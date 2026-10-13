@@ -1,8 +1,9 @@
+data
 ouptus/*
 logs/*
 figures/*
 *.Processed_files/Ouputs_10000seeds.pkl
 *.pkl
 *.npz
-*.ipynb
 *.sh
+*.root
