@@ -7,3 +7,7 @@ figures/*
 *.npz
 *.sh
 *.root
+physik_deployment/
+!veto/bin/*.sh
+.DS_Store
+__pycache__/
