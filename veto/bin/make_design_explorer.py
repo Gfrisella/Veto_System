@@ -6,8 +6,8 @@ Design (what the RL environment will choose):
   wings  thin vertical fins perpendicular to the beam (x-y plane at a fixed z) on the left and right
          of the vessel. A fin touches the vessel only with its inner edge, on the side wall at
          |x| = X(z), and reaches out in x by `reach`; it covers y from `bottom` to `top`. A fin at
-         z = 30.6 m extends the UBT sideways. Left and right are independent; on each side fins are
-         placed one after another along z, every next one at least `min gap` after the previous.
+         z = 30.6 m extends the UBT sideways. Left and right are independent and every fin has its own
+         z (the RL environment will place them one after another with a minimum gap instead).
          Nothing on the top or bottom of the vessel.
 
 A muon is vetoed with probability 1 - (1 - eps)^n_hits. Its position at any z comes from its path
@@ -202,8 +202,8 @@ TEMPLATE = r"""<!doctype html>
 <div id="side">
   <h1>Veto design explorer</h1>
   <div class="note">UBT at z = 30.6 m (|x| &lt; 0.5 m) and fins ("wings") on the left and right: thin x–y
-  planes that touch the side wall with their inner edge and reach out in x. Fins are placed one after
-  another along z. Muons of <i>design-optimization-dataset-alpha-14-oct-2026</i>; rates in muons per spill.</div>
+  planes that touch the side wall with their inner edge and reach out in x, each at its own z.
+  Muons of <i>design-optimization-dataset-alpha-14-oct-2026</i>; rates in muons per spill.</div>
 
   <h2>Result</h2>
   <div id="summary" class="big"></div>
@@ -241,36 +241,33 @@ function slider(parent, key, label, min, max, step, value, unit) {
   inp.addEventListener('input', () => { set(); schedule(); });
 }
 
-slider(document.getElementById('global'), 'mingap', 'min gap', 0, 10, 0.1, 1, ' m');
 slider(document.getElementById('global'), 'eps', 'efficiency', 0.9, 1, 0.001, 0.99, '');
 const ubtBox = document.getElementById('ubt');
 slider(ubtBox, 'ubt_lo', 'bottom y', -8, 0, 0.05, -1.35, ' m');
 slider(ubtBox, 'ubt_hi', 'top y', 0, 8, 0.05, 1.35, ' m');
-const defaults = [[0, 3, -3, 3], [15, 3, -3, 3], [15, 3, -3, 3], [15, 3, -3, 3]];
+const defaults = [[30.6, 3, -3, 3], [45.6, 3, -3, 3], [60.6, 3, -3, 3], [75.6, 3, -3, 3]];
 for (const [side, el] of [['R', 'right'], ['L', 'left']]) {
   const box = document.getElementById(el);
   for (let i = 0; i < N_FINS; i++) {
     const h = document.createElement('div'); h.innerHTML = `<b>fin ${i + 1}</b>`; box.appendChild(h);
-    const [g, reach, lo, hi] = defaults[i];
-    slider(box, `${side}${i}_gap`, i ? 'gap after prev' : 'offset from UBT', 0, 51.4, 0.1, g, ' m');
+    const [z, reach, lo, hi] = defaults[i];
+    slider(box, `${side}${i}_zpos`, 'z position', 30.6, 82, 0.1, z, ' m');
     slider(box, `${side}${i}_reach`, 'reach out (x)', 0, 7.5, 0.05, reach, ' m');
     slider(box, `${side}${i}_lo`, 'bottom y', -8, 0, 0.05, lo, ' m');
     slider(box, `${side}${i}_hi`, 'top y', 0, 8, 0.05, hi, ' m');
-    const z = document.createElement('div'); z.className = 'zinfo'; z.id = `${side}${i}_z`; box.appendChild(z);
+    const info = document.createElement('div'); info.className = 'zinfo'; info.id = `${side}${i}_z`; box.appendChild(info);
   }
 }
 
 function design() {
   const fins = {R: [], L: []};
   for (const side of ['R', 'L']) {
-    let z = G.z_ubt;
     for (let i = 0; i < N_FINS; i++) {
-      z += i ? Math.max(S[`${side}${i}_gap`], S.mingap) : S[`${side}${i}_gap`];
+      const z = S[`${side}${i}_zpos`];
       const reach = S[`${side}${i}_reach`], lo = S[`${side}${i}_lo`], hi = S[`${side}${i}_hi`];
       const active = z <= G.z_max && reach > 0 && hi > lo;
       fins[side].push({z, reach, lo, hi, active});
-      document.getElementById(`${side}${i}_z`).textContent = z > G.z_max ? 'past z = 82 m: not placed'
-        : active ? `z = ${z.toFixed(1)} m, |x| = ${X(z).toFixed(2)} … ${(X(z) + reach).toFixed(2)} m, `
+      document.getElementById(`${side}${i}_z`).textContent = active ? `z = ${z.toFixed(1)} m, |x| = ${X(z).toFixed(2)} … ${(X(z) + reach).toFixed(2)} m, `
                    + `area ${(reach * (hi - lo)).toFixed(1)} m²` : 'empty';
     }
   }
