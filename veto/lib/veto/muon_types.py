@@ -13,6 +13,7 @@ from .tracks import vessel_crossings
 
 REACH_30 = geo.Z_UBT - 0.01     # A really is at z = 30.6 (stored z is 30.600 .. 30.620)
 REACH_82 = geo.Z_SST1 - 0.01    # B really is at z = 82
+A_TOLERANCE = 0.05            # [m] the z = 30.6 state is stored up to 2 cm after the plane
 BOUNCE_CUT = 0.5                # B more than this [m] off the straight line from A = bounced / scattered
 
 TYPES = {
@@ -130,27 +131,24 @@ def side_plane_x(z):
     return geo.VESSEL_X_IN + slope * (z - geo.Z_VESSEL_MIN)
 
 
-def side_plane_crossings(a, k, b, z_max=geo.Z_SST1):
-    """Where the path a -> (k) -> b crosses the side-wall planes x = +-side_plane_x(z).
+def path_at_z(a, k, b, z):
+    """Position of the path a -> (k) -> b at plane z (scalar or per-muon array).
 
-    The planes are continued above / below the vessel and up to z_max; detector panels ("wings")
-    on the left and right of the vessel lie on them, so these crossings are independent of the
-    design. a, k, b: (n, 3), k NaN without a bounce. Returns z, y, side (+1 right, -1 left, 0 none),
-    each (n, 4): columns = (first segment, +x), (first, -x), (second, +x), (second, -x).
+    a, k, b: (n, 3), k NaN without a bounce; the path is monotonic in z (k lies between a and b).
+    Returns x, y and a mask of muons whose path reaches z.
     """
     a, k, b = (np.asarray(v, np.float64) for v in (a, k, b))
+    z = np.broadcast_to(np.asarray(z, np.float64), (len(a),))
+    # A is stored a few mm after z = 30.6 (30.600 .. 30.620): a plane just before A uses A itself
+    z = np.where((z < a[:, 2]) & (a[:, 2] - z < A_TOLERANCE), a[:, 2], z)
     bounced = np.isfinite(k[:, 2])
-    mid = np.where(bounced[:, None], k, b)
-    zs, ys, sides = [], [], []
-    for p, q, use in ((a, mid, np.ones(len(a), bool)), (k, b, bounced)):
-        for side in (1, -1):
-            fp = side * p[:, 0] - side_plane_x(p[:, 2])
-            fq = side * q[:, 0] - side_plane_x(q[:, 2])
-            with np.errstate(invalid="ignore", divide="ignore"):
-                t = fp / (fp - fq)
-                c = p + t[:, None] * (q - p)
-                hit = use & (fp * fq < 0) & (c[:, 2] >= geo.Z_UBT) & (c[:, 2] <= z_max)
-            zs.append(np.where(hit, c[:, 2], np.nan))
-            ys.append(np.where(hit, c[:, 1], np.nan))
-            sides.append(np.where(hit, side, 0).astype(np.int8))
-    return np.stack(zs, 1), np.stack(ys, 1), np.stack(sides, 1)
+    end = np.where(bounced[:, None], k, b)
+    x, y = np.full(len(a), np.nan), np.full(len(a), np.nan)
+    for p, q, use in ((a, end, np.ones(len(a), bool)), (k, b, bounced)):
+        dz = q[:, 2] - p[:, 2]
+        with np.errstate(invalid="ignore", divide="ignore"):
+            t = (z - p[:, 2]) / dz
+        m = use & (dz > 0) & (t >= 0) & (t <= 1) & np.isnan(x)
+        x[m] = p[m, 0] + t[m] * (q[m, 0] - p[m, 0])
+        y[m] = p[m, 1] + t[m] * (q[m, 1] - p[m, 1])
+    return x, y, np.isfinite(x)
