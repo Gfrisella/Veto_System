@@ -65,15 +65,16 @@ def true_crossing(tr, plane):
 
 
 def own_hits(tr, event, design, rng, tracks_mask=None):
-    """Hits of the events' own muons. Returns dict of arrays event, plane, u, y, t."""
-    out = {k: [] for k in ("event", "plane", "u", "y", "t")}
+    """Hits of the events' own muons. Returns dict of arrays event, track, plane, u, y, t."""
+    out = {k: [] for k in ("event", "track", "plane", "u", "y", "t")}
     sel = np.ones(len(event), bool) if tracks_mask is None else tracks_mask
     for plane in design.planes:
         u, y, length, ok = true_crossing(tr, plane)
         ok &= sel & (rng.random(len(ok)) < design.efficiency)
         uc, yc = plane.cell_centre(u[ok], y[ok])
         t = -length[ok] / C + rng.normal(0, design.sigma_t * 1e9, ok.sum())
-        out["event"].append(event[ok]); out["plane"].append(np.full(ok.sum(), plane.index))
+        out["event"].append(event[ok]); out["track"].append(np.where(ok)[0])
+        out["plane"].append(np.full(ok.sum(), plane.index))
         out["u"].append(uc); out["y"].append(yc); out["t"].append(t)
     return {k: np.concatenate(v) for k, v in out.items()}
 
@@ -203,10 +204,12 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
     n_events = int(event.max()) + 1 if len(event) else 0
     t0 = time.perf_counter()
     own = own_hits(tr, event, design, rng) if with_own_hits else {k: np.empty(0) for k in
-                                                                   ("event", "plane", "u", "y", "t")}
+                                                                   ("event", "track", "plane", "u", "y", "t")}
     window = cfg.n_sigma_t * np.hypot(design.sigma_t * 1e9, cfg.sigma_t_track) + 0.5
     acc = accidental_hits(design, maps, n_events, window, cfg, rng)
+    acc["track"] = np.full(len(acc["event"]), -1)            # accidental: no track of this event
     hits = {k: np.concatenate([own[k], acc[k]]) for k in own}
+    hits["track"] = hits["track"].astype(np.int64)
     hits["event"] = hits["event"].astype(np.int64); hits["plane"] = hits["plane"].astype(np.int64)
     timing["digitize"] = time.perf_counter() - t0
     t0 = time.perf_counter()
