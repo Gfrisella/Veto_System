@@ -163,3 +163,123 @@ def iterate_store(directory, chunk_size=10_000_000, columns=None, stop=None):
     for start in range(0, n, chunk_size):
         end = min(start + chunk_size, n)
         yield start, {key: np.asarray(store[key][start:end]) for key in keys}
+
+
+
+# ============================================================
+# Columns of a large pickle, memory-mapped in place
+# ============================================================
+
+class _Skipped:
+    """Stands in for a large byte payload that was seeked over instead of read."""
+
+    def __init__(self, n):
+        self.n = n
+
+    def __len__(self):
+        return self.n
+
+
+class _SkippingReader:
+    def __init__(self, f, threshold):
+        self.f, self.threshold = f, threshold
+
+    def read(self, n=-1):
+        if n > self.threshold:
+            self.f.seek(n, 1)
+            return _Skipped(n)
+        return self.f.read(n)
+
+    def readline(self):
+        return self.f.readline()
+
+    def tell(self):
+        return self.f.tell()
+
+
+_DTYPE_STRING = re.compile(r"^[<>|=]?[fiub][1248]$")
+_NOT_KEYS = {"planes", "<", ">", "|", "=", "C", "F"}   # byte order and memory layout flags
+_TORCH_STORAGES = {b"LongStorage": "<i8", b"IntStorage": "<i4", b"FloatStorage": "<f4",
+                   b"DoubleStorage": "<f8", b"ShortStorage": "<i2", b"ByteStorage": "|u1"}
+
+
+def scan_pickle_columns(filename, threshold=1 << 20):
+    """Locate the large arrays inside a pickle without reading them.
+
+    Written for Guglielmo's {"planes": {0: {"px": array, ...}, 1: {...}}, "evt_n": tensor,
+    "pdg": array, "weight": array}: numpy arrays pickled through ndarray.__reduce__ (dtype
+    before the bytes) or protocol-5 _frombuffer (dtype after), and torch tensors (legacy
+    torch.save storage, raw data at the end of the payload). Arrays inside "planes" are named
+    by key + plane index ("x0", "px1"), others by their key.
+    Returns {name: (offset, dtype)}.
+    """
+    import pickletools
+
+    pickletools.bytearray8.reader = pickletools.read_bytes8   # bytearray(_Skipped) would fail
+    memo, payloads = [], []
+    last, pending_dtype, dtype_before = None, None, None
+    strings, plane, in_planes, prev, setitems = [], None, False, (None, None), 0
+    with open(filename, "rb") as f:
+        for op, arg, pos in pickletools.genops(_SkippingReader(f, threshold)):
+            name, value = op.name, None
+            if name in ("MEMOIZE", "BINPUT", "LONG_BINPUT"):
+                index = len(memo) if name == "MEMOIZE" else int(arg)
+                memo.extend([None] * (index + 1 - len(memo)))
+                memo[index] = last
+                continue
+            if name in ("SHORT_BINUNICODE", "BINUNICODE", "BINUNICODE8"):
+                value = arg
+                if _DTYPE_STRING.match(arg):
+                    pending_dtype = arg
+            elif name in ("BINGET", "LONG_BINGET"):
+                value = memo[int(arg)]
+            elif name == "REDUCE" and pending_dtype:
+                value, pending_dtype = ("dtype", pending_dtype), None
+
+            if isinstance(value, tuple):
+                dtype_before = value[1]
+                if payloads and payloads[-1]["kind"] == "frombuffer" and payloads[-1]["dtype"] is None:
+                    payloads[-1]["dtype"] = value[1]
+            elif isinstance(value, str):
+                strings.append(value)            # candidate key: first one after the previous payload
+                in_planes |= value == "planes"
+            if name == "STACK_GLOBAL":
+                del strings[-2:]                 # module and class name, not a key
+            if name == "EMPTY_DICT" and in_planes and prev[0] in ("BININT1", "BININT"):
+                plane = prev[1]
+            setitems = setitems + 1 if name == "SETITEMS" else 0
+            in_planes &= setitems < 2
+
+            if isinstance(arg, _Skipped):
+                start = pos + 1 + (8 if name.endswith("8") else 4)
+                kind = {"BYTEARRAY8": "frombuffer"}.get(name, "bytes")
+                f.seek(start)
+                head = f.read(4096)
+                storage = next((t for s, t in _TORCH_STORAGES.items() if s in head), None)
+                if storage:
+                    kind = "torch"
+                key = next(t for t in strings if t not in _NOT_KEYS and not _DTYPE_STRING.match(t))
+                payloads.append(dict(key=key, plane=plane if in_planes else None, start=start, nbytes=arg.n,
+                                     kind=kind, dtype=storage or (dtype_before if kind == "bytes" else None)))
+                f.seek(start + arg.n)
+                strings = []
+            last, prev = value, (name, arg)
+
+    sizes = {p["nbytes"] // np.dtype(p["dtype"]).itemsize for p in payloads if p["kind"] != "torch"}
+    if len(sizes) != 1:
+        raise ValueError(f"{filename}: columns of different lengths {sizes}")
+    n = sizes.pop()
+    columns = {}
+    for p in payloads:
+        nbytes = n * np.dtype(p["dtype"]).itemsize
+        offset = p["start"] + p["nbytes"] - nbytes if p["kind"] == "torch" else p["start"]
+        if p["kind"] != "torch" and nbytes != p["nbytes"]:
+            raise ValueError(f"{filename}: {p}")
+        columns[p["key"] + ("" if p["plane"] is None else str(p["plane"]))] = (offset, p["dtype"])
+    return columns, n
+
+
+def open_pickle_columns(filename):
+    """Memory-mapped columns of a large pickle (see scan_pickle_columns); nothing is loaded."""
+    columns, n = scan_pickle_columns(filename)
+    return {k: np.memmap(filename, np.dtype(dtype), "r", offset, n) for k, (offset, dtype) in columns.items()}, n

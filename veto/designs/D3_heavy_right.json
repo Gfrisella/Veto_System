@@ -1,0 +1,116 @@
+{
+ "name": "D3_heavy_right",
+ "description": "right side (cavern wall, bounces): 7 fins up to the wall; left: 3 short fins",
+ "ubt": {
+  "y_lo": -2.0,
+  "y_hi": 2.0,
+  "cell_x": 0.1,
+  "cell_y": 0.1
+ },
+ "fins": [
+  {
+   "side": "right",
+   "z": 30.6,
+   "length": 4.5,
+   "y_lo": -3.2,
+   "y_hi": 4.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "right",
+   "z": 38.0,
+   "length": 4.5,
+   "y_lo": -3.2,
+   "y_hi": 4.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "right",
+   "z": 46.0,
+   "length": 4.5,
+   "y_lo": -3.2,
+   "y_hi": 4.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "right",
+   "z": 54.0,
+   "length": 4.5,
+   "y_lo": -3.2,
+   "y_hi": 4.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "right",
+   "z": 62.0,
+   "length": 4.5,
+   "y_lo": -3.2,
+   "y_hi": 4.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "right",
+   "z": 70.0,
+   "length": 4.5,
+   "y_lo": -3.2,
+   "y_hi": 4.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "right",
+   "z": 78.0,
+   "length": 4.5,
+   "y_lo": -3.2,
+   "y_hi": 4.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "left",
+   "z": 30.6,
+   "length": 2.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "left",
+   "z": 50.0,
+   "length": 2.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "left",
+   "z": 70.0,
+   "length": 2.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  }
+ ],
+ "detector": {
+  "efficiency": 0.99,
+  "sigma_t": 5e-10
+ }
+}
