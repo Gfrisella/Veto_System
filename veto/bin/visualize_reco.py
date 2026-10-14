@@ -83,7 +83,9 @@ def detector_traces(design, inp, spill):
         out.append(go.Mesh3d(x=[plane.z] * 4, y=x, z=y, i=[0, 0], j=[1, 2], k=[2, 3],
                              intensity=[np.log10(max(density, 1))] * 4, cmin=2, cmax=9, colorscale="Viridis",
                              showscale=k == 0, opacity=0.55, flatshading=True,
-                             colorbar=dict(title="log10 muons<br>/ m² / spill", x=1.0, len=0.5),
+                             colorbar=dict(title=dict(text="detector rate: log10 muons / m² / spill", side="top"),
+                                           orientation="h", x=0.3, xanchor="center", y=0.02, yanchor="bottom",
+                                           len=0.45, thickness=12),
                              name=f"{plane.name}: {r['rate']:.3g} muons/spill, peak cell {r['peak_cell'] / spill:.3g} Hz",
                              hoverinfo="name", showlegend=False))
     return out
