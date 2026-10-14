@@ -122,3 +122,35 @@ def classify(d):
     kind[good] = 1
     kind[acc & (off > BOUNCE_CUT)] = 0
     return dict(type=kind, walls=walls, kx=k[:, 0], ky=k[:, 1], kz=k[:, 2], off=off)
+
+
+def side_plane_x(z):
+    """Half width of the side-wall planes: the vessel's lateral walls, continued past z = 80.6 m."""
+    slope = (geo.VESSEL_X_OUT - geo.VESSEL_X_IN) / (geo.Z_VESSEL_MAX - geo.Z_VESSEL_MIN)
+    return geo.VESSEL_X_IN + slope * (z - geo.Z_VESSEL_MIN)
+
+
+def side_plane_crossings(a, k, b, z_max=geo.Z_SST1):
+    """Where the path a -> (k) -> b crosses the side-wall planes x = +-side_plane_x(z).
+
+    The planes are continued above / below the vessel and up to z_max; detector panels ("wings")
+    on the left and right of the vessel lie on them, so these crossings are independent of the
+    design. a, k, b: (n, 3), k NaN without a bounce. Returns z, y, side (+1 right, -1 left, 0 none),
+    each (n, 4): columns = (first segment, +x), (first, -x), (second, +x), (second, -x).
+    """
+    a, k, b = (np.asarray(v, np.float64) for v in (a, k, b))
+    bounced = np.isfinite(k[:, 2])
+    mid = np.where(bounced[:, None], k, b)
+    zs, ys, sides = [], [], []
+    for p, q, use in ((a, mid, np.ones(len(a), bool)), (k, b, bounced)):
+        for side in (1, -1):
+            fp = side * p[:, 0] - side_plane_x(p[:, 2])
+            fq = side * q[:, 0] - side_plane_x(q[:, 2])
+            with np.errstate(invalid="ignore", divide="ignore"):
+                t = fp / (fp - fq)
+                c = p + t[:, None] * (q - p)
+                hit = use & (fp * fq < 0) & (c[:, 2] >= geo.Z_UBT) & (c[:, 2] <= z_max)
+            zs.append(np.where(hit, c[:, 2], np.nan))
+            ys.append(np.where(hit, c[:, 1], np.nan))
+            sides.append(np.where(hit, side, 0).astype(np.int8))
+    return np.stack(zs, 1), np.stack(ys, 1), np.stack(sides, 1)
