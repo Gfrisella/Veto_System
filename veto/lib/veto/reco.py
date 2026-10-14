@@ -187,12 +187,15 @@ def match(queries, hits, design, cfg):
     du = np.abs(hu[hi_idx] - queries["u"][qi]) <= queries["r"][qi] + cell_u[hp[hi_idx]] / 2
     dy = np.abs(hy[hi_idx] - queries["y"][qi]) <= queries["r"][qi] + cell_y[hp[hi_idx]] / 2
     dt = np.abs(ht[hi_idx] - queries["t"][qi]) <= window_t
+    ok = du & dy & dt
     found = np.zeros(len(key_q), bool)
-    found[qi[du & dy & dt]] = True
-    return found, int(counts.sum())
+    found[qi[ok]] = True
+    hit_of_query = np.full(len(key_q), -1)
+    hit_of_query[qi[ok][::-1]] = order[hi_idx[ok][::-1]]     # first matching hit (index into `hits`)
+    return found, int(counts.sum()), hit_of_query
 
 
-def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True):
+def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, details=False):
     """Full chain for a set of events. tr: true tracks (one row per track), event: event id per
     track, z_limit: search only planes upstream of this z (the vertex; 82 m for single tracks).
     Returns per-event veto flag, per-track explained flag, per-plane veto counts and timings."""
@@ -209,16 +212,19 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True):
     t0 = time.perf_counter()
     meas = measure(tr, cfg, rng)
     q = predictions(meas, event, z_limit, design, cfg)
-    found, n_compared = match(q, hits, design, cfg)
+    found, n_compared, hit_of_query = match(q, hits, design, cfg)
     explained = np.zeros(len(event), bool)
     explained[q["track"][found]] = True
     vetoed = np.zeros(n_events, bool)
     vetoed[event[explained]] = True
     timing["reconstruct"] = time.perf_counter() - t0
     by_plane = np.bincount(q["plane"][found], minlength=len(design.planes))
-    return dict(vetoed=vetoed, explained=explained, by_plane=by_plane, timing=timing,
-                n_hits=len(hits["event"]), n_own=len(own["event"]), n_queries=len(q["event"]),
-                n_compared=n_compared)
+    out = dict(vetoed=vetoed, explained=explained, by_plane=by_plane, timing=timing,
+               n_hits=len(hits["event"]), n_own=len(own["event"]), n_queries=len(q["event"]),
+               n_compared=n_compared)
+    if details:   # for visualisation: every hit (own ones first), query, match and measured track
+        out.update(hits=hits, queries=q, found=found, hit_of_query=hit_of_query, meas=meas)
+    return out
 
 
 # ---------------------------------------------------------------- hypothetical signal
@@ -239,5 +245,6 @@ def signal_tracks(n, rng, p_range=(1.0, 50.0)):
     d = np.stack([xt - xv, yt - yv, geo.Z_SST1 - zv], 1)
     p = rng.uniform(*p_range, 2 * n)
     mom = d / np.linalg.norm(d, axis=1, keepdims=True) * p[:, None]
-    tr = dict(bx=xt, by=yt, bz=np.full(2 * n, geo.Z_SST1), bpx=mom[:, 0], bpy=mom[:, 1], bpz=mom[:, 2])
+    tr = dict(bx=xt, by=yt, bz=np.full(2 * n, geo.Z_SST1), bpx=mom[:, 0], bpy=mom[:, 1], bpz=mom[:, 2],
+              vx=xv, vy=yv, vz=zv)
     return tr, zv, np.tile(np.arange(n), 2)
