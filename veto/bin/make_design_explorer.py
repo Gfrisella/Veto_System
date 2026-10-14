@@ -3,9 +3,11 @@
 
 Design (what the RL environment will choose):
   UBT    plane at z = 30.6 m, |x| < 0.5 m (the vessel aperture), free bottom / top edge in y
-  wings  thin vertical fins perpendicular to the beam (x-y plane at a fixed z) on the left and right
-         of the vessel. A fin touches the vessel only with its inner edge, on the side wall at
-         |x| = X(z), and reaches out in x by `reach`; it covers y from `bottom` to `top`. A fin at
+  wings  thin vertical fins on the left (+x) and right (-x, looking from the target) of the vessel.
+         A fin touches the vessel only with its inner edge, on the side wall at |x| = X(z), reaches
+         out in x by `length` and can lean downstream by `tilt` (0 = perpendicular to the beam);
+         it covers y from `bottom` (>= -3.2 m, above the floor) to `top`. Right-side fins stop at
+         the cavern wall x = -4.56 m. The UBT covers at least the 1 x 2.7 m vessel entrance. A fin at
          z = 30.6 m extends the UBT sideways. Left and right are independent and every fin has its own
          z (the RL environment will place them one after another with a minimum gap instead).
          Nothing on the top or bottom of the vessel.
@@ -201,8 +203,10 @@ TEMPLATE = r"""<!doctype html>
 <body><div id="wrap">
 <div id="side">
   <h1>Veto design explorer</h1>
-  <div class="note">UBT at z = 30.6 m (|x| &lt; 0.5 m) and fins ("wings") on the left and right: thin x–y
-  planes that touch the side wall with their inner edge and reach out in x, each at its own z.
+  <div class="note">UBT at z = 30.6 m (|x| &lt; 0.5 m, at least the 1 × 2.7 m vessel entrance) and fins ("wings")
+  on the left and right: thin planes that touch the side wall with their inner edge, reach out in x and can lean
+  downstream (tilt). Each fin has its own z. Fins and UBT stay above y = −3.2 m; right-side fins stop at the
+  cavern wall (x = −4.56 m).
   Muons of <i>design-optimization-dataset-alpha-14-oct-2026</i>; rates in muons per spill.</div>
 
   <h2>Result</h2>
@@ -213,11 +217,12 @@ TEMPLATE = r"""<!doctype html>
   <h2>Global</h2>
   <div id="global"></div>
   <details open><summary>UBT</summary><div id="ubt"></div></details>
-  <details open><summary>Right side (+x)</summary><div id="right"></div></details>
-  <details open><summary>Left side (−x, the bounce side)</summary><div id="left"></div></details>
+  <details open><summary>Right side (−x, looking from the target): cavern wall at x = −4.56 m, bounces</summary><div id="right"></div></details>
+  <details open><summary>Left side (+x)</summary><div id="left"></div></details>
   <p class="note">Drawn: a few muons per type; big markers are their hits on the UBT / fins; thick black are
-  drawn SST1 / veto-only muons with no hit. Veto numbers use a sample of ~29 k muons; detector rates use
-  every muon of the dataset (maps every 1 m in z). Overlapping detectors count as separate layers.</p>
+  drawn SST1 / veto-only muons with no hit. Veto numbers use a sample of ~25 k muons; detector rates use
+  every muon of the dataset (maps every 1 m in z; for tilted fins each strip takes the map at its own z,
+  fine because muons travel nearly along z). Overlapping detectors count as separate layers.</p>
 </div>
 <div id="plot"></div>
 </div>
@@ -228,6 +233,7 @@ const NSTATIC = __NSTATIC__;
 const G = D.geo;
 const X = z => G.x_in + (G.x_out - G.x_in) / (G.z_vmax - G.z_vmin) * (z - G.z_vmin);
 const N_FINS = 4;
+const Y_MIN = -3.2, X_WALL = -4.56, DEG = Math.PI / 180;
 const S = {};
 
 function slider(parent, key, label, min, max, step, value, unit) {
@@ -236,24 +242,26 @@ function slider(parent, key, label, min, max, step, value, unit) {
     step="${step}" value="${value}"><span class="val" id="${key}_v"></span>`;
   parent.appendChild(row);
   const inp = row.querySelector('input'), out = row.querySelector('.val');
-  const set = () => { S[key] = parseFloat(inp.value); out.textContent = S[key].toFixed(step < 0.01 ? 3 : 2) + (unit || ''); };
+  const set = () => { S[key] = parseFloat(inp.value); out.textContent = S[key].toFixed(step < 0.01 ? 3 : step >= 1 ? 0 : 2) + (unit || ''); };
   set();
   inp.addEventListener('input', () => { set(); schedule(); });
 }
 
 slider(document.getElementById('global'), 'eps', 'efficiency', 0.9, 1, 0.001, 0.99, '');
 const ubtBox = document.getElementById('ubt');
-slider(ubtBox, 'ubt_lo', 'bottom y', -8, 0, 0.05, -1.35, ' m');
-slider(ubtBox, 'ubt_hi', 'top y', 0, 8, 0.05, 1.35, ' m');
-const defaults = [[30.6, 3, -3, 3], [45.6, 3, -3, 3], [60.6, 3, -3, 3], [75.6, 3, -3, 3]];
+slider(ubtBox, 'ubt_lo', 'bottom y', Y_MIN, -1.35, 0.05, -1.35, ' m');
+slider(ubtBox, 'ubt_hi', 'top y', 1.35, 8, 0.05, 1.35, ' m');
+const defaults = [[30.6, 3, 0, -3, 3], [45.6, 3, 0, -3, 3], [60.6, 3, 0, -3, 3], [75.6, 3, 0, -3, 3]];
+// looking from the target downstream (y up), +x is on the LEFT and -x on the RIGHT
 for (const [side, el] of [['R', 'right'], ['L', 'left']]) {
   const box = document.getElementById(el);
   for (let i = 0; i < N_FINS; i++) {
     const h = document.createElement('div'); h.innerHTML = `<b>fin ${i + 1}</b>`; box.appendChild(h);
-    const [z, reach, lo, hi] = defaults[i];
+    const [z, len, tilt, lo, hi] = defaults[i];
     slider(box, `${side}${i}_zpos`, 'z position', 30.6, 82, 0.1, z, ' m');
-    slider(box, `${side}${i}_reach`, 'reach out (x)', 0, 7.5, 0.05, reach, ' m');
-    slider(box, `${side}${i}_lo`, 'bottom y', -8, 0, 0.05, lo, ' m');
+    slider(box, `${side}${i}_len`, 'length', 0, 7.5, 0.05, len, ' m');
+    slider(box, `${side}${i}_tilt`, 'tilt downstr.', 0, 80, 1, tilt, '°');
+    slider(box, `${side}${i}_lo`, 'bottom y', Y_MIN, 0, 0.05, lo, ' m');
     slider(box, `${side}${i}_hi`, 'top y', 0, 8, 0.05, hi, ' m');
     const info = document.createElement('div'); info.className = 'zinfo'; info.id = `${side}${i}_z`; box.appendChild(info);
   }
@@ -261,61 +269,69 @@ for (const [side, el] of [['R', 'right'], ['L', 'left']]) {
 
 function design() {
   const fins = {R: [], L: []};
-  for (const side of ['R', 'L']) {
+  for (const [side, sign] of [['R', -1], ['L', 1]]) {
     for (let i = 0; i < N_FINS; i++) {
-      const z = S[`${side}${i}_zpos`];
-      const reach = S[`${side}${i}_reach`], lo = S[`${side}${i}_lo`], hi = S[`${side}${i}_hi`];
-      const active = z <= G.z_max && reach > 0 && hi > lo;
-      fins[side].push({z, reach, lo, hi, active});
-      document.getElementById(`${side}${i}_z`).textContent = active ? `z = ${z.toFixed(1)} m, |x| = ${X(z).toFixed(2)} … ${(X(z) + reach).toFixed(2)} m, `
-                   + `area ${(reach * (hi - lo)).toFixed(1)} m²` : 'empty';
+      const z = S[`${side}${i}_zpos`], th = S[`${side}${i}_tilt`] * DEG, lo = S[`${side}${i}_lo`], hi = S[`${side}${i}_hi`];
+      const c = Math.cos(th), sn = Math.sin(th), x0 = X(z);
+      let len = S[`${side}${i}_len`], why = '';
+      if (sign < 0 && x0 + len * c > -X_WALL) { len = (-X_WALL - x0) / c; why = ', cut at the cavern wall x = −4.56 m'; }
+      if (sn > 0 && z + len * sn > G.z_max) { len = (G.z_max - z) / sn; why += ', cut at z = 82 m'; }
+      len = Math.max(len, 0);
+      const active = len > 0 && hi > lo;
+      fins[side].push({z, sign, c, sn, x0, len, lo, hi, active});
+      document.getElementById(`${side}${i}_z`).textContent = active
+        ? `z = ${z.toFixed(1)} … ${(z + len * sn).toFixed(1)} m, |x| = ${x0.toFixed(2)} … ${(x0 + len * c).toFixed(2)} m, `
+          + `area ${(len * (hi - lo)).toFixed(1)} m²${why}` : 'empty';
     }
   }
   return {ubt: {lo: S.ubt_lo, hi: S.ubt_hi}, fins, eps: S.eps};
 }
 
-// position of muon i's path at plane z (A -> K -> B), null if the path does not reach z
-function at(i, z) {
-  if (z < D.az[i] && D.az[i] - z < 0.05) z = D.az[i];   // A is stored a few mm after z = 30.6
-  const segs = D.kz[i] === null ? [[D.ax[i], D.ay[i], D.az[i], D.bx[i], D.by[i], D.bz[i]]]
-    : [[D.ax[i], D.ay[i], D.az[i], D.kx[i], D.ky[i], D.kz[i]], [D.kx[i], D.ky[i], D.kz[i], D.bx[i], D.by[i], D.bz[i]]];
-  for (const [x0, y0, z0, x1, y1, z1] of segs) {
-    if (z1 > z0 && z >= z0 && z <= z1) { const t = (z - z0) / (z1 - z0); return [x0 + t * (x1 - x0), y0 + t * (y1 - y0)]; }
+function segments(i) {
+  const A = [D.ax[i], D.ay[i], D.az[i]], B = [D.bx[i], D.by[i], D.bz[i]];
+  return D.kz[i] === null ? [[A, B, true]] : [[A, [D.kx[i], D.ky[i], D.kz[i]], true], [[D.kx[i], D.ky[i], D.kz[i]], B, false]];
+}
+
+// crossing point of muon i's path with fin f, or null.
+// fin plane: (z - z0) cos(t) = (sign x - X(z0)) sin(t); first segment extended 5 cm back (A sits after 30.6)
+function finCross(f, i) {
+  for (const [p, q, first] of segments(i)) {
+    const dz = q[2] - p[2]; if (!(dz > 0)) continue;
+    const g = P => (P[2] - f.z) * f.c - (f.sign * P[0] - f.x0) * f.sn;
+    const gp = g(p), gq = g(q); if (gp === gq) continue;
+    const t = gp / (gp - gq); if (t > 1 || t < (first ? -0.05 / dz : 0)) continue;
+    const P = [p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1]), p[2] + t * (q[2] - p[2])];
+    const along = (f.sign * P[0] - f.x0) * f.c + (P[2] - f.z) * f.sn;
+    if (along >= 0 && along <= f.len && P[1] >= f.lo && P[1] <= f.hi) return P;
   }
   return null;
 }
-
-function finHit(f, sign, p, z) {
-  if (!p) return false;
-  const u = sign * p[0] - X(z);
-  return u >= 0 && u <= f.reach && p[1] >= f.lo && p[1] <= f.hi;
-}
 const ubtHit = (des, i) => D.ubt_on[i] && D.ay[i] >= des.ubt.lo && D.ay[i] <= des.ubt.hi;
+const allFins = des => des.fins.R.concat(des.fins.L).filter(f => f.active);
 
-// hit points of muon i: list of [x, y, z]
 function hitPoints(des, i) {
   const pts = [];
   if (ubtHit(des, i)) pts.push([D.ax[i], D.ay[i], G.z_ubt]);
-  for (const [side, sign] of [['R', 1], ['L', -1]]) for (const f of des.fins[side]) {
-    if (!f.active) continue;
-    const p = at(i, f.z);
-    if (finHit(f, sign, p, f.z)) pts.push([p[0], p[1], f.z]);
-  }
+  for (const f of allFins(des)) { const P = finCross(f, i); if (P) pts.push(P); }
   return pts;
 }
 
 const fmt = v => v === 0 ? '0' : (Math.abs(v) >= 1e4 || Math.abs(v) < 0.01 ? v.toExponential(2) : v.toPrecision(3));
 
-function finRate(f, sideIdx) {
-  // nearest 1 m slice; cumulative over u, sum over y bins inside [lo, hi]
-  const iz = Math.max(0, Math.min(D.z_slices.length - 1, Math.round(f.z - D.z_slices[0])));
-  const du = D.u_bins[1] - D.u_bins[0];
-  const iu = Math.min(D.u_bins.length - 2, Math.floor(f.reach / du + 1e-9) - 1);
-  if (iu < 0) return 0;
-  const m = D.fin_cum[sideIdx][iz][iu];
+// rate on a (tilted) fin from the maps: muons travel nearly along z, so the strip at outward distance u
+// is crossed by the muons at (u, y) in the slice at the strip's own z = z0 + u tan(t)
+function finRate(f) {
+  const side = f.sign > 0 ? 0 : 1, du = D.u_bins[1] - D.u_bins[0];
   let s = 0;
-  for (let b = 0; b < D.y_bins.length - 1; b++) {
-    const yc = (D.y_bins[b] + D.y_bins[b + 1]) / 2; if (yc >= f.lo && yc <= f.hi) s += m[b];
+  for (let b = 0; b < D.u_bins.length - 1; b++) {
+    const uc = (b + 0.5) * du; if (uc > f.len * f.c) break;
+    const z = f.z + (f.c > 0 ? uc * f.sn / f.c : 0);
+    const iz = Math.max(0, Math.min(D.z_slices.length - 1, Math.round(z - D.z_slices[0])));
+    const cur = D.fin_cum[side][iz][b], prev = b ? D.fin_cum[side][iz][b - 1] : null;
+    for (let k = 0; k < D.y_bins.length - 1; k++) {
+      const yc = (D.y_bins[k] + D.y_bins[k + 1]) / 2;
+      if (yc >= f.lo && yc <= f.hi) s += cur[k] - (prev ? prev[k] : 0);
+    }
   }
   return s;
 }
@@ -346,9 +362,9 @@ function tables(des, hits) {
   let rows = '<tr><th>detector</th><th>area m²</th><th>muons/spill</th><th>per m²</th></tr>';
   rows += `<tr><td>UBT</td><td>${ubtArea.toFixed(1)}</td><td>${fmt(ubtRate)}</td><td>${fmt(ubtRate / Math.max(ubtArea, 1e-9))}</td></tr>`;
   let totArea = ubtArea;
-  for (const [side, k, name] of [['R', 0, 'right fins'], ['L', 1, 'left fins']]) {
+  for (const [side, name] of [['R', 'right fins (−x)'], ['L', 'left fins (+x)']]) {
     let area = 0, rate = 0;
-    for (const f of des.fins[side]) if (f.active) { area += f.reach * (f.hi - f.lo); rate += finRate(f, k); }
+    for (const f of des.fins[side]) if (f.active) { area += f.len * (f.hi - f.lo); rate += finRate(f); }
     totArea += area;
     rows += `<tr><td>${name}</td><td>${area.toFixed(1)}</td><td>${fmt(rate)}</td><td>${fmt(rate / Math.max(area, 1e-9))}</td></tr>`;
   }
@@ -357,12 +373,10 @@ function tables(des, hits) {
 }
 
 function hitCounts(des) {
-  const n = D.w.length, hits = new Int32Array(n);
-  const fins = [];
-  for (const [side, sign] of [['R', 1], ['L', -1]]) for (const f of des.fins[side]) if (f.active) fins.push([f, sign]);
+  const n = D.w.length, hits = new Int32Array(n), fins = allFins(des);
   for (let i = 0; i < n; i++) {
     let h = ubtHit(des, i) ? 1 : 0;
-    for (const [f, sign] of fins) if (finHit(f, sign, at(i, f.z), f.z)) h++;
+    for (const f of fins) if (finCross(f, i)) h++;
     hits[i] = h;
   }
   return hits;
@@ -376,12 +390,15 @@ function rect(zs, xs, ys, color, name, show) {
 function geometryTraces(des) {
   const t = [rect([G.z_ubt, G.z_ubt, G.z_ubt, G.z_ubt], [-G.ubt_half_x, G.ubt_half_x, G.ubt_half_x, -G.ubt_half_x],
                   [des.ubt.lo, des.ubt.lo, des.ubt.hi, des.ubt.hi], '#ff7f0e', 'UBT', true)];
-  for (const [side, sign] of [['R', 1], ['L', -1]]) des.fins[side].forEach((f, i) => {
-    const z = f.active ? f.z : G.z_ubt, x0 = sign * X(z), x1 = sign * (X(z) + (f.active ? f.reach : 0));
-    const lo = f.active ? f.lo : 0, hi = f.active ? f.hi : 0;
-    t.push(rect([z, z, z, z], [x0, x1, x1, x0], [lo, lo, hi, hi], sign > 0 ? '#2ca02c' : '#17becf',
-                sign > 0 ? 'fins, right (+x)' : 'fins, left (−x)', i === 0));
-  });
+  t.push({type: 'mesh3d', x: [G.z_ubt, G.z_max, G.z_max, G.z_ubt], y: [X_WALL, X_WALL, X_WALL, X_WALL],
+          z: [Y_MIN, Y_MIN, 8, 8], i: [0, 0], j: [1, 2], k: [2, 3], color: '#8c564b', opacity: 0.08,
+          name: 'cavern wall x = −4.56 m (fin limit)', showlegend: true, hoverinfo: 'name'});
+  for (const [side, nm, col] of [['R', 'fins, right (−x)', '#17becf'], ['L', 'fins, left (+x)', '#2ca02c']])
+    des.fins[side].forEach((f, i) => {
+      const L = f.active ? f.len : 0, zi = f.z, zo = f.z + L * f.sn;
+      const xi = f.sign * f.x0, xo = f.sign * (f.x0 + L * f.c), lo = f.active ? f.lo : 0, hi = f.active ? f.hi : 0;
+      t.push(rect([zi, zo, zo, zi], [xi, xo, xo, xi], [lo, lo, hi, hi], col, nm, i === 0));
+    });
   return t;
 }
 

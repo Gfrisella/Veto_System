@@ -152,3 +152,43 @@ def path_at_z(a, k, b, z):
         x[m] = p[m, 0] + t[m] * (q[m, 0] - p[m, 0])
         y[m] = p[m, 1] + t[m] * (q[m, 1] - p[m, 1])
     return x, y, np.isfinite(x)
+
+
+CAVERN_X_WALL = geo.CAVERN_X_WALL   # fins on the -x side (right, looking from the target) stop here
+FIN_Y_MIN = -3.2                    # fins and UBT stay above the cavern floor (y = -3.36 m)
+
+
+def fin_geometry(z0, sign, theta, length):
+    """Inner and outer edge of a fin: it pivots about its inner edge on the side wall at (sign * X(z0), z0)
+    and leans downstream by theta (0 = perpendicular to the beam). Returns (x_in, z_in, x_out, z_out)."""
+    x_in = sign * side_plane_x(z0)
+    return x_in, z0, x_in + sign * length * np.cos(theta), z0 + length * np.sin(theta)
+
+
+def fin_hits(a, k, b, z0, sign, theta, length, y_lo, y_hi):
+    """Which paths a -> (k) -> b cross a fin (see fin_geometry), and where.
+
+    The fin plane: (z - z0) cos(theta) = (sign x - X(z0)) sin(theta). A muon hits it if its path crosses
+    the plane at distance 0 .. length from the inner edge and bottom .. top in y. The first segment is
+    extended A_TOLERANCE back because A is stored a few mm after z = 30.6.
+    Returns hit mask and crossing points (n, 3), NaN where no hit.
+    """
+    a, k, b = (np.asarray(v, np.float64) for v in (a, k, b))
+    c, s = np.cos(theta), np.sin(theta)
+    x0 = side_plane_x(z0)
+    bounced = np.isfinite(k[:, 2])
+    end = np.where(bounced[:, None], k, b)
+    g = lambda p: (p[:, 2] - z0) * c - (sign * p[:, 0] - x0) * s
+    point = np.full((len(a), 3), np.nan)
+    for p, q, use, first in ((a, end, np.ones(len(a), bool), True), (k, b, bounced, False)):
+        gp, gq = g(p), g(q)
+        dz = q[:, 2] - p[:, 2]
+        with np.errstate(invalid="ignore", divide="ignore"):
+            t = gp / (gp - gq)
+            t_min = -A_TOLERANCE / dz if first else 0.0
+            cross = p + t[:, None] * (q - p)
+        along = (sign * cross[:, 0] - x0) * c + (cross[:, 2] - z0) * s
+        hit = (use & (dz > 0) & (t >= t_min) & (t <= 1) & (along >= 0) & (along <= length)
+               & (cross[:, 1] >= y_lo) & (cross[:, 1] <= y_hi) & np.isnan(point[:, 0]))
+        point[hit] = cross[hit]
+    return np.isfinite(point[:, 0]), point
