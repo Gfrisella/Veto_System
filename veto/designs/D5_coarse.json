@@ -1,0 +1,96 @@
+{
+ "name": "D5_coarse",
+ "description": "D2 geometry with 50 cm cells",
+ "ubt": {
+  "y_lo": -1.35,
+  "y_hi": 1.35,
+  "cell_x": 0.5,
+  "cell_y": 0.5
+ },
+ "fins": [
+  {
+   "side": "right",
+   "z": 30.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0,
+   "cell_u": 0.5,
+   "cell_y": 0.5
+  },
+  {
+   "side": "right",
+   "z": 45.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0,
+   "cell_u": 0.5,
+   "cell_y": 0.5
+  },
+  {
+   "side": "right",
+   "z": 60.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0,
+   "cell_u": 0.5,
+   "cell_y": 0.5
+  },
+  {
+   "side": "right",
+   "z": 75.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0,
+   "cell_u": 0.5,
+   "cell_y": 0.5
+  },
+  {
+   "side": "left",
+   "z": 30.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0,
+   "cell_u": 0.5,
+   "cell_y": 0.5
+  },
+  {
+   "side": "left",
+   "z": 45.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0,
+   "cell_u": 0.5,
+   "cell_y": 0.5
+  },
+  {
+   "side": "left",
+   "z": 60.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0,
+   "cell_u": 0.5,
+   "cell_y": 0.5
+  },
+  {
+   "side": "left",
+   "z": 75.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0,
+   "cell_u": 0.5,
+   "cell_y": 0.5
+  }
+ ],
+ "detector": {
+  "efficiency": 0.99,
+  "sigma_t": 5e-10
+ }
+}

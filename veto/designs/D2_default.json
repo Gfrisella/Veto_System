@@ -1,0 +1,96 @@
+{
+ "name": "D2_default",
+ "description": "the explorer default: 4 fins per side, 3 m reach, y +-3 m",
+ "ubt": {
+  "y_lo": -1.35,
+  "y_hi": 1.35,
+  "cell_x": 0.1,
+  "cell_y": 0.1
+ },
+ "fins": [
+  {
+   "side": "right",
+   "z": 30.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "right",
+   "z": 45.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "right",
+   "z": 60.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "right",
+   "z": 75.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "left",
+   "z": 30.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "left",
+   "z": 45.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "left",
+   "z": 60.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "left",
+   "z": 75.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  }
+ ],
+ "detector": {
+  "efficiency": 0.99,
+  "sigma_t": 5e-10
+ }
+}

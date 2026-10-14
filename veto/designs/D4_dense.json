@@ -1,0 +1,176 @@
+{
+ "name": "D4_dense",
+ "description": "stress test: 8 fins per side, 5 m reach, y -3.2 .. 6 m",
+ "ubt": {
+  "y_lo": -3.2,
+  "y_hi": 4.0,
+  "cell_x": 0.1,
+  "cell_y": 0.1
+ },
+ "fins": [
+  {
+   "side": "right",
+   "z": 30.6,
+   "length": 5.0,
+   "y_lo": -3.2,
+   "y_hi": 6.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "right",
+   "z": 37.0,
+   "length": 5.0,
+   "y_lo": -3.2,
+   "y_hi": 6.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "right",
+   "z": 43.5,
+   "length": 5.0,
+   "y_lo": -3.2,
+   "y_hi": 6.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "right",
+   "z": 50.0,
+   "length": 5.0,
+   "y_lo": -3.2,
+   "y_hi": 6.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "right",
+   "z": 56.5,
+   "length": 5.0,
+   "y_lo": -3.2,
+   "y_hi": 6.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "right",
+   "z": 63.0,
+   "length": 5.0,
+   "y_lo": -3.2,
+   "y_hi": 6.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "right",
+   "z": 69.5,
+   "length": 5.0,
+   "y_lo": -3.2,
+   "y_hi": 6.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "right",
+   "z": 76.0,
+   "length": 5.0,
+   "y_lo": -3.2,
+   "y_hi": 6.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "left",
+   "z": 30.6,
+   "length": 5.0,
+   "y_lo": -3.2,
+   "y_hi": 6.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "left",
+   "z": 37.0,
+   "length": 5.0,
+   "y_lo": -3.2,
+   "y_hi": 6.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "left",
+   "z": 43.5,
+   "length": 5.0,
+   "y_lo": -3.2,
+   "y_hi": 6.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "left",
+   "z": 50.0,
+   "length": 5.0,
+   "y_lo": -3.2,
+   "y_hi": 6.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "left",
+   "z": 56.5,
+   "length": 5.0,
+   "y_lo": -3.2,
+   "y_hi": 6.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "left",
+   "z": 63.0,
+   "length": 5.0,
+   "y_lo": -3.2,
+   "y_hi": 6.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "left",
+   "z": 69.5,
+   "length": 5.0,
+   "y_lo": -3.2,
+   "y_hi": 6.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  },
+  {
+   "side": "left",
+   "z": 76.0,
+   "length": 5.0,
+   "y_lo": -3.2,
+   "y_hi": 6.0,
+   "tilt": 0,
+   "cell_u": 0.1,
+   "cell_y": 0.1
+  }
+ ],
+ "detector": {
+  "efficiency": 0.99,
+  "sigma_t": 5e-10
+ }
+}
