@@ -125,7 +125,8 @@ def track_traces(tracks, groups, colors):
     return traces
 
 
-def detector_figure(tracks=None, groups=None, colors=None, title="SHiP muon background: shield, decay vessel and veto"):
+def detector_figure(tracks=None, groups=None, colors=None, title="SHiP muon background: shield, decay vessel and veto",
+                    x_range=(-6, 6), y_range=(-5, 5)):
     fig = go.Figure(geometry_traces())
     if tracks is not None:
         fig.add_traces(track_traces(tracks, groups, colors))
@@ -133,9 +134,10 @@ def detector_figure(tracks=None, groups=None, colors=None, title="SHiP muon back
         title=title,
         scene=dict(
             xaxis=dict(title="z [m]", range=[-3, 98]),
-            yaxis=dict(title="x [m]", range=[-6, 6]),
-            zaxis=dict(title="y [m]", range=[-5, 5]),
-            aspectmode="manual", aspectratio=dict(x=4, y=0.6, z=0.6),
+            yaxis=dict(title="x [m]", range=list(x_range)),
+            zaxis=dict(title="y [m]", range=list(y_range)),
+            aspectmode="manual",
+            aspectratio=dict(x=4, y=0.05 * (x_range[1] - x_range[0]), z=0.05 * (y_range[1] - y_range[0])),
             camera=dict(eye=dict(x=-0.4, y=-3.4, z=1.6)),
         ),
         legend=dict(itemsizing="constant"),

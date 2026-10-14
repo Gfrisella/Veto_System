@@ -42,6 +42,11 @@ def derived(name: str) -> Path:
     return data_root() / "data" / name
 
 
+def full_dataset_pickle() -> Path:
+    """Every simulated muon at z = 30.6 m and z = 82 m (or where it stopped first)."""
+    return data_root() / "data" / "Full_dataset_z_3060_8200.pkl"
+
+
 def ubt_raw_pickle() -> Path:
     return MUONS_AND_MATTER / "data/outputs/UBT_data_TRY6.pkl"
 

@@ -12,7 +12,9 @@ veto/
     geometry.py    z planes, decay vessel, UBT/SBT, SST1, timing plane, spectrometer, TRY6 shield
     config.py      default cuts (p > 1 GeV, timing acceptance, DOCA < 2 cm, IP < 2.5 m, ...)
     paths.py       where inputs are read from / results written to
-    io.py          output pickles, vessel dataset, 3D distribution, field map
+    io.py          output pickles, vessel dataset, 3D distribution, field map, column stores,
+                   memory-mapped columns of large pickles (open_pickle_columns)
+    muon_types.py  muon types from the z = 30.6 / 82 m states, bounce points, SBT wall crossings
     tracks.py      straight-line extrapolation, back-tracking to the vessel walls, categories
     weights.py     repeated-evt_n weight corrections
     pairs.py       all pairs / time-window pairs / KD-tree candidates, DOCA + vertex
@@ -31,6 +33,8 @@ veto/
     convert_ubt_data.py       UBT_data_TRY6.pkl -> memory-mapped column store + 2 M subsample
     analyse_ubt_plane.py      chunked pass over the 150 M UBT-plane muons
     convert_sst1_outputs.py   all 20 001 output pickles -> one column store (78 s on 32 cores)
+    visualize_full_dataset.py 3D + side views of the full dataset, a few muons of each type
+    make_design_dataset.py    -> design-optimization-dataset-alpha-14-oct-2026 (see below)
     benchmark.py              timing of the building blocks, CPU vs GPU
     benchmark_designs.py      per-design cost for arbitrary UBT/SBT geometries (truth crossings)
     benchmark_digitization.py per-design cost with digitization + hit-to-track matching
@@ -89,6 +93,54 @@ against the vessel. That gives the entry face (UBT window, an SBT wall, or never
 the exit face, and whether the line reaches the SST1 acceptance. It keeps only histograms
 (`results/ubt/hists.npz`, replot with `--replot`) and every vessel-entering muon
 (`results/ubt/entering_vessel.npz`).
+
+### The full dataset
+
+`data/Full_dataset_z_3060_8200.pkl` (32 GB) has every simulated muon of one run, 506 374 000
+rows: the state at z = 30.6 m and at z = 82 m, or where the muon stopped first, plus pdg,
+weight and evt_n (= row index = input muon index, the same index as evt_n in the old files).
+It is a rerun of seed 42: muons that reach the SST1 acceptance match old file 42, except the
+ones that bounce off the cavern (that part differs from run to run). `io.open_pickle_columns`
+memory-maps its columns in place (no unpickling, no torch); a full pass takes about a minute.
+
+| type (`lib/veto/muon_types.py`) | muons per run | per spill | in the old 20 001 files |
+|---|---|---|---|
+| stops before z = 30.6 m | 355 M | 1.45e10 | no |
+| stops between z = 30.6 and 82 m (rock at x ~ -5 m) | 25.8 M | 7.7e8 | no |
+| reaches z = 82 outside SST1, straight | 125 M | 2.7e9 | no |
+| reaches z = 82 outside SST1, bounced / scattered in the rock | 575 k | 1.8e7 | no |
+| crosses an SBT wall or the UBT window, misses SST1 (veto only) | 975 | 3.3e4 | no |
+| SST1 acceptance, p > 1 GeV and timing acceptance | 313 | 1.1e4 | yes, ~301 per file |
+| SST1 acceptance, other | 688 | 9.6e3 | yes, ~723 per file |
+| SST1 acceptance, bounced off the cavern wall / floor | 287 | 8.4e3 | yes, ~299 per file |
+
+Bounced muons: the line forward from the z = 30.6 m state and the line backward from the
+z = 82 m state meet (median 4 cm apart) on the -x cavern wall (x ~ -4.6 .. -5 m) or the
+floor (y ~ -3.4 m); `muon_types.bounce_points` gives that point. For muons that stopped,
+the backward line uses the momentum at the stop point.
+
+### The design-optimisation dataset
+
+`bin/make_design_dataset.py` combines both sources into
+`data/store/design-optimization-dataset-alpha-14-oct-2026` (57 M rows, 5.8 GB, column store,
+documented in its `meta.json`):
+
+| type | source | rows kept | muons per spill |
+|---|---|---|---|
+| sst1_bounced | old, 20 001 runs | 5 986 931 | 1.0e4 |
+| sst1_selected | old | 6 013 719 | 8.2e3 |
+| sst1_other | old | 14 459 811 | 1.2e4 |
+| veto_only | new, 1 run | 975 | 3.3e4 |
+| rock_bounced | new | 575 321 | 1.8e7 |
+| straight_past | new | 15 M of 125 M | 2.7e9 |
+| stops_between | new | 15 M of 25.8 M | 7.7e8 |
+
+`weight` is muons per spill: old rows divided by the number of files, capped types scaled by
+rows in source / rows kept (column `scale`). The repeated-evt_n correction of the original
+analysis is not applied. Columns: start state (old rows only), states at 30.6 and 82 m,
+bounce point `kx, ky, kz`, `walls` (bitmask of SBT walls +x, -x, +y, -y and the UBT window
+crossed by the path), `type`, `run`, `source`, `evt_n`, `pdg`. The veto_only and
+rock_bounced types come from a single run: limited statistics, easy to overfit.
 
 ## Running
 
