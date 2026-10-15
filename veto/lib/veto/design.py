@@ -192,7 +192,12 @@ def load(path_or_name):
     path = Path(path_or_name)
     if not path.exists():
         path = DESIGN_DIR / f"{path_or_name}.json"
-    raw = json.loads(path.read_text())
+    return from_dict(json.loads(path.read_text()))
+
+
+def from_dict(raw):
+    """A design from its JSON content (the dict is copied, then the physical limits applied)."""
+    raw = json.loads(json.dumps(raw))
     notes = validate(raw)
     det = raw.get("detector", {})
     base = detector_settings(det, dict(technology=None, efficiency=0.99, sigma_t=0.5e-9, time_window=None))

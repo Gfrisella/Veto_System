@@ -1,0 +1,657 @@
+% Live talk on the SHiP veto study, for PictureThis (widgets computed by veto_talk.py). Build and present: ./run.sh
+% In any other PDF viewer the widgets are grey placeholders.
+\documentclass[aspectratio=169,10pt]{beamer}
+\usepackage{talktheme}
+\usepackage{picturethis}
+\hypersetup{hidelinks}
+\usetikzlibrary{decorations.pathmorphing}
+
+\title[A veto for SHiP, live]{A veto for SHiP}
+\subtitle{Muon background, design space and reconstruction, live}
+\author{Shah Rukh Qasim}
+\institute{University of Zurich · with G.~Frisella}
+\date{October 2026}
+
+\tikzset{
+  box/.style={draw=line, fill=white, rounded corners=3pt, inner sep=4pt, align=center, font=\footnotesize},
+  hbox/.style={box, fill=wash},
+  abox/.style={box, draw=accent, line width=0.8pt},
+  arr/.style={-{Stealth[length=2.2mm]}, line width=0.8pt, color=muted},
+  aarr/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, color=accent},
+}
+\newcommand{\sld}[2][\linewidth]{\livewidget{#2}{#1}{0.62cm}}
+\newcommand{\legendline}[1]{{\color{muted}\lightfont\scriptsize #1}}
+\newcommand{\sw}[1]{\textcolor[HTML]{#1}{\rule{1.1ex}{1.1ex}}}
+
+\begin{document}
+
+\begin{frame}[plain,noframenumbering]
+  \titlepage
+\end{frame}
+
+\begin{frame}{How to read this talk}
+  \begin{columns}[c]
+    \begin{column}{0.56\textwidth}\small
+      Every plot with a slider is computed while you watch, by the code of the study (\texttt{veto/lib/veto}):
+      \begin{itemize}
+        \item the muon samples of the full simulation and the 20\,001 old runs
+        \item digitization, accidental hits and the veto reconstruction
+        \item design comparisons, rerun on request
+      \end{itemize}
+      \vspace{1mm}
+      Slow widgets show a spinner and fill in; some show a quick answer first. 3D views rotate and zoom.\\[2mm]
+      \takeaway[\footnotesize]{The spill is \key{1 s} of $5\cdot10^{13}$ POT and the weights are muons per spill, so muons per spill and Hz are the same number.}
+    \end{column}
+    \begin{column}{0.4\textwidth}\centering
+      \begin{tikzpicture}[node distance=3.2mm]
+        \node[hbox, text width=3.7cm] (data) {\semibold muons\\\faint{full run + 20\,001 runs}};
+        \node[box, below=of data, text width=3.7cm] (des) {\semibold a veto design\\\faint{UBT + fins, JSON}};
+        \node[abox, below=of des, text width=3.7cm] (reco) {\semibold digitize + reconstruct\\\faint{algorithm A}};
+        \node[box, below=of reco, text width=3.7cm] (score) {\semibold score\\\faint{TP · FN · FP · TN, rates}};
+        \node[box, below=of score, text width=3.7cm, draw=muted, dashed] (rl) {\semibold optimise\\\faint{next: RL loop}};
+        \draw[arr] (data) -- (des); \draw[arr] (des) -- (reco); \draw[aarr] (reco) -- (score); \draw[arr, dashed] (score) -- (rl);
+      \end{tikzpicture}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ======================================================================== PART 1
+\blurb{Muons from the target reach the detector; two of them can fake a decay in the vessel. The veto has to see them on their way in, without killing the signal.}
+\section{The problem}
+
+\begin{frame}{SHiP and its muon background}
+  \begin{columns}[c]
+    \begin{column}{0.68\textwidth}
+      \livewidget{det3d}{\linewidth}{0.6\textheight}\\[1mm]
+      \sld[0.6\linewidth]{n_show}
+    \end{column}
+    \begin{column}{0.3\textwidth}\footnotesize
+      \key{Target} at $z=0$, \key{muon shield} (TRY6) to 30\,m.\\[1mm]
+      \key{Decay vessel} $z = 30.6$--$80.6$\,m, $1\times2.7$\,m entrance widening to $4\times6$\,m.\\[1mm]
+      \key{UBT} on the entrance window, \key{SST1} at 82\,m, spectrometer magnet and timing detector behind.\\[1mm]
+      Cavern wall at $x=-4.56$\,m, floor at $y=-3.36$\,m.\\[2mm]
+      \legendline{Muons per type (slider): \sw{9400D3}\,bounced into SST1 \sw{D62728}\,SST1 $p>1$, timing \sw{FF9896}\,SST1 other \sw{1F77B4}\,through an SBT wall \sw{FF7F0E}\,through the UBT window \sw{E377C2}\,bounced in the rock \sw{7F7F7F}\,straight past \sw{8C564B}\,stop in the rock \sw{2B2B2B}\,stop in the shield.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{What the veto has to do}
+  \begin{columns}[c]
+    \begin{column}{0.5\textwidth}\centering
+      \begin{tikzpicture}[x=0.95cm,y=0.9cm]
+        \fill[wash] (0,-1) -- (4.6,-1.9) -- (4.6,1.9) -- (0,1) -- cycle;
+        \draw[accent, line width=0.8pt] (0,-1) -- (4.6,-1.9) (0,1) -- (4.6,1.9);
+        \node[font=\scriptsize\lightfont, color=accent] at (3.6,-2.05) {decay vessel};
+        \draw[ora, line width=2pt] (0,-1) -- (0,1); \node[font=\scriptsize, color=ora, below] at (0,-1) {UBT};
+        \draw[grn, line width=2pt] (1.0,-1.2) -- (1.0,-2.4); \node[font=\scriptsize, color=grn, left] at (1.0,-2.3) {fin};
+        \draw[red, line width=1pt] (-0.8,-2.2) -- (1.6,-1.35) -- (5.2,0.6);
+        \draw[red, line width=1pt] (-0.8,0.3) -- (5.2,-0.9);
+        \fill[red] (3.05,-0.26) circle (0.07); \node[font=\scriptsize, color=red, above] at (3.05,-0.2) {fake vertex};
+        \fill[white, draw=grn, line width=1pt] (1.0,-1.89) circle (0.07);
+        \fill[white, draw=ora, line width=1pt] (0,0.14) circle (0.07);
+        \draw[ink, line width=1pt, decorate, decoration={snake, amplitude=1pt, segment length=4pt}] (-0.8,0.12) -- (2.6,0.25);
+        \fill[ink] (2.6,0.25) circle (0.06);
+        \draw[ink, line width=1pt] (2.6,0.25) -- (5.2,1.3) (2.6,0.25) -- (5.2,-0.2);
+        \node[font=\scriptsize, right, fill=white, inner sep=1pt] at (-0.45,1.55) {signal (wavy): neutral from the target, no hits};
+        \draw[muted] (5.2,-2.0) -- (5.2,2.0); \node[font=\scriptsize, color=muted, right] at (5.2,1.9) {SST1};
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.47\textwidth}\small
+      Two muons from the same spill, within $\pm200$\,ps, can form a vertex inside the vessel that points back to the target: a \key{fake signal}.\\[2mm]
+      Each came in from outside: through the UBT window, the side walls, or after bouncing off the cavern. A hit where its track came from \key{explains} it.\\[2mm]
+      \begin{tabular}{@{}ll@{}}
+        muons per spill (simulated) & $1.8\cdot10^{10}$\\
+        crossing $z = 30.6$\,m & $3.5\cdot10^{9}$\\
+        in the SST1 acceptance & $3\cdot10^{4}$\\
+        fake-vertex pairs, 15 years & \num{36} before any veto\\
+      \end{tabular}\\[2mm]
+      \takeaway[\footnotesize]{Veto every fake vertex, but do not veto the signal with \key{random hits} of the $10^{9}$--$10^{10}$ other muons.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ======================================================================== PART 2
+\blurb{Two simulations: 20\,001 runs that keep only what reaches the spectrometer, and one run that keeps every muon.}
+\section{The data}
+
+\begin{frame}{Two simulations of the same muons}
+  \footnotesize
+  \begin{tabular}{@{}>{\raggedright}p{0.14\textwidth}>{\raggedright}p{0.38\textwidth}>{\raggedright\arraybackslash}p{0.4\textwidth}@{}}
+    \toprule
+    & \key{20\,001 old runs} & \key{the full run} (\texttt{Full\_dataset\_z\_3060\_8200.pkl})\\
+    \midrule
+    muons & only those ending in the SST1 acceptance, $\approx1\,300$ per run, 26.5\,M rows & all 506\,M simulated, one row each, 32\,GB\\
+    states & start, $z = 30.6$\,m, $z = 82$\,m & $z = 30.6$\,m and $z = 82$\,m, or where the muon stopped\\
+    good for & pair background: $\approx2\cdot10^{5}$ fake-vertex candidates & everything that misses the spectrometer: UBT and fin rates, veto-only muons\\
+    read with & a column store, 78\,s to build & memory-mapped in place, a pass in $\approx1$\,min\\
+    \bottomrule
+  \end{tabular}\\[2mm]
+  \begin{itemize}\footnotesize
+    \item The full run is a \key{rerun of seed 42}: same input muons, same states at 30.6\,m; old file 42 holds its SST1 muons. Combined, it is not a 20\,002nd run.
+    \item \texttt{evt\_n} = input-muon index in both; weights belong to the input muon (identical in both).
+    \item Muons that bounce off the cavern differ between the two: bouncing is random from run to run.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Where the muons go}
+  \begin{columns}[c]
+    \begin{column}{0.62\textwidth}
+      \livewidget{where_bar}{\linewidth}{0.7\textheight}
+    \end{column}
+    \begin{column}{0.36\textwidth}\footnotesize
+      70\,\% stop in the shield; 26\,M range out in the rock behind the cavern wall.\\[1.5mm]
+      \key{125\,M} pass the vessel to $z = 82$\,m outside the spectrometer: harmless themselves, but they light up any detector placed in their way.\\[1.5mm]
+      Only $\approx2\,000$ per run matter directly: they enter the vessel or reach SST1.\\[1.5mm]
+      \takeaway[\footnotesize]{The veto sees $10^{9}$--$10^{10}$ muons per spill to catch $\approx10^{4}$. Accidental hits are the real enemy.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Where the muons go, in Hz}
+  \begin{columns}[c]
+    \begin{column}{0.62\textwidth}
+      \livewidget{where_hz}{\linewidth}{0.7\textheight}
+    \end{column}
+    \begin{column}{0.36\textwidth}\footnotesize
+      The same muons as rates: muons per spill of $5\cdot10^{13}$ POT over the 1\,s spill.\\[1.5mm]
+      \key{$\approx$3.5\,GHz} cross $z = 30.6$\,m and 2.7\,GHz pass the vessel to $z = 82$\,m.\\[1.5mm]
+      $\approx$29\,kHz reach the SST1 acceptance (the three SST1 bars together), $\approx$27\,kHz enter the vessel without reaching it.\\[1.5mm]
+      \takeaway[\footnotesize]{A veto detector sees GHz in total; the muons it must catch arrive at tens of kHz.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Bouncing off the cavern}
+  \livewidget{bounce_view}{0.6\linewidth}{0.56\textheight}\hfill\livewidget{bounce_map}{0.38\linewidth}{0.56\textheight}\\[1mm]
+  \sld[0.4\linewidth]{bounce_ev}\\[0.5mm]
+  \legendline{Grey dashed: straight line from the 30.6\,m state; orange dotted: backward line from the 82\,m state. They meet within 4\,cm (median) at the bounce point, on the $-x$ wall or the floor. Right: all reconstructed bounce points trace the cavern.}
+\end{frame}
+
+\begin{frame}{The design-optimisation dataset}
+  \begin{columns}[c]
+    \begin{column}{0.55\textwidth}\footnotesize
+      \begin{tabular}{@{}llrr@{}}
+        \toprule
+        type & source & rows & muons / spill\\
+        \midrule
+        SST1, bounced & old runs & 6.0\,M & $1.0\cdot10^{4}$\\
+        SST1, $p>1$\,GeV, timing & old runs & 6.0\,M & $8.2\cdot10^{3}$\\
+        SST1, other & old runs & 14.5\,M & $1.2\cdot10^{4}$\\
+        veto only & full run & 975 & $3.3\cdot10^{4}$\\
+        bounced in the rock & full run & 575\,k & $1.8\cdot10^{7}$\\
+        straight past & full run & 15\,M of 125\,M & $2.7\cdot10^{9}$\\
+        stops in the rock & full run & 15\,M of 26\,M & $7.7\cdot10^{8}$\\
+        \bottomrule
+      \end{tabular}
+    \end{column}
+    \begin{column}{0.42\textwidth}\footnotesize
+      \texttt{design-optimization-dataset-alpha-14-oct-2026}: 57\,M muons, 5.8\,GB.\\[1.5mm]
+      Each type capped at 15\,M rows and re-weighted, so \texttt{weight} is always muons per spill:
+      \[ w = w_\text{orig}\cdot\frac{1}{N_\text{runs}}\cdot\frac{N_\text{type}}{N_\text{kept}} \]
+      Columns: states at 30.6 and 82\,m, start state (old runs), bounce point, SBT walls crossed, type, run, \texttt{evt\_n}.\\[1.5mm]
+      \takeaway[\footnotesize]{Veto-only and rock-bounced come from one run: right rate, few distinct muons. A new run will fix that.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ======================================================================== PART 3
+\blurb{A UBT on the vessel entrance and thin fins reaching out from the side walls, left and right. Nothing on top or below.}
+\section{The design space}
+
+\begin{frame}{UBT and fins}
+  \livewidget{design3d}{0.63\linewidth}{0.46\textheight}\hfill\livewidget{design_eff}{0.35\linewidth}{0.46\textheight}\\[1mm]
+  \sld[0.32\linewidth]{d_ubt}\hfill\sld[0.32\linewidth]{d_nfin}\hfill\sld[0.32\linewidth]{d_gap}\\[0.4mm]
+  \sld[0.32\linewidth]{d_len}\hfill\sld[0.32\linewidth]{d_top}\hfill\hspace*{0.32\linewidth}\\[0.4mm]
+  \legendline{Sliders: UBT top · fins per side · gap · fin length · fin top [m]. Fin colour: $\log_{10}$ muons/m$^2$/spill, 2 (purple) to 9 (yellow). Black: drawn muons crossing nothing. Bars: geometric coverage.}
+\end{frame}
+
+\begin{frame}{Where the muons are}
+  \begin{columns}[c]
+    \begin{column}{0.6\textwidth}
+      \livewidget{rate_map}{\linewidth}{0.66\textheight}\\[1mm]
+      \sld[0.48\linewidth]{map_z}\hfill\sld[0.48\linewidth]{map_side}
+    \end{column}
+    \begin{column}{0.37\textwidth}\footnotesize
+      Muon density on a fin plane at $z$, every muon of the dataset; $u$ is the distance from the vessel wall. Side: 0 right ($-x$), 1 left ($+x$). Dotted: cavern wall and floor limit.\\[2mm]
+      A \key{lobe} at $y\approx0$, 1.5--3\,m from the wall, reaches $10^{9}$ muons/m$^2$ per spill: the muons the shield sweeps past the vessel. Close to the wall and away from $y=0$ it is 3--5 orders of magnitude quieter.\\[2mm]
+      \takeaway[\footnotesize]{A fin pays for every muon crossing it. The muons it is there for cross it near the wall.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Seven designs to learn from}
+  \begin{columns}[c]
+    \begin{column}{0.55\textwidth}\footnotesize
+      \begin{tabular}{@{}lp{0.62\linewidth}r@{}}
+        \toprule
+        & & area\\
+        \midrule
+        D0 & UBT on the entrance only & 3\,m$^2$\\
+        D1 & taller UBT, one 4\,m fin per side at 30.6\,m & 56\,m$^2$\\
+        D2 & 4 fins per side every 15\,m, 3\,m long, $y\pm3$\,m & 145\,m$^2$\\
+        D3 & 7 fins on the right up to the wall, 3 short on the left & 209\,m$^2$\\
+        D4 & 8 fins per side, 5\,m, $y$ to 6\,m: the stress test & 624\,m$^2$\\
+        D5 & D2 with 50\,cm or 5\,cm cells & 145\,m$^2$\\
+        \bottomrule
+      \end{tabular}
+    \end{column}
+    \begin{column}{0.42\textwidth}\footnotesize
+      A design is a small JSON file: UBT edges and cell size; per fin its side, $z$, length, $y$ range, cell size; detector efficiency and time resolution.\\[2mm]
+      The loader applies the physical limits (floor, cavern wall, minimum UBT) and says what it changed.\\[2mm]
+      All: 10\,cm cells, $\varepsilon = 0.99$, $\sigma_t = 0.5$\,ns, no tilt yet.\\[2mm]
+      \takeaway[\footnotesize]{In the RL environment fins are placed one after another along $z$ with a minimum gap.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ======================================================================== PART 4
+\blurb{Events are short time windows around a spectrometer candidate. Each spectrometer track is followed back to the veto planes; a hit where it should be explains it.}
+\section{Reconstruction}
+
+\begin{frame}{The chain}
+  \centering
+  \begin{tikzpicture}[node distance=4mm and 5mm]
+    \node[hbox, text width=2.7cm] (paths) {\semibold true muon paths\\\faint{A (30.6\,m) $\to$ K $\to$ B (82\,m)}};
+    \node[box, right=of paths, text width=2.7cm] (dig) {\semibold digitization\\\faint{crossing $\to$ cell, $\varepsilon$, time $\pm\sigma_t$}};
+    \node[box, below=of dig, text width=2.7cm] (acc) {\semibold accidental hits\\\faint{Poisson(rate $\times$ window) per plane, from rate maps}};
+    \node[abox, right=of dig, text width=2.0cm, yshift=-6mm] (hits) {\semibold hits\\\faint{plane, cell, time}};
+    \node[hbox, below=of paths, text width=2.7cm, yshift=-12mm] (spec) {\semibold spectrometer tracks\\\faint{position, slope, time, $p$ smeared}};
+    \node[box, right=of spec, text width=2.7cm, yshift=-10mm] (vtx) {\semibold candidate vertex\\\faint{pair: DOCA $<2$\,cm, IP $<2.5$\,m}};
+    \node[abox, right=of hits, text width=2.6cm, yshift=-12mm, line width=1.2pt] (algo) {\semibold algorithm A\\\faint{backward prediction, space + time window}};
+    \node[box, below=of algo, text width=2.6cm] (score) {\semibold veto / no veto\\\faint{TP · FN on muon pairs\\FP · TN on signal}};
+    \draw[arr] (paths) -- (dig); \draw[arr] (dig) -- (hits); \draw[arr] (acc) -- (hits);
+    \draw[arr] (paths) -- (spec); \draw[arr] (spec) -- (vtx); \draw[aarr] (hits) -- (algo);
+    \draw[aarr] (vtx.east) -- node[below, font=\scriptsize, color=accent] {tracks + vertex} ++(1.2,0) |- ([yshift=-2mm]algo.west);
+    \draw[aarr] (algo) -- (score);
+  \end{tikzpicture}\\[3mm]
+  \footnotesize Signal events: a long-lived neutral from the target decaying in the vessel into two tracks, with the pairs' selection; no own veto hits, only accidental hits can veto them.
+\end{frame}
+
+\begin{frame}{Events are time windows, not spills}
+  \begin{columns}[c]
+    \begin{column}{0.62\textwidth}
+      \livewidget{acc_cloud}{\linewidth}{0.62\textheight}\\[1mm]
+      \sld[0.6\linewidth]{cell_cm}\\[0.3mm]
+      \legendline{cell size [cm]; 1\,s spill}
+    \end{column}
+    \begin{column}{0.36\textwidth}\footnotesize
+      A fin at 30.6\,m sees $\sim10^{9}$ muons per second: simulating whole spills hit by hit is hopeless.\\[1.5mm]
+      Instead, around each candidate: the own muons' hits, plus per plane
+      \[ n_\text{acc} \sim \text{Poisson}\Big(R_\text{plane}\cdot\frac{2W}{T_\text{spill}}\Big) \]
+      random hits, placed according to the full-statistics rate map and digitized like real ones.\\[1.5mm]
+      Blue box: a search window near the wall. What matters is the chance a random hit lands in it: rate density $\times$ box $\times$ window.\\[1.5mm]
+      \legendline{Orange squares: random hits of one $\pm1.5$\,ns window on the right fin of D2, at the chosen cell size.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The detector and spectrometer models}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}\footnotesize
+      \key{Veto planes} (UBT and every fin, the same model)
+      \begin{itemize}\scriptsize
+        \item one layer of cells at fixed $z$ (10\,cm default)
+        \item a crossing makes one hit with probability $\varepsilon$ (0.99)
+        \item hit = cell centre + time, $\sigma_t = 0.5$\,ns, muons at $c$
+        \item no direction, no energy, no noise, no dead time (yet)
+        \item a muon's own crossing comes from its true path, bounce included
+      \end{itemize}
+      \vspace{1mm}
+      \key{Spectrometer} (track at $z = 82$\,m)
+      \begin{itemize}\footnotesize
+        \item position $\pm1$\,mm, time $\pm0.1$\,ns
+        \item slope $\pm0.1$\,mrad $\oplus$ 2\,mrad$\cdot$(1\,GeV$/p$)
+        \item momentum as true, used only to size the window
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}\footnotesize
+      \key{Direction comes only from the spectrometer.} The UBT gives no usable direction; neither do the fins.\\[2mm]
+      \key{Candidates}
+      \begin{itemize}\footnotesize
+        \item background: opposite-charge muon pairs of the same old run, $p>1$\,GeV, in the timing acceptance, DOCA $<2$\,cm, vertex in the vessel, IP $<2.5$\,m: \num{196\,736} pairs
+        \item each weighted by $w_1 w_2 N_\text{runs}\cdot 2\Delta t/T_\text{spill}$, $\Delta t = 200$\,ps
+        \item signal: long-lived neutrals from the target, nearly along the beam ($\theta\approx p_T/p$), decaying in the vessel into two tracks; same selection as the pairs
+        \item single SST1 muons (200\,k) for per-muon efficiencies
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The signal: from the target, not from Mars}
+  \begin{columns}[c]
+    \begin{column}{0.56\textwidth}
+      \livewidget{sig_cross}{\linewidth}{0.7\textheight}
+    \end{column}
+    \begin{column}{0.41\textwidth}\footnotesize
+      A long-lived neutral from the \key{target}: $p$ = 10--100\,GeV (log-uniform), $p_T\sim$ exp(1\,GeV), so $\theta\approx p_T/p$.\\[1mm]
+      Decays uniformly in $z$ in the vessel, $m = 1$\,GeV $\to$ two muon-mass tracks.\\[1mm]
+      The pairs' selection: SST1, $p>1$\,GeV, timing, IP $<2.5$\,m. \key{37\,\%} pass; median daughter angle 22\,mrad.\\[1mm]
+      Orange: its tracks followed back to $z = 30.6$\,m; grey: muon density.\\[1mm]
+      \takeaway[\footnotesize]{Two thirds cross the quiet UBT; the rest hit the fins next to the wall, where random hits veto them.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Algorithm A: follow every track back}
+  \begin{columns}[c]
+    \begin{column}{0.48\textwidth}\footnotesize
+      For each spectrometer track:
+      \begin{enumerate}\footnotesize
+        \item extrapolate backward in a straight line from $z = 82$\,m (no field in the vessel)
+        \item on every veto plane \key{upstream of the vertex}: predicted cell $(u, y)$ and time $t - \ell/c$
+        \item look for a hit within
+          \[ |\Delta u|, |\Delta y| \le r_0 + \Big(a + \frac{b}{p}\Big)d + \tfrac{\text{cell}}{2},\quad |\Delta t| \le n\,\sigma \]
+        \item a hit found: the track is \key{explained}
+      \end{enumerate}
+      A candidate is vetoed if either track is explained.\\[2mm]
+      \takeaway[\footnotesize]{No combinatorics: one binary search per (event, plane) and a scan of that plane's few hits.}
+    \end{column}
+    \begin{column}{0.5\textwidth}\centering
+      \begin{tikzpicture}[x=0.95cm,y=0.95cm]
+        \fill[wash] (0,-0.8) -- (5.6,-1.7) -- (5.6,1.7) -- (0,0.8) -- cycle;
+        \draw[accent] (0,-0.8) -- (5.6,-1.7) (0,0.8) -- (5.6,1.7);
+        \draw[grn, line width=2pt] (1.2,-0.99) -- (1.2,-2.9); \node[font=\scriptsize, color=grn, left] at (1.2,-2.8) {fin};
+        \draw[ora, line width=2pt] (0,-0.8) -- (0,0.8); \node[font=\scriptsize, color=ora, left] at (0,0.6) {UBT};
+        \draw[red, line width=1.2pt] (-0.6,-2.6) -- (2.6,-1.25) -- (6.2,0.3);
+        \draw[red, dashed] (2.6,-1.25) -- (-0.6,-2.63);
+        \fill[accent, opacity=0.25] (1.08,-2.35) rectangle (1.32,-1.7);
+        \fill[white, draw=red, line width=1pt] (1.2,-2.02) circle (0.07);
+        \node[font=\scriptsize, color=accent, right] at (1.35,-2.45) {window};
+        \fill[red] (6.2,0.3) circle (0.06); \node[font=\scriptsize, right] at (6.2,0.3) {track};
+        \draw[muted] (6.2,-1.9) -- (6.2,1.9); \node[font=\scriptsize, color=muted, above] at (6.2,1.9) {SST1};
+        \fill[red] (4.3,-0.5) circle (0.06); \node[font=\scriptsize, color=red, below] at (4.3,-0.55) {vertex};
+        \draw[muted, dotted] (4.3,-2.9) -- (4.3,2.0); \node[font=\scriptsize, color=muted] at (4.3,2.2) {only upstream};
+      \end{tikzpicture}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The spatial window}
+  \begin{columns}[c]
+    \begin{column}{0.6\textwidth}
+      \livewidget{window_plot}{\linewidth}{0.64\textheight}\\[1mm]
+      \sld[0.6\linewidth]{r_ms}
+    \end{column}
+    \begin{column}{0.37\textwidth}\footnotesize
+      $r = r_0 + (a + b/p)\,d$ with $r_0 = 5$\,cm, $a = 0.5$\,mrad and $b$ the slider, in mrad$\cdot$GeV: the spectrometer's slope error grows with the lever arm $d$, multiple scattering with $1/p$.\\[2mm]
+      Title: how many of the true crossings of straight SST1 muons (D2, 60\,k muons) fall inside the window, computed now.\\[2mm]
+      \takeaway[\footnotesize]{For straight muons the prediction is within millimetres: the window can be tight. A bigger window only buys more random hits.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The time window}
+  \livewidget{time_plot}{0.55\linewidth}{0.5\textheight}\hfill\livewidget{time_trade}{0.43\linewidth}{0.5\textheight}\\[1mm]
+  \sld[0.48\linewidth]{sig_t}\hfill\sld[0.48\linewidth]{n_sig}\\[1mm]
+  \footnotesize The predicted time includes the time of flight from the plane to $z = 82$\,m. The window is $\pm n\sigma$ with $\sigma = \sigma_t^\text{veto}\oplus\sigma_t^\text{track}$: wider loses fewer own hits, but lets in proportionally more random hits.\\
+  \legendline{Right: signal loss scaled from D2's 1.3\,\% at $3\sigma$ and 0.5\,ns, since random hits grow with the window.}
+\end{frame}
+
+\begin{frame}{Algorithm A on real events}
+  \livewidget{ev3d}{\linewidth}{0.52\textheight}\\[1mm]
+  \sld[0.32\linewidth]{ev_design}\hfill\sld[0.32\linewidth]{ev_kind}\hfill\sld[0.32\linewidth]{ev_index}\\[0.3mm]
+  \legendline{design: 0 D0 · 1 D1 · 2 D2 · 3 D3 · 4 D4 · 5 D5 coarse · 6 D5 fine · 7 fibre · 8 pixel · 9 straw · 10 tile · 11 tile2 (fins).\quad kind: 0 pair vetoed · 1 pair missed · 2 signal lost to a random hit · 3 bounced muon missed.}\\
+  \legendline{Solid: true path; dotted: backward prediction; white: own hits; diamond: the hit that explained the track; grey: random hits.}
+\end{frame}
+
+\begin{frame}{The same event from above}
+  \livewidget{ev_side}{\linewidth}{0.55\textheight}\\[1mm]
+  \sld[0.32\linewidth]{ev_design}\hfill\sld[0.32\linewidth]{ev_kind}\hfill\sld[0.32\linewidth]{ev_index}\\[0.3mm]
+  \legendline{$x$--$z$ view. Thick lines: UBT (orange) and fins (green). Blue bars: the search window on each plane the track is followed to. Same sliders as the previous slide.}
+\end{frame}
+
+\begin{frame}{What it costs}
+  \begin{columns}[c]
+    \begin{column}{0.58\textwidth}\footnotesize
+      \begin{tabular}{@{}lrrrr@{}}
+        \toprule
+        design & planes & hits / event & comparisons & µs / event\\
+        \midrule
+        D0 & 1 & 0.1 & 40\,k & 0.5\\
+        D1 & 3 & 16 & 3.2\,M & 4.8\\
+        D2 & 9 & 39 & 4.0\,M & 12.5\\
+        D3 & 11 & 49 & 4.9\,M & 16.7\\
+        D4 & 17 & 90 & 7.2\,M & 33.3\\
+        \bottomrule
+      \end{tabular}\\[1mm]
+      \faint{196\,736 background events; numpy, one core of a laptop.}
+    \end{column}
+    \begin{column}{0.4\textwidth}\small
+      A full evaluation of a design (196\,k pairs, 100\,k signal, 200\,k single muons) takes \key{$\approx$6\,s} on one core, linear in hits per event.\\[2mm]
+      Nothing to cap: algorithm A never combines hits.\\[2mm]
+      \takeaway[\footnotesize]{On a GPU, or with the factorised estimate, 10--100\,ms per design: fast enough for an RL loop.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ======================================================================== PART 5
+\blurb{The background is easy to veto. Keeping the signal, and catching the last muon pairs, is where designs differ.}
+\section{Results}
+
+\begin{frame}{Seven designs}
+  \livewidget{compare}{\linewidth}{0.46\textheight}\\[1mm]
+  \footnotesize
+  \begin{tabular}{@{}lrrrrrrr@{}}
+    \toprule
+    & D0 & D1 & D2 & D3 & D4 & D5 coarse & D5 fine\\
+    \midrule
+    background vetoed & 25\,\% & 99.992\,\% & 99.997\,\% & 99.992\,\% & 100.000\,\% & 99.997\,\% & 99.997\,\%\\
+    pairs surviving & 171\,020 & 54 & 27 & 19 & 6 & 24 & 27\\
+    signal lost & 0 & 1.13\,\% & 1.28\,\% & 1.49\,\% & 1.76\,\% & 4.72\,\% & 1.00\,\%\\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Turn the knobs}
+  \livewidget{knobs}{\linewidth}{0.5\textheight}\\[1mm]
+  \sld[0.32\linewidth]{k_design}\hfill\sld[0.32\linewidth]{k_eps}\hfill\sld[0.32\linewidth]{k_nsig}\\[0.4mm]
+  \sld[0.32\linewidth]{k_sigt}\hfill\hspace*{0.32\linewidth}\hfill\hspace*{0.32\linewidth}\\[0.3mm]
+  \legendline{design: 0 D0 · 1 D1 · 2 D2 · 3 D3 · 4 D4 · 5 D5 coarse · 6 D5 fine · 7 fibre · 8 pixel · 9 straw · 10 tile · 11 tile2 (fins). The whole chain reruns: a quick answer on 15\,\% of the events, then all of them ($\approx$5--10\,s).}
+\end{frame}
+
+\begin{frame}{Figure of merit}
+  \begin{columns}[c]
+    \begin{column}{0.44\textwidth}
+      \livewidget{fom}{\linewidth}{0.55\textheight}\\[1mm]
+      \sld{fom_design}\\[0.3mm]
+      \legendline{Positive = vetoed. Background: events in 15 years; signal: fractions.}
+    \end{column}
+    \begin{column}{0.54\textwidth}\tiny
+      \setlength{\tabcolsep}{3.5pt}
+      \begin{tabular}{@{}lrrrrrr@{}}
+        \toprule
+        design & TPR & FNR & FPR & TNR & $B$ / 15\,y & Punzi\\
+        \midrule
+        D0 & 25.2\,\% & 74.8\,\% & 0 & 100\,\% & 27 & 0.15\\
+        D1 & 99.992\,\% & 0.008\,\% & 1.13\,\% & 98.87\,\% & 0.003 & 0.637\\
+        D2 & 99.997\,\% & 0.003\,\% & 1.28\,\% & 98.72\,\% & 0.001 & 0.645\\
+        D3 & 99.992\,\% & 0.008\,\% & 1.49\,\% & 98.51\,\% & 0.003 & 0.634\\
+        D4 & 99.9998\,\% & 0.0002\,\% & 1.76\,\% & 98.24\,\% & 0.0001 & 0.651\\
+        D5 coarse & 99.997\,\% & 0.003\,\% & 4.72\,\% & 95.28\,\% & 0.001 & 0.623\\
+        D5 fine & 99.997\,\% & 0.003\,\% & 1.00\,\% & 99.00\,\% & 0.001 & 0.647\\
+        \bottomrule
+      \end{tabular}\\[2mm]
+      \footnotesize Punzi $= \varepsilon_S / (1.5 + \sqrt{B})$, $\varepsilon_S$ = TNR. Every design with fins has $B\ll1$, so the FoM is set by the signal efficiency.\\[1.5mm]
+      \takeaway[\footnotesize]{$B$ rests on a few dozen surviving pairs and some muons weigh 100$\times$ more: one pair can move it by $5\times$. The factorised estimate comes next.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Figure of merit: the 15-year run}
+  \begin{columns}[c]
+    \begin{column}{0.5\textwidth}
+      \livewidget{fom15}{\linewidth}{0.56\textheight}\\[1mm]
+      \sld{fom_design}\\[0.4mm]\sld{n_sig15}
+    \end{column}
+    \begin{column}{0.47\textwidth}\footnotesize
+      The same confusion matrix, as \key{counts over 15 years}: $6\cdot10^{20}$ POT in 1\,s spills of $5\cdot10^{13}$ POT, $1.2\cdot10^{7}$ spills.\\[1.5mm]
+      \key{Fake vertices}: 36 muon pairs over the whole run look like a decay in the vessel. The veto removes all but a tiny fraction: FN is the expected number of \key{fake discoveries}.\\[1.5mm]
+      \key{Signal}: its total is model dependent; the slider sets how many selected decays SHiP would see. FP are lost to random hits, TN kept.\\[1.5mm]
+      $P(\geq1\ \text{fake}) = 1 - e^{-\text{FN}}$: the chance the whole run has even one.\\[1.5mm]
+      \takeaway[\footnotesize]{Background-free means FN $\ll 1$: true for every design with fins. They differ in how much signal they keep.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Experiments}
+  \begin{columns}[c]
+    \begin{column}{0.56\textwidth}\scriptsize
+      \begin{tabular}{@{}lrrr@{}}
+        \toprule
+        variation of D2 & FPR & TPR & $B$ / 15\,y\\
+        \midrule
+        as is & 1.21\,\% & 99.997\,\% & 0.001\\
+        $\sigma_t$ 0.5 $\to$ \key{0.1\,ns} & \key{0.41\,\%} & 99.98\,\% & 0.006\\
+        $\sigma_t$ 1\,ns & 2.19\,\% & 99.997\,\% & 0.001\\
+        cells 10 $\to$ 3\,cm & 0.83\,\% & 99.997\,\% & 0.001\\
+        $\sigma_t$ 0.1\,ns \key{and} 5\,cm cells & \key{0.30\,\%} & 99.98\,\% & 0.006\\
+        time window 3 $\to$ 2$\sigma$ & 0.89\,\% & 99.91\,\% & 0.03\\
+        time window 4$\sigma$ & 1.65\,\% & 99.998\,\% & 0.0008\\
+        veto needs hits on 2 planes & 0.002\,\% & 36\,\% & 23\\
+        without the fins at 30.6\,m & 0.13\,\% & 61\,\% & 14\\
+        fins only 1\,m long & 0.20\,\% & 98.9\,\% & 0.4\\
+        fins only $y = -1$..$1$\,m & 1.21\,\% & 94.2\,\% & 2.1\\
+        \midrule
+        D4, $\sigma_t$ 0.1\,ns and 5\,cm cells & 0.49\,\% & 99.9998\,\% & 0.0001\\
+        \bottomrule
+      \end{tabular}\\[1mm]
+      \faint{60\,k signal decays per row; \texttt{bin/run\_reco.py} on one core.}
+    \end{column}
+    \begin{column}{0.41\textwidth}\footnotesize
+      \key{Time resolution} is the biggest lever on signal loss, then cell size: $3$--$4\times$ less, at no cost in background.\\[1.5mm]
+      The \key{fins at 30.6\,m} veto most of the background and cause most of the signal loss.\\[1.5mm]
+      A \key{2-plane rule} fails: most muons cross exactly one plane. Redundancy has to be built into the geometry.\\[1.5mm]
+      \takeaway[\footnotesize]{Short fins trade 0.2\,\% signal loss for about 0.4 background events: the kind of choice the optimiser has to make.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Why the last pairs survive}
+  \begin{columns}[c]
+    \begin{column}{0.62\textwidth}
+      \livewidget{missed_why}{\linewidth}{0.6\textheight}\\[1mm]
+      \sld[0.6\linewidth]{mw_design}
+    \end{column}
+    \begin{column}{0.36\textwidth}\footnotesize
+      A pair survives only if \key{neither} muon is explained. For a straight muon crossing a single plane that is one chance:
+      \[ P_\text{miss} \approx (1-\varepsilon) + 2\,\Phi(-n) \approx 1.3\,\% \]
+      so a pair escapes with $\approx2\cdot10^{-4}$: $\approx$\,30--40 of 196\,k.\\[1.5mm]
+      Bounced muons are followed back only after their bounce: the prediction misses the planes they crossed before it by metres.\\[1.5mm]
+      \takeaway[\footnotesize]{Redundancy: two planes on every incoming path square the miss probability.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Bounced muons, in perspective}
+  \begin{columns}[c]
+    \begin{column}{0.5\textwidth}\small
+      \begin{tabular}{@{}lrr@{}}
+        \toprule
+        background pairs & count & weight\\
+        \midrule
+        no bounced muon & 193\,873 & 98.7\,\%\\
+        one bounced muon & 2\,863 & 1.3\,\%\\
+        two bounced muons & 0 & 0\,\%\\
+        \bottomrule
+      \end{tabular}\\[3mm]
+      Single SST1 muons vetoed by algorithm A:\\[1mm]
+      \begin{tabular}{@{}lrrr@{}}
+        & D2 & D3 & D4\\
+        $p>1$\,GeV, timing & 99.1\,\% & 99.2\,\% & 99.3\,\%\\
+        other & 99.3\,\% & 99.7\,\% & 100.0\,\%\\
+        bounced & 74\,\% & 87\,\% & 88\,\%\\
+      \end{tabular}
+    \end{column}
+    \begin{column}{0.46\textwidth}\small
+      Bouncing costs most of the momentum (median 3 $\to$ 0.3\,GeV), so bounced muons rarely pass $p>1$\,GeV: 23\,\% of SST1 muons, 1.5\,\% of the pairs.\\[2mm]
+      For single muons algorithm A's blind spot is real; for the pair background it is a small effect, and the partner muon usually explains the pair.\\[2mm]
+      \takeaway[\footnotesize]{A hit-driven algorithm B could use the hits before the bounce: tracklets in the fins pointing at the vessel.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Granularity: the signal-loss knob}
+  \begin{columns}[c]
+    \begin{column}{0.62\textwidth}
+      \livewidget{cell_scan}{\linewidth}{0.58\textheight}\\[1mm]
+      \sld[0.6\linewidth]{cs_design}
+    \end{column}
+    \begin{column}{0.36\textwidth}\footnotesize
+      Same geometry, cell size from 3 to 50\,cm, 30\,k signal events per point.\\[1.5mm]
+      Smaller cells shrink the search box, so fewer random hits fall in it: signal loss drops from 4.7\,\% (50\,cm) to 1.0\,\% (5\,cm) for D2.\\[1.5mm]
+      But the busiest 10\,cm cell already sees \key{60\,MHz}, the UBT 400\,Hz. Dead time and pile-up are not modelled yet and will matter in the lobe.\\[1.5mm]
+      \takeaway[\footnotesize]{Detector technology near $|x|\approx2$\,m is a design question of its own.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ======================================================================== PART 6
+\blurb{What the reconstruction still ignores, and how the design loop will use it.}
+\section{Next}
+
+\begin{frame}{What is not in yet}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}\small
+      \key{Reconstruction}
+      \begin{itemize}\footnotesize
+        \item algorithm B: hit-driven tracklets across fins (sees bounces), with a time cap per event
+        \item factorised background: $\sum w\,P^{(1)}_\text{miss}P^{(2)}_\text{miss}$ instead of counting a handful of survivors
+        \item dead time and pile-up at MHz rates per cell
+        \item tilted fins (geometry and hits exist, not in the reconstruction)
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}\small
+      \key{Physics and data}
+      \begin{itemize}\footnotesize
+        \item muon DIS in the walls and fins, neutrinos
+        \item muons from the same proton collision (correlated in time)
+        \item specific signal models (masses, decay modes, lifetimes) beyond the generic two-body decay
+        \item more runs of the veto-only muons: per seed, everything crossing the vessel walls or UBT window, plus a $10^{-5}$ sample of UBT-plane crossers
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Towards the optimisation loop}
+  \begin{columns}[c]
+    \begin{column}{0.5\textwidth}\centering
+      \begin{tikzpicture}[node distance=5mm]
+        \node[abox, text width=3.6cm] (agent) {\semibold agent\\\faint{places UBT and fins, one after another in $z$}};
+        \node[box, below=of agent, text width=3.6cm] (eval) {\semibold evaluation\\\faint{algorithm A, 1.5--2\,M tracks, rate maps}};
+        \node[box, below=of eval, text width=3.6cm] (rew) {\semibold reward\\\faint{background, signal loss, area / channels, rates}};
+        \draw[aarr] (agent) -- (eval); \draw[arr] (eval) -- (rew);
+        \draw[arr] (rew.east) -- ++(0.6,0) |- (agent.east);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.46\textwidth}\small
+      Per design: $\approx$1\,M SST1 muons, $2\cdot10^{5}$ pairs, $10^{5}$ signal decays, and \key{no} flux muons as particles: they enter as rate maps.\\[2mm]
+      Accidental vetoes analytic, $1 - e^{-\sum \text{rate}\times\text{window}}$: no Monte-Carlo noise in the reward.\\[2mm]
+      \takeaway[\footnotesize]{Expect the agent to cover incoming paths twice near the wall and to stay out of the lobe.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Open questions}
+  \begin{itemize}\small
+    \item POT per spill: are the weights muons per 1\,s spill of $5\cdot10^{13}$ POT?
+    \item The repeated-\texttt{evt\_n} weight correction of the original analysis: the dataset uses the plain average over runs.
+    \item Cavern geometry in the simulation: muons cross $x = -4.56$\,m and reach $x\approx-9$\,m.
+    \item Veto technology near the vessel: rates per cell, time resolution, dead time.
+    \item The new run: what to store per seed (above), and keep the start state and \texttt{evt\_n}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Summary}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}\small
+      \key{Data}: the full run and 20\,001 old runs, combined into a 57\,M-muon design dataset with per-spill weights; cavern bounces reconstructed to 4\,cm.\\[2mm]
+      \key{Design space}: a UBT plus fins from the side walls; seven designs from minimal to dense.
+    \end{column}
+    \begin{column}{0.48\textwidth}\small
+      \key{Reconstruction}: time-window events with accidental hits from full-statistics rate maps; a track-driven veto, $\approx$10\,µs per event, no combinatorics.\\[2mm]
+      \takeaway[\footnotesize]{Background is vetoed at $>99.99\,\%$ by any design with fins ($B\ll1$ in 15 years). The figure of merit is then the signal efficiency: 98.7\,\% for D2, 99.7\,\% with 0.1\,ns timing and 5\,cm cells.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\end{document}

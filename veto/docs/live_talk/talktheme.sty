@@ -1,0 +1,133 @@
+% Custom presentation look for the active-layer calorimetry talk (XeLaTeX).
+% Built on beamer's machinery but every visual element is redrawn: Fira Sans/Fira Math, left
+% aligned titles with a section label, a slim accent strip, dark section dividers, plain footer.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{talktheme}
+
+\RequirePackage{fontspec}
+\RequirePackage{unicode-math}
+\RequirePackage{tikz}
+\RequirePackage{xcolor}
+\RequirePackage{booktabs}
+\RequirePackage{array}
+\RequirePackage{colortbl}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds,shapes.geometric,decorations.pathreplacing,shadows}
+
+% ---------------------------------------------------------------- fonts
+\setsansfont{FiraSans}[Extension=.otf, UprightFont=*-Book, BoldFont=*-SemiBold, ItalicFont=*-BookItalic, BoldItalicFont=*-SemiBoldItalic]
+\newfontfamily\lightfont{FiraSans}[Extension=.otf, UprightFont=*-Light, BoldFont=*-Medium, ItalicFont=*-LightItalic]
+\newfontfamily\semibold{FiraSans}[Extension=.otf, UprightFont=*-SemiBold]
+\setmonofont{FiraMono}[Extension=.otf, UprightFont=*-Regular, BoldFont=*-Bold, Scale=0.92]
+\setmathfont{FiraMath-Regular.otf}
+\setmathrm{FiraSans}[Extension=.otf, UprightFont=*-Book, BoldFont=*-SemiBold, ItalicFont=*-BookItalic]
+\setoperatorfont\mathrm
+\usefonttheme{professionalfonts}
+
+% ---------------------------------------------------------------- colours (match the figures)
+\definecolor{ink}{HTML}{1C2230}
+\definecolor{muted}{HTML}{5B6475}
+\definecolor{line}{HTML}{DDE1E8}
+\definecolor{paper}{HTML}{FFFFFF}
+\definecolor{wash}{HTML}{F3F5F8}
+\definecolor{accent}{HTML}{2459A8}
+\definecolor{ora}{HTML}{D07A2D}
+\definecolor{grn}{HTML}{2A7F3F}
+\definecolor{red}{HTML}{B0352B}
+\definecolor{night}{HTML}{141A26}
+\definecolor{sionetwenty}{HTML}{08306B}
+\definecolor{sitwohundred}{HTML}{2171B5}
+\definecolor{sithreehundred}{HTML}{6BAED6}
+\definecolor{tile}{HTML}{2CA02C}
+\definecolor{fr4}{HTML}{C9B26B}
+\definecolor{steel}{HTML}{B8B8B8}
+\definecolor{tungsten}{HTML}{4D4D4D}
+\definecolor{lead}{HTML}{7F7F9F}
+\definecolor{copper}{HTML}{C87533}
+\definecolor{glass}{HTML}{9FC5D9}
+\definecolor{gas}{HTML}{E7EEF3}
+
+\setbeamercolor{normal text}{fg=ink,bg=paper}
+\setbeamercolor{structure}{fg=accent}
+\setbeamercolor{alerted text}{fg=red}
+\setbeamercolor{item}{fg=accent}
+
+% ---------------------------------------------------------------- layout
+\setbeamersize{text margin left=12mm, text margin right=10mm}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{background canvas}{%
+  \begin{tikzpicture}[remember picture,overlay]
+    \fill[paper] (current page.south west) rectangle (current page.north east);
+    \fill[accent] (current page.north west) rectangle ([xshift=2.2mm]current page.south west);
+  \end{tikzpicture}}
+
+\newcommand{\sectionlabel}{\insertsectionhead}
+\setbeamertemplate{frametitle}{%
+  \vspace*{3.2mm}%
+  {\color{accent}\lightfont\footnotesize\addfontfeatures{LetterSpace=8}\MakeUppercase{\insertsectionhead}}\par\vspace{0.6mm}%
+  {\semibold\color{ink}\fontsize{17}{20}\selectfont\insertframetitle}\par
+  \ifx\insertframesubtitle\@empty\else{\color{muted}\lightfont\small\insertframesubtitle\par}\fi
+  \vspace{1mm}}
+
+\setbeamertemplate{footline}{%
+  \hbox to \paperwidth{\hspace{12mm}{\color{muted}\lightfont\scriptsize \insertshorttitle\enspace·\enspace S.\,R.~Qasim}\hfill
+  {\color{muted}\lightfont\scriptsize\insertframenumber\,/\,\inserttotalframenumber}\hspace{10mm}}\vspace{4mm}}
+
+% lists
+\setbeamertemplate{itemize item}{\raisebox{0.25ex}{\color{accent}\rule{1.3ex}{1.3ex}}}
+\setbeamertemplate{itemize subitem}{\raisebox{0.35ex}{\color{muted}\rule{0.9ex}{0.9ex}}}
+\setbeamertemplate{enumerate item}{\color{accent}\semibold\insertenumlabel.}
+\setlength{\leftmargini}{1.4em}
+
+% ---------------------------------------------------------------- title page
+\setbeamertemplate{title page}{%
+  \begin{tikzpicture}[remember picture,overlay]
+    \fill[night] (current page.south west) rectangle (current page.north east);
+    % artwork: a dipole spectrometer, stations as thin planes, a few tracks with a kink at the magnet
+    \begin{scope}[shift={($(current page.east)+(-4.55,-2.3)$),scale=0.72}]
+      \fill[ora!35!night] (2.55,0.1) rectangle ++(0.75,5.0);
+      \foreach \x in {0.3,0.95,1.6,2.15,3.75,4.35,4.95,5.5}{\draw[sithreehundred,line width=1.1pt] (\x,0.3) -- ++(0,4.6);}
+      \foreach \y/\k/\c in {2.6/0.55/white, 2.2/-0.35/white, 3.0/0.2/white, 1.9/0.85/sithreehundred, 3.3/-0.6/sithreehundred}{
+        \draw[\c,opacity=0.85,line width=0.9pt] (-0.4,2.6) -- (2.92,\y) -- ++(2.9,{(\y-2.6)/3.32*2.9+\k});
+        \foreach \x in {0.3,0.95,1.6,2.15}{\fill[\c] (\x,{2.6+(\y-2.6)*(\x+0.4)/3.32}) circle (0.05);}
+        \foreach \x in {3.75,4.35,4.95,5.5}{\fill[\c] (\x,{\y+((\y-2.6)/3.32+\k/2.9)*(\x-2.92)}) circle (0.05);}}
+    \end{scope}
+    \node[anchor=north west,text width=0.52\paperwidth,align=left] at ($(current page.north west)+(1.3,-2.0)$) {%
+      {\color{sithreehundred}\lightfont\small\addfontfeatures{LetterSpace=10}\MakeUppercase{\insertsubtitle}}\\[3mm]
+      {\color{white}\semibold\fontsize{28}{32}\selectfont\inserttitle}\\[9mm]
+      {\color{white}\large\insertauthor}\\[1.5mm]
+      {\color{sithreehundred}\lightfont\small\insertinstitute}\\[1.5mm]
+      {\color{sithreehundred}\lightfont\small\insertdate}};
+  \end{tikzpicture}}
+
+% ---------------------------------------------------------------- section dividers
+\AtBeginSection[]{%
+  {\setbeamertemplate{background canvas}{\begin{tikzpicture}[remember picture,overlay]
+      \fill[night] (current page.south west) rectangle (current page.north east);
+      \node[anchor=south east,text=white,opacity=0.07,font=\semibold\fontsize{230}{230}\selectfont] at ($(current page.south east)+(0.4,-1.6)$) {\thesection};
+     \end{tikzpicture}}
+   \setbeamertemplate{footline}{}
+   \begin{frame}[plain,noframenumbering]
+     \vspace*{2.6cm}\hspace*{0.6cm}%
+     \begin{minipage}{0.9\textwidth}\raggedright\hyphenpenalty=10000\exhyphenpenalty=10000
+       {\color{sithreehundred}\lightfont\small\addfontfeatures{LetterSpace=10}PART \thesection}\\[2mm]
+       {\color{white}\semibold\fontsize{30}{34}\selectfont\insertsectionhead}\\[4mm]
+       {\color{white!75!night}\lightfont\large\sectionblurb}
+     \end{minipage}
+   \end{frame}}}
+\newcommand{\sectionblurb}{}
+\newcommand{\blurb}[1]{\renewcommand{\sectionblurb}{#1}}
+
+% ---------------------------------------------------------------- helpers
+\newcommand{\key}[1]{{\semibold\color{accent}#1}}
+\newcommand{\aside}[1]{{\color{muted}\lightfont\small #1}}
+\newcommand{\faint}[1]{{\color{muted}\lightfont #1}}
+\newcommand{\num}[1]{{\semibold #1}}
+% boxed statement
+\newcommand{\takeaway}[2][\small]{%
+  \begin{tikzpicture}\node[fill=wash,draw=none,text width=\linewidth-20pt,inner xsep=10pt,inner ysep=6pt,align=left,
+     path picture={\fill[accent] (path picture bounding box.north west) rectangle ([xshift=1.4mm]path picture bounding box.south west);}]
+     {#1#2};\end{tikzpicture}}
+% big number tile
+\newcommand{\bignum}[2]{\begin{tabular}{@{}l@{}}{\semibold\color{accent}\fontsize{26}{28}\selectfont #1}\\[-0.5mm]{\color{muted}\lightfont\scriptsize #2}\end{tabular}}
+\renewcommand{\arraystretch}{1.15}
+\newcolumntype{R}{>{\raggedleft\arraybackslash}p}

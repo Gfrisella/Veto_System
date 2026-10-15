@@ -1,11 +1,9 @@
 {
  "name": "D5_coarse",
- "description": "D2 geometry with 50 cm cells",
+ "description": "D2 geometry with 50 cm cells; 4 x 4 cm tile fins read out in 50 cm cells",
  "ubt": {
   "y_lo": -1.35,
-  "y_hi": 1.35,
-  "cell_x": 0.5,
-  "cell_y": 0.5
+  "y_hi": 1.35
  },
  "fins": [
   {
@@ -90,7 +88,6 @@
   }
  ],
  "detector": {
-  "efficiency": 0.99,
-  "sigma_t": 5e-10
+  "technology": "tile"
  }
 }

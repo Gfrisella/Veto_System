@@ -13,5 +13,6 @@ physik_deployment/
 !veto/bin/*.sh
 .DS_Store
 __pycache__/
+!veto/docs/live_talk/run.sh
 *.pdf
 veto/knowledge/
