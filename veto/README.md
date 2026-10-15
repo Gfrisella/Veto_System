@@ -49,6 +49,7 @@ veto/
     remote.sh                 sync code / run / launch tmux jobs on the cluster
   designs/   veto designs (JSON): D0 minimal ... D4 dense, D5 cell-size variants,
              D6 technology variants (straw, fiber, pixel, tile, tile2 fins)
+  ISSUES.txt open problems before optimising, with status (keep it updated)
   data/      local copy of the inputs (git-ignored)
   results/   everything we produce (git-ignored)
 ```
@@ -223,6 +224,21 @@ the generic detector of D0–D5 (no cost, no material).
 For reference, the OPT_BT layout had three straw entrance planes at z = 30.7, 30.8, 30.9 m
 (±1.8 × ±1.35 m) and lateral rings around the tapered vessel at z = 40–78 m, with its own
 simplified vessel geometry.
+
+### Open problems before optimising
+
+`ISSUES.txt` lists what is still missing, with a status (OPEN / IN PROGRESS / DONE / DEFERRED / OK)
+and a priority (A: before optimising, B: changes the results, C: second order). In short:
+
+- **A, blockers:** the pair background is saturated (2-3 survivors, use single-muon inefficiency
+  and factorisation); bounced muons are only 74-77 % vetoed; rate limits are not enforced; no
+  objective and two cost models; spill / PoT normalisation and spill structure.
+- **B, physics:** multiple scattering (air 29.89-30.6 m and 80.6-82 m, 0.3 mm PVC walls at the
+  vessel entrance and exit, helium in the vessel, the veto planes; for bounced muons only after
+  the bounce); EM debris from the last 20 cm of shield iron, estimated from the full dataset;
+  a literature-based HNL / dark-photon signal model. Neutrino and muon DIS are deferred.
+- **C, detector:** response simplifications, dead material, validation against FairShip,
+  weights and statistics of the single-run classes.
 
 ## Running
 
