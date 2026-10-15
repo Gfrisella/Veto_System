@@ -267,7 +267,7 @@ def plane_meshes(design, scale=True):
 def design3d(ubt_top, nfin, gap, length, top):
     d = slider_design(ubt_top, nfin, gap, length, top)
     hit = geometric_hits(d)
-    traces = geometry() + plane_meshes(d)
+    traces = geometry() + plane_meshes(d, scale=False)      # a colour bar makes plotly redraw the WebGL scene
     rng = np.random.default_rng(4)
     for t in (1, 2, 0, 3):
         idx = np.where(EXPL["s_type"] == t)[0]
