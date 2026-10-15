@@ -147,6 +147,21 @@
   \end{columns}
 \end{frame}
 
+\begin{frame}{Where the muons go, in Hz}
+  \begin{columns}[c]
+    \begin{column}{0.62\textwidth}
+      \livewidget{where_hz}{\linewidth}{0.62\textheight}\\[1mm]
+      \sld[0.6\linewidth]{spill}
+    \end{column}
+    \begin{column}{0.36\textwidth}\footnotesize
+      The same muons as rates: muons per spill (weights for $5\cdot10^{13}$ POT) divided by the spill length $T$.\\[1.5mm]
+      At $T = 1$\,s: \key{$\approx$3.5\,GHz} cross $z = 30.6$\,m, 2.7\,GHz pass the vessel to $z = 82$\,m, $\approx$30\,kHz reach the SST1 acceptance and $\approx$30\,kHz enter the vessel without reaching it.\\[1.5mm]
+      Every rate scales as $1/T$: the slider is shared with the time-window slide.\\[1.5mm]
+      \takeaway[\footnotesize]{Spill length and POT per spill still need confirming: all rates on these slides inherit them.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
 \begin{frame}{Bouncing off the cavern}
   \livewidget{bounce_view}{0.6\linewidth}{0.56\textheight}\hfill\livewidget{bounce_map}{0.38\linewidth}{0.56\textheight}\\[1mm]
   \sld[0.4\linewidth]{bounce_ev}\\[0.5mm]

@@ -163,6 +163,27 @@ def where_bar():
     return layout(fig, margin=dict(l=112, r=6, t=8, b=30))
 
 
+def si_hz(v):
+    for unit, f in (("GHz", 1e9), ("MHz", 1e6), ("kHz", 1e3)):
+        if v >= f:
+            return f"{v / f:.3g} {unit}"
+    return f"{v:.3g} Hz"
+
+
+@pres.output("where_hz", inputs=["spill"])
+def where_hz(spill):
+    """The same categories as rates: muons per spill / spill length."""
+    rate = FULL["weight"] / spill
+    order = list(range(len(VIZ_TYPES)))[::-1]
+    fig = go.Figure(go.Bar(y=[VIZ_TYPES[i][0] for i in order], x=[rate[i] for i in order], orientation="h",
+                           marker_color=[VIZ_TYPES[i][1] for i in order], text=[si_hz(rate[i]) for i in order],
+                           textposition="outside", textfont=dict(size=6.5), cliponaxis=False))
+    fig.update_xaxes(type="log", title=f"rate for a {spill:g} s spill [Hz]", range=[2.7, 12.3],
+                     tickvals=[1e3, 1e6, 1e9], ticktext=["1 kHz", "1 MHz", "1 GHz"])
+    return layout(fig, title=dict(text=f"total {si_hz(rate.sum())} · {si_hz(rate[:8].sum())} past z = 30.6 m",
+                                  font=dict(size=8), x=0.02), margin=dict(l=112, r=6, t=18, b=30))
+
+
 BOUNCED = np.where((EXPL["s_type"] == 0) & np.isfinite(EXPL["s_kz"]))[0]
 pres.slider("bounce_ev", label="muon", min=0, max=39, value=3, step=1, decimals=0)
 
