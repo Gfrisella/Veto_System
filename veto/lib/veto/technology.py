@@ -4,26 +4,34 @@ Each entry describes one complete plane (all its layers). Sources: SPSC-P-369 (2
 SPSC-SR-370 (2025 annual report, sec. 3.3.2 UBT), as summarised in conversation.txt. "assumed"
 marks numbers that are not in the documents.
 
-    straw   Liverpool "UBT0" straws (SR-370), but VERTICAL: 5 mm straws, 1 mm dead space, two
-            staggered layers per view (6 mm pitch per layer, 3 mm effective), three views at
-            0 and +-15 deg from vertical = 6 layers. Straws at most 1 m long, so a taller plane has
-            overlapping rows (overlap ignored). ~100 um; 0.5 % single-straw inefficiency gives
-            > 99.99 % with 6 staggered layers. Rate limit 0.5 MHz/cm^2 (ATLAS TRT reference).
-            Time: drift limited, a fixed 100 ns window (the user's assumption; the documents give
-            no straw time resolution). ~0.02 % X0 per layer (the report's 1.2 % for six layers is
-            a factor-10 slip). Cost ~6 kCHF per layer-m^2 (P-369 table 11, SST).
+    straw   Liverpool "UBT0" straws (SR-370), but VERTICAL: 5 mm straws at 5 mm pitch per layer
+            (colleague's numbers, Oct 2026; SR-370 has 1 mm dead space, 6 mm pitch), two staggered
+            layers per view, three views at 0 and +-15 deg from vertical = 6 layers. Straws at most
+            1 m long, so a taller plane has overlapping rows (overlap ignored). sigma_x 110 +- 20 um
+            (at least 100 um; 40-60 um achievable in principle). Efficiency > 97 % per straw and
+            > 99.9 % per track (the plane number used here). Rate limit 0.5 MHz/cm^2 (ATLAS TRT
+            reference). Time: drift limited, ~50 ns maximum drift, used as a 50 ns window (no straw
+            time resolution yet). ~0.02 % X0 per layer (the report's 1.2 % for six layers is a
+            factor-10 slip). Cost ~6 kCHF per layer-m^2 (P-369 table 11, SST).
     fiber   SciFi mats of Kuraray SCSF-78MJ, 250 um fibres, 6 staggered fibre layers (1.35 mm),
             Hamamatsu S13552 SiPM arrays at one end (250 um channels). Two crossed mats (x, y).
-            ~100 um. sigma_t 0.5 ns and 99.5 % are the user's numbers (decay time 2.8 ns; no SciFi
-            timing in the documents). Mats at most 3 m long (assumed: "a few metres", light
-            attenuation). ~0.3 % X0 per mat (estimate). Cost ~170 kCHF per mat-m^2 (P-369, SND SciFi).
-    pixel   Timepix-class hybrid pixels, 55 um. ~200 ps (Timepix4 bins; 50 ps would need LGADs).
-            99.9 % (the user's number). Several tenths of a % X0 (0.5 % assumed). The documents have
-            no pixel numbers: no rate limit, no cost (cost = nan).
-    tile    UBT timing layer (SR-370): 5 x 5 x 1 cm^3 scintillating tiles, one SiPM each,
-            ~200 ps. Up to 10 MHz per tile in the muon flames; tiles are made smaller to keep
-            < 1 MHz per channel (max_channel_rate). ~2.4 % X0 (1 cm plastic). 99.5 % assumed.
-            Cost ~30 kCHF/m^2 (P-369, timing detector).
+            ~100 um. sigma_t 0.5 ns is the user's number (decay time 2.8 ns); it can go down to
+            ~100 ps, to be confirmed with Ettore. Efficiency basically 100 % for the detector (99.9 %
+            used), a bit lower per fibre / SiPM channel (not modelled). Mats at most 3 m long
+            (assumed: "a few metres", light attenuation). ~0.3 % X0 per mat (estimate). Cost
+            ~170 kCHF per mat-m^2 (P-369, SND SciFi).
+    pixel   Timepix-class hybrid pixels, 55 um. ~200 ps (Timepix4 bins). Pitch is variable and the
+            timing depends on the chosen technology: much better with LGADs. 99.9 % (the user's
+            number). Several tenths of a % X0 (0.5 % assumed). The documents have no pixel numbers:
+            no rate limit, no cost (cost = nan).
+    tile    UBT timing layer: scintillating tiles, one SiPM each (colleague's numbers, Oct 2026):
+            4 x 4 cm, ~120 ps (`tile`) or 2 x 2 cm, ~80 ps (`tile2`); sigma_x ~ the pitch; ~99.9 %
+            depending on the configuration; veto window +-1.5 ns. SR-370: up to 10 MHz per 5 x 5 cm^2
+            tile in the muon flames, < 1 MHz per channel wanted (max_channel_rate). ~2.4 % X0 (1 cm
+            plastic). Cost ~30 kCHF/m^2 (P-369, timing detector).
+
+Relative cost per channel (cost_channel, straw = 1): fibre 4 and pixel 20 (the user's table), tile 5
+(colleague). veto_window: fixed half width of the veto time window [s], instead of +- 3 sigma.
 
 Readout: strip technologies have `views` (strip angles from vertical, deg) with `layers_per_view`
 layers each; pads (pixel, tile) measure both coordinates. A hit sits at the centre of a cell (u, y):
@@ -36,23 +44,28 @@ import numpy as np
 
 TECHNOLOGIES = {
     "straw": dict(name="Straw (Liverpool UBT0, vertical)", readout="strip", views=(0.0, 15.0, -15.0),
-                  layers_per_view=2, pitch=6e-3, diameter=5e-3, sigma_x=100e-6, sigma_t=None,
-                  time_window=100e-9, efficiency=0.9999, max_length=1.0, max_rate=0.5e6,
-                  max_channel_rate=None, x0_per_layer=0.0002, cost_m2_per_layer=6.0),
+                  layers_per_view=2, pitch=5e-3, diameter=5e-3, sigma_x=110e-6, sigma_t=None,
+                  time_window=50e-9, veto_window=None, efficiency=0.999, straw_efficiency=0.97,
+                  max_length=1.0, max_rate=0.5e6, max_channel_rate=None, x0_per_layer=0.0002,
+                  cost_m2_per_layer=6.0, cost_channel=1.0),
     "fiber": dict(name="Scintillating fibre (SCSF-78MJ mats)", readout="strip", views=(0.0, 90.0),
                   layers_per_view=1, pitch=250e-6, sigma_x=100e-6, sigma_t=0.5e-9, time_window=None,
-                  efficiency=0.995, max_length=3.0, max_rate=None, max_channel_rate=None,
-                  x0_per_layer=0.003, cost_m2_per_layer=170.0),
+                  veto_window=None, efficiency=0.999, max_length=3.0, max_rate=None, max_channel_rate=None,
+                  x0_per_layer=0.003, cost_m2_per_layer=170.0, cost_channel=4.0),
     "pixel": dict(name="Silicon pixel (Timepix-class)", readout="pad", views=None, layers_per_view=1,
-                  pitch=55e-6, sigma_x=16e-6, sigma_t=0.2e-9, time_window=None, efficiency=0.999,
-                  max_length=None, max_rate=None, max_channel_rate=None, x0_per_layer=0.005,
-                  cost_m2_per_layer=None),
-    "tile": dict(name="Scintillating tile (5 x 5 cm, SiPM)", readout="pad", views=None, layers_per_view=1,
-                 pitch=0.05, sigma_x=0.05 / np.sqrt(12), sigma_t=0.2e-9, time_window=None, efficiency=0.995,
-                 max_length=None, max_rate=None, max_channel_rate=1e6, x0_per_layer=0.024,
-                 cost_m2_per_layer=30.0),
+                  pitch=55e-6, sigma_x=16e-6, sigma_t=0.2e-9, time_window=None, veto_window=None,
+                  efficiency=0.999, max_length=None, max_rate=None, max_channel_rate=None,
+                  x0_per_layer=0.005, cost_m2_per_layer=None, cost_channel=20.0),
+    "tile": dict(name="Scintillating tile (4 x 4 cm, SiPM)", readout="pad", views=None, layers_per_view=1,
+                 pitch=0.04, sigma_x=0.04, sigma_t=0.12e-9, time_window=None, veto_window=1.5e-9,
+                 efficiency=0.999, max_length=None, max_rate=None, max_channel_rate=1e6,
+                 x0_per_layer=0.024, cost_m2_per_layer=30.0, cost_channel=5.0),
+    "tile2": dict(name="Scintillating tile (2 x 2 cm, SiPM)", readout="pad", views=None, layers_per_view=1,
+                  pitch=0.02, sigma_x=0.02, sigma_t=0.08e-9, time_window=None, veto_window=1.5e-9,
+                  efficiency=0.999, max_length=None, max_rate=None, max_channel_rate=1e6,
+                  x0_per_layer=0.024, cost_m2_per_layer=30.0, cost_channel=5.0),
 }
-ALIASES = {"A": "straw", "B": "fiber", "C": "pixel", "fibre": "fiber", "tiles": "tile"}
+ALIASES = {"A": "straw", "B": "fiber", "C": "pixel", "fibre": "fiber", "tiles": "tile", "tile4": "tile"}
 
 
 def get(name):
@@ -117,3 +130,8 @@ def cost(tech, area):
     if tech["cost_m2_per_layer"] is None:
         return float("nan")
     return area * n_layers(tech) * tech["cost_m2_per_layer"]
+
+
+def relative_cost(tech, width, height):
+    """Cost of a width x height [m] plane in units of one straw channel."""
+    return n_channels(tech, width, height) * tech["cost_channel"]

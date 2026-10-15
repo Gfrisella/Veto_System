@@ -74,6 +74,13 @@ class Plane:
         return tech.cost(tech.TECHNOLOGIES[self.technology], self.area)
 
     @property
+    def rel_cost(self):
+        """Channels x relative cost per channel (straw channel = 1); nan for the generic detector."""
+        if self.technology is None:
+            return float("nan")
+        return self.n_channels * tech.TECHNOLOGIES[self.technology]["cost_channel"]
+
+    @property
     def x0(self):
         """Material in radiation lengths; nan for the generic detector."""
         if self.technology is None:
@@ -127,6 +134,10 @@ class Design:
     @property
     def cost(self):
         return sum(p.cost for p in self.planes)
+
+    @property
+    def rel_cost(self):
+        return sum(p.rel_cost for p in self.planes)
 
     @property
     def ubt_x0(self):

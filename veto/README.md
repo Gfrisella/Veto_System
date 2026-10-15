@@ -17,7 +17,7 @@ veto/
     muon_types.py  muon types from the z = 30.6 / 82 m states, bounce points, SBT wall crossings,
                    path position at any z, fin hits
     design.py      veto designs (UBT + fins) from designs/*.json, physical limits
-    technology.py  detector technologies (straw, fibre, pixel, tile): layers, timing, rates, material, cost
+    technology.py  detector technologies (straw, fibre, pixel, tile, tile2): layers, timing, rates, material, cost
     reco.py        digitization, accidental hits from rate maps, spectrometer, veto algorithm A
     tracks.py      straight-line extrapolation, back-tracking to the vessel walls, categories
     weights.py     repeated-evt_n weight corrections
@@ -48,7 +48,7 @@ veto/
     fetch_data.sh             copy N output files (+ derived datasets) from the cluster
     remote.sh                 sync code / run / launch tmux jobs on the cluster
   designs/   veto designs (JSON): D0 minimal ... D4 dense, D5 cell-size variants,
-             D6 technology variants (straw, fiber, pixel, tile fins)
+             D6 technology variants (straw, fiber, pixel, tile, tile2 fins)
   data/      local copy of the inputs (git-ignored)
   results/   everything we produce (git-ignored)
 ```
@@ -167,26 +167,30 @@ accidental hits). Bounced muons can only be predicted after their bounce.
 ### Detector technology
 
 The goal is to veto the combinatorial background: pairs of muons from the muon shield that
-enter the decay vessel region and reach SST1. Every veto plane is one of four technologies
+enter the decay vessel region and reach SST1. Every veto plane is one of five technologies
 (`lib/veto/technology.py`). Numbers are from SPSC-P-369 (2023 proposal) and SPSC-SR-370 (2025
-annual report, UBT sec. 3.3.2), summarised in `conversation.txt`. *Assumed* marks what the
-documents do not give. Each entry describes one complete plane, all layers included.
+annual report, UBT sec. 3.3.2), summarised in `conversation.txt`, updated with a colleague's
+comments (Oct 2026: straw pitch, resolution, drift time and efficiency; fibre and pixel timing;
+tiles). *Assumed* marks what nobody has given yet. Each entry describes one complete plane, all
+layers included.
 
-| | `straw` (UBT, fins) | `fiber` (fins) | `pixel` (fins) | `tile` (fins) |
+| | `straw` (UBT, fins) | `fiber` (fins) | `pixel` (fins) | `tile` / `tile2` (fins) |
 |---|---|---|---|---|
-| design | Liverpool UBT0 straws, **vertical** | Kuraray SCSF-78MJ mats, S13552 SiPM | Timepix-class hybrid | 5 × 5 × 1 cm³ scintillator, SiPM each |
+| design | Liverpool UBT0 straws, **vertical** | Kuraray SCSF-78MJ mats, S13552 SiPM | Timepix-class hybrid | scintillator tiles, SiPM each |
 | layers | 6: double staggered layers at 0°, +15°, −15° from vertical | 2 crossed mats (x, y) of 6 fibre layers | 1 | 1 |
-| pitch | 6 mm per layer (5 mm straws, 1 mm dead space) | 250 µm | 55 µm | 5 cm |
-| cell a hit gives (u × y) | 6 mm × 22 mm (stereo) | 250 × 250 µm | 55 × 55 µm | 5 × 5 cm |
-| σ_x | ~100 µm | ~100 µm | ~16 µm (pitch/√12) | pitch/√12 |
-| timing | drift limited: **100 ns window** (user's assumption) | 0.5 ns (user's; decay 2.8 ns) | ~200 ps (Timepix4; 50 ps needs LGADs) | ~200 ps |
-| plane efficiency | 99.99 % (0.5 % per straw, 6 layers) | 99.5 % (user's) | 99.9 % (user's) | 99.5 % *assumed* |
+| pitch | 5 mm per layer (5 mm straws) | 250 µm | 55 µm (variable, depends on the technology) | 4 cm / 2 cm |
+| cell a hit gives (u × y) | 5 mm × 19 mm (stereo) | 250 × 250 µm | 55 × 55 µm | 4 × 4 cm / 2 × 2 cm |
+| σ_x | 110 ± 20 µm (≥ 100 µm; 40–60 µm possible) | ~100 µm | ~16 µm (pitch/√12) | ~4 cm / ~2 cm |
+| timing | drift limited: ~50 ns max drift, **50 ns window** | 0.5 ns (user's; can reach ~100 ps, check with Ettore) | ~200 ps (Timepix4; much better with LGADs) | ~120 ps / ~80 ps |
+| veto window | ±25 ns (drift) | ±3σ ≈ ±1.5 ns | ±3σ ≈ ±0.7 ns | **±1.5 ns** fixed |
+| plane efficiency | 99.9 % per track (> 97 % per straw) | 99.9 % (~100 % per detector, lower per fibre / SiPM) | 99.9 % (user's) | ~99.9 % (depends on the configuration) |
 | max length | 1 m (overlapping rows) | 3 m *assumed* ("a few metres") | – | – |
-| rate limit | 0.5 MHz/cm² (ATLAS TRT reference) | none given | none given | < 1 MHz per channel (up to 10 MHz per tile in the flames) |
+| rate limit | 0.5 MHz/cm² (ATLAS TRT reference) | none given | none given | < 1 MHz per channel (up to 10 MHz per 5 × 5 cm tile in the flames) |
 | material | 0.12 % X0 (0.02 % per layer) | 0.6 % X0 (estimate) | 0.5 % X0 *assumed* | 2.4 % X0 |
 | cost | 6 kCHF per layer-m² (SST) | 170 kCHF per mat-m² (SND SciFi) | none given (nan) | 30 kCHF/m² (timing detector) |
-| 1 × 2.7 m plane | 3 006 channels, 97 kCHF | 14 800 ch., 920 kCHF | 8.9 × 10⁸ ch. | 1 080 ch., 81 kCHF |
-| 3 × 6 m fin | 20 000 channels, 650 kCHF | 48 000 ch., 6.1 MCHF | 6.0 × 10⁹ ch. | 7 200 ch., 540 kCHF |
+| cost per channel (straw = 1) | 1 | 4 (user's) | 20 (user's) | 5 |
+| 1 × 2.7 m plane | 3 600 ch., 97 kCHF, 3.6 k units | 14 800 ch., 920 kCHF, 59 k units | 8.9 × 10⁸ ch., 1.8 × 10¹⁰ units | 1 700 / 6 750 ch., 81 kCHF, 8.5 k / 34 k units |
+| 3 × 6 m fin | 24 000 ch., 650 kCHF, 24 k units | 48 000 ch., 6.1 MCHF, 190 k units | 6.0 × 10⁹ ch., 1.2 × 10¹¹ units | 11 250 / 45 000 ch., 540 kCHF, 56 k / 225 k units |
 
 **The UBT is always Liverpool straws, vertical:** `design.validate` sets it in every design,
 D0–D5 included, and notes it if the JSON asked for another technology. The report's own design
@@ -199,13 +203,15 @@ block for every fin, or in a fin for that fin only (`designs/D6_*.json`). Explic
 the generic detector of D0–D5 (no cost, no material).
 
 - **Reconstruction:** each plane uses its own efficiency and time window. Drift-limited planes
-  (straws) put the hit time anywhere in their 100 ns window and match within ±50 ns; the others
-  use ±3 √(σ_t² + σ_t,spectrometer²), ±1.5 ns for fibres and ±0.7 ns for pixels and tiles. The
-  accidental-hit window follows the slowest plane, so with a straw UBT every event is ±50 ns.
+  (straws) put the hit time anywhere in their 50 ns window and match within ±25 ns; tiles use
+  their fixed ±1.5 ns veto window; the others use ±3 √(σ_t² + σ_t,spectrometer²), ±1.5 ns for
+  fibres and ±0.7 ns for pixels. The accidental-hit window follows the slowest plane, so with a
+  straw UBT every event is ±25 ns.
   `--time-window 100` on `run_reco.py` / `visualize_reco.py` forces one window on every plane
   and writes `results_tw100.json` / `visualization_tw100/`.
 - **Channels:** strips across × segments along, summed over views and layers; pads area / pitch².
-  Cost is area-driven (kCHF per layer-m², P-369 table 11 anchors, order of magnitude).
+  Cost is area-driven (kCHF per layer-m², P-369 table 11 anchors, order of magnitude); a second,
+  channel-driven figure is channels × relative cost per channel (straw channel = 1).
 - **Rates:** a strip's rate is the rate map summed over its own segment; a pad's is the density
   × its area. `run_reco.py` prints `OVER RATE LIMIT` for a plane above its density limit
   (area in m²) or its per-channel limit. Rates assume a 1 s spill (`--spill`); the fin maps have

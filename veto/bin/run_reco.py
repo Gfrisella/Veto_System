@@ -66,7 +66,8 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair):
     res = {"design": design.name, "description": design.raw.get("description", ""), "notes": design.notes,
            "area_m2": design.area, "n_cells": design.n_cells, "n_planes": len(design.planes),
            "technologies": sorted({p.technology or "generic" for p in design.planes}),
-           "n_channels": design.n_channels, "cost_kchf": design.cost, "ubt_x0": design.ubt_x0}
+           "n_channels": design.n_channels, "cost_kchf": design.cost, "rel_cost": design.rel_cost,
+           "ubt_x0": design.ubt_x0}
 
     # background candidates
     cand = inp["cand"]
@@ -130,7 +131,8 @@ def report(r, cfg):
     print(f"    {r['n_planes']} planes, {r['area_m2']:.1f} m2, {r['n_cells']:,} cells, "
           f"{r['total_rate_per_spill']:.3g} muon hits / spill ({r['total_rate_per_spill'] / cfg.spill_s:.3g} Hz)")
     print(f"    technology: {', '.join(r['technologies'])}; {r['n_channels']:,} readout channels, "
-          f"cost {r['cost_kchf']:.4g} kCHF, UBT material {100 * r['ubt_x0']:.2f} % X0")
+          f"cost {r['cost_kchf']:.4g} kCHF ({r['rel_cost']:.4g} straw-channel units), "
+          f"UBT material {100 * r['ubt_x0']:.2f} % X0")
     print(f"    background: {b['n']:,} candidates, TP {100 * b['TP_frac']:.3f} %  FN {100 * b['FN_frac']:.3f} % "
           f"({b['n_survive']:,} survive) -> {b['per_15y_before']:.3g} -> {b['per_15y_after']:.3g} events in 15 years")
     print(f"    signal:     FP (lost to accidental hits) {100 * s['FP_frac']:.3f} %, TN {100 * s['TN_frac']:.3f} %"

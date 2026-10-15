@@ -115,7 +115,8 @@ def plane_rates(design, maps, spill_s=1.0):
         limit = t["max_rate"] if t else None
         r = dict(plane=plane.name, area=plane.area, n_cells=plane.n_cells, rate=h.sum(),
                  mean_cell=h.sum() / max(plane.n_cells, 1), peak_cell=density.max() * cell,
-                 technology=plane.technology, n_channels=plane.n_channels, cost=plane.cost, x0=plane.x0,
+                 technology=plane.technology, n_channels=plane.n_channels, cost=plane.cost,
+                 rel_cost=plane.rel_cost, x0=plane.x0,
                  peak_hz_cm2=float(hz_cm2.max()), max_rate_hz_cm2=limit,
                  area_over_limit=float(bin_area[hz_cm2 > limit].sum()) if limit else 0.0)
         if t is None:
@@ -206,7 +207,10 @@ def time_window(design, cfg):
         return np.full(len(design.planes), cfg.time_window_ns / 2)
     sig = cfg.n_sigma_t * np.hypot(np.array([p.sigma_t for p in design.planes]) * 1e9, cfg.sigma_t_track)
     drift = np.array([(p.time_window or 0.0) * 1e9 / 2 for p in design.planes])
-    return drift + sig
+    # technologies with a fixed veto window (tiles: +- 1.5 ns) use it instead of +- n_sigma_t
+    fixed = np.array([(tech.TECHNOLOGIES[p.technology].get("veto_window") or np.nan) * 1e9 if p.technology
+                      else np.nan for p in design.planes])
+    return np.where(np.isnan(fixed), drift + sig, fixed)
 
 
 def match(queries, hits, design, cfg):
