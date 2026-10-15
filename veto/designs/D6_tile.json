@@ -1,0 +1,77 @@
+{
+ "name": "D6_tile",
+ "description": "D2 geometry, straw UBT, 5 x 5 cm scintillating-tile fins (200 ps)",
+ "ubt": {
+  "y_lo": -1.35,
+  "y_hi": 1.35
+ },
+ "fins": [
+  {
+   "side": "right",
+   "z": 30.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0
+  },
+  {
+   "side": "right",
+   "z": 45.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0
+  },
+  {
+   "side": "right",
+   "z": 60.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0
+  },
+  {
+   "side": "right",
+   "z": 75.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0
+  },
+  {
+   "side": "left",
+   "z": 30.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0
+  },
+  {
+   "side": "left",
+   "z": 45.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0
+  },
+  {
+   "side": "left",
+   "z": 60.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0
+  },
+  {
+   "side": "left",
+   "z": 75.6,
+   "length": 3.0,
+   "y_lo": -3.0,
+   "y_hi": 3.0,
+   "tilt": 0
+  }
+ ],
+ "detector": {
+  "technology": "tile"
+ }
+}
