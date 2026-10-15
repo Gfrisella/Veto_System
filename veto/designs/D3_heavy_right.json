@@ -1,11 +1,9 @@
 {
  "name": "D3_heavy_right",
- "description": "right side (cavern wall, bounces): 7 fins up to the wall; left: 3 short fins",
+ "description": "right side (cavern wall, bounces): 7 fins up to the wall; left: 3 short fins; 4 x 4 cm tile fins",
  "ubt": {
   "y_lo": -2.0,
-  "y_hi": 2.0,
-  "cell_x": 0.1,
-  "cell_y": 0.1
+  "y_hi": 2.0
  },
  "fins": [
   {
@@ -14,9 +12,7 @@
    "length": 4.5,
    "y_lo": -3.2,
    "y_hi": 4.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "right",
@@ -24,9 +20,7 @@
    "length": 4.5,
    "y_lo": -3.2,
    "y_hi": 4.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "right",
@@ -34,9 +28,7 @@
    "length": 4.5,
    "y_lo": -3.2,
    "y_hi": 4.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "right",
@@ -44,9 +36,7 @@
    "length": 4.5,
    "y_lo": -3.2,
    "y_hi": 4.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "right",
@@ -54,9 +44,7 @@
    "length": 4.5,
    "y_lo": -3.2,
    "y_hi": 4.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "right",
@@ -64,9 +52,7 @@
    "length": 4.5,
    "y_lo": -3.2,
    "y_hi": 4.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "right",
@@ -74,9 +60,7 @@
    "length": 4.5,
    "y_lo": -3.2,
    "y_hi": 4.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "left",
@@ -84,9 +68,7 @@
    "length": 2.0,
    "y_lo": -3.0,
    "y_hi": 3.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "left",
@@ -94,9 +76,7 @@
    "length": 2.0,
    "y_lo": -3.0,
    "y_hi": 3.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "left",
@@ -104,13 +84,10 @@
    "length": 2.0,
    "y_lo": -3.0,
    "y_hi": 3.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   }
  ],
  "detector": {
-  "efficiency": 0.99,
-  "sigma_t": 5e-10
+  "technology": "tile"
  }
 }

@@ -450,119 +450,36 @@ def acc_cloud(cell_cm):
     return layout(fig, title=dict(text=title, font=dict(size=7.5), x=0.02), margin=dict(l=32, r=6, t=18, b=28))
 
 
-# --- algorithm A on real events: one cached run per design
-_CACHE, _LOCK = {}, threading.Lock()
+# --- algorithm A on real events: computed once per design on the cluster (talk_events.py)
+import pickle  # noqa: E402
 
+from talk_events import KINDS, REASONS  # noqa: E402
 
-def run_design(name, quick=False):
-    """Background, signal and single-muon events of a design with full details (cached)."""
-    key = (name, quick)
-    with _LOCK:
-        if key in _CACHE:
-            return _CACHE[key]
-    d = dsg.load(name)
-    rng = np.random.default_rng(11)
-    cand = INP["cand"] if not quick else INP["cand"][:30_000]
-    rows = cand.ravel()
-    sub = take(TR, rows)
-    vz = np.repeat(INP["cand_vertex"][:len(cand), 2], 2)
-    check_stale()
-    b = reco.run_events(sub, np.repeat(np.arange(len(cand)), 2), vz, d, INP, CFG, rng, details=True)
-    check_stale()
-    sig, zv, ev, _ = reco.signal_from_target(30_000 if quick else 60_000, rng)
-    s = reco.run_events(sig, ev, zv, d, INP, CFG, rng, with_own_hits=False, details=True)
-    check_stale()
-    single = INP["single"] if not quick else INP["single"][::5]
-    st = take(TR, single)
-    m = reco.run_events(st, np.arange(len(single)), np.full(len(single), 1e9), d, INP, CFG, rng, details=True)
-    out = dict(design=d, sub=sub, vz=vz, b=b, sig=sig, s=s, st=st, m=m, single_w=INP["single_w"][:len(single)] if not quick
-               else INP["single_w"][::5], cand_w=INP["cand_w"][:len(cand)])
-    with _LOCK:
-        _CACHE[key] = out
-    return out
-
+EVENTS_FILE = paths.results_dir() / "reco" / "talk_events.pkl"
+EVENTS = pickle.loads(EVENTS_FILE.read_bytes()) if EVENTS_FILE.exists() else {}
+NO_EVENTS = "no talk_events.pkl: run docs/live_talk/talk_events.py on the cluster"
 
 pres.slider("ev_design", label="design", min=0, max=len(DESIGNS) - 1, value=DESIGNS.index("D2_default"), step=1, decimals=0)
 pres.slider("ev_kind", label="kind", min=0, max=3, value=0, step=1, decimals=0)
 pres.slider("ev_index", label="event", min=0, max=9, value=0, step=1, decimals=0)
-KINDS = ["background pair, vetoed", "background pair, missed", "signal lost to a random hit", "bounced muon, missed"]
 
 
-def pick_event(r, kind, k):
-    """Return (event tracks, tracks dict, run result, vertex z per track) for the k-th event of a kind."""
-    if kind in (0, 1):
-        ev = np.where(r["b"]["vetoed"] if kind == 0 else ~r["b"]["vetoed"])[0]
-        if not len(ev):
-            return None
-        e = ev[(k * 7919) % len(ev)] if kind == 0 else ev[k % len(ev)]
-        return [2 * e, 2 * e + 1], r["sub"], r["b"], r["vz"], e
-    if kind == 2:
-        ev = np.where(r["s"]["vetoed"])[0]
-        if not len(ev):
-            return None
-        e = ev[k % len(ev)]
-        n = len(r["s"]["vetoed"])
-        return [e, e + n], r["sig"], r["s"], r["sig"]["vz"], e
-    ev = np.where(~r["m"]["vetoed"] & (r["st"]["type"] == 0))[0]
-    if not len(ev):
-        return None
-    e = ev[k % len(ev)]
-    return [e], r["st"], r["m"], np.full(len(r["st"]["bx"]), 1e9), e
+def stored_event(di, kind, k):
+    """(design, parts) of the k-th stored event of a kind, parts None if the design has none."""
+    name = DESIGNS[int(di)]
+    d = dsg.load(name)
+    evs = EVENTS.get(name, {}).get("events", {}).get(int(kind), [])
+    return d, (evs[int(k) % len(evs)] if evs else None)
 
 
-def event_parts(r, kind, k):
-    got = pick_event(r, kind, int(k))
-    if got is None:
-        return None
-    tracks, tr, res, vz, e = got
-    d = r["design"]
-    hits, q, meas = res["hits"], res["queries"], res["meas"]
-    in_ev = hits["event"] == e
-    parts = dict(tracks=tracks, e=e, design=d, paths=[], preds=[], windows=[], matched=[], own=[], acc=[], vtx=None, info=[])
-    for t in tracks:
-        if "ax" in tr:
-            parts["paths"].append(path_of(tr, t, ("a{}", "b{}", "k{}")))
-        else:
-            parts["paths"].append([[tr["vx"][t], tr["vy"][t], tr["vz"][t]], [tr["bx"][t], tr["by"][t], tr["bz"][t]]])
-            parts["vtx"] = [tr["vx"][t], tr["vy"][t], tr["vz"][t]]
-        for j in np.where(q["track"] == t)[0]:
-            plane = d.planes[int(q["plane"][j])]
-            dz = meas["z"][t] - plane.z
-            x0, y0 = meas["x"][t], meas["y"][t]
-            xp, yp = plane.to_global(q["u"][j]), q["y"][j]
-            parts["preds"].append([[x0, y0, meas["z"][t]], [xp, yp, plane.z]])
-            parts["windows"].append((plane, xp, yp, q["r"][j]))
-            if res["found"][j]:
-                h = res["hit_of_query"][j]
-                hp = d.planes[int(hits["plane"][h])]
-                parts["matched"].append([hp.to_global(hits["u"][h]), hits["y"][h], hp.z])
-                parts["info"].append(f"track {tracks.index(t) + 1} hit: {hp.name.replace(' fin z=', ' ')} m")
-                parts["info"].append(f"   Δt = {hits['t'][h] - q['t'][j]:+.2f} ns")
-        p = math.sqrt(tr["bpx"][t] ** 2 + tr["bpy"][t] ** 2 + tr["bpz"][t] ** 2)
-        typ = TYPE_NAMES.get(int(tr["type"][t]), "") if "type" in tr else "signal"
-        short = {"SST1 bounced": "bounced", "SST1 p>1 GeV & timing": "selected", "SST1 other": "other"}.get(typ, typ)
-        parts["info"].insert(0, f"track {tracks.index(t) + 1}: {short} muon, {p:.1f} GeV")
-    for h in np.where(in_ev)[0]:
-        hp = d.planes[int(hits["plane"][h])]
-        pt = [hp.to_global(hits["u"][h]), hits["y"][h], hp.z]
-        (parts["own"] if hits["track"][h] in tracks else parts["acc"]).append(pt)
-    if kind in (0, 1):
-        parts["vtx"] = list(INP["cand_vertex"][e])
-    return parts
-
-
-def design_planes_3d(d):
-    return plane_meshes(d, scale=False)
-
-
-@pres.output("ev3d", inputs=["ev_design", "ev_kind", "ev_index"], background=True)
+@pres.output("ev3d", inputs=["ev_design", "ev_kind", "ev_index"])
 def ev3d(di, kind, k):
-    r = run_design(DESIGNS[int(di)])
-    parts = event_parts(r, int(kind), k)
-    traces = geometry() + design_planes_3d(r["design"])
+    d, parts = stored_event(di, kind, k)
+    traces = geometry() + plane_meshes(d, scale=False)
     sc = scene(z_range=(20, 90))
     if parts is None:
-        return layout(go.Figure(traces), scene=sc, title=dict(text="no such event in this design", font=dict(size=8)))
+        return layout(go.Figure(traces), scene=sc, title=dict(text=f"{d.name}: no event of this kind", font=dict(size=8),
+                                                              x=0.02) if EVENTS else dict(text=NO_EVENTS, font=dict(size=8)))
     col = {0: GRN, 1: RED, 2: ORA, 3: PUR}[int(kind)]
     traces += [lines3d(parts["paths"], col, 4), lines3d(parts["preds"], col, 2, dash="dot")]
     if parts["acc"]:
@@ -576,11 +493,9 @@ def ev3d(di, kind, k):
     return layout(go.Figure(traces), scene=sc, margin=dict(l=0, r=0, t=0, b=0))
 
 
-@pres.output("ev_side", inputs=["ev_design", "ev_kind", "ev_index"], background=True)
+@pres.output("ev_side", inputs=["ev_design", "ev_kind", "ev_index"])
 def ev_side(di, kind, k):
-    r = run_design(DESIGNS[int(di)])
-    parts = event_parts(r, int(kind), k)
-    d = r["design"]
+    d, parts = stored_event(di, kind, k)
     fig = make_subplots(rows=1, cols=1)
     fig.update_xaxes(domain=[0, 0.7])
     zz = np.array([geo.Z_VESSEL_MIN, geo.Z_VESSEL_MAX])
@@ -592,7 +507,7 @@ def ev_side(di, kind, k):
         xs = [plane.to_global(0), plane.to_global(plane.u_max)]
         fig.add_trace(go.Scatter(x=[plane.z, plane.z], y=xs, mode="lines", line=dict(color=ORA if plane.kind == "ubt" else "#2ca02c",
                                                                                    width=4), opacity=0.6), 1, 1)
-    info = ["no such event in this design"]
+    info = [f"{d.name}: no event of this kind" if EVENTS else NO_EVENTS]
     if parts is not None:
         col = {0: GRN, 1: RED, 2: ORA, 3: PUR}[int(kind)]
         for pth in parts["paths"]:
@@ -600,14 +515,15 @@ def ev_side(di, kind, k):
         for pr in parts["preds"]:
             fig.add_trace(go.Scatter(x=[pr[0][2], pr[1][2]], y=[pr[0][0], pr[1][0]], mode="lines",
                                      line=dict(color=col, width=1, dash="dot")), 1, 1)
-        for plane, xp, yp, rr in parts["windows"]:
+        for pi, xp, yp, rr in parts["windows"]:
+            plane = d.planes[pi]
             half = rr + plane.cell_u / 2
             fig.add_trace(go.Scatter(x=[plane.z, plane.z], y=[xp - half, xp + half], mode="lines",
                                      line=dict(color=ACC, width=7), opacity=0.35), 1, 1)
-        for name, pts, mk in (("acc", parts["acc"], dict(size=4, color="#777")),
-                              ("own", parts["own"], dict(size=7, color="white", line=dict(color=col, width=2))),
-                              ("matched", parts["matched"], dict(size=9, color="black" if int(kind) == 2 else col, symbol="diamond",
-                                                                 line=dict(color="black", width=1)))):
+        for pts, mk in ((parts["acc"], dict(size=4, color="#777")),
+                        (parts["own"], dict(size=7, color="white", line=dict(color=col, width=2))),
+                        (parts["matched"], dict(size=9, color="black" if int(kind) == 2 else col, symbol="diamond",
+                                                line=dict(color="black", width=1)))):
             if pts:
                 fig.add_trace(go.Scatter(x=[p[2] for p in pts], y=[p[0] for p in pts], mode="markers", marker=mk), 1, 1)
         if parts["vtx"] is not None:
@@ -631,7 +547,7 @@ pres.slider("k_sigt", label="σt", min=0.1, max=2, value=0.5, decimals=2)
 def evaluate(name, eps, spill, nsig, sigt, n_cand, n_sig, n_single):
     raw = dsg.load(name).raw
     raw = json.loads(json.dumps(raw))
-    raw["detector"] = dict(efficiency=eps, sigma_t=sigt * 1e-9)
+    raw["detector"] = dict(raw.get("detector", {}), efficiency=eps, sigma_t=sigt * 1e-9)   # keep the technology
     d = dsg.from_dict(raw)
     cfg = reco.RecoConfig(spill_s=spill, n_sigma_t=nsig)
     rng = np.random.default_rng(21)
@@ -671,17 +587,16 @@ def knobs_figure(res, final):
             ["pairs surviving", f"{res['surv']:,} of {res['n']:,}"],
             ["events / 15 y", f"{before:.3g} → {before * res['fn']:.2g}"],
             ["signal lost", f"{100 * res['fp']:.2f} %"], ["hits / event", f"{res['hits']:.1f}"],
-            ["time / event", f"{res['us']:.1f} µs"], ["sample", "all events" if final else "quick, 15 %"]]
+            ["time / event", f"{res['us']:.1f} µs"], ["sample", "20 k pairs, 10 k signal"]]
     text_block(fig, [f"{a}: {b}" for a, b in rows], 0.64, y0=0.97, dy=0.12, size=7, bold_first=False)
     return layout(fig, margin=dict(l=100, r=4, t=4, b=26))
 
 
-@pres.output("knobs", inputs=["k_design", "k_eps", "k_nsig", "k_sigt"], scan_result="first")
+@pres.output("knobs", inputs=["k_design", "k_eps", "k_nsig", "k_sigt"], background=True)
 def knobs(di, eps, nsig, sigt):
     spill = SPILL_S
     name = DESIGNS[int(di)]
-    yield knobs_figure(evaluate(name, eps, spill, nsig, sigt, 30_000, 15_000, 30_000), False)
-    yield knobs_figure(evaluate(name, eps, spill, nsig, sigt, len(INP["cand"]), 60_000, len(INP["single"])), True)
+    return knobs_figure(evaluate(name, eps, spill, nsig, sigt, 20_000, 10_000, 20_000), False)
 
 
 @pres.output("compare")
@@ -712,46 +627,20 @@ def compare():
 
 
 pres.slider("mw_design", label="design", min=0, max=len(DESIGNS) - 1, value=DESIGNS.index("D1_wide_ubt"), step=1, decimals=0)
-REASONS = ["crosses no detector upstream", "hit lost (inefficiency)", "bounced: prediction off by metres",
-           "outside the space window", "outside the time window"]
 
 
-@pres.output("missed_why", inputs=["mw_design"], background=True)
+@pres.output("missed_why", inputs=["mw_design"])
 def missed_why(di):
-    r = run_design(DESIGNS[int(di)])
-    d, sub, b, vz = r["design"], r["sub"], r["b"], r["vz"]
-    hits, q, meas = b["hits"], b["queries"], b["meas"]
-    window_t = CFG.n_sigma_t * math.hypot(d.sigma_t * 1e9, CFG.sigma_t_track)
-    counts = np.zeros(len(REASONS), int)
-    surv = np.where(~b["vetoed"])[0]
-    for e in surv:
-        check_stale()
-        for t in (2 * e, 2 * e + 1):
-            one = {k: v[t:t + 1] for k, v in sub.items()}
-            crossed = [p for p in d.planes if p.z < vz[t] and reco.true_crossing(one, p)[3][0]]
-            mine = np.where(hits["track"] == t)[0]
-            if not crossed:
-                counts[0] += 1
-                continue
-            on = [h for h in mine if d.planes[int(hits["plane"][h])] in crossed]
-            if not on:
-                counts[1] += 1
-                continue
-            h = on[0]
-            plane = d.planes[int(hits["plane"][h])]
-            dz = meas["z"][t] - plane.z
-            pu = plane.to_local(meas["x"][t] - meas["tx"][t] * dz); py = meas["y"][t] - meas["ty"][t] * dz
-            dist = dz * math.sqrt(1 + meas["tx"][t] ** 2 + meas["ty"][t] ** 2)
-            rr = CFG.r0 + (CFG.r_slope + CFG.r_ms / max(meas["p"][t], 0.1)) * dist
-            far = max(abs(hits["u"][h] - pu), abs(hits["y"][h] - py))
-            if far > rr + plane.cell_u / 2:
-                counts[2 if (np.isfinite(sub["kz"][t]) and far > 1) else 3] += 1
-            else:
-                counts[4] += 1
+    name = DESIGNS[int(di)]
+    st = EVENTS.get(name)
+    if st is None:
+        return layout(go.Figure(), title=dict(text=NO_EVENTS, font=dict(size=8)))
+    counts = st["why"]
     fig = go.Figure(go.Bar(y=REASONS[::-1], x=counts[::-1], orientation="h", marker_color=[ORA, RED, PUR, ACC, MUT],
                            text=[str(c) for c in counts[::-1]], textposition="outside", cliponaxis=False))
     fig.update_xaxes(title="muons of the surviving pairs")
-    title = f"{DESIGNS[int(di)]}: {len(surv)} of {len(b['vetoed']):,} pairs survive"
+    f = st["fom"]
+    title = f"{name}: {f['n_surv']} of {f['n_cand']:,} pairs survive"
     return layout(fig, title=dict(text=title, font=dict(size=8), x=0.02), margin=dict(l=150, r=20, t=18, b=28))
 
 
@@ -771,7 +660,7 @@ def cell_scan(di):
             f.update(cell_u=c, cell_y=c)
         d = dsg.from_dict(raw)
         rng = np.random.default_rng(5)
-        sig, zv, ev, _ = reco.signal_from_target(30_000, rng)
+        sig, zv, ev, _ = reco.signal_from_target(15_000, rng)
         s = reco.run_events(sig, ev, zv, d, INP, CFG, rng, with_own_hits=False)
         fp.append(100 * s["vetoed"].mean())
         peak.append(max(p["peak_cell"] for p in reco.plane_rates(d, INP)))
@@ -818,18 +707,15 @@ def sig_cross():
 pres.slider("fom_design", label="design", min=0, max=len(DESIGNS) - 1, value=DESIGNS.index("D2_default"), step=1, decimals=0)
 
 
-@pres.output("fom", inputs=["fom_design"], background=True)
+@pres.output("fom", inputs=["fom_design"])
 def fom(di):
     """Confusion matrix of one design: background pairs (expected events in 15 years) and signal (fractions)."""
-    r = run_design(DESIGNS[int(di)])
-    w15 = r["cand_w"] * 2 * 200e-12 / SPILL_S * (6e20 / 5e13)
-    veto_b, veto_s = r["b"]["vetoed"], r["s"]["vetoed"]
-    tp, fn = w15[veto_b].sum(), w15[~veto_b].sum()
-    fn_err = math.sqrt((w15[~veto_b] ** 2).sum()) if (~veto_b).any() else 2.3 * w15.mean()
-    fp, tn = veto_s.mean(), 1 - veto_s.mean()
+    f = EVENTS[DESIGNS[int(di)]]["fom"]
+    tp, fn, fn_err, fp, tn = f["tp"], f["fn"], f["fn_err"], f["fp"], f["tn"]
+    n_surv, n_cand = f["n_surv"], f["n_cand"]
     fig = go.Figure()
     cells = [(0, 1, "TP", f"{tp:.3g} events", f"{100 * tp / (tp + fn):.4f} % of bkg", GRN),
-             (1, 1, "FN", f"{fn:.1e} ± {fn_err:.0e}", f"events · {(~veto_b).sum()} of {len(veto_b):,} pairs", RED),
+             (1, 1, "FN", f"{fn:.1e} ± {fn_err:.0e}" if fn > 0 else f"< {fn_err:.0e}", f"events · {n_surv} of {n_cand:,} pairs", RED),
              (0, 0, "FP", f"{100 * fp:.2f} %", "of the signal", ORA),
              (1, 0, "TN", f"{100 * tn:.2f} %", "of the signal", ACC)]
     for cx, cy, name, big, small, col in cells:
@@ -850,19 +736,16 @@ def fom(di):
 pres.slider("n_sig15", label="signal", min=1, max=1000, value=100, decimals=0)
 
 
-@pres.output("fom15", inputs=["fom_design", "n_sig15"], background=True)
+@pres.output("fom15", inputs=["fom_design", "n_sig15"])
 def fom15(di, n_sig):
     """The confusion matrix as counts over the 15-year run (6e20 POT, 1 s spills)."""
-    r = run_design(DESIGNS[int(di)])
-    w15 = r["cand_w"] * 2 * 200e-12 / SPILL_S * (6e20 / 5e13)
-    veto_b, veto_s = r["b"]["vetoed"], r["s"]["vetoed"]
-    tp, fn = w15[veto_b].sum(), w15[~veto_b].sum()
-    fn_err = math.sqrt((w15[~veto_b] ** 2).sum()) if (~veto_b).any() else 2.3 * w15.mean()
-    fp, tn = n_sig * veto_s.mean(), n_sig * (1 - veto_s.mean())
+    f = EVENTS[DESIGNS[int(di)]]["fom"]
+    tp, fn, fn_err = f["tp"], f["fn"], f["fn_err"]
+    fp, tn = n_sig * f["fp"], n_sig * f["tn"]
     p_fake = 1 - math.exp(-fn)
     fig = go.Figure()
     cells = [(0, 1, "TP", f"{tp:.1f}", "fake vertices vetoed", GRN),
-             (1, 1, "FN", f"{fn:.1e}", f"fake discoveries (± {fn_err:.0e})", RED),
+             (1, 1, "FN", f"{fn:.1e}" if fn > 0 else f"< {fn_err:.0e}", "fake discoveries" + (f" (± {fn_err:.0e})" if fn > 0 else " (none survive: 90 % limit)"), RED),
              (0, 0, "FP", f"{fp:.1f}", "signal events lost", ORA),
              (1, 0, "TN", f"{tn:.1f}", "signal events kept", ACC)]
     for cx, cy, name, big, small, col in cells:
@@ -879,8 +762,6 @@ def fom15(di, n_sig):
     return layout(fig, title=dict(text=title, font=dict(size=7.5), x=0.02), margin=dict(l=4, r=4, t=18, b=4))
 
 
-# ---------------------------------------------------------------- warm the default design while the talk starts
-threading.Thread(target=lambda: run_design("D2_default"), daemon=True).start()
 
 if __name__ == "__main__":
     pres.run()

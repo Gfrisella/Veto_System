@@ -199,13 +199,13 @@ def main():
         results.append(r)
     print(f"\nFIGURE OF MERIT (signal model: {args.signal}; positive = vetoed; spill {args.spill:g} s)")
     print(f"{'design':<15}{'area m2':>8}{'TPR %':>10}{'FNR %':>9}{'FPR %':>8}{'TNR %':>8}{'pairs left':>11}"
-          f"{'B / 15 y':>18}{'Punzi':>7}")
+          f"{'B / 15 y':>18}{'Punzi':>7}{'cost kCHF':>11}{'channels':>14}")
     for r in results:
         f, b = r["fom"], r["background"]
         lim = "<" if f["B_15y_is_upper_limit"] else ""
         print(f"{r['design']:<15}{r['area_m2']:>8.0f}{100 * f['TPR']:>10.4f}{100 * f['FNR']:>9.4f}{100 * f['FPR']:>8.3f}"
               f"{100 * f['TNR']:>8.3f}{b['n_survive']:>11,}{lim + format(f['B_15y'], '.2g') + ' ± ' + format(f['B_15y_err'], '.1g'):>18}"
-              f"{f['punzi']:>7.3f}")
+              f"{f['punzi']:>7.3f}{r['cost_kchf']:>11,.0f}{r['n_channels']:>14,}")
     name = args.out or f"results{tag(cfg)}{'_oldsignal' if args.signal == 'old' else ''}.json"
     out = paths.results_dir() / "reco" / name
     out.write_text(json.dumps(dict(config=vars(cfg), spill_s=args.spill, signal=args.signal, results=results),

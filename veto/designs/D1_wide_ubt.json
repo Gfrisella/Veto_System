@@ -1,11 +1,9 @@
 {
  "name": "D1_wide_ubt",
- "description": "taller UBT and one fin per side at z = 30.6 m: a wide UBT",
+ "description": "taller UBT and one fin per side at z = 30.6 m: a wide UBT; 4 x 4 cm tile fins",
  "ubt": {
   "y_lo": -3.2,
-  "y_hi": 3.0,
-  "cell_x": 0.1,
-  "cell_y": 0.1
+  "y_hi": 3.0
  },
  "fins": [
   {
@@ -14,9 +12,7 @@
    "length": 4.0,
    "y_lo": -3.2,
    "y_hi": 3.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "left",
@@ -24,13 +20,10 @@
    "length": 4.0,
    "y_lo": -3.2,
    "y_hi": 3.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   }
  ],
  "detector": {
-  "efficiency": 0.99,
-  "sigma_t": 5e-10
+  "technology": "tile"
  }
 }

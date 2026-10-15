@@ -22,8 +22,12 @@ marks numbers that are not in the documents.
             ~170 kCHF per mat-m^2 (P-369, SND SciFi).
     pixel   Timepix-class hybrid pixels, 55 um. ~200 ps (Timepix4 bins). Pitch is variable and the
             timing depends on the chosen technology: much better with LGADs. 99.9 % (the user's
-            number). Several tenths of a % X0 (0.5 % assumed). The documents have no pixel numbers:
-            no rate limit, no cost (cost = nan).
+            number). Several tenths of a % X0 (0.5 % assumed). The SHiP documents have no pixel
+            numbers: no rate limit. Cost ESTIMATE ~3 800 kCHF/m^2 from the ATLAS ITk pixel detector
+            (hybrid, bump-bonded, same class): the UK share of its CORE cost (parts only) is 10.4 %
+            = 5.1 MCHF (UK Phase-II project report, Dec 2024, indico.cern.ch/event/1487535), so
+            ~49 MCHF in total, for ~13 m^2 of active area (ITk pixel TDR, CERN-LHCC-2017-021).
+            Monolithic sensors (MAPS) would be cheaper per m^2; no number found.
     tile    UBT timing layer: scintillating tiles, one SiPM each (colleague's numbers, Oct 2026):
             4 x 4 cm, ~120 ps (`tile`) or 2 x 2 cm, ~80 ps (`tile2`); sigma_x ~ the pitch; ~99.9 %
             depending on the configuration; veto window +-1.5 ns. SR-370: up to 10 MHz per 5 x 5 cm^2
@@ -55,7 +59,7 @@ TECHNOLOGIES = {
     "pixel": dict(name="Silicon pixel (Timepix-class)", readout="pad", views=None, layers_per_view=1,
                   pitch=55e-6, sigma_x=16e-6, sigma_t=0.2e-9, time_window=None, veto_window=None,
                   efficiency=0.999, max_length=None, max_rate=None, max_channel_rate=None,
-                  x0_per_layer=0.005, cost_m2_per_layer=None, cost_channel=20.0),
+                  x0_per_layer=0.005, cost_m2_per_layer=3800.0, cost_channel=20.0),   # cost: estimate, see above
     "tile": dict(name="Scintillating tile (4 x 4 cm, SiPM)", readout="pad", views=None, layers_per_view=1,
                  pitch=0.04, sigma_x=0.04, sigma_t=0.12e-9, time_window=None, veto_window=1.5e-9,
                  efficiency=0.999, max_length=None, max_rate=None, max_channel_rate=1e6,

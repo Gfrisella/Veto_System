@@ -1,11 +1,9 @@
 {
  "name": "D4_dense",
- "description": "stress test: 8 fins per side, 5 m reach, y -3.2 .. 6 m",
+ "description": "stress test: 8 fins per side, 5 m reach, y -3.2 .. 6 m; 4 x 4 cm tile fins",
  "ubt": {
   "y_lo": -3.2,
-  "y_hi": 4.0,
-  "cell_x": 0.1,
-  "cell_y": 0.1
+  "y_hi": 4.0
  },
  "fins": [
   {
@@ -14,9 +12,7 @@
    "length": 5.0,
    "y_lo": -3.2,
    "y_hi": 6.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "right",
@@ -24,9 +20,7 @@
    "length": 5.0,
    "y_lo": -3.2,
    "y_hi": 6.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "right",
@@ -34,9 +28,7 @@
    "length": 5.0,
    "y_lo": -3.2,
    "y_hi": 6.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "right",
@@ -44,9 +36,7 @@
    "length": 5.0,
    "y_lo": -3.2,
    "y_hi": 6.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "right",
@@ -54,9 +44,7 @@
    "length": 5.0,
    "y_lo": -3.2,
    "y_hi": 6.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "right",
@@ -64,9 +52,7 @@
    "length": 5.0,
    "y_lo": -3.2,
    "y_hi": 6.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "right",
@@ -74,9 +60,7 @@
    "length": 5.0,
    "y_lo": -3.2,
    "y_hi": 6.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "right",
@@ -84,9 +68,7 @@
    "length": 5.0,
    "y_lo": -3.2,
    "y_hi": 6.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "left",
@@ -94,9 +76,7 @@
    "length": 5.0,
    "y_lo": -3.2,
    "y_hi": 6.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "left",
@@ -104,9 +84,7 @@
    "length": 5.0,
    "y_lo": -3.2,
    "y_hi": 6.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "left",
@@ -114,9 +92,7 @@
    "length": 5.0,
    "y_lo": -3.2,
    "y_hi": 6.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "left",
@@ -124,9 +100,7 @@
    "length": 5.0,
    "y_lo": -3.2,
    "y_hi": 6.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "left",
@@ -134,9 +108,7 @@
    "length": 5.0,
    "y_lo": -3.2,
    "y_hi": 6.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "left",
@@ -144,9 +116,7 @@
    "length": 5.0,
    "y_lo": -3.2,
    "y_hi": 6.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "left",
@@ -154,9 +124,7 @@
    "length": 5.0,
    "y_lo": -3.2,
    "y_hi": 6.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   },
   {
    "side": "left",
@@ -164,13 +132,10 @@
    "length": 5.0,
    "y_lo": -3.2,
    "y_hi": 6.0,
-   "tilt": 0,
-   "cell_u": 0.1,
-   "cell_y": 0.1
+   "tilt": 0
   }
  ],
  "detector": {
-  "efficiency": 0.99,
-  "sigma_t": 5e-10
+  "technology": "tile"
  }
 }
