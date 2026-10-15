@@ -264,7 +264,7 @@
     \draw[aarr] (vtx.east) -- node[below, font=\scriptsize, color=accent] {tracks + vertex} ++(1.2,0) |- ([yshift=-2mm]algo.west);
     \draw[aarr] (algo) -- (score);
   \end{tikzpicture}\\[3mm]
-  \footnotesize Signal events: two tracks from a decay vertex uniform in the vessel, no own veto hits; only accidental hits can veto them.
+  \footnotesize Signal events: a long-lived neutral from the target decaying in the vessel into two tracks, with the pairs' selection; no own veto hits, only accidental hits can veto them.
 \end{frame}
 
 \begin{frame}{Events are time windows, not spills}
@@ -313,6 +313,21 @@
         \item signal: long-lived neutrals from the target, nearly along the beam ($\theta\approx p_T/p$), decaying in the vessel into two tracks; same selection as the pairs
         \item single SST1 muons (200\,k) for per-muon efficiencies
       \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The signal: from the target, not from Mars}
+  \begin{columns}[c]
+    \begin{column}{0.56\textwidth}
+      \livewidget{sig_cross}{\linewidth}{0.7\textheight}
+    \end{column}
+    \begin{column}{0.41\textwidth}\footnotesize
+      A long-lived neutral from the \key{target}: $p$ = 10--100\,GeV (log-uniform), $p_T\sim$ exp(1\,GeV), so $\theta\approx p_T/p$.\\[1mm]
+      Decays uniformly in $z$ in the vessel, $m = 1$\,GeV $\to$ two muon-mass tracks.\\[1mm]
+      The pairs' selection: SST1, $p>1$\,GeV, timing, IP $<2.5$\,m. \key{37\,\%} pass; median daughter angle 22\,mrad.\\[1mm]
+      Orange: its tracks followed back to $z = 30.6$\,m; grey: muon density.\\[1mm]
+      \takeaway[\footnotesize]{Two thirds cross the quiet UBT; the rest hit the fins next to the wall, where random hits veto them.}
     \end{column}
   \end{columns}
 \end{frame}
@@ -434,6 +449,67 @@
   \legendline{design: 0 D0 · 1 D1 · 2 D2 · 3 D3 · 4 D4 · 5 D5 coarse · 6 D5 fine. The whole chain reruns: a quick answer on 15\,\% of the events, then all of them ($\approx$5--10\,s).}
 \end{frame}
 
+\begin{frame}{Figure of merit}
+  \begin{columns}[c]
+    \begin{column}{0.44\textwidth}
+      \livewidget{fom}{\linewidth}{0.55\textheight}\\[1mm]
+      \sld{fom_design}\\[0.3mm]
+      \legendline{Positive = vetoed. Background: events in 15 years; signal: fractions.}
+    \end{column}
+    \begin{column}{0.54\textwidth}\tiny
+      \setlength{\tabcolsep}{3.5pt}
+      \begin{tabular}{@{}lrrrrrr@{}}
+        \toprule
+        design & TPR & FNR & FPR & TNR & $B$ / 15\,y & Punzi\\
+        \midrule
+        D0 & 25.2\,\% & 74.8\,\% & 0 & 100\,\% & 27 & 0.15\\
+        D1 & 99.992\,\% & 0.008\,\% & 1.13\,\% & 98.87\,\% & 0.003 & 0.637\\
+        D2 & 99.997\,\% & 0.003\,\% & 1.28\,\% & 98.72\,\% & 0.001 & 0.645\\
+        D3 & 99.992\,\% & 0.008\,\% & 1.49\,\% & 98.51\,\% & 0.003 & 0.634\\
+        D4 & 99.9998\,\% & 0.0002\,\% & 1.76\,\% & 98.24\,\% & 0.0001 & 0.651\\
+        D5 coarse & 99.997\,\% & 0.003\,\% & 4.72\,\% & 95.28\,\% & 0.001 & 0.623\\
+        D5 fine & 99.997\,\% & 0.003\,\% & 1.00\,\% & 99.00\,\% & 0.001 & 0.647\\
+        \bottomrule
+      \end{tabular}\\[2mm]
+      \footnotesize Punzi $= \varepsilon_S / (1.5 + \sqrt{B})$, $\varepsilon_S$ = TNR. Every design with fins has $B\ll1$, so the FoM is set by the signal efficiency.\\[1.5mm]
+      \takeaway[\footnotesize]{$B$ rests on a few dozen surviving pairs and some muons weigh 100$\times$ more: one pair can move it by $5\times$. The factorised estimate comes next.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Experiments}
+  \begin{columns}[c]
+    \begin{column}{0.56\textwidth}\scriptsize
+      \begin{tabular}{@{}lrrr@{}}
+        \toprule
+        variation of D2 & FPR & TPR & $B$ / 15\,y\\
+        \midrule
+        as is & 1.21\,\% & 99.997\,\% & 0.001\\
+        $\sigma_t$ 0.5 $\to$ \key{0.1\,ns} & \key{0.41\,\%} & 99.98\,\% & 0.006\\
+        $\sigma_t$ 1\,ns & 2.19\,\% & 99.997\,\% & 0.001\\
+        cells 10 $\to$ 3\,cm & 0.83\,\% & 99.997\,\% & 0.001\\
+        $\sigma_t$ 0.1\,ns \key{and} 5\,cm cells & \key{0.30\,\%} & 99.98\,\% & 0.006\\
+        time window 3 $\to$ 2$\sigma$ & 0.89\,\% & 99.91\,\% & 0.03\\
+        time window 4$\sigma$ & 1.65\,\% & 99.998\,\% & 0.0008\\
+        veto needs hits on 2 planes & 0.002\,\% & 36\,\% & 23\\
+        without the fins at 30.6\,m & 0.13\,\% & 61\,\% & 14\\
+        fins only 1\,m long & 0.20\,\% & 98.9\,\% & 0.4\\
+        fins only $y = -1$..$1$\,m & 1.21\,\% & 94.2\,\% & 2.1\\
+        \midrule
+        D4, $\sigma_t$ 0.1\,ns and 5\,cm cells & 0.49\,\% & 99.9998\,\% & 0.0001\\
+        \bottomrule
+      \end{tabular}\\[1mm]
+      \faint{60\,k signal decays per row; \texttt{bin/run\_reco.py} on one core.}
+    \end{column}
+    \begin{column}{0.41\textwidth}\footnotesize
+      \key{Time resolution} is the biggest lever on signal loss, then cell size: $3$--$4\times$ less, at no cost in background.\\[1.5mm]
+      The \key{fins at 30.6\,m} veto most of the background and cause most of the signal loss.\\[1.5mm]
+      A \key{2-plane rule} fails: most muons cross exactly one plane. Redundancy has to be built into the geometry.\\[1.5mm]
+      \takeaway[\footnotesize]{Short fins trade 0.2\,\% signal loss for about 0.4 background events: the kind of choice the optimiser has to make.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
 \begin{frame}{Why the last pairs survive}
   \begin{columns}[c]
     \begin{column}{0.62\textwidth}
@@ -513,7 +589,7 @@
       \begin{itemize}\footnotesize
         \item muon DIS in the walls and fins, neutrinos
         \item muons from the same proton collision (correlated in time)
-        \item a realistic signal model
+        \item specific signal models (masses, decay modes, lifetimes) beyond the generic two-body decay
         \item more runs of the veto-only muons: per seed, everything crossing the vessel walls or UBT window, plus a $10^{-5}$ sample of UBT-plane crossers
       \end{itemize}
     \end{column}
@@ -557,7 +633,7 @@
     \end{column}
     \begin{column}{0.48\textwidth}\small
       \key{Reconstruction}: time-window events with accidental hits from full-statistics rate maps; a track-driven veto, $\approx$10\,µs per event, no combinatorics.\\[2mm]
-      \takeaway[\footnotesize]{Background is vetoed at $>99.99\,\%$ by any design with fins. The trade-off is signal loss to random hits (cells, time window, fin placement) and redundancy for the last pairs.}
+      \takeaway[\footnotesize]{Background is vetoed at $>99.99\,\%$ by any design with fins ($B\ll1$ in 15 years). The figure of merit is then the signal efficiency: 98.7\,\% for D2, 99.7\,\% with 0.1\,ns timing and 5\,cm cells.}
     \end{column}
   \end{columns}
 \end{frame}

@@ -785,6 +785,68 @@ def cell_scan(di):
     return layout(fig, title=dict(text=DESIGNS[int(di)], font=dict(size=8), x=0.02), margin=dict(l=40, r=8, t=18, b=30))
 
 
+# ====================================================================== the signal, and the figure of merit
+@pres.output("sig_cross")
+def sig_cross():
+    """Where selected signal tracks, followed back from the spectrometer, cross z = 30.6 m, over the muon density."""
+    rng = np.random.default_rng(3)
+    sig, zv, ev, acc = reco.signal_from_target(4000, rng)
+    meas = reco.measure(sig, CFG, rng)
+    dz = meas["z"] - geo.Z_UBT
+    xs, ys = meas["x"] - meas["tx"] * dz, meas["y"] - meas["ty"] * dz
+    # muon density at z = 30.6 m in x-y: fins' maps outside the walls, the UBT's profile inside
+    ub, yb = INP["u_bins"], INP["y_bins"]
+    xw = mt.side_plane_x(geo.Z_UBT)
+    dens = lambda side: INP["fin_maps"][side, 0] / np.outer(np.diff(ub), np.diff(yb))
+    yc = 0.5 * (yb[1:] + yb[:-1])
+    x_left = xw + 0.5 * (ub[1:] + ub[:-1])
+    fig = go.Figure()
+    for xx, dd in ((x_left, dens(0)), (-x_left[::-1], dens(1)[::-1])):
+        fig.add_trace(go.Heatmap(x=xx, y=yc, z=np.log10(np.maximum(dd.T, 1)), zmin=2, zmax=9, colorscale="Greys",
+                                 showscale=False, opacity=0.55))
+    fig.add_trace(go.Scatter(x=xs, y=ys, mode="markers", marker=dict(size=2.5, color=ORA, opacity=0.6)))
+    fig.add_shape(type="rect", x0=-geo.UBT_HALF_X, x1=geo.UBT_HALF_X, y0=-geo.UBT_HALF_Y, y1=geo.UBT_HALF_Y,
+                  line=dict(color=ACC, width=1.5))
+    inside = np.mean((np.abs(xs) < geo.UBT_HALF_X) & (np.abs(ys) < geo.UBT_HALF_Y))
+    near = np.mean((np.abs(xs) >= geo.UBT_HALF_X) & (np.abs(xs) < xw + 1.0))
+    fig.update_xaxes(title="x at z = 30.6 m [m]", range=[-4, 4])
+    fig.update_yaxes(title="y [m]", range=[-3.5, 3.5], scaleanchor="x")
+    title = f"{100 * inside:.0f} % through the UBT · {100 * near:.0f} % within 1 m outside it"
+    return layout(fig, title=dict(text=title, font=dict(size=7.5), x=0.02), margin=dict(l=32, r=6, t=18, b=28))
+
+
+pres.slider("fom_design", label="design", min=0, max=len(DESIGNS) - 1, value=DESIGNS.index("D2_default"), step=1, decimals=0)
+
+
+@pres.output("fom", inputs=["fom_design"], background=True)
+def fom(di):
+    """Confusion matrix of one design: background pairs (expected events in 15 years) and signal (fractions)."""
+    r = run_design(DESIGNS[int(di)])
+    w15 = r["cand_w"] * 2 * 200e-12 / SPILL_S * (6e20 / 5e13)
+    veto_b, veto_s = r["b"]["vetoed"], r["s"]["vetoed"]
+    tp, fn = w15[veto_b].sum(), w15[~veto_b].sum()
+    fn_err = math.sqrt((w15[~veto_b] ** 2).sum()) if (~veto_b).any() else 2.3 * w15.mean()
+    fp, tn = veto_s.mean(), 1 - veto_s.mean()
+    fig = go.Figure()
+    cells = [(0, 1, "TP", f"{tp:.3g} events", f"{100 * tp / (tp + fn):.4f} % of bkg", GRN),
+             (1, 1, "FN", f"{fn:.1e} ± {fn_err:.0e}", f"events · {(~veto_b).sum()} of {len(veto_b):,} pairs", RED),
+             (0, 0, "FP", f"{100 * fp:.2f} %", "of the signal", ORA),
+             (1, 0, "TN", f"{100 * tn:.2f} %", "of the signal", ACC)]
+    for cx, cy, name, big, small, col in cells:
+        fig.add_shape(type="rect", x0=cx, x1=cx + 1, y0=cy, y1=cy + 1, line=dict(color="white", width=3),
+                      fillcolor=col, opacity=0.18)
+        for dy, text, size in ((0.72, f"<b>{name}</b>", 9), (0.47, big, 8.5), (0.24, small, 6.5)):
+            fig.add_annotation(x=cx + 0.5, y=cy + dy, text=text, showarrow=False, font=dict(size=size, color=INK))
+    for x, text in ((0.5, "vetoed"), (1.5, "not vetoed")):
+        fig.add_annotation(x=x, y=2.08, text=f"<b>{text}</b>", showarrow=False, font=dict(size=7, color=MUT))
+    for y, text in ((1.5, "muon pairs"), (0.5, "signal")):
+        fig.add_annotation(x=-0.06, y=y, text=f"<b>{text}</b>", showarrow=False, textangle=-90, font=dict(size=7, color=MUT))
+    fig.update_xaxes(visible=False, range=[-0.15, 2.02]); fig.update_yaxes(visible=False, range=[-0.02, 2.18])
+    punzi = tn / (1.5 + math.sqrt(fn))
+    return layout(fig, title=dict(text=f"{DESIGNS[int(di)]} · Punzi {punzi:.3f}",
+                                  font=dict(size=7.5), x=0.02), margin=dict(l=4, r=4, t=18, b=4))
+
+
 # ---------------------------------------------------------------- warm the default design while the talk starts
 threading.Thread(target=lambda: run_design("D2_default"), daemon=True).start()
 
