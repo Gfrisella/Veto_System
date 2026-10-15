@@ -3,7 +3,9 @@
   data          the full run (types, bounces) and the design-optimisation dataset
   design space  UBT + fins built from sliders, geometric coverage, rate maps
   reconstruction  search windows, timing, accidental hits, algorithm A on real events, diagnosis
-  results       knobs (efficiency, spill, time window, cells), design comparison, granularity
+  results       knobs (efficiency, time window, time resolution), design comparison, granularity
+
+The spill is 1 s (SPILL_S): rates in Hz equal muons per spill.
 
   ./run.sh        (build the PDF and present; the app starts this script)
 Needs veto/results/{reco/inputs.npz, reco/results.json, design_explorer/sample.npz,
@@ -56,7 +58,8 @@ EXPL = dict(np.load(paths.results_dir() / "design_explorer" / "sample.npz"))
 FULL = dict(np.load(paths.results_dir() / "visualization" / "full" / "samples.npz"))
 RESULTS = json.loads((paths.results_dir() / "reco" / "results.json").read_text())
 DESIGNS = sorted(p.stem for p in dsg.DESIGN_DIR.glob("*.json"))
-CFG = reco.RecoConfig()
+SPILL_S = 1.0                                                    # spill length [s]
+CFG = reco.RecoConfig(spill_s=SPILL_S)
 VIZ_TYPES = [("bounced back into SST1", PUR), ("SST1, p > 1 GeV & timing", RED), ("SST1, other", "#ff9896"),
              ("enters through SBT wall", "#1f77b4"), ("enters through UBT window", "#ff7f0e"),
              ("bounced / scattered in rock", PINK), ("straight past the vessel", GREY),
@@ -170,15 +173,15 @@ def si_hz(v):
     return f"{v:.3g} Hz"
 
 
-@pres.output("where_hz", inputs=["spill"])
-def where_hz(spill):
+@pres.output("where_hz")
+def where_hz():
     """The same categories as rates: muons per spill / spill length."""
-    rate = FULL["weight"] / spill
+    rate = FULL["weight"] / SPILL_S
     order = list(range(len(VIZ_TYPES)))[::-1]
     fig = go.Figure(go.Bar(y=[VIZ_TYPES[i][0] for i in order], x=[rate[i] for i in order], orientation="h",
                            marker_color=[VIZ_TYPES[i][1] for i in order], text=[si_hz(rate[i]) for i in order],
                            textposition="outside", textfont=dict(size=6.5), cliponaxis=False))
-    fig.update_xaxes(type="log", title=f"rate for a {spill:g} s spill [Hz]", range=[2.7, 12.3],
+    fig.update_xaxes(type="log", title=f"rate for a {SPILL_S:g} s spill [Hz]", range=[2.7, 12.3],
                      tickvals=[1e3, 1e6, 1e9], ticktext=["1 kHz", "1 MHz", "1 GHz"])
     return layout(fig, title=dict(text=f"total {si_hz(rate.sum())} · {si_hz(rate[:8].sum())} past z = 30.6 m",
                                   font=dict(size=8), x=0.02), margin=dict(l=112, r=6, t=18, b=30))
@@ -412,18 +415,18 @@ def time_trade(sig_t):
 
 # --- accidental hits on one fin
 pres.slider("cell_cm", label="cell", min=2, max=50, value=10, decimals=0)
-pres.slider("spill", label="spill", min=0.5, max=5, value=1, decimals=1)
 
 
-@pres.output("acc_cloud", inputs=["cell_cm", "spill"])
-def acc_cloud(cell_cm, spill):
+@pres.output("acc_cloud", inputs=["cell_cm"])
+def acc_cloud(cell_cm):
+    spill = SPILL_S
     d = dsg.load("D2_default")
     plane = next(p for p in d.planes if p.kind == "fin" and p.sign < 0)          # right fin at z = 30.6
     cell = cell_cm / 100
     ub, yb, h = reco.plane_rate_map(plane, INP)
     window = 2 * CFG.n_sigma_t * math.hypot(0.5, CFG.sigma_t_track) * 1e-9
     lam = h.sum() * window / spill
-    rng = np.random.default_rng(int(cell_cm * 7 + spill * 13))
+    rng = np.random.default_rng(int(cell_cm * 7))
     n = rng.poisson(lam)
     b = rng.choice(h.size, n, p=(h / h.sum()).ravel())
     iu, iy = np.unravel_index(b, h.shape)
@@ -621,7 +624,6 @@ def ev_side(di, kind, k):
 # ====================================================================== PART 5: results
 pres.slider("k_design", label="design", min=0, max=len(DESIGNS) - 1, value=DESIGNS.index("D2_default"), step=1, decimals=0)
 pres.slider("k_eps", label="ε", min=0.9, max=1.0, value=0.99, decimals=3)
-pres.slider("k_spill", label="spill", min=0.5, max=5, value=1, decimals=1)
 pres.slider("k_nsig", label="nσ", min=1.5, max=5, value=3, decimals=1)
 pres.slider("k_sigt", label="σt", min=0.1, max=2, value=0.5, decimals=2)
 
@@ -674,8 +676,9 @@ def knobs_figure(res, final):
     return layout(fig, margin=dict(l=100, r=4, t=4, b=26))
 
 
-@pres.output("knobs", inputs=["k_design", "k_eps", "k_spill", "k_nsig", "k_sigt"], scan_result="first")
-def knobs(di, eps, spill, nsig, sigt):
+@pres.output("knobs", inputs=["k_design", "k_eps", "k_nsig", "k_sigt"], scan_result="first")
+def knobs(di, eps, nsig, sigt):
+    spill = SPILL_S
     name = DESIGNS[int(di)]
     yield knobs_figure(evaluate(name, eps, spill, nsig, sigt, 30_000, 15_000, 30_000), False)
     yield knobs_figure(evaluate(name, eps, spill, nsig, sigt, len(INP["cand"]), 60_000, len(INP["single"])), True)

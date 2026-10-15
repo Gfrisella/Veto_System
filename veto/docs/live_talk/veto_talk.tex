@@ -40,7 +40,7 @@
       \end{itemize}
       \vspace{1mm}
       Slow widgets show a spinner and fill in; some show a quick answer first. 3D views rotate and zoom.\\[2mm]
-      \takeaway[\footnotesize]{All rates assume a \key{1 s spill} of $5\cdot10^{13}$ POT and weights in muons per spill. Both still need confirming; the accidental rates scale with $1/T_\text{spill}$.}
+      \takeaway[\footnotesize]{The spill is \key{1 s} of $5\cdot10^{13}$ POT and the weights are muons per spill, so muons per spill and Hz are the same number.}
     \end{column}
     \begin{column}{0.4\textwidth}\centering
       \begin{tikzpicture}[node distance=3.2mm]
@@ -150,14 +150,13 @@
 \begin{frame}{Where the muons go, in Hz}
   \begin{columns}[c]
     \begin{column}{0.62\textwidth}
-      \livewidget{where_hz}{\linewidth}{0.62\textheight}\\[1mm]
-      \sld[0.6\linewidth]{spill}
+      \livewidget{where_hz}{\linewidth}{0.7\textheight}
     \end{column}
     \begin{column}{0.36\textwidth}\footnotesize
-      The same muons as rates: muons per spill (weights for $5\cdot10^{13}$ POT) divided by the spill length $T$.\\[1.5mm]
-      At $T = 1$\,s: \key{$\approx$3.5\,GHz} cross $z = 30.6$\,m, 2.7\,GHz pass the vessel to $z = 82$\,m, $\approx$30\,kHz reach the SST1 acceptance and $\approx$30\,kHz enter the vessel without reaching it.\\[1.5mm]
-      Every rate scales as $1/T$: the slider is shared with the time-window slide.\\[1.5mm]
-      \takeaway[\footnotesize]{Spill length and POT per spill still need confirming: all rates on these slides inherit them.}
+      The same muons as rates: muons per spill of $5\cdot10^{13}$ POT over the 1\,s spill.\\[1.5mm]
+      \key{$\approx$3.5\,GHz} cross $z = 30.6$\,m and 2.7\,GHz pass the vessel to $z = 82$\,m.\\[1.5mm]
+      $\approx$29\,kHz reach the SST1 acceptance (the three SST1 bars together), $\approx$27\,kHz enter the vessel without reaching it.\\[1.5mm]
+      \takeaway[\footnotesize]{A veto detector sees GHz in total; the muons it must catch arrive at tens of kHz.}
     \end{column}
   \end{columns}
 \end{frame}
@@ -272,8 +271,8 @@
   \begin{columns}[c]
     \begin{column}{0.62\textwidth}
       \livewidget{acc_cloud}{\linewidth}{0.62\textheight}\\[1mm]
-      \sld[0.48\linewidth]{cell_cm}\hfill\sld[0.48\linewidth]{spill}\\[0.3mm]
-      \legendline{cell size [cm] · spill length [s]}
+      \sld[0.6\linewidth]{cell_cm}\\[0.3mm]
+      \legendline{cell size [cm]; 1\,s spill}
     \end{column}
     \begin{column}{0.36\textwidth}\footnotesize
       A fin at 30.6\,m sees $\sim10^{9}$ muons per second: simulating whole spills hit by hit is hopeless.\\[1.5mm]
@@ -430,8 +429,8 @@
 
 \begin{frame}{Turn the knobs}
   \livewidget{knobs}{\linewidth}{0.5\textheight}\\[1mm]
-  \sld[0.32\linewidth]{k_design}\hfill\sld[0.32\linewidth]{k_eps}\hfill\sld[0.32\linewidth]{k_spill}\\[0.4mm]
-  \sld[0.32\linewidth]{k_nsig}\hfill\sld[0.32\linewidth]{k_sigt}\hfill\hspace*{0.32\linewidth}\\[0.3mm]
+  \sld[0.32\linewidth]{k_design}\hfill\sld[0.32\linewidth]{k_eps}\hfill\sld[0.32\linewidth]{k_nsig}\\[0.4mm]
+  \sld[0.32\linewidth]{k_sigt}\hfill\hspace*{0.32\linewidth}\hfill\hspace*{0.32\linewidth}\\[0.3mm]
   \legendline{design: 0 D0 · 1 D1 · 2 D2 · 3 D3 · 4 D4 · 5 D5 coarse · 6 D5 fine. The whole chain reruns: a quick answer on 15\,\% of the events, then all of them ($\approx$5--10\,s).}
 \end{frame}
 
@@ -542,7 +541,7 @@
 
 \begin{frame}{Open questions}
   \begin{itemize}\small
-    \item Spill length and POT per spill; are the weights muons per spill?
+    \item POT per spill: are the weights muons per 1\,s spill of $5\cdot10^{13}$ POT?
     \item The repeated-\texttt{evt\_n} weight correction of the original analysis: the dataset uses the plain average over runs.
     \item Cavern geometry in the simulation: muons cross $x = -4.56$\,m and reach $x\approx-9$\,m.
     \item Veto technology near the vessel: rates per cell, time resolution, dead time.
