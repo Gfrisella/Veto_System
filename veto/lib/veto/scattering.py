@@ -7,10 +7,11 @@ the scatterers along its true path, with x/X0:
     PVC walls, 0.3 mm (X0 = 19.63 cm)     vessel entrance (z = 30.6 m, inside the aperture),
                                           exit (z = 80.6 m) and the lateral walls where crossed;
                                           path in the wall = thickness / |cos(incidence)|
-    helium, X0 = 5671 m                   path inside the vessel (decay volume)
-    air, X0 = 303.9 m                     path outside the vessel, z = 30.6 .. 82 m
     UBT                                   straw plane at z = 30.6 m (technology x0) if crossed
     fins                                  technology x0 / |cos(incidence)| where crossed
+    helium, X0 = 5671 m; air, 303.9 m     OFF by default (MEDIA = False): to be done once with
+                                          Geant4; with MEDIA on, the path inside / outside the
+                                          vessel, z = 30.6 .. 82 m, sliced in DZ_SLICE slabs
 
 The angular spread follows Highland for the muon's TOTAL x/X0, shared between the scatterers in
 proportion to their x/X0 (Gaussian kicks in x and y). Bounced muons scatter only after their bounce
@@ -32,6 +33,7 @@ from .tracks import vessel_crossings
 X0_AIR, X0_HELIUM, X0_PVC = 303.9, 5671.0, 0.1963        # m (PDG)
 PVC_THICKNESS = 0.3e-3                                     # m, vessel walls
 DZ_SLICE = 1.0                                             # m, slicing of air / helium
+MEDIA = False                                              # air and helium: later, from Geant4
 M_MU = 0.10566                                             # GeV
 MIN_COS = 0.02                                             # cap grazing incidence (path <= 50 x thickness)
 
@@ -53,7 +55,11 @@ def _segments(tr):
     a = np.stack([tr["ax"], tr["ay"], tr["az"]], 1).astype(float)
     k = np.stack([tr["kx"], tr["ky"], tr["kz"]], 1).astype(float)
     bounced = np.isfinite(k[:, 2])
-    start = np.where(bounced[:, None], k, a)                # bounced: only after the bounce
+    # A is stored up to 2 cm after z = 30.6: start 5 cm earlier so planes at 30.6 are crossed
+    with np.errstate(invalid="ignore", divide="ignore"):
+        a_ext = a - (b - a) * (mt.A_TOLERANCE / (b[:, 2] - a[:, 2]))[:, None]
+    a_ext = np.where(np.isfinite(a_ext), a_ext, a)
+    start = np.where(bounced[:, None], k, a_ext)            # bounced: only after the bounce
     return [(start, b, np.ones(len(b), bool))], bounced
 
 
@@ -68,7 +74,7 @@ def _at_z(p, q, z):
     return pt
 
 
-def scatterers(tr, design):
+def scatterers(tr, design, media=None):
     """All scatterers of every track: z (n, S), x/X0 (n, S), NaN / 0 where a scatterer is not crossed."""
     (segs, bounced) = _segments(tr)
     p, q, _ = segs[0]
@@ -83,7 +89,7 @@ def scatterers(tr, design):
     # UBT and the vessel entrance window, at z = 30.6 m (start of the unbounced muons)
     ubt = design.planes[0]
     pa = p
-    near_a = np.abs(p[:, 2] - geo.Z_UBT) < 0.05
+    near_a = np.abs(p[:, 2] - geo.Z_UBT) < 2 * mt.A_TOLERANCE
     in_ubt = near_a & (np.abs(pa[:, 0]) < geo.UBT_HALF_X) & (pa[:, 1] >= ubt.y_lo) & (pa[:, 1] <= ubt.y_hi)
     x_ubt = tech.x0(tech.TECHNOLOGIES[ubt.technology]) if ubt.technology else 0.0
     zs.append(np.where(in_ubt, geo.Z_UBT, np.nan)); xs.append(np.where(in_ubt, x_ubt / cos_z, 0.0))
@@ -118,8 +124,9 @@ def scatterers(tr, design):
     in_exit = np.isfinite(pe[:, 2]) & (np.abs(pe[:, 0]) < hx) & (np.abs(pe[:, 1]) < hy)
     zs.append(np.where(in_exit, geo.Z_VESSEL_MAX, np.nan)); xs.append(np.where(in_exit, PVC_THICKNESS / X0_PVC / cos_z, 0.0))
 
-    # air / helium, sliced in z
-    for zc in np.arange(geo.Z_UBT + DZ_SLICE / 2, geo.Z_SST1, DZ_SLICE):
+    # air / helium, sliced in z (off by default)
+    slices = np.arange(geo.Z_UBT + DZ_SLICE / 2, geo.Z_SST1, DZ_SLICE) if (MEDIA if media is None else media) else []
+    for zc in slices:
         pt = _at_z(p, q, np.full(n, zc))
         ok = np.isfinite(pt[:, 2])
         hx, hy = geo.vessel_half_widths(np.full(n, zc))
@@ -129,9 +136,9 @@ def scatterers(tr, design):
     return np.stack(zs, 1), np.stack(xs, 1)
 
 
-def kicks(tr, design, rng):
+def kicks(tr, design, rng, media=None):
     """Scattering of every track: dict with z, theta_x, theta_y (n, S) and the total x/X0 (n,)."""
-    z, x = scatterers(tr, design)
+    z, x = scatterers(tr, design, media)
     p = np.maximum(np.sqrt(tr["bpx"] ** 2 + tr["bpy"] ** 2 + tr["bpz"] ** 2), 0.05)   # at z = 82 m
     x_tot = x.sum(1)
     theta = highland(p, x_tot)
