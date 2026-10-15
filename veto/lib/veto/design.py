@@ -119,7 +119,12 @@ def load(path_or_name):
     path = Path(path_or_name)
     if not path.exists():
         path = DESIGN_DIR / f"{path_or_name}.json"
-    raw = json.loads(path.read_text())
+    return from_dict(json.loads(path.read_text()))
+
+
+def from_dict(raw):
+    """A design from its JSON content (the dict is copied, then the physical limits applied)."""
+    raw = json.loads(json.dumps(raw))
     notes = validate(raw)
     u = raw["ubt"]
     planes = [Plane(0, "UBT", "ubt", geo.Z_UBT, 0, 2 * geo.UBT_HALF_X, u["y_lo"], u["y_hi"],
