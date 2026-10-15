@@ -240,6 +240,23 @@ and a priority (A: before optimising, B: changes the results, C: second order). 
 - **C, detector:** response simplifications, dead material, validation against FairShip,
   weights and statistics of the single-run classes.
 
+### Design optimisation: LLM evolution (AlphaEvolve-style)
+
+`evolve/evolve_designs.py` runs on the laptop: an LLM (OpenRouter, key from `OPENROUTER_API_KEY` or the
+supply2 `.env`) proposes complete design JSONs from a rank-weighted parent, the top designs as
+inspiration and a directive (refine / explore / combine), with the problem context: geometry and limits,
+the JSON schema, technologies, the muon density per side / z / distance from the wall, the objective.
+Each generation's designs are evaluated in parallel on farm-gpu3 (`evolve/evaluate_designs.py`, sent over
+the SSH proxy, so the key stays local): the full run_reco chain with multiple scattering, reported back
+per plane (rates, limits, cost, which planes veto and which lose signal). `evolve/objective.py` is a
+PLACEHOLDER score (signal kept - cost - rate-limit and background penalties). Everything goes to
+`results/evolve/<run>/` (`history.jsonl`, `best.json`, the system prompt).
+
+```bash
+bin/remote.sh sync                                   # the cluster needs the current code
+evolve/evolve_designs.py --generations 20 --children 8 [--model anthropic/claude-sonnet-4.5]
+```
+
 ## Running
 
 ```bash

@@ -152,10 +152,16 @@ def plane_rates(design, maps, spill_s=1.0):
     return out
 
 
+ACC_MARGIN_NS = 2.0     # random hits are drawn this much beyond a plane's time window (inclined tracks)
+
+
 def accidental_hits(design, maps, n_events, window_ns, cfg, rng):
-    """Random hits of all other muons in +- window_ns around each plane's nominal time."""
+    """Random hits of all other muons in +- window_ns around each plane's nominal time.
+    window_ns: one half width for every plane, or one per plane (each plane only needs its own)."""
     out = {k: [] for k in ("event", "plane", "u", "y", "t")}
+    windows = np.broadcast_to(np.asarray(window_ns, float), (len(design.planes),))
     for plane in design.planes:
+        window_ns = float(windows[plane.index])
         ub, yb, h = plane_rate_map(plane, maps)
         rate = h.sum()
         if rate <= 0:
@@ -267,7 +273,7 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
         tr_true = tr
     own = own_hits(tr_true, event, design, rng) if with_own_hits else {k: np.empty(0) for k in
                                                                    ("event", "track", "plane", "u", "y", "t")}
-    window = time_window(design, cfg).max() + 0.5
+    window = time_window(design, cfg) + ACC_MARGIN_NS        # each plane its own window
     acc = accidental_hits(design, maps, n_events, window, cfg, rng)
     acc["track"] = np.full(len(acc["event"]), -1)            # accidental: no track of this event
     hits = {k: np.concatenate([own[k], acc[k]]) for k in own}

@@ -86,6 +86,7 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
                              per_spill_before=float(w.sum()), per_spill_after=float(w[surv].sum()),
                              per_15y_before=float(w.sum() * SPILLS_15Y), per_15y_after=float(w[surv].sum() * SPILLS_15Y),
                              hits_per_event=b["n_hits"] / len(cand), comparisons=b["n_compared"],
+                             veto_by_plane={design.planes[i].name: int(c) for i, c in enumerate(b["by_plane"]) if c},
                              seconds=t_bkg, us_per_event=1e6 * t_bkg / len(cand), timing=b["timing"])
 
     # hypothetical signal

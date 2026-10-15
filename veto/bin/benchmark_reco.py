@@ -42,7 +42,7 @@ def bench(design, tr, inp, n_events, ms, seed=1):
         sub_true = sub
     t["scatter"] = time.perf_counter() - t0
     t0 = time.perf_counter(); own = reco.own_hits(sub_true, event, design, rng); t["own hits"] = time.perf_counter() - t0
-    window = reco.time_window(design, cfg).max() + 0.5
+    window = reco.time_window(design, cfg) + reco.ACC_MARGIN_NS
     t0 = time.perf_counter(); acc = reco.accidental_hits(design, inp, len(cand), window, cfg, rng)
     t["random hits"] = time.perf_counter() - t0
     acc["track"] = np.full(len(acc["event"]), -1)
