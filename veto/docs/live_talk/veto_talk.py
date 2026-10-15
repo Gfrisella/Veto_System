@@ -85,13 +85,14 @@ def layout(fig, **kw):
     return fig
 
 
-def scene(x_range=(-8, 8), y_range=(-6, 8), eye=(-0.35, -1.75, 0.85), z_range=(-3, 98)):
-    tick = dict(size=6)
-    return dict(xaxis=dict(title="z [m]", range=list(z_range), tickfont=tick),
-                yaxis=dict(title="x [m]", range=list(x_range), tickfont=tick),
-                zaxis=dict(title="y [m]", range=list(y_range), tickfont=tick), aspectmode="manual",
-                aspectratio=dict(x=4 * (z_range[1] - z_range[0]) / 101, y=0.05 * (x_range[1] - x_range[0]),
-                                 z=0.05 * (y_range[1] - y_range[0])),
+def scene(x_range=(-8, 8), y_range=(-6, 8), eye=(-0.75, -1.05, 0.5), z_range=(-3, 98)):
+    """3D scene in the example talk's style: white background, pale grid, compact aspect ratio
+    (a stretched box draws everything small, and the grey template background washes it out)."""
+    def axis(title, rng):
+        return dict(title=title, range=list(rng), backgroundcolor="white", gridcolor="#e6e8ee", zeroline=False,
+                    showspikes=False, tickfont=dict(size=6))
+    return dict(xaxis=axis("z [m]", z_range), yaxis=axis("x [m]", x_range), zaxis=axis("y [m]", y_range),
+                aspectmode="manual", aspectratio=dict(x=2.6, y=1.0, z=0.8),
                 camera=dict(eye=dict(x=eye[0], y=eye[1], z=eye[2])))
 
 
@@ -274,7 +275,7 @@ def design3d(ubt_top, nfin, gap, length, top):
         paths_ = [[S_A[i], S_K[i], S_B[i]] if np.isfinite(S_K[i, 2]) else [S_A[i], S_B[i]] for i in pick]
         traces.append(lines3d([p for p, i in zip(paths_, pick) if hit[i]], SST1_COL[t], 2))
         traces.append(lines3d([p for p, i in zip(paths_, pick) if not hit[i]], "black", 5))
-    return layout(go.Figure(traces), scene=scene(z_range=(20, 90), eye=(-0.3, -1.5, 0.75)), margin=dict(l=0, r=0, t=0, b=0))
+    return layout(go.Figure(traces), scene=scene(z_range=(20, 90)), margin=dict(l=0, r=0, t=0, b=0))
 
 
 @pres.output("design_eff", inputs=["d_ubt", "d_nfin", "d_gap", "d_len", "d_top"])
@@ -535,7 +536,7 @@ def ev3d(di, kind, k):
     r = run_design(DESIGNS[int(di)])
     parts = event_parts(r, int(kind), k)
     traces = geometry() + design_planes_3d(r["design"])
-    sc = scene(z_range=(20, 90), eye=(-0.3, -1.5, 0.75))
+    sc = scene(z_range=(20, 90))
     if parts is None:
         return layout(go.Figure(traces), scene=sc, title=dict(text="no such event in this design", font=dict(size=8)))
     col = {0: GRN, 1: RED, 2: ORA, 3: PUR}[int(kind)]
