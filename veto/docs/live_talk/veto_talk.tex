@@ -310,7 +310,7 @@
       \begin{itemize}\footnotesize
         \item background: opposite-charge muon pairs of the same old run, $p>1$\,GeV, in the timing acceptance, DOCA $<2$\,cm, vertex in the vessel, IP $<2.5$\,m: \num{196\,736} pairs
         \item each weighted by $w_1 w_2 N_\text{runs}\cdot 2\Delta t/T_\text{spill}$, $\Delta t = 200$\,ps
-        \item signal: neutral decays uniform in the vessel, two tracks into SST1, $p$ 1--50\,GeV
+        \item signal: long-lived neutrals from the target, nearly along the beam ($\theta\approx p_T/p$), decaying in the vessel into two tracks; same selection as the pairs
         \item single SST1 muons (200\,k) for per-muon efficiencies
       \end{itemize}
     \end{column}
@@ -369,7 +369,7 @@
   \livewidget{time_plot}{0.55\linewidth}{0.5\textheight}\hfill\livewidget{time_trade}{0.43\linewidth}{0.5\textheight}\\[1mm]
   \sld[0.48\linewidth]{sig_t}\hfill\sld[0.48\linewidth]{n_sig}\\[1mm]
   \footnotesize The predicted time includes the time of flight from the plane to $z = 82$\,m. The window is $\pm n\sigma$ with $\sigma = \sigma_t^\text{veto}\oplus\sigma_t^\text{track}$: wider loses fewer own hits, but lets in proportionally more random hits.\\
-  \legendline{Right: signal loss scaled from D2's 1.2\,\% at $3\sigma$ and 0.5\,ns, since random hits grow with the window.}
+  \legendline{Right: signal loss scaled from D2's 1.3\,\% at $3\sigma$ and 0.5\,ns, since random hits grow with the window.}
 \end{frame}
 
 \begin{frame}{Algorithm A on real events}
@@ -422,7 +422,7 @@
     \midrule
     background vetoed & 25\,\% & 99.992\,\% & 99.997\,\% & 99.992\,\% & 100.000\,\% & 99.997\,\% & 99.997\,\%\\
     pairs surviving & 171\,020 & 54 & 27 & 19 & 6 & 24 & 27\\
-    signal lost & 0 & 0.82\,\% & 1.20\,\% & 1.45\,\% & 1.97\,\% & 4.98\,\% & 0.86\,\%\\
+    signal lost & 0 & 1.13\,\% & 1.28\,\% & 1.49\,\% & 1.76\,\% & 4.72\,\% & 1.00\,\%\\
     \bottomrule
   \end{tabular}
 \end{frame}
@@ -486,7 +486,7 @@
     \end{column}
     \begin{column}{0.36\textwidth}\footnotesize
       Same geometry, cell size from 3 to 50\,cm, 30\,k signal events per point.\\[1.5mm]
-      Smaller cells shrink the search box, so fewer random hits fall in it: signal loss drops from 5\,\% (50\,cm) to below 1\,\% (5\,cm) for D2.\\[1.5mm]
+      Smaller cells shrink the search box, so fewer random hits fall in it: signal loss drops from 4.7\,\% (50\,cm) to 1.0\,\% (5\,cm) for D2.\\[1.5mm]
       But the busiest 10\,cm cell already sees \key{60\,MHz}, the UBT 400\,Hz. Dead time and pile-up are not modelled yet and will matter in the lobe.\\[1.5mm]
       \takeaway[\footnotesize]{Detector technology near $|x|\approx2$\,m is a design question of its own.}
     \end{column}

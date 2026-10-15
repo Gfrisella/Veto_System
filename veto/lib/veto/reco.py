@@ -37,6 +37,7 @@ class RecoConfig:
     r0: float = 0.05                   # spatial window: r0 + (r_slope + r_ms / p) * distance [m]
     r_slope: float = 5e-4
     r_ms: float = 6e-3
+    min_planes: int = 1                # a track is explained by hits on at least this many planes
     seed: int = 1
     extra: dict = field(default_factory=dict)
 
@@ -216,8 +217,7 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
     meas = measure(tr, cfg, rng)
     q = predictions(meas, event, z_limit, design, cfg)
     found, n_compared, hit_of_query = match(q, hits, design, cfg)
-    explained = np.zeros(len(event), bool)
-    explained[q["track"][found]] = True
+    explained = np.bincount(q["track"][found], minlength=len(event)) >= cfg.min_planes
     vetoed = np.zeros(n_events, bool)
     vetoed[event[explained]] = True
     timing["reconstruct"] = time.perf_counter() - t0
@@ -251,3 +251,83 @@ def signal_tracks(n, rng, p_range=(1.0, 50.0)):
     tr = dict(bx=xt, by=yt, bz=np.full(2 * n, geo.Z_SST1), bpx=mom[:, 0], bpy=mom[:, 1], bpz=mom[:, 2],
               vx=xv, vy=yv, vz=zv)
     return tr, zv, np.tile(np.arange(n), 2)
+
+
+def _boost(p_rest, e_rest, beta):
+    """Lorentz boost of momenta p_rest (n, 3) with energies e_rest (n,) by velocity beta (n, 3)."""
+    b2 = (beta ** 2).sum(1)
+    gamma = 1 / np.sqrt(1 - b2)
+    bp = (beta * p_rest).sum(1)
+    factor = np.where(b2 > 0, (gamma - 1) * bp / np.where(b2 > 0, b2, 1), 0)
+    return p_rest + (factor + gamma * e_rest)[:, None] * beta
+
+
+def signal_from_target(n, rng, mass=1.0, m_daughter=0.106, p_range=(10.0, 100.0), pt_mean=1.0, max_rounds=50):
+    """Hypothetical long-lived neutral particles from the target, decaying in the vessel into two
+    charged tracks, with the same selection as the background pairs.
+
+    The parent starts at the target (x = y = z = 0) with log-uniform momentum in p_range and a
+    transverse momentum drawn from an exponential of mean pt_mean, so it flies nearly along the
+    beam (angle ~ pt / p). It decays uniformly in z inside the vessel, isotropically in its rest
+    frame into two particles of mass m_daughter. Both must reach the SST1 acceptance with
+    p > 1 GeV, point into the timing detector, and the pair must point back to the target
+    (IP < 2.5 m at z = -2.14 m); the vertex is inside the vessel by construction.
+    Returns (tracks with the B state at z = 82 and the vertex, vertex z per track, event id per
+    track, acceptance counts). Tracks are ordered all first daughters, then all second daughters.
+    """
+    keep_rows, stats = [], dict(generated=0, vertex_in_vessel=0, in_sst1=0, p_and_timing=0, ip=0)
+    have = 0
+    for _ in range(max_rounds):
+        m = max(4 * (n - have), 10_000)
+        p = 10 ** rng.uniform(np.log10(p_range[0]), np.log10(p_range[1]), m)
+        pt = rng.exponential(pt_mean, m)
+        phi = rng.uniform(0, 2 * np.pi, m)
+        tx, ty = pt / p * np.cos(phi), pt / p * np.sin(phi)
+        z_v = rng.uniform(geo.Z_VESSEL_MIN, geo.Z_VESSEL_MAX, m)
+        x_v, y_v = tx * z_v, ty * z_v
+        hx, hy = geo.vessel_half_widths(z_v)
+        stats["generated"] += m
+        ok = (np.abs(x_v) < hx) & (np.abs(y_v) < hy)
+        stats["vertex_in_vessel"] += int(ok.sum())
+        direction = np.stack([tx, ty, np.ones(m)], 1)
+        direction /= np.linalg.norm(direction, axis=1, keepdims=True)
+        e_parent = np.sqrt(p ** 2 + mass ** 2)
+        beta = direction * (p / e_parent)[:, None]
+        e_star = mass / 2
+        p_star = np.sqrt(max(e_star ** 2 - m_daughter ** 2, 0))
+        u = rng.normal(size=(m, 3))
+        u /= np.linalg.norm(u, axis=1, keepdims=True)
+        d1 = _boost(u * p_star, np.full(m, e_star), beta)
+        d2 = _boost(-u * p_star, np.full(m, e_star), beta)
+        states = []
+        for d in (d1, d2):
+            with np.errstate(divide="ignore", invalid="ignore"):
+                x82 = x_v + d[:, 0] / d[:, 2] * (geo.Z_SST1 - z_v)
+                y82 = y_v + d[:, 1] / d[:, 2] * (geo.Z_SST1 - z_v)
+                xt = x_v + d[:, 0] / d[:, 2] * (geo.Z_TIMING - z_v)
+                yt = y_v + d[:, 1] / d[:, 2] * (geo.Z_TIMING - z_v)
+            acc = (d[:, 2] > 0) & (np.abs(x82) < geo.SST1_HALF_X) & (np.abs(y82) < geo.SST1_HALF_Y)
+            sel = acc & (np.linalg.norm(d, axis=1) > 1) & (np.abs(xt) < geo.TIMING_HALF_X) & (np.abs(yt) < geo.TIMING_HALF_Y)
+            states.append((x82, y82, d, acc, sel))
+        acc2 = ok & states[0][3] & states[1][3]
+        sel2 = acc2 & states[0][4] & states[1][4]
+        tot = d1 + d2
+        dz = geo.Z_TARGET - z_v
+        ip = np.hypot(x_v + tot[:, 0] / tot[:, 2] * dz, y_v + tot[:, 1] / tot[:, 2] * dz)
+        good = sel2 & (ip < 2.5)
+        stats["in_sst1"] += int(acc2.sum()); stats["p_and_timing"] += int(sel2.sum()); stats["ip"] += int(good.sum())
+        idx = np.where(good)[0][:n - have]
+        keep_rows.append((idx, x_v, y_v, z_v, states))
+        have += len(idx)
+        if have >= n:
+            break
+    cols = {k: [] for k in ("bx", "by", "bz", "bpx", "bpy", "bpz", "vx", "vy", "vz")}
+    for daughter in (0, 1):
+        for idx, x_v, y_v, z_v, states in keep_rows:
+            x82, y82, d, _, _ = states[daughter]
+            cols["bx"].append(x82[idx]); cols["by"].append(y82[idx]); cols["bz"].append(np.full(len(idx), geo.Z_SST1))
+            cols["bpx"].append(d[idx, 0]); cols["bpy"].append(d[idx, 1]); cols["bpz"].append(d[idx, 2])
+            cols["vx"].append(x_v[idx]); cols["vy"].append(y_v[idx]); cols["vz"].append(z_v[idx])
+    tr = {k: np.concatenate(v) for k, v in cols.items()}
+    n_ev = len(tr["bx"]) // 2
+    return tr, tr["vz"], np.tile(np.arange(n_ev), 2), stats

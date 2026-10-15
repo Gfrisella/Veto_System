@@ -469,7 +469,7 @@ def run_design(name, quick=False):
     check_stale()
     b = reco.run_events(sub, np.repeat(np.arange(len(cand)), 2), vz, d, INP, CFG, rng, details=True)
     check_stale()
-    sig, zv, ev = reco.signal_tracks(30_000 if quick else 60_000, rng)
+    sig, zv, ev, _ = reco.signal_from_target(30_000 if quick else 60_000, rng)
     s = reco.run_events(sig, ev, zv, d, INP, CFG, rng, with_own_hits=False, details=True)
     check_stale()
     single = INP["single"] if not quick else INP["single"][::5]
@@ -641,7 +641,7 @@ def evaluate(name, eps, spill, nsig, sigt, n_cand, n_sig, n_single):
                         np.repeat(INP["cand_vertex"][:len(cand), 2], 2), d, INP, cfg, rng)
     t_b = (time.perf_counter() - t0) / len(cand)
     check_stale()
-    sig, zv, ev = reco.signal_tracks(n_sig, rng)
+    sig, zv, ev, _ = reco.signal_from_target(n_sig, rng)
     s = reco.run_events(sig, ev, zv, d, INP, cfg, rng, with_own_hits=False)
     check_stale()
     step = max(len(INP["single"]) // n_single, 1)                      # rows are sorted by type: stride
@@ -771,7 +771,7 @@ def cell_scan(di):
             f.update(cell_u=c, cell_y=c)
         d = dsg.from_dict(raw)
         rng = np.random.default_rng(5)
-        sig, zv, ev = reco.signal_tracks(30_000, rng)
+        sig, zv, ev, _ = reco.signal_from_target(30_000, rng)
         s = reco.run_events(sig, ev, zv, d, INP, CFG, rng, with_own_hits=False)
         fp.append(100 * s["vetoed"].mean())
         peak.append(max(p["peak_cell"] for p in reco.plane_rates(d, INP)))
