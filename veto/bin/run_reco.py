@@ -66,7 +66,10 @@ def containment(tr, rows, design, cfg, rng):
 def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
     rng = np.random.default_rng(cfg.seed)
     res = {"design": design.name, "description": design.raw.get("description", ""), "notes": design.notes,
-           "area_m2": design.area, "n_cells": design.n_cells, "n_planes": len(design.planes)}
+           "area_m2": design.area, "n_cells": design.n_cells, "n_planes": len(design.planes),
+           "technologies": sorted({p.technology or "generic" for p in design.planes}),
+           "n_channels": design.n_channels, "cost_kchf": design.cost, "rel_cost": design.rel_cost,
+           "ubt_x0": design.ubt_x0}
 
     # background candidates
     cand = inp["cand"]
@@ -121,11 +124,20 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
     res["single"]["us_per_event"] = 1e6 * (time.perf_counter() - t0) / len(single)
     res["window_containment"] = containment(tr, rng.choice(single, 50_000, replace=False), design, cfg, rng)
 
-    rates = reco.plane_rates(design, inp)
-    res["planes"] = [dict(r, peak_cell_hz=r["peak_cell"] / cfg.spill_s, mean_cell_hz=r["mean_cell"] / cfg.spill_s)
+    rates = reco.plane_rates(design, inp, cfg.spill_s)
+    res["planes"] = [dict(r, peak_cell_hz=r["peak_cell"] / cfg.spill_s, mean_cell_hz=r["mean_cell"] / cfg.spill_s,
+                          peak_channel_hz=r["peak_channel"] / cfg.spill_s, mean_channel_hz=r["mean_channel"] / cfg.spill_s)
                      for r in rates]
     res["total_rate_per_spill"] = float(sum(r["rate"] for r in rates))
+    res["over_rate_limit"] = [dict(plane=r["plane"], technology=r["technology"], peak_hz_cm2=r["peak_hz_cm2"],
+                                   area_m2=r["area_over_limit"], peak_channel_hz=r["peak_channel"] / cfg.spill_s)
+                              for r in rates if r["area_over_limit"] > 0 or r["channel_over_limit"]]
     return res
+
+
+def tag(cfg):
+    """Output-name suffix: '' for the default window, '_tw100' for a fixed 100 ns one."""
+    return f"_tw{cfg.time_window_ns:g}" if cfg.time_window_ns else ""
 
 
 def report(r, cfg):
@@ -135,6 +147,9 @@ def report(r, cfg):
         print(f"    note: {n}")
     print(f"    {r['n_planes']} planes, {r['area_m2']:.1f} m2, {r['n_cells']:,} cells, "
           f"{r['total_rate_per_spill']:.3g} muon hits / spill ({r['total_rate_per_spill'] / cfg.spill_s:.3g} Hz)")
+    print(f"    technology: {', '.join(r['technologies'])}; {r['n_channels']:,} readout channels, "
+          f"cost {r['cost_kchf']:.4g} kCHF ({r['rel_cost']:.4g} straw-channel units), "
+          f"UBT material {100 * r['ubt_x0']:.2f} % X0")
     print(f"    background: {b['n']:,} candidates, TP {100 * b['TP_frac']:.3f} %  FN {100 * b['FN_frac']:.3f} % "
           f"({b['n_survive']:,} survive) -> {b['per_15y_before']:.3g} -> {b['per_15y_after']:.3g} events in 15 years")
     print(f"    signal:     FP (lost to accidental hits) {100 * s['FP_frac']:.3f} %, TN {100 * s['TN_frac']:.3f} %"
@@ -153,6 +168,12 @@ def report(r, cfg):
     worst = max(r["planes"], key=lambda p: p["peak_cell_hz"])
     print(f"    busiest cell: {worst['peak_cell_hz']:.3g} Hz on {worst['plane']} "
           f"(mean over that plane {worst['mean_cell_hz']:.3g} Hz)")
+    for o in r["over_rate_limit"]:
+        print(f"    OVER RATE LIMIT: {o['plane']} ({o['technology']}) peaks at {o['peak_hz_cm2'] / 1e6:.2f} MHz/cm2 "
+              f"({o['area_m2']:.2f} m2 above the density limit), {o['peak_channel_hz'] / 1e6:.2f} MHz per channel")
+    worst = max(r["planes"], key=lambda p: p["peak_channel_hz"])
+    print(f"    busiest readout channel: {worst['peak_channel_hz']:.3g} Hz on {worst['plane']} "
+          f"({worst['technology'] or 'generic'}, mean over that plane {worst['mean_channel_hz']:.3g} Hz)")
 
 
 def main():
@@ -163,10 +184,12 @@ def main():
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--signal", choices=("target", "old"), default="target",
                         help="target: neutral from the target, decays in the vessel (default); old: tracks aimed at random")
-    parser.add_argument("--out", default="results.json")
+    parser.add_argument("--time-window", type=float, default=None,
+                        help="fixed full width of the veto time window [ns] (default: +-3 sigma per plane)")
+    parser.add_argument("--out", default=None, help="output file name in results/reco (default: results[_tw..][_oldsignal].json)")
     args = parser.parse_args()
     names = args.designs or sorted(p.stem for p in dsg.DESIGN_DIR.glob("*.json"))
-    cfg = reco.RecoConfig(spill_s=args.spill, seed=args.seed)
+    cfg = reco.RecoConfig(spill_s=args.spill, seed=args.seed, time_window_ns=args.time_window)
     tr, inp = load_inputs()
     dt_pair = DEFAULT_CONFIG["time_window"] * 1e9 * 1e-9    # two-track coincidence window [s]
     results = []
@@ -183,7 +206,8 @@ def main():
         print(f"{r['design']:<15}{r['area_m2']:>8.0f}{100 * f['TPR']:>10.4f}{100 * f['FNR']:>9.4f}{100 * f['FPR']:>8.3f}"
               f"{100 * f['TNR']:>8.3f}{b['n_survive']:>11,}{lim + format(f['B_15y'], '.2g') + ' ± ' + format(f['B_15y_err'], '.1g'):>18}"
               f"{f['punzi']:>7.3f}")
-    out = paths.results_dir() / "reco" / args.out
+    name = args.out or f"results{tag(cfg)}{'_oldsignal' if args.signal == 'old' else ''}.json"
+    out = paths.results_dir() / "reco" / name
     out.write_text(json.dumps(dict(config=vars(cfg), spill_s=args.spill, signal=args.signal, results=results),
                               indent=1, default=float))
     print(f"\nsaved {out}")

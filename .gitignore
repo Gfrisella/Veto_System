@@ -2,13 +2,17 @@ data
 ouptus/*
 logs/*
 figures/*
+graphify-out/*
 *.Processed_files/Ouputs_10000seeds.pkl
 *.pkl
 *.npz
 *.sh
+*.ipynb
 *.root
 physik_deployment/
 !veto/bin/*.sh
 .DS_Store
 __pycache__/
 !veto/docs/live_talk/run.sh
+*.pdf
+veto/knowledge/

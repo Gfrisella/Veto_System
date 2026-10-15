@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import plotly.graph_objects as go
 
-from run_reco import TYPE_NAMES, load_inputs, take
+from run_reco import TYPE_NAMES, load_inputs, tag, take
 from veto import design as dsg
 from veto import paths, plotting, reco, viz3d
 
@@ -73,7 +73,7 @@ def prediction_line(meas, i, z_to):
 
 def detector_traces(design, inp, spill):
     """UBT and fins as rectangles coloured by muons / m^2 / spill (log10)."""
-    rates = reco.plane_rates(design, inp)
+    rates = reco.plane_rates(design, inp, spill)
     out = []
     for k, (plane, r) in enumerate(zip(design.planes, rates)):
         density = r["rate"] / max(plane.area, 1e-9)
@@ -185,14 +185,15 @@ def figure(design, tr, inp, cfg, n_signal, rng_seed):
     acc_idx = np.where((hits["event"] == e0) & (np.arange(len(hits["event"])) >= b["n_own"]))[0]
     if len(acc_idx):
         traces.append(markers(hit_xyz(design, hits, acc_idx), marker=dict(size=2.5, color="#555"),
-                              name=f"accidental hits in one ±{cfg.n_sigma_t * np.hypot(design.sigma_t * 1e9, cfg.sigma_t_track) + 0.5:.1f} ns "
+                              name=f"accidental hits in one ±{reco.time_window(design, cfg).max() + 0.5:.1f} ns "
                                    f"window ({len(acc_idx)})", visible="legendonly"))
 
     fig = go.Figure(traces)
     fig.update_layout(
         title=dict(text=f"{design.name}: {design.raw.get('description', '')}<br><sup>background vetoed "
                         f"{100 * b['vetoed'].mean():.3f} % of pairs, {(~b['vetoed']).sum()} missed; signal lost "
-                        f"{100 * s['vetoed'].mean():.2f} %; spill {cfg.spill_s:g} s, ε = {design.efficiency}</sup>",
+                        f"{100 * s['vetoed'].mean():.2f} %; spill {cfg.spill_s:g} s, "
+                        f"{', '.join(sorted({p.technology or f'ε = {p.efficiency}' for p in design.planes}))}</sup>",
                    font=dict(size=14)),
         scene=dict(xaxis=dict(title="z [m]", range=[-3, 98]), yaxis=dict(title="x [m]", range=[-8, 8]),
                    zaxis=dict(title="y [m]", range=[-6, 8]), aspectmode="manual",
@@ -250,10 +251,12 @@ def main():
     parser.add_argument("designs", nargs="*", default=DEFAULT)
     parser.add_argument("--spill", type=float, default=1.0)
     parser.add_argument("--n-signal", type=int, default=100_000)
+    parser.add_argument("--time-window", type=float, default=None,
+                        help="fixed full width of the veto time window [ns] (default: +-3 sigma per plane)")
     args = parser.parse_args()
-    cfg = reco.RecoConfig(spill_s=args.spill)
+    cfg = reco.RecoConfig(spill_s=args.spill, time_window_ns=args.time_window)
     tr, inp = load_inputs()
-    outdir = paths.results_dir() / "reco" / "visualization"
+    outdir = paths.results_dir() / "reco" / f"visualization{tag(cfg)}"
     outdir.mkdir(parents=True, exist_ok=True)
     plotting.set_style()
     rows = []

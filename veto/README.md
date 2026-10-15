@@ -17,6 +17,7 @@ veto/
     muon_types.py  muon types from the z = 30.6 / 82 m states, bounce points, SBT wall crossings,
                    path position at any z, fin hits
     design.py      veto designs (UBT + fins) from designs/*.json, physical limits
+    technology.py  detector technologies (straw, fibre, pixel, tile, tile2): layers, timing, rates, material, cost
     reco.py        digitization, accidental hits from rate maps, spectrometer, veto algorithm A
     tracks.py      straight-line extrapolation, back-tracking to the vessel walls, categories
     weights.py     repeated-evt_n weight corrections
@@ -46,7 +47,9 @@ veto/
     benchmark_digitization.py per-design cost with digitization + hit-to-track matching
     fetch_data.sh             copy N output files (+ derived datasets) from the cluster
     remote.sh                 sync code / run / launch tmux jobs on the cluster
-  designs/   veto designs (JSON): D0 minimal ... D4 dense, D5 cell-size variants
+  designs/   veto designs (JSON): D0 minimal ... D4 dense, D5 cell-size variants,
+             D6 technology variants (straw, fiber, pixel, tile, tile2 fins)
+  ISSUES.txt open problems before optimising, with status (keep it updated)
   data/      local copy of the inputs (git-ignored)
   results/   everything we produce (git-ignored)
 ```
@@ -161,6 +164,81 @@ spectrometer track backward in a straight line to the planes upstream of its ver
 for a hit in a space / time window; no combinatorics. Background = muon pairs of the old runs
 (TP vetoed, FN survive), signal = hypothetical neutral decays in the vessel (FP = lost to
 accidental hits). Bounced muons can only be predicted after their bounce.
+
+### Detector technology
+
+The goal is to veto the combinatorial background: pairs of muons from the muon shield that
+enter the decay vessel region and reach SST1. Every veto plane is one of five technologies
+(`lib/veto/technology.py`). Numbers are from SPSC-P-369 (2023 proposal) and SPSC-SR-370 (2025
+annual report, UBT sec. 3.3.2), summarised in `conversation.txt`, updated with a colleague's
+comments (Oct 2026: straw pitch, resolution, drift time and efficiency; fibre and pixel timing;
+tiles). *Assumed* marks what nobody has given yet. Each entry describes one complete plane, all
+layers included.
+
+| | `straw` (UBT, fins) | `fiber` (fins) | `pixel` (fins) | `tile` / `tile2` (fins) |
+|---|---|---|---|---|
+| design | Liverpool UBT0 straws, **vertical** | Kuraray SCSF-78MJ mats, S13552 SiPM | Timepix-class hybrid | scintillator tiles, SiPM each |
+| layers | 6: double staggered layers at 0°, +15°, −15° from vertical | 2 crossed mats (x, y) of 6 fibre layers | 1 | 1 |
+| pitch | 5 mm per layer (5 mm straws) | 250 µm | 55 µm (variable, depends on the technology) | 4 cm / 2 cm |
+| cell a hit gives (u × y) | 5 mm × 19 mm (stereo) | 250 × 250 µm | 55 × 55 µm | 4 × 4 cm / 2 × 2 cm |
+| σ_x | 110 ± 20 µm (≥ 100 µm; 40–60 µm possible) | ~100 µm | ~16 µm (pitch/√12) | ~4 cm / ~2 cm |
+| timing | drift limited: ~50 ns max drift, **50 ns window** | 0.5 ns (user's; can reach ~100 ps, check with Ettore) | ~200 ps (Timepix4; much better with LGADs) | ~120 ps / ~80 ps |
+| veto window | ±25 ns (drift) | ±3σ ≈ ±1.5 ns | ±3σ ≈ ±0.7 ns | **±1.5 ns** fixed |
+| plane efficiency | 99.9 % per track (> 97 % per straw) | 99.9 % (~100 % per detector, lower per fibre / SiPM) | 99.9 % (user's) | ~99.9 % (depends on the configuration) |
+| max length | 1 m (overlapping rows) | 3 m *assumed* ("a few metres") | – | – |
+| rate limit | 0.5 MHz/cm² (ATLAS TRT reference) | none given | none given | < 1 MHz per channel (up to 10 MHz per 5 × 5 cm tile in the flames) |
+| material | 0.12 % X0 (0.02 % per layer) | 0.6 % X0 (estimate) | 0.5 % X0 *assumed* | 2.4 % X0 |
+| cost | 6 kCHF per layer-m² (SST) | 170 kCHF per mat-m² (SND SciFi) | none given (nan) | 30 kCHF/m² (timing detector) |
+| cost per channel (straw = 1) | 1 | 4 (user's) | 20 (user's) | 5 |
+| 1 × 2.7 m plane | 3 600 ch., 97 kCHF, 3.6 k units | 14 800 ch., 920 kCHF, 59 k units | 8.9 × 10⁸ ch., 1.8 × 10¹⁰ units | 1 700 / 6 750 ch., 81 kCHF, 8.5 k / 34 k units |
+| 3 × 6 m fin | 24 000 ch., 650 kCHF, 24 k units | 48 000 ch., 6.1 MCHF, 190 k units | 6.0 × 10⁹ ch., 1.2 × 10¹¹ units | 11 250 / 45 000 ch., 540 kCHF, 56 k / 225 k units |
+
+**The UBT is always Liverpool straws, vertical:** `design.validate` sets it in every design,
+D0–D5 included, and notes it if the JSON asked for another technology. The report's own design
+is horizontal (two horizontal + two ±15° views) with 1 × 1 m modules on a 3 × 1 m detector; here it is
+turned vertical with the same 1 m maximum straw length. A taller plane has overlapping rows of
+straws (the overlap is ignored). The report's active area is 1.3 × 2.7–3.0 m; the UBT here stays
+1 m wide (the vessel entrance). Fins can be any technology: set `"technology"` in the `detector`
+block for every fin, or in a fin for that fin only (`designs/D6_*.json`). Explicit `efficiency`,
+`sigma_t` or cell sizes next to it still win, except on the UBT. Without a technology a fin is
+the generic detector of D0–D5 (no cost, no material).
+
+- **Reconstruction:** each plane uses its own efficiency and time window. Drift-limited planes
+  (straws) put the hit time anywhere in their 50 ns window and match within ±25 ns; tiles use
+  their fixed ±1.5 ns veto window; the others use ±3 √(σ_t² + σ_t,spectrometer²), ±1.5 ns for
+  fibres and ±0.7 ns for pixels. The accidental-hit window follows the slowest plane, so with a
+  straw UBT every event is ±25 ns.
+  `--time-window 100` on `run_reco.py` / `visualize_reco.py` forces one window on every plane
+  and writes `results_tw100.json` / `visualization_tw100/`.
+- **Channels:** strips across × segments along, summed over views and layers; pads area / pitch².
+  Cost is area-driven (kCHF per layer-m², P-369 table 11 anchors, order of magnitude); a second,
+  channel-driven figure is channels × relative cost per channel (straw channel = 1).
+- **Rates:** a strip's rate is the rate map summed over its own segment; a pad's is the density
+  × its area. `run_reco.py` prints `OVER RATE LIMIT` for a plane above its density limit
+  (area in m²) or its per-channel limit. Rates assume a 1 s spill (`--spill`); the fin maps have
+  20 × 20 cm bins, so a narrower peak is averaged down.
+- **Not modelled yet:** σ_x (the 5 cm search window is far larger); ghost hits from combining
+  views when several muons share a time window; the material of the planes (it is reported,
+  not simulated: no scattering, conversions or neutrino interactions).
+
+For reference, the OPT_BT layout had three straw entrance planes at z = 30.7, 30.8, 30.9 m
+(±1.8 × ±1.35 m) and lateral rings around the tapered vessel at z = 40–78 m, with its own
+simplified vessel geometry.
+
+### Open problems before optimising
+
+`ISSUES.txt` lists what is still missing, with a status (OPEN / IN PROGRESS / DONE / DEFERRED / OK)
+and a priority (A: before optimising, B: changes the results, C: second order). In short:
+
+- **A, blockers:** the pair background is saturated (2-3 survivors, use single-muon inefficiency
+  and factorisation); bounced muons are only 74-77 % vetoed; rate limits are not enforced; no
+  objective and two cost models; spill / PoT normalisation and spill structure.
+- **B, physics:** multiple scattering (air 29.89-30.6 m and 80.6-82 m, 0.3 mm PVC walls at the
+  vessel entrance and exit, helium in the vessel, the veto planes; for bounced muons only after
+  the bounce); EM debris from the last 20 cm of shield iron, estimated from the full dataset;
+  a literature-based HNL / dark-photon signal model. Neutrino and muon DIS are deferred.
+- **C, detector:** response simplifications, dead material, validation against FairShip,
+  weights and statistics of the single-run classes.
 
 ## Running
 

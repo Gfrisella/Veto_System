@@ -22,6 +22,7 @@ import numpy as np
 
 from . import geometry as geo
 from . import muon_types as mt
+from . import technology as tech
 
 C = 0.299792458   # m / ns
 
@@ -34,6 +35,7 @@ class RecoConfig:
     sigma_slope: float = 1e-4          # spectrometer slope resolution, high momentum [rad]
     ms_slope: float = 2e-3             # extra slope smearing * 1 GeV / p (multiple scattering) [rad]
     n_sigma_t: float = 3.0             # time window: +- n_sigma_t * combined resolution
+    time_window_ns: float = None       # if set: fixed full width of the time window on every plane [ns]
     r0: float = 0.05                   # spatial window: r0 + (r_slope + r_ms / p) * distance [m]
     r_slope: float = 5e-4
     r_ms: float = 6e-3
@@ -71,9 +73,11 @@ def own_hits(tr, event, design, rng, tracks_mask=None):
     sel = np.ones(len(event), bool) if tracks_mask is None else tracks_mask
     for plane in design.planes:
         u, y, length, ok = true_crossing(tr, plane)
-        ok &= sel & (rng.random(len(ok)) < design.efficiency)
+        ok &= sel & (rng.random(len(ok)) < plane.efficiency)
         uc, yc = plane.cell_centre(u[ok], y[ok])
-        t = -length[ok] / C + rng.normal(0, design.sigma_t * 1e9, ok.sum())
+        t = -length[ok] / C + rng.normal(0, plane.sigma_t * 1e9, ok.sum())
+        if plane.time_window:                   # drift-limited (straws): anywhere in the window
+            t += rng.uniform(-0.5, 0.5, ok.sum()) * plane.time_window * 1e9
         out["event"].append(event[ok]); out["track"].append(np.where(ok)[0])
         out["plane"].append(np.full(ok.sum(), plane.index))
         out["u"].append(uc); out["y"].append(yc); out["t"].append(t)
@@ -98,15 +102,43 @@ def plane_rate_map(plane, maps):
     return ub, yb, np.where(keep, h, 0.0)
 
 
-def plane_rates(design, maps):
-    """Per plane: total muons per spill, mean and peak muons per spill per cell."""
+def plane_rates(design, maps, spill_s=1.0):
+    """Per plane: total muons per spill, mean and peak muons per spill per cell and per readout channel,
+    peak rate density [Hz / cm^2] and the area above the technology's rate limit [m^2]."""
     out = []
     for plane in design.planes:
         ub, yb, h = plane_rate_map(plane, maps)
-        density = h / np.outer(np.diff(ub), np.diff(yb))
+        bin_area = np.outer(np.diff(ub), np.diff(yb))
+        density = h / bin_area
         cell = plane.cell_u * plane.cell_y
-        out.append(dict(plane=plane.name, area=plane.area, n_cells=plane.n_cells, rate=h.sum(),
-                        mean_cell=h.sum() / max(plane.n_cells, 1), peak_cell=density.max() * cell))
+        hz_cm2 = density / spill_s / 1e4
+        t = tech.TECHNOLOGIES[plane.technology] if plane.technology else None
+        limit = t["max_rate"] if t else None
+        r = dict(plane=plane.name, area=plane.area, n_cells=plane.n_cells, rate=h.sum(),
+                 mean_cell=h.sum() / max(plane.n_cells, 1), peak_cell=density.max() * cell,
+                 technology=plane.technology, n_channels=plane.n_channels, cost=plane.cost,
+                 rel_cost=plane.rel_cost, x0=plane.x0,
+                 peak_hz_cm2=float(hz_cm2.max()), max_rate_hz_cm2=limit,
+                 area_over_limit=float(bin_area[hz_cm2 > limit].sum()) if limit else 0.0)
+        if t is None:
+            r["peak_channel"], r["mean_channel"] = r["peak_cell"], r["mean_cell"]
+        elif t["readout"] == "pad":
+            r["peak_channel"] = density.max() * t["pitch"] ** 2
+            r["mean_channel"] = tech.n_layers(t) * h.sum() / max(plane.n_channels, 1)
+        else:
+            # one strip: the map summed over the segment it covers, times the pitch across it
+            uc, yc = 0.5 * (ub[1:] + ub[:-1]), 0.5 * (yb[1:] + yb[:-1])
+            height = plane.y_hi - plane.y_lo
+            ny, nu = tech.n_segments(t, height), tech.n_segments(t, plane.u_max)
+            seg_y = np.minimum((np.clip(yc - plane.y_lo, 0, None) / (height / ny)).astype(int), ny - 1)
+            seg_u = np.minimum((np.clip(uc, 0, None) / (plane.u_max / nu)).astype(int), nu - 1)
+            per_u = np.stack([h[:, seg_y == k].sum(1) for k in np.unique(seg_y)]) / np.diff(ub)
+            per_y = np.stack([h[seg_u == k, :].sum(0) for k in np.unique(seg_u)]) / np.diff(yb)
+            r["peak_channel"] = t["pitch"] * max((per_u if tech.vertical(a) else per_y).max() for a in t["views"])
+            r["mean_channel"] = tech.n_layers(t) * h.sum() / max(plane.n_channels, 1)   # a muon fires every layer
+        ch_limit = t["max_channel_rate"] if t else None
+        r["channel_over_limit"] = bool(ch_limit and r["peak_channel"] / spill_s > ch_limit)
+        out.append(r)
     return out
 
 
@@ -170,12 +202,24 @@ def predictions(meas, event, z_limit, design, cfg):
     return {k: np.concatenate(v) for k, v in q.items()}
 
 
+def time_window(design, cfg):
+    """Half width of the time window of each plane [ns]."""
+    if cfg.time_window_ns:
+        return np.full(len(design.planes), cfg.time_window_ns / 2)
+    sig = cfg.n_sigma_t * np.hypot(np.array([p.sigma_t for p in design.planes]) * 1e9, cfg.sigma_t_track)
+    drift = np.array([(p.time_window or 0.0) * 1e9 / 2 for p in design.planes])
+    # technologies with a fixed veto window (tiles: +- 1.5 ns) use it instead of +- n_sigma_t
+    fixed = np.array([(tech.TECHNOLOGIES[p.technology].get("veto_window") or np.nan) * 1e9 if p.technology
+                      else np.nan for p in design.planes])
+    return np.where(np.isnan(fixed), drift + sig, fixed)
+
+
 def match(queries, hits, design, cfg):
     """For every query: is there a hit on its plane within the space and time window?"""
     n_planes = len(design.planes)
     cell_u = np.array([p.cell_u for p in design.planes])
     cell_y = np.array([p.cell_y for p in design.planes])
-    window_t = cfg.n_sigma_t * np.hypot(design.sigma_t * 1e9, cfg.sigma_t_track)
+    window_t = time_window(design, cfg)                       # per plane [ns]
     key_h = hits["event"].astype(np.int64) * n_planes + hits["plane"]
     order = np.argsort(key_h, kind="stable")
     key_h = key_h[order]
@@ -188,7 +232,7 @@ def match(queries, hits, design, cfg):
     hi_idx = np.repeat(lo - np.cumsum(counts) + counts, counts) + np.arange(counts.sum())
     du = np.abs(hu[hi_idx] - queries["u"][qi]) <= queries["r"][qi] + cell_u[hp[hi_idx]] / 2
     dy = np.abs(hy[hi_idx] - queries["y"][qi]) <= queries["r"][qi] + cell_y[hp[hi_idx]] / 2
-    dt = np.abs(ht[hi_idx] - queries["t"][qi]) <= window_t
+    dt = np.abs(ht[hi_idx] - queries["t"][qi]) <= window_t[hp[hi_idx]]
     ok = du & dy & dt
     found = np.zeros(len(key_q), bool)
     found[qi[ok]] = True
@@ -206,7 +250,7 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
     t0 = time.perf_counter()
     own = own_hits(tr, event, design, rng) if with_own_hits else {k: np.empty(0) for k in
                                                                    ("event", "track", "plane", "u", "y", "t")}
-    window = cfg.n_sigma_t * np.hypot(design.sigma_t * 1e9, cfg.sigma_t_track) + 0.5
+    window = time_window(design, cfg).max() + 0.5
     acc = accidental_hits(design, maps, n_events, window, cfg, rng)
     acc["track"] = np.full(len(acc["event"]), -1)            # accidental: no track of this event
     hits = {k: np.concatenate([own[k], acc[k]]) for k in own}
