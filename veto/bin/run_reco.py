@@ -186,10 +186,13 @@ def main():
                         help="target: neutral from the target, decays in the vessel (default); old: tracks aimed at random")
     parser.add_argument("--time-window", type=float, default=None,
                         help="fixed full width of the veto time window [ns] (default: +-3 sigma per plane)")
+    parser.add_argument("--multiple-scattering", action="store_true",
+                        help="scatter the muons after z = 30.6 m: walls, helium, air, UBT and fins (scattering.py)")
     parser.add_argument("--out", default=None, help="output file name in results/reco (default: results[_tw..][_oldsignal].json)")
     args = parser.parse_args()
     names = args.designs or sorted(p.stem for p in dsg.DESIGN_DIR.glob("*.json"))
-    cfg = reco.RecoConfig(spill_s=args.spill, seed=args.seed, time_window_ns=args.time_window)
+    cfg = reco.RecoConfig(spill_s=args.spill, seed=args.seed, time_window_ns=args.time_window,
+                          multiple_scattering=args.multiple_scattering)
     tr, inp = load_inputs()
     dt_pair = DEFAULT_CONFIG["time_window"] * 1e9 * 1e-9    # two-track coincidence window [s]
     results = []

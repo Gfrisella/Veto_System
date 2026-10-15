@@ -22,6 +22,7 @@ import numpy as np
 
 from . import geometry as geo
 from . import muon_types as mt
+from . import scattering
 from . import technology as tech
 
 C = 0.299792458   # m / ns
@@ -40,6 +41,7 @@ class RecoConfig:
     r_slope: float = 5e-4
     r_ms: float = 6e-3
     min_planes: int = 1                # a track is explained by hits on at least this many planes
+    multiple_scattering: bool = False  # scatter the muons after z = 30.6 m (scattering.py)
     seed: int = 1
     extra: dict = field(default_factory=dict)
 
@@ -71,8 +73,16 @@ def own_hits(tr, event, design, rng, tracks_mask=None):
     """Hits of the events' own muons. Returns dict of arrays event, track, plane, u, y, t."""
     out = {k: [] for k in ("event", "track", "plane", "u", "y", "t")}
     sel = np.ones(len(event), bool) if tracks_mask is None else tracks_mask
+    kicks = tr.get("_kicks")
     for plane in design.planes:
         u, y, length, ok = true_crossing(tr, plane)
+        if kicks is not None:                   # multiple scattering upstream of this plane
+            dx, dy = scattering.offset_at(kicks, plane.z)
+            crossed = np.isfinite(u) & np.isfinite(y)
+            if plane.kind == "ubt":
+                crossed &= tr["apz"] > 0
+            u, y = u + (dx if plane.kind == "ubt" else plane.sign * dx), y + dy
+            ok = crossed & plane.inside(u, y)
         ok &= sel & (rng.random(len(ok)) < plane.efficiency)
         uc, yc = plane.cell_centre(u[ok], y[ok])
         t = -length[ok] / C + rng.normal(0, plane.sigma_t * 1e9, ok.sum())
@@ -248,7 +258,14 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
     timing = {}
     n_events = int(event.max()) + 1 if len(event) else 0
     t0 = time.perf_counter()
-    own = own_hits(tr, event, design, rng) if with_own_hits else {k: np.empty(0) for k in
+    if cfg.multiple_scattering:
+        kicks = scattering.kicks(tr, design, rng)
+        tr_true, tr = dict(tr, _kicks=kicks), scattering.scattered_tracks(tr, kicks)   # tr: as measured
+        timing["scatter"] = time.perf_counter() - t0
+        t0 = time.perf_counter()
+    else:
+        tr_true = tr
+    own = own_hits(tr_true, event, design, rng) if with_own_hits else {k: np.empty(0) for k in
                                                                    ("event", "track", "plane", "u", "y", "t")}
     window = time_window(design, cfg).max() + 0.5
     acc = accidental_hits(design, maps, n_events, window, cfg, rng)
