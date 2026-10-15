@@ -847,6 +847,38 @@ def fom(di):
                                   font=dict(size=7.5), x=0.02), margin=dict(l=4, r=4, t=18, b=4))
 
 
+pres.slider("n_sig15", label="signal", min=1, max=1000, value=100, decimals=0)
+
+
+@pres.output("fom15", inputs=["fom_design", "n_sig15"], background=True)
+def fom15(di, n_sig):
+    """The confusion matrix as counts over the 15-year run (6e20 POT, 1 s spills)."""
+    r = run_design(DESIGNS[int(di)])
+    w15 = r["cand_w"] * 2 * 200e-12 / SPILL_S * (6e20 / 5e13)
+    veto_b, veto_s = r["b"]["vetoed"], r["s"]["vetoed"]
+    tp, fn = w15[veto_b].sum(), w15[~veto_b].sum()
+    fn_err = math.sqrt((w15[~veto_b] ** 2).sum()) if (~veto_b).any() else 2.3 * w15.mean()
+    fp, tn = n_sig * veto_s.mean(), n_sig * (1 - veto_s.mean())
+    p_fake = 1 - math.exp(-fn)
+    fig = go.Figure()
+    cells = [(0, 1, "TP", f"{tp:.1f}", "fake vertices vetoed", GRN),
+             (1, 1, "FN", f"{fn:.1e}", f"fake discoveries (± {fn_err:.0e})", RED),
+             (0, 0, "FP", f"{fp:.1f}", "signal events lost", ORA),
+             (1, 0, "TN", f"{tn:.1f}", "signal events kept", ACC)]
+    for cx, cy, name, big, small, col in cells:
+        fig.add_shape(type="rect", x0=cx, x1=cx + 1, y0=cy, y1=cy + 1, line=dict(color="white", width=3),
+                      fillcolor=col, opacity=0.18)
+        for dy, text, size in ((0.74, f"<b>{name}</b>", 9), (0.47, f"<b>{big}</b>", 11), (0.22, small, 6.5)):
+            fig.add_annotation(x=cx + 0.5, y=cy + dy, text=text, showarrow=False, font=dict(size=size, color=INK))
+    for x, text in ((0.5, "vetoed"), (1.5, "not vetoed")):
+        fig.add_annotation(x=x, y=2.08, text=f"<b>{text}</b>", showarrow=False, font=dict(size=7, color=MUT))
+    for y, text in ((1.5, f"pairs {tp + fn:.1f}"), (0.5, f"signal {n_sig:.0f}")):
+        fig.add_annotation(x=-0.06, y=y, text=f"<b>{text}</b>", showarrow=False, textangle=-90, font=dict(size=7, color=MUT))
+    fig.update_xaxes(visible=False, range=[-0.15, 2.02]); fig.update_yaxes(visible=False, range=[-0.02, 2.18])
+    title = f"{DESIGNS[int(di)]} · 15 years · P(≥ 1 fake discovery) = {100 * p_fake:.2g} %"
+    return layout(fig, title=dict(text=title, font=dict(size=7.5), x=0.02), margin=dict(l=4, r=4, t=18, b=4))
+
+
 # ---------------------------------------------------------------- warm the default design while the talk starts
 threading.Thread(target=lambda: run_design("D2_default"), daemon=True).start()
 

@@ -477,6 +477,22 @@
   \end{columns}
 \end{frame}
 
+\begin{frame}{Figure of merit: the 15-year run}
+  \begin{columns}[c]
+    \begin{column}{0.5\textwidth}
+      \livewidget{fom15}{\linewidth}{0.56\textheight}\\[1mm]
+      \sld{fom_design}\\[0.4mm]\sld{n_sig15}
+    \end{column}
+    \begin{column}{0.47\textwidth}\footnotesize
+      The same confusion matrix, as \key{counts over 15 years}: $6\cdot10^{20}$ POT in 1\,s spills of $5\cdot10^{13}$ POT, $1.2\cdot10^{7}$ spills.\\[1.5mm]
+      \key{Fake vertices}: 36 muon pairs over the whole run look like a decay in the vessel. The veto removes all but a tiny fraction: FN is the expected number of \key{fake discoveries}.\\[1.5mm]
+      \key{Signal}: its total is model dependent; the slider sets how many selected decays SHiP would see. FP are lost to random hits, TN kept.\\[1.5mm]
+      $P(\geq1\ \text{fake}) = 1 - e^{-\text{FN}}$: the chance the whole run has even one.\\[1.5mm]
+      \takeaway[\footnotesize]{Background-free means FN $\ll 1$: true for every design with fins. They differ in how much signal they keep.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
 \begin{frame}{Experiments}
   \begin{columns}[c]
     \begin{column}{0.56\textwidth}\scriptsize
