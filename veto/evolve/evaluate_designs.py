@@ -33,8 +33,8 @@ from veto.config import DEFAULT_CONFIG  # noqa: E402
 _STATE = {}
 
 
-def _init(n_signal, seed):
-    _STATE["tr"], _STATE["inp"] = load_inputs()
+def _init(n_signal, seed, inputs="inputs.npz"):
+    _STATE["tr"], _STATE["inp"] = load_inputs(inputs)
     _STATE["n_signal"], _STATE["seed"] = n_signal, seed
 
 
@@ -60,9 +60,10 @@ def main():
     ap.add_argument("--workers", type=int, default=16)
     ap.add_argument("--n-signal", type=int, default=40_000)
     ap.add_argument("--seed", type=int, default=1, help="same seed for every design: common random numbers")
+    ap.add_argument("--inputs", default="inputs.npz", help="results/reco file: inputs.npz or inputs_xrun.npz")
     args = ap.parse_args()
     designs = json.load(sys.stdin if args.input == "-" else open(args.input))
-    with Pool(min(args.workers, len(designs)), initializer=_init, initargs=(args.n_signal, args.seed)) as pool:
+    with Pool(min(args.workers, len(designs)), initializer=_init, initargs=(args.n_signal, args.seed, args.inputs)) as pool:
         reports = pool.map(report, designs)
     print(json.dumps(reports, default=lambda o: None if o != o else float(o)))
 

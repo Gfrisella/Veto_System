@@ -33,8 +33,9 @@ TYPE_NAMES = {0: "SST1 bounced", 1: "SST1 p>1 GeV & timing", 2: "SST1 other"}
 SPILLS_15Y = DEFAULT_CONFIG["pot_15_years"] / DEFAULT_CONFIG["pot_spill"]
 
 
-def load_inputs():
-    f = np.load(paths.results_dir() / "reco" / "inputs.npz")
+def load_inputs(name="inputs.npz"):
+    """Tracks and candidates of results/reco/<name> (inputs.npz; inputs_xrun.npz: cross-run pairs)."""
+    f = np.load(paths.results_dir() / "reco" / name)
     tr = {k[3:]: f[k].astype(np.float64) for k in f.files if k.startswith("tr_")}
     return tr, {k: f[k] for k in f.files if not k.startswith("tr_")}
 
