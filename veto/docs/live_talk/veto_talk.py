@@ -152,6 +152,70 @@ def det3d(n_show):
     return layout(go.Figure(traces), scene=scene(), margin=dict(l=0, r=0, t=0, b=0))
 
 
+# --- one muon at a time: a radio picks the type, a slider one of 15 muons of it
+MU_TYPES = ["SST1, bounced into it", "SST1, selected", "SST1, other", "through an SBT wall",
+            "through the UBT window", "bounced in the rock", "straight past", "stops at 30.6–82 m",
+            "stops in the shield"]
+MU_SHOW = 15
+WALL_NAMES = {1: "+x wall", 2: "−x wall", 4: "+y wall", 8: "−y wall", 16: "UBT window"}
+pres.radio("mu_type", MU_TYPES, value="through an SBT wall", label="muon type", style="list")
+pres.slider("mu_index", label="muon", min=1, max=MU_SHOW, value=1, step=1, decimals=0, scan=True, scan_points=MU_SHOW)
+
+
+def mu_examples(t):
+    """MU_SHOW muons of type t of the full run: start A (z = 30.6 or stop), bounce K, end B; and their momenta."""
+    rows = {k[len(f"{t}_"):]: FULL[k] for k in FULL if k.startswith(f"{t}_")}
+    a = np.stack([rows[f"{k}0"] for k in "xyz"], 1); b = np.stack([rows[f"{k}1"] for k in "xyz"], 1)
+    pa = np.stack([rows[f"p{k}0"] for k in "xyz"], 1); pb = np.stack([rows[f"p{k}1"] for k in "xyz"], 1)
+    kk, ok = mt.bounce_points(a, pa, b, pb)
+    bounced = "bounced" in VIZ_TYPES[t][0]
+    # typical muons: drawn in proportion to their weight, end point inside the 3D view
+    inside = (np.abs(b[:, 0]) < 7.5) & (b[:, 1] > -5.5) & (b[:, 1] < 7.5)
+    good = np.where(inside & (ok if bounced else True))[0]
+    w = rows["weight"][good].astype(float)
+    pick = np.sort(np.random.default_rng(100 + t).choice(good, min(MU_SHOW, len(good)), replace=False, p=w / w.sum()))
+    k = np.where((bounced & ok[pick])[:, None], kk[pick], np.nan)
+    return a[pick], pa[pick], b[pick], pb[pick], k, rows["weight"][pick]
+
+
+MU_EX = [mu_examples(t) for t in range(len(VIZ_TYPES))]
+
+
+@pres.output("mu3d", inputs=["mu_type", "mu_index"])
+def mu3d(kind, index):
+    t = MU_TYPES.index(kind)
+    a, pa, b, pb, k, w = MU_EX[t]
+    i = min(int(index), len(a)) - 1
+    col = VIZ_TYPES[t][1]
+    traces = geometry(ubt=True)
+    p_a, p_b = np.linalg.norm(pa[i]), np.linalg.norm(pb[i])
+    lines = [f"{kind} · muon {i + 1} of {len(a)}"]
+    if t == 8:                                              # never reaches z = 30.6: only its stop point
+        traces.append(pts3d([a[i]], col, 6, "diamond", line=dict(color=INK, width=1)))
+        lines += [f"stops at z = {a[i][2]:.1f} m (x = {a[i][0]:+.2f}, y = {a[i][1]:+.2f} m)"]
+    else:
+        path = [a[i], k[i], b[i]] if np.isfinite(k[i][2]) else [a[i], b[i]]
+        traces.append(lines3d([path], col, 6))
+        traces.append(pts3d([a[i]], col, 5, line=dict(color=INK, width=1)))
+        traces.append(pts3d([b[i]], col, 5, "square", line=dict(color=INK, width=1)))
+        if np.isfinite(k[i][2]):
+            traces.append(pts3d([k[i]], "black", 5, "x"))
+        mid = (k[i] if np.isfinite(k[i][2]) else b[i])[None]
+        bits = int(mt.segment_walls(a[i][None], mid)[0]) | (int(mt.segment_walls(k[i][None], b[i][None])[0]) if np.isfinite(k[i][2]) else 0)
+        if abs(a[i][0]) < geo.UBT_HALF_X and abs(a[i][1]) < geo.UBT_HALF_Y:
+            bits |= 16
+        lines += [f"z = 30.6 m: x = {a[i][0]:+.2f}, y = {a[i][1]:+.2f} m, p = {p_a:.1f} GeV",
+                  (f"z = 82 m: x = {b[i][0]:+.2f}, y = {b[i][1]:+.2f} m, p = {p_b:.1f} GeV" if b[i][2] > 81.9
+                   else f"stops at z = {b[i][2]:.1f} m (x = {b[i][0]:+.2f}, y = {b[i][1]:+.2f})")]
+        if np.isfinite(k[i][2]):
+            lines.append(f"bounces at z = {k[i][2]:.1f} m, x = {k[i][0]:+.2f}, y = {k[i][1]:+.2f} m")
+        lines.append("crosses: " + (", ".join(n for bit, n in WALL_NAMES.items() if bits & bit) or "no vessel wall"))
+    lines.append(f"weight {w[i]:.3g} muons per spill")
+    fig = go.Figure(traces)
+    text_block(fig, lines, 0.01, y0=0.99, dy=0.055, size=6.3)
+    return layout(fig, scene=scene(), margin=dict(l=0, r=0, t=0, b=0))
+
+
 # ====================================================================== PART 2: the data
 @pres.output("where_bar")
 def where_bar():
