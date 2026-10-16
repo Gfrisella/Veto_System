@@ -5,12 +5,9 @@ Input: a JSON list of designs (the designs/*.json format) on stdin or --input. O
 of stdout is a JSON list of reports, one per design, in the same order:
 
   name, error (or None), notes (what design.validate changed: cut at the cavern wall, ...)
-  fom          TPR, FNR, FPR, TNR, B_15y, B_15y_err, B_15y_is_upper_limit, n_survive, n_candidates
-  cost_kchf, n_channels, area_m2, ubt_x0, n_planes_over_limit
-  single       veto efficiency per SST1 muon type (selected, other, bounced) and all
-  signal_lost_by_plane, bkg_vetoed_by_plane    which planes cause signal loss / do the vetoing
-  planes       per plane: kind, side, z, reach, y range, technology, area, muons per spill, peak
-               channel rate [Hz], peak density [Hz/cm^2], limits, over limit, channels, cost, x0
+  result       the run_reco.py evaluate() dict (what veto.objective scores): background, signal,
+               fom, single, pair_muons, planes (rates and limits), cost_kchf, n_channels, ...
+  planes       per plane, geometry for the LLM: name, kind, side, z, reach, y range, technology
   seconds
 The full chain of run_reco.py (196 736 background pairs, --n-signal signal decays, 200 k single
 muons) with multiple scattering in the PVC walls, the UBT and the fins.
@@ -36,8 +33,8 @@ from veto.config import DEFAULT_CONFIG  # noqa: E402
 _STATE = {}
 
 
-def _init(n_signal, seed):
-    _STATE["tr"], _STATE["inp"] = load_inputs()
+def _init(n_signal, seed, inputs="inputs.npz"):
+    _STATE["tr"], _STATE["inp"] = load_inputs(inputs)
     _STATE["n_signal"], _STATE["seed"] = n_signal, seed
 
 
@@ -50,25 +47,12 @@ def report(raw):
         r = evaluate(design, _STATE["tr"], _STATE["inp"], cfg, _STATE["n_signal"], DEFAULT_CONFIG["time_window"], "target")
     except Exception as e:  # noqa: BLE001  (an invalid design is a normal outcome here)
         return dict(name=name, error=f"{type(e).__name__}: {e}")
-    planes = []
-    for plane, p in zip(design.planes, r["planes"]):
-        planes.append(dict(
-            name=plane.name, kind=plane.kind, side={-1: "right", 1: "left", 0: "-"}[plane.sign], z=plane.z,
-            reach_m=round(plane.u_max, 3), y_lo=plane.y_lo, y_hi=plane.y_hi, technology=plane.technology,
-            area_m2=round(plane.area, 2), muons_per_spill=p["rate"], peak_channel_hz=p["peak_channel"],
-            peak_hz_cm2=p["peak_hz_cm2"], max_rate_hz_cm2=p["max_rate_hz_cm2"],
-            area_over_density_limit_m2=p["area_over_limit"], channel_over_limit=p["channel_over_limit"],
-            n_channels=p["n_channels"], cost_kchf=p["cost"], x0=p["x0"]))
-    over = sum(1 for p in planes if p["channel_over_limit"] or p["area_over_density_limit_m2"] > 0)
-    f, b, s = r["fom"], r["background"], r["signal"]
-    return dict(
-        name=name, error=None, notes=design.notes,
-        fom=dict(TPR=f["TPR"], FNR=f["FNR"], FPR=f["FPR"], TNR=f["TNR"], B_15y=f["B_15y"], B_15y_err=f["B_15y_err"],
-                 B_15y_is_upper_limit=f["B_15y_is_upper_limit"], n_survive=b["n_survive"], n_candidates=b["n"]),
-        cost_kchf=r["cost_kchf"], n_channels=r["n_channels"], area_m2=r["area_m2"], ubt_x0=r["ubt_x0"],
-        n_planes_over_limit=over, single=r["single"], signal_lost_by_plane=s["FP_by_plane"],
-        bkg_vetoed_by_plane=b.get("veto_by_plane", {}), planes=planes, seconds=round(time.time() - t0, 1))
-
+    planes = [dict(name=p.name, kind=p.kind, side={-1: "right", 1: "left", 0: "-"}[p.sign], z=p.z,
+                   reach_m=round(p.u_max, 3), y_lo=p.y_lo, y_hi=p.y_hi, technology=p.technology,
+                   area_m2=round(p.area, 2)) for p in design.planes]
+    r.pop("window_containment", None)
+    r["background"].pop("timing", None)
+    return dict(name=name, error=None, notes=design.notes, result=r, planes=planes, seconds=round(time.time() - t0, 1))
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -76,9 +60,10 @@ def main():
     ap.add_argument("--workers", type=int, default=16)
     ap.add_argument("--n-signal", type=int, default=40_000)
     ap.add_argument("--seed", type=int, default=1, help="same seed for every design: common random numbers")
+    ap.add_argument("--inputs", default="inputs.npz", help="results/reco file: inputs.npz or inputs_xrun.npz")
     args = ap.parse_args()
     designs = json.load(sys.stdin if args.input == "-" else open(args.input))
-    with Pool(min(args.workers, len(designs)), initializer=_init, initargs=(args.n_signal, args.seed)) as pool:
+    with Pool(min(args.workers, len(designs)), initializer=_init, initargs=(args.n_signal, args.seed, args.inputs)) as pool:
         reports = pool.map(report, designs)
     print(json.dumps(reports, default=lambda o: None if o != o else float(o)))
 

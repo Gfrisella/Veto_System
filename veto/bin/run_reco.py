@@ -33,8 +33,9 @@ TYPE_NAMES = {0: "SST1 bounced", 1: "SST1 p>1 GeV & timing", 2: "SST1 other"}
 SPILLS_15Y = DEFAULT_CONFIG["pot_15_years"] / DEFAULT_CONFIG["pot_spill"]
 
 
-def load_inputs():
-    f = np.load(paths.results_dir() / "reco" / "inputs.npz")
+def load_inputs(name="inputs.npz"):
+    """Tracks and candidates of results/reco/<name> (inputs.npz; inputs_xrun.npz: cross-run pairs)."""
+    f = np.load(paths.results_dir() / "reco" / name)
     tr = {k[3:]: f[k].astype(np.float64) for k in f.files if k.startswith("tr_")}
     return tr, {k: f[k] for k in f.files if not k.startswith("tr_")}
 
@@ -88,6 +89,10 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
                              hits_per_event=b["n_hits"] / len(cand), comparisons=b["n_compared"],
                              veto_by_plane={design.planes[i].name: int(c) for i, c in enumerate(b["by_plane"]) if c},
                              seconds=t_bkg, us_per_event=1e6 * t_bkg / len(cand), timing=b["timing"])
+    # veto efficiency of the muons in the pairs, per type (for the factorised background, objective.py)
+    ty, wt = tr["type"][rows].astype(int), np.repeat(inp["cand_w"], 2)
+    res["pair_muons"] = {TYPE_NAMES[k]: float((wt * b["explained"])[ty == k].sum() / wt[ty == k].sum())
+                         for k in range(3) if (ty == k).any()}
 
     # hypothetical signal
     if signal_model == "target":
