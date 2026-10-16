@@ -88,6 +88,10 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
                              hits_per_event=b["n_hits"] / len(cand), comparisons=b["n_compared"],
                              veto_by_plane={design.planes[i].name: int(c) for i, c in enumerate(b["by_plane"]) if c},
                              seconds=t_bkg, us_per_event=1e6 * t_bkg / len(cand), timing=b["timing"])
+    # veto efficiency of the muons in the pairs, per type (for the factorised background, objective.py)
+    ty, wt = tr["type"][rows].astype(int), np.repeat(inp["cand_w"], 2)
+    res["pair_muons"] = {TYPE_NAMES[k]: float((wt * b["explained"])[ty == k].sum() / wt[ty == k].sum())
+                         for k in range(3) if (ty == k).any()}
 
     # hypothetical signal
     if signal_model == "target":
