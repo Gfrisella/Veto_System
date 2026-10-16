@@ -21,11 +21,15 @@ It saturates for N >> bkg_scale (no gradient there); bkg_form = "log" keeps one.
 Background estimate (ISSUES A1): the direct count of surviving pairs is 0-3 out of 196 736, i.e.
 Poisson noise. The default estimate factorises the single-muon inefficiencies per muon type,
     N = N_before * sum_kl f_kl eps_k eps_l ,
-with f_kl the weighted pair composition of the candidates and eps_k = 1 - single veto efficiency
-of type k. On D6_tile / D6_straw it predicts 1.4 / 1.2 surviving pairs vs 3 / 2 observed.
+with f_kl the weighted pair composition of the candidates and eps_k = 1 - veto efficiency of the
+muons of type k. By default (eps_source = "pairs") eps_k is measured on the muons of the pairs
+themselves (run_reco "pair_muons"), else on the single-muon sample: the two agree for selected muons,
+but bounced muons of pairs are about twice as often unvetoed (0.47 vs 0.25), and bounced x selected
+pairs dominate N. On D6_tile / D6_straw the single-muon version predicts 1.4 / 1.2 surviving pairs vs 3 / 2 observed.
 
-Errors (1 sigma, statistical only): eps_k from the weighted single-muon sample (Wilson interval
-with the effective number of muons (sum w)^2 / sum w^2, so eps = 0 still gets an error), N_before
+Errors (1 sigma, statistical only): eps_k from the weighted muon sample (Wilson interval with the
+effective number of muons (sum w)^2 / sum w^2, a muon's weight summed over the pairs it is in, so
+eps = 0 still gets an error), N_before
 from the candidate weights, signal FP binomial. They are propagated linearly to N, to every term
 and to the reward. Cost and rate limits have no statistical error (cost is an order-of-magnitude
 model). Every design is run on the same events (fixed seed), so errors are largely correlated
@@ -52,6 +56,7 @@ class ObjectiveConfig:
     bkg_scale: float = 1.0            # exp: false vertices in 15 years at which the term reaches 1 - 1/e
     bkg_target: float = 0.01          # log: events in 15 years regarded as background free
     bkg_estimate: str = "factorised"  # "factorised" | "direct" | "max" (conservative)
+    eps_source: str = "pairs"         # eps_k from the muons of the pairs ("pairs") or the single-muon sample ("single")
     sig_loss_max: float = 0.10        # signal loss mapped to the top of the signal tier
     cost_min_kchf: float = 97.2       # straw UBT alone (D0)
     cost_max_kchf: float = 8000.0     # top of the cost tier = the budget
@@ -81,7 +86,12 @@ def sample_stats(inp=None):
     f = (f + f.T) / 2
     ts, ws = inp["tr_type"][inp["single"]].astype(int), inp["single_w"]
     n_eff = [ws[ts == k].sum() ** 2 / (ws[ts == k] ** 2).sum() for k in range(3)]
-    return {"f_pair": f / f.sum(), "n_eff_single": np.array(n_eff),
+    # muons of the pairs: a muon is in several pairs, so its weight is summed over them first
+    rows, inv = np.unique(inp["cand"].ravel(), return_inverse=True)
+    wm = np.bincount(inv.ravel(), weights=np.repeat(w, 2), minlength=len(rows))
+    tm = inp["tr_type"][rows].astype(int)
+    n_eff_pair = [wm[tm == k].sum() ** 2 / (wm[tm == k] ** 2).sum() if (tm == k).any() else 0.0 for k in range(3)]
+    return {"f_pair": f / f.sum(), "n_eff_single": np.array(n_eff), "n_eff_pair": np.array(n_eff_pair),
             "n_before_rel_err": float(np.sqrt((w ** 2).sum()) / w.sum())}
 
 
@@ -89,8 +99,13 @@ def confusion_matrix(res, stats, cfg=ObjectiveConfig()):
     """Background (pairs) and signal confusion matrices with 1-sigma errors; background in events / 15 y."""
     b, s = res["background"], res["signal"]
     f = stats["f_pair"]
-    eps = np.array([1 - res["single"][k] for k in TYPES])
-    eps_err = np.array([wilson_sigma(e, n) for e, n in zip(eps, stats["n_eff_single"])])
+    # eps_k from the muons of the pairs when the result has them (run_reco "pair_muons"): the single-muon
+    # sample under-represents how badly bounced muons of pairs are vetoed (~0.47 vs ~0.25 unvetoed)
+    pairs = res.get("pair_muons") if cfg.eps_source == "pairs" else None
+    use_pair = [bool(pairs) and k in pairs and stats["n_eff_pair"][i] > 0 for i, k in enumerate(TYPES)]
+    eps = np.array([1 - (pairs[k] if up else res["single"][k]) for k, up in zip(TYPES, use_pair)])
+    n_eff = [stats["n_eff_pair"][i] if up else stats["n_eff_single"][i] for i, up in enumerate(use_pair)]
+    eps_err = np.array([wilson_sigma(e, n) for e, n in zip(eps, n_eff)])
 
     fn_fact = float(eps @ f @ eps)
     fn_fact_err = float(np.sqrt(((2 * f @ eps) * eps_err) @ ((2 * f @ eps) * eps_err)))

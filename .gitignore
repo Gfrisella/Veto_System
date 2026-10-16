@@ -16,3 +16,4 @@ __pycache__/
 !veto/docs/live_talk/run.sh
 *.pdf
 veto/knowledge/
+!veto/evolve/*.sh
