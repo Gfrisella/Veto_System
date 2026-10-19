@@ -849,9 +849,14 @@ from veto import objective as vobj  # noqa: E402
 from veto import technology as tech  # noqa: E402
 
 EVO_DIR = paths.results_dir() / "evolve"
-EVO_RUNS = [("run 1 · factorised background", "20261015_175718"), ("run 2 · honest background", "20261015_213509")]
+EVO_RUNS = [("run 1 (old) · factorised background", "20261015_175718"), ("run 2 (old) · honest background", "20261015_213509"),
+            ("run 3 · full objective, enriched, Codex", "20261019_212211")]
+EVO_NEW = "20261019_212211"
 EVO_PICK = ["E1_llm_run1", "E2_llm_run2"]
 OBJ_STATS = vobj.sample_stats()
+# each run is scored with the pair statistics of the reco inputs it was evaluated on
+RUN_STATS = {run: (vobj.sample_stats(np.load(paths.results_dir() / "reco" / json.loads((EVO_DIR / run / "config.json").read_text()).get("inputs", "inputs.npz")))
+                   if (EVO_DIR / run / "config.json").exists() else OBJ_STATS) for _, run in EVO_RUNS}
 OBJ_CFG = vobj.ObjectiveConfig(bkg_estimate="max")
 
 
@@ -875,12 +880,12 @@ EVO = {run: evo_history(run) for _, run in EVO_RUNS} if EVO_DIR.exists() else {}
 LINEAGE = {run: evo_lineage(h) for run, h in EVO.items()}
 
 
-def honest(c):
+def honest(c, run=None):
     """veto.objective with the max(direct, factorised) background, for every design alike."""
-    return vobj.score(c["report"]["result"], OBJ_STATS, OBJ_CFG)
+    return vobj.score(c["report"]["result"], RUN_STATS.get(run, OBJ_STATS), OBJ_CFG)
 
 
-pres.slider("evo_run", label="run", min=0, max=len(EVO_RUNS) - 1, value=1, step=1, decimals=0)
+pres.slider("evo_run", label="run", min=0, max=len(EVO_RUNS) - 1, value=len(EVO_RUNS) - 1, step=1, decimals=0)
 pres.slider("evo_step", label="step", min=0, max=max([len(v) for v in LINEAGE.values()] + [1]) - 1, value=0, step=1, decimals=0)
 
 
@@ -934,7 +939,7 @@ def evo3d(ri, step):
 def evo_top(ri, step):
     """Top view (x against z) of the best design at this step, fins coloured by peak rate / limit, and its numbers."""
     run, g, c, d, n = lineage_step(ri, step)
-    sc = honest(c)
+    sc = honest(c, run)
     res = c["report"]["result"]
     rates = {p["plane"]: p for p in res["planes"]}
     fig = make_subplots(rows=1, cols=1)
@@ -966,8 +971,9 @@ def evo_top(ri, step):
              "feasible" if sc["feasible"] else f"INFEASIBLE: {over} rate limit{'s' * (over != 1)}" + (" + budget" if sc["over_budget"] else ""),
              f"{sc['cost_kchf'] / 1000:.2f} MCHF · {', '.join(techs)}",
              f"signal kept {100 * sg['efficiency']:.2f} %",
-             f"false vertices {bg['events_15y_after']:.1g} / 15 y",
-             f"{bg['n_survive_direct']} of 196 k pairs survive"]
+             f"false vertices {sc['bkg_events_15y']:.2g} / 15 y" + (f" (μ {res['interactions']['muon']['total']:.2g}, ν {res['interactions']['nu']['total']:.2g})"
+                                                                   if res.get("interactions") else ""),
+             f"cone {res.get('cone_mrad', 0):g} mrad" if res.get("interactions") else f"{bg['n_survive_direct']} of 196 k pairs survive"]
     why = textwrap.wrap(c.get("rationale", ""), 42)[:5]
     text_block(fig, lines, 0.5, y0=0.99, dy=0.068, size=5.8)
     text_block(fig, ["the LLM's reason:"] + why, 0.5, y0=0.36, dy=0.062, size=5.3)
@@ -978,8 +984,8 @@ def evo_top(ri, step):
 def evo_map():
     """All feasible designs of both runs, honest objective: signal lost against cost, coloured by false vertices."""
     fig = go.Figure()
-    for (label, run), sym in zip(EVO_RUNS, ("circle", "diamond")):
-        pts = [(c, honest(c)) for c in EVO[run]]
+    for (label, run), sym in zip(EVO_RUNS, ("circle", "diamond", "square")):
+        pts = [(c, honest(c, run)) for c in EVO[run]]
         pts = [(c, s) for c, s in pts if s["feasible"]]
         n = np.array([s["bkg_events_15y"] for _, s in pts])
         fig.add_trace(go.Scatter(
@@ -990,20 +996,49 @@ def evo_map():
                         colorbar=dict(title=dict(text="log₁₀ false vertices / 15 y", side="right", font=dict(size=6)),
                                       thickness=7, len=0.8, tickfont=dict(size=6)))))
     for name, sym in zip(EVO_PICK, ("circle", "diamond")):
-        c = next((c for _, run in EVO_RUNS for c in EVO[run] if c["design"]["fins"] == json.loads(
-            (dsg.DESIGN_DIR / f"{name}.json").read_text())["fins"]), None)
+        c, crun = next(((c, run) for _, run in EVO_RUNS[:2] for c in EVO[run] if c["design"]["fins"] == json.loads(
+            (dsg.DESIGN_DIR / f"{name}.json").read_text())["fins"]), (None, None))
         if c:
-            s = honest(c)
+            s = honest(c, crun)
             fig.add_trace(go.Scatter(x=[s["cost_kchf"] / 1000], y=[100 * s["confusion"]["signal"]["FP"]], mode="markers+text",
                                      text=[name.split("_")[0]], textposition="top right" if name.startswith("E1") else "bottom left",
                                      textfont=dict(size=8, color=INK),
                                      marker=dict(size=11, symbol=sym, color="rgba(0,0,0,0)", line=dict(width=1.6, color=INK))))
-    fig.update_xaxes(title="cost [MCHF]", type="log", range=[math.log10(0.25), math.log10(9)],
-                     tickvals=[0.3, 0.5, 1, 2, 4, 8], ticktext=["0.3", "0.5", "1", "2", "4", "8"])
-    fig.update_yaxes(title="signal lost [%]", type="log", range=[-1.6, 0.3], tickvals=[0.03, 0.1, 0.3, 1],
-                     ticktext=["0.03", "0.1", "0.3", "1"])
-    return layout(fig, title=dict(text="every feasible design the LLM proposed (● run 1, ◆ run 2)", font=dict(size=7.5), x=0.02),
+    fig.update_xaxes(title="cost [MCHF]", type="log", range=[math.log10(0.08), math.log10(9)],
+                     tickvals=[0.1, 0.3, 0.5, 1, 2, 4, 8], ticktext=["0.1", "0.3", "0.5", "1", "2", "4", "8"])
+    fig.update_yaxes(title="signal lost [%]", type="log", range=[-1.6, 2.05], tickvals=[0.03, 0.1, 0.3, 1, 3, 10, 30, 100],
+                     ticktext=["0.03", "0.1", "0.3", "1", "3", "10", "30", "100"])
+    fig.add_hline(y=10, line=dict(color=RED, dash="dot", width=1))
+    fig.add_annotation(xref="paper", x=0.01, y=1.0, text="signal term saturates at 10 %", showarrow=False, xanchor="left",
+                       yanchor="bottom", font=dict(size=6, color=RED))
+    return layout(fig, title=dict(text="every feasible design the LLM proposed (● run 1, ◆ run 2, ■ run 3)", font=dict(size=7.5), x=0.02),
                   margin=dict(l=36, r=8, t=18, b=28))
+
+
+@pres.output("evo_drift")
+def evo_drift():
+    """Run 3: each new best design, what the objective saw (penalty) against what it paid (signal, cost) and bought (ν)."""
+    lin = LINEAGE.get(EVO_NEW, [])
+    if not lin:
+        return layout(go.Figure())
+    names = [f"g{g} {c['id'].split('_', 1)[-1][:18]}" for g, c in lin]
+    res = [c["report"]["result"] for _, c in lin]
+    fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.06,
+                        subplot_titles=("penalty = −reward (lower is better for the optimiser)", "signal lost [%]",
+                                        "background after veto / 15 y: μ (red), ν (blue)"))
+    fig.add_trace(go.Scatter(x=names, y=[-c["score"] for _, c in lin], mode="lines+markers", line=dict(color=ORA, width=2)), 1, 1)
+    fig.add_trace(go.Bar(x=names, y=[100 * r["signal"]["FP_frac"] for r in res], marker_color=RED,
+                         text=[f"{100 * r['signal']['FP_frac']:.0f} %" for r in res], textposition="outside", textfont=dict(size=6)), 2, 1)
+    fig.add_trace(go.Scatter(x=names, y=[max(r["interactions"]["muon"]["total"], 1e-2) for r in res], mode="lines+markers",
+                             line=dict(color=RED, width=1.5)), 3, 1)
+    fig.add_trace(go.Scatter(x=names, y=[r["interactions"]["nu"]["total"] for r in res], mode="lines+markers",
+                             line=dict(color=ACC, width=1.5)), 3, 1)
+    fig.update_yaxes(range=[0, 105], row=1, col=1)
+    fig.update_yaxes(range=[0, 95], row=2, col=1)
+    fig.update_yaxes(type="log", row=3, col=1)
+    fig.update_xaxes(tickangle=-25, tickfont=dict(size=5.5), row=3, col=1)
+    fig.update_annotations(font=dict(size=6.5))
+    return layout(fig, margin=dict(l=34, r=6, t=14, b=40))
 
 
 pres.slider("evo_pick", label="design", min=0, max=len(EVO_PICK) - 1, value=1, step=1, decimals=0)
@@ -1030,6 +1065,16 @@ def ev3d_evo(pi, kind, k):
 def ev_side_evo(pi, kind, k):
     return ev_side_figure(EVO_PICK[int(pi)], kind, k, plot_width=0.58, text_size=5.6)
 
+
+# ====================================================================== PART 7: simulation after the shield, interactions
+import talk_sim  # noqa: E402
+
+talk_sim.register(pres, INP)
+
+# ====================================================================== datasets and end-to-end results
+import talk_e2e  # noqa: E402
+
+talk_e2e.register(pres, plane_meshes, geometry, scene)
 
 if __name__ == "__main__":
     pres.run()

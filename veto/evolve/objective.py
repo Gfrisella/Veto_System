@@ -5,12 +5,14 @@ The reward is minus the sum of four tiers, in order of priority:
                   1000 * (1 + log10(peak / limit)); a design over the 8 MCHF budget costs
                   1000 * (1 + overshoot / 8 MCHF). A design with any of these is INFEASIBLE: it loses
                   to every feasible design. Getting feasible comes first.
-  2. background   100 * (1 - exp(-N)), N = false vertices (background pairs surviving the veto) in
-                  15 years: about 100 * N. 0.01 events cost 1 point. N is the larger of two estimates:
-                  the surviving pairs counted directly, and a factorised one (product of how often
-                  each muon type escapes the veto) that still works when no pair survives. The
-                  factorised one assumes the two muons of a pair escape independently: wrong when
-                  both enter through the same gap in the coverage, then the direct count is larger.
+  2. background   100 * (1 - exp(-N)), N = false vertices surviving the selection and the veto in 15 years:
+                  about 100 * N for small N, saturating at 100. 0.01 events cost 1 point. N has three sources:
+                  - combinatorial: two unrelated muons coincident in time (now tiny, ~1e-3);
+                  - muon interactions: a muon interacting in the helium or the PVC walls makes a real vertex;
+                    its parent crossed the UBT or a fin, but the interaction bends it by a few mrad, so the
+                    straight backward search misses the parent's hit: the vertex cone ("cone_mrad") recovers it;
+                  - neutrino interactions: no incoming charged particle, nothing to veto: a floor of ~0.5.
+                  Selection for every sample: measured IP < 0.1 m at the target, at most 2 tracks in SST1.
   3. signal       10 * (fraction of signal lost to random hits) / 0.10: 1 point per 1 % of signal lost.
   4. cost         1 * log(cost / 97 kCHF) / log(8000 / 97): from the UBT alone (0) to the budget (1);
                   doubling the cost costs 0.16 points.
@@ -30,6 +32,7 @@ from veto import objective as vo  # noqa: E402
 
 
 CONFIG = vo.ObjectiveConfig(bkg_estimate="max")
+INPUTS = "inputs.npz"          # results/reco file the designs are evaluated on (evolve_designs --inputs)
 
 
 def configure(**kw):
@@ -40,7 +43,9 @@ def configure(**kw):
 
 @functools.lru_cache(maxsize=1)
 def stats():
-    return vo.sample_stats()
+    import numpy as np
+    from veto import paths
+    return vo.sample_stats(np.load(paths.results_dir() / "reco" / INPUTS))
 
 
 def evaluate(report):

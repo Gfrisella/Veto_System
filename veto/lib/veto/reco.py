@@ -41,7 +41,13 @@ class RecoConfig:
     r_slope: float = 5e-4
     r_ms: float = 6e-3
     min_planes: int = 1                # a track is explained by hits on at least this many planes
+    ip_max: float = 0.10               # selection: measured IP < ip_max [m] at the target (vertex_selection.py)
+    max_tracks: int = 2                # selection: at most this many tracks in SST1 (interaction events)
+    cone: float = 0.0                  # vertex cone [rad]: tracks of a vertex also search r0 + cone * (distance from
+                                       # the vertex to the plane), for parents bent at the vertex (0 = off)
     multiple_scattering: bool = False  # scatter the muons after z = 30.6 m (scattering.py)
+    msc_media: bool = True             # ... also in the helium and the air (1 m slices)
+    msc_tails: bool = True             # ... with single-scattering tails (fastveto.msc, tuned to Geant4)
     seed: int = 1
     extra: dict = field(default_factory=dict)
 
@@ -55,7 +61,7 @@ def true_crossing(tr, plane):
     b = np.stack([tr["bx"], tr["by"], tr["bz"]], 1)
     if plane.kind == "ubt":
         x, y = a[:, 0], a[:, 1]
-        ok = tr["apz"] > 0
+        ok = (tr["apz"] > 0) & (a[:, 2] < geo.Z_UBT + mt.A_TOLERANCE)   # tracks starting further in never cross it
         p = a
     else:
         x, y, ok = mt.path_at_z(a, k, b, plane.z)
@@ -208,6 +214,9 @@ def predictions(meas, event, z_limit, design, cfg):
         y = meas["y"] - meas["ty"] * dz
         dist = dz * np.sqrt(1 + meas["tx"] ** 2 + meas["ty"] ** 2)
         r = cfg.r0 + (cfg.r_slope + cfg.r_ms / np.maximum(meas["p"], 0.1)) * dist
+        if cfg.cone > 0:                        # vertex cone: grows from the vertex (single tracks: z_limit beyond SST1)
+            from_vertex = np.where(z_limit < meas["z"], (z_limit - plane.z), 0.0) * np.sqrt(1 + meas["tx"] ** 2 + meas["ty"] ** 2)
+            r = np.maximum(r, cfg.r0 + cfg.cone * np.maximum(from_vertex, 0.0))
         u = plane.to_local(x)
         reach = ((plane.z < z_limit) & (u >= -r - plane.cell_u) & (u <= plane.u_max + r + plane.cell_u)
                  & (y >= plane.y_lo - r - plane.cell_y) & (y <= plane.y_hi + r + plane.cell_y))
@@ -265,7 +274,7 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
     n_events = int(event.max()) + 1 if len(event) else 0
     t0 = time.perf_counter()
     if cfg.multiple_scattering:
-        kicks = scattering.kicks(tr, design, rng)
+        kicks = scattering.kicks(tr, design, rng, media=cfg.msc_media, tails=cfg.msc_tails)
         tr_true, tr = dict(tr, _kicks=kicks), scattering.scattered_tracks(tr, kicks)   # tr: as measured
         timing["scatter"] = time.perf_counter() - t0
         t0 = time.perf_counter()

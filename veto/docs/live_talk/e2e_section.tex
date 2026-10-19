@@ -1,0 +1,120 @@
+% End to end on the enriched dataset (bin/end_to_end.py, results/end_to_end/e2e.json); widgets in talk_e2e.py.
+
+\begin{frame}{The designs, and two iterations}
+  \begin{columns}[c]
+    \begin{column}{0.55\textwidth}
+      \livewidget{e2e_design3d}{\linewidth}{0.58\textheight}\\[1mm]
+      \livewidget{e2e_design}{\linewidth}{0.62cm}
+    \end{column}
+    \begin{column}{0.43\textwidth}\footnotesize
+      \key{E3\_robust}: from the first evolution runs (E2 + 10\,cm margins; see Evolution): the minimal straw UBT and two short tile2 fin pairs at 30.6 and 36\,m, 26\,k channels, 0.40\,MCHF. \key{D6\_tile2}: the hand-made reference, tile2 fins every 15\,m.\\[1.5mm]
+      \key{Iteration 1}: E3's surviving muon interactions all have a parent that crossed \emph{one} plane, the UBT or a 30.6\,m fin, and left no hit: plane efficiency 0.999. Hence a \key{second station} where the parents enter:
+      \begin{itemize}\scriptsize
+        \item \key{E4\_ubt2}: two UBT stations ($+97$\,kCHF)
+        \item \key{E4\_entry2}: two stations on the UBT and both 30.6\,m fins ($+206$\,kCHF)
+      \end{itemize}
+      \key{Iteration 2}: the cone of E4\_entry2, 0--20\,mrad.\\[1mm]
+      \aside{A second station: efficiency $1 - 10^{-6}$ and its cost added; same geometry, so the same interactions.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Every background, before and after the veto}
+  \begin{columns}[c]
+    \begin{column}{0.64\textwidth}
+      \livewidget{e2e_sources}{\linewidth}{0.62\textheight}\\[1mm]
+      \livewidget{e2e_cone}{\linewidth}{0.62cm}
+    \end{column}
+    \begin{column}{0.34\textwidth}
+      \livewidget{e2e_design}{\linewidth}{0.62cm}\\[2mm]\footnotesize
+      Light: selected, before the veto; dark: after it. Per 15 years, enriched dataset, the full chain: scattering with tails, helium and air; measured IP $<0.1$\,m; at most two tracks; the cone of the design.\\[1.5mm]
+      Muon interactions in the PVC walls (130--170) and in the veto planes (75--80) are all vetoed: their parents crossed the planes right before. In the \key{helium}, 4\,300 are selected.\\[1.5mm]
+      \takeaway[\footnotesize]{Neutrinos: $\approx$0.9 selected, a third vetoed by random hits; $\approx$0.6 is a floor for every design.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Why the last muon interactions survive}
+  \begin{columns}[c]
+    \begin{column}{0.5\textwidth}\footnotesize
+      The survivors of E3\_robust at 10\,mrad, one by one (the parent at $z = 30.6$\,m):\\[1mm]
+      \begin{itemize}\scriptsize
+        \item all from the \key{high-energy tail}: 130--300\,GeV, the enriched input's own muons
+        \item parents enter at $|x| = 0.43$--$0.54$\,m: through the UBT window or the $-x$ wall right behind the 30.6\,m fin
+        \item in truth every parent crossed a plane; the event simply has \key{no hit} from it: one plane, efficiency 0.999
+        \item the scattered muon is reconstructed in every case; its kink is 1--2\,mrad
+      \end{itemize}
+      \vspace{1mm}
+      $4\,300 \times 10^{-3} \approx 4$ per 15 years: exactly what is left once the cone recovers the kinks.
+    \end{column}
+    \begin{column}{0.46\textwidth}\footnotesize
+      Two separate effects, two separate cures:\\[1mm]
+      {\scriptsize\begin{tabular}{@{}lll@{}}
+        \toprule
+        missed because & how often & cure\\
+        \midrule
+        bend at the vertex & most (no cone) & vertex cone\\
+        no hit on its plane & $10^{-3}$ & second station\\
+        \bottomrule
+      \end{tabular}}\\[2mm]
+      \takeaway[\footnotesize]{Redundancy is not about geometry here: the parents of interactions come in through the entrance, where one plane is the only chance.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Signal against background}
+  \begin{columns}[c]
+    \begin{column}{0.6\textwidth}
+      \livewidget{e2e_trade}{\linewidth}{0.66\textheight}
+    \end{column}
+    \begin{column}{0.38\textwidth}\footnotesize
+      Each line one design, each point a cone (labels in mrad); all background sources together, per 15 years, against the signal lost to random hits.\\[1.5mm]
+      The cone costs signal through the random hits it lets in: cheap on short fins near the wall (E3, E4: 1\,\% at 10\,mrad), expensive on D6\_tile2's busy fins (6\,\% at 10, 18\,\% at 20\,mrad).\\[1.5mm]
+      \takeaway[\footnotesize]{With a second station at the entrance the muon interactions go to zero at 17.5\,mrad: what is left is the neutrino floor.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{End-to-end figure of merit}
+  \begin{columns}[c]
+    \begin{column}{0.6\textwidth}\tiny
+      \setlength{\tabcolsep}{2.4pt}
+      \begin{tabular}{@{}lrrrrrrrr@{}}
+        \toprule
+        design & cone & signal lost & comb. & $\mu$ helium & $\nu$ helium & \key{total} & MCHF & reward\\
+        \midrule
+        E3\_robust & 0 & 0.06\,\% & $9\cdot10^{-5}$ & $76\pm6$ & 0.72 & $76\pm6$ & 0.40 & $-100.4$\\
+         & 10 & 0.92\,\% & $4\cdot10^{-5}$ & $3.1\pm1.3$ & 0.64 & $3.8\pm1.3$ & & $-98.9$\\
+         & 20 & 3.60\,\% & $3\cdot10^{-5}$ & $1.6\pm0.9$ & 0.54 & $2.1\pm0.9$ & & $-91.7$\\
+        E4\_ubt2 & 10 & 0.90\,\% & $4\cdot10^{-5}$ & $1.6\pm0.9$ & 0.67 & $2.2\pm0.9$ & 0.50 & $-90.4$\\
+         & 17.5 & 2.76\,\% & $4\cdot10^{-5}$ & $0.5\pm0.5$ & 0.62 & $1.1\pm0.5$ & & $-71.0$\\
+        E4\_entry2 & 10 & 0.90\,\% & $2\cdot10^{-5}$ & $1.0\pm0.7$ & 0.67 & $1.7\pm0.7$ & 0.61 & $-83.1$\\
+         & \key{17.5} & \key{2.85\,\%} & $1\cdot10^{-5}$ & \key{0} & 0.62 & \key{$0.62\pm0.06$} & & \key{$-49.2$}\\
+         & 20 & 3.78\,\% & $1\cdot10^{-5}$ & 0 & 0.61 & $0.61\pm0.06$ & & $-49.6$\\
+        D6\_tile2 & 10 & 5.89\,\% & $3\cdot10^{-5}$ & $1.0\pm0.7$ & 0.43 & $1.5\pm0.7$ & 4.4 & rates\\
+         & 20 & 17.8\,\% & $1\cdot10^{-5}$ & $1.0\pm0.7$ & 0.37 & $1.4\pm0.7$ & & rates\\
+        \bottomrule
+      \end{tabular}\\[1.5mm]
+      {\color{muted}\lightfont\tiny Per 15 years after selection and veto; $\mu$ interactions in air, PVC and the planes and $\nu$ in air and PVC: 0 in every row. 100\,k signal decays, 400\,k pairs, 11\,M + 7\,M forced interactions; delta dataset, 484 seeds.}
+    \end{column}
+    \begin{column}{0.38\textwidth}\footnotesize
+      Confusion matrix of \key{E4\_entry2 at 17.5\,mrad}, per 15 years:\\[1mm]
+      {\scriptsize\setlength{\tabcolsep}{3pt}\begin{tabular}{@{}lrrr@{}}
+        \toprule
+        & before & TP & FN\\
+        \midrule
+        combinatorial & 16.8 & 16.8 & $10^{-5}$\\
+        $\mu$ helium & 4\,307 & 4\,307 & 0\\
+        $\mu$ PVC walls & 128 & 128 & 0\\
+        $\mu$ veto planes & 80 & 80 & 0\\
+        $\nu$ helium & 0.92 & 0.30 & 0.62\\
+        $\nu$ veto planes & 0.06 & 0.06 & 0\\
+        \midrule
+        signal & & FP 2.85\,\% & TN 97.2\,\%\\
+        \bottomrule
+      \end{tabular}}\\[1.5mm]
+      \takeaway[\scriptsize]{0 muon interactions: fewer than one simulated event of weight 0.52, i.e.\ below $\approx$1.2 per 15 years at 90\,\% CL.}
+    \end{column}
+  \end{columns}
+\end{frame}
+

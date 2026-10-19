@@ -174,8 +174,15 @@ def score(res, stats, cfg=ObjectiveConfig()):
     """Reward (higher is better, <= 0) with its 1-sigma statistical error, and a breakdown for logging."""
     cm = confusion_matrix(res, stats, cfg)
     bg, sg = cm["background"], cm["signal"]
-    t_bkg, dt_dn = background_term(bg["events_15y_after"], bg["events_15y_before"], cfg)
-    t_bkg_err = dt_dn * bg["events_15y_after_err"]
+    # every background source: combinatorial pairs, plus muon / neutrino interactions after the veto if the result
+    # has them (run_reco / evaluate_designs "interactions": lib/veto/interactions.veto)
+    sources = {"combinatorial": (bg["events_15y_after"], bg["events_15y_after_err"])}
+    for kind, r in (res.get("interactions") or {}).items():
+        sources[f"{kind}_interactions"] = (r["total"], r["total_err"])
+    n_bkg = sum(v for v, _ in sources.values())
+    n_bkg_err = math.sqrt(sum(e * e for _, e in sources.values()))
+    t_bkg, dt_dn = background_term(n_bkg, bg["events_15y_before"] + n_bkg, cfg)
+    t_bkg_err = dt_dn * n_bkg_err
     clipped = sg["FP"] > cfg.sig_loss_max
     t_sig = min(sg["FP"] / cfg.sig_loss_max, 1.0)
     t_sig_err = 0.0 if clipped else sg["FP_err"] / cfg.sig_loss_max
@@ -190,8 +197,8 @@ def score(res, stats, cfg=ObjectiveConfig()):
             "reward_err": math.sqrt(sum(e * e for _, e in terms.values())),
             "terms": terms, "feasible": not over and not p_budget, "over_rate_limit": over,
             "over_budget": bool(p_budget), "cost_kchf": cost,
-            "bkg_events_15y": bg["events_15y_after"], "bkg_events_15y_err": bg["events_15y_after_err"],
-            "p_at_least_one_false_vertex": 1 - math.exp(-bg["events_15y_after"]),
+            "bkg_events_15y": n_bkg, "bkg_events_15y_err": n_bkg_err, "bkg_by_source": sources,
+            "p_at_least_one_false_vertex": 1 - math.exp(-n_bkg),
             "confusion": cm, "config": asdict(cfg)}
 
 

@@ -23,10 +23,11 @@ import time
 import numpy as np
 import torch
 
-from benchmark_designs import candidates
+from benchmark_designs import candidates, candidates_blocked
 from make_design_explorer import U_BINS, UBT_Y_BINS, Y_BINS, Z_SLICES
 from veto import geometry as geo
 from veto import io, paths
+from veto import muon_types as mt
 
 DATASET = "design-optimization-dataset-alpha-14-oct-2026"
 COLS = {"ax": "x_30", "ay": "y_30", "az": "z_30", "apz": "pz_30", "kx": "kx", "ky": "ky", "kz": "kz",
@@ -39,14 +40,23 @@ def main():
     parser.add_argument("--n-single", type=int, default=200_000)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--seed", type=int, default=3)
+    parser.add_argument("--dataset", default=DATASET)
+    parser.add_argument("--maps", default="sample.npz", help="rate maps: results/design_explorer/<this>")
+    parser.add_argument("--out", default="inputs.npz", help="file name in results/reco")
+    parser.add_argument("--pair-block", type=int, default=0, help="> 0: pairs in blocks of this many muons per spill (big spills)")
     args = parser.parse_args()
     rng = np.random.default_rng(args.seed)
     start = time.time()
 
-    store, meta = io.open_store(paths.store_dir(DATASET))
-    n_runs = meta["sources"]["old"]["n_files"]
+    store, meta = io.open_store(paths.store_dir(args.dataset))
     types = np.asarray(store["type"])
-    sst1 = np.where(types <= 2)[0]                     # old rows come first and are the SST1 types
+    sst1 = np.where(types <= 2)[0]                     # the SST1 types: every run / seed keeps all of them
+    if "sources" in meta:                              # alpha: the old runs
+        n_runs = meta["sources"]["old"]["n_files"]
+    else:                                              # our production (gamma builder): seeds that kept SST1
+        n_runs = {meta["per_type"][mt.TYPES[t]]["seeds"] for t in range(3)}
+        assert len(n_runs) == 1, f"SST1 types from different numbers of seeds: {n_runs}"
+        n_runs = n_runs.pop()
     d = {k: np.asarray(store[c][sst1]) for k, c in COLS.items()}
     print(f"{len(sst1):,} SST1-acceptance muons loaded, {time.time() - start:.0f} s")
 
@@ -60,7 +70,7 @@ def main():
          for k, c in (("x", "bx"), ("y", "by"), ("z", "bz"), ("px", "bpx"), ("py", "bpy"), ("pz", "bpz"))}
     t["pdg"] = torch.as_tensor(d["pdg"][g].astype(np.float64), device=dev)
     t["file_index"] = torch.as_tensor(d["run"][g].astype(np.int64), device=dev)
-    pairs, vertex, n_pairs = candidates(t, dev)
+    pairs, vertex, n_pairs = (candidates_blocked(t, dev, args.pair_block) if args.pair_block else candidates(t, dev))
     pairs, vertex = g[pairs.cpu().numpy()], vertex.cpu().numpy()
     w_pair = d["weight"][pairs[:, 0]].astype(np.float64) * d["weight"][pairs[:, 1]] * n_runs
     print(f"{good.sum():,} muons with p > 1 GeV in the timing acceptance, {n_pairs:,} opposite-charge pairs "
@@ -75,16 +85,16 @@ def main():
 
     rows = np.unique(np.concatenate([pairs.ravel(), single]))
     index = {k: np.searchsorted(rows, v) for k, v in (("pairs", pairs), ("single", single))}
-    maps = np.load(paths.results_dir() / "design_explorer" / "sample.npz")
+    maps = np.load(paths.results_dir() / "design_explorer" / args.maps)
     outdir = paths.results_dir() / "reco"
     outdir.mkdir(parents=True, exist_ok=True)
-    np.savez(outdir / "inputs.npz",
+    np.savez(outdir / args.out,
              **{f"tr_{k}": v[rows] for k, v in d.items()},
              cand=index["pairs"], cand_vertex=vertex, cand_w=w_pair,
              single=index["single"], single_w=w_single,
              fin_maps=maps["fin_maps"], z_slices=Z_SLICES, u_bins=U_BINS, y_bins=Y_BINS,
              ubt_hist=maps["ubt_hist"], ubt_y_bins=UBT_Y_BINS, n_runs=n_runs)
-    print(f"saved {outdir / 'inputs.npz'}: {len(rows):,} tracks, {time.time() - start:.0f} s")
+    print(f"saved {outdir / args.out}: {len(rows):,} tracks, {time.time() - start:.0f} s")
 
 
 if __name__ == "__main__":

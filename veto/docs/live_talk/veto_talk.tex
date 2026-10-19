@@ -34,29 +34,31 @@
     \begin{column}{0.56\textwidth}\small
       Every plot with a slider is computed while you watch, by the code of the study (\texttt{veto/lib/veto}):
       \begin{itemize}
-        \item the muon samples of the full simulation and the 20\,001 old runs
-        \item digitization, accidental hits and the veto reconstruction
-        \item design comparisons, rerun on request
+        \item muons after the shield from our own production (the enriched input), and the older samples
+        \item interactions of muons and neutrinos in everything after the shield (fast-veto-sim)
+        \item digitization, random hits, the selection and the veto
+        \item designs scored on every background source, by hand and by an LLM-driven evolution
       \end{itemize}
       \vspace{1mm}
-      Slow widgets show a spinner and fill in; some show a quick answer first. 3D views rotate and zoom.\\[2mm]
-      \takeaway[\footnotesize]{The spill is \key{1 s} of $5\cdot10^{13}$ POT and the weights are muons per spill, so muons per spill and Hz are the same number.}
+      Slow widgets show a spinner and fill in. 3D views rotate and zoom.\\[1mm]
+      \takeaway[\footnotesize]{The spill is \key{1 s} of $5\cdot10^{13}$ POT and the weights are muons per spill, so muons per spill and Hz are the same number. 15 years $= 1.2\cdot10^{7}$ spills.}
     \end{column}
     \begin{column}{0.4\textwidth}\centering
-      \begin{tikzpicture}[node distance=3.2mm]
-        \node[hbox, text width=3.7cm] (data) {\semibold muons\\\faint{full run + 20\,001 runs}};
-        \node[box, below=of data, text width=3.7cm] (des) {\semibold a veto design\\\faint{UBT + fins, JSON}};
-        \node[abox, below=of des, text width=3.7cm] (reco) {\semibold digitize + reconstruct\\\faint{algorithm A}};
-        \node[box, below=of reco, text width=3.7cm] (score) {\semibold score\\\faint{TP · FN · FP · TN, rates}};
-        \node[box, below=of score, text width=3.7cm] (rl) {\semibold optimise\\\faint{an LLM evolves the design}};
-        \draw[arr] (data) -- (des); \draw[arr] (des) -- (reco); \draw[aarr] (reco) -- (score); \draw[arr] (score) -- (rl);
+      \begin{tikzpicture}[node distance=1.6mm, every node/.append style={font=\scriptsize}]
+        \node[hbox, text width=3.9cm] (data) {\semibold muons after the shield\\\faint{our production, enriched input}};
+        \node[hbox, below=of data, text width=3.9cm] (int) {\semibold interactions\\\faint{Geant4 + Pythia\,6 ($\mu$), GENIE ($\nu$)}};
+        \node[box, below=of int, text width=3.9cm] (des) {\semibold a veto design\\\faint{UBT + fins, JSON}};
+        \node[abox, below=of des, text width=3.9cm] (reco) {\semibold digitize, select, veto\\\faint{backward search with a vertex cone}};
+        \node[box, below=of reco, text width=3.9cm] (score) {\semibold score\\\faint{every background, signal, cost, rates}};
+        \node[box, below=of score, text width=3.9cm] (rl) {\semibold optimise\\\faint{an LLM evolves the design}};
+        \draw[arr] (data) -- (int); \draw[arr] (int) -- (des); \draw[arr] (des) -- (reco); \draw[aarr] (reco) -- (score); \draw[arr] (score) -- (rl);
       \end{tikzpicture}
     \end{column}
   \end{columns}
 \end{frame}
 
 % ======================================================================== PART 1
-\blurb{Muons from the target reach the detector; two of them can fake a decay in the vessel. The veto has to see them on their way in, without killing the signal.}
+\blurb{Muons from the target reach the detector. Two of them can fake a decay in the vessel, and one muon or neutrino interacting after the shield makes a real vertex. The veto has to see them coming in, without killing the signal.}
 \section{The problem}
 
 \begin{frame}{SHiP and its muon background}
@@ -71,19 +73,6 @@
       \key{UBT} on the entrance window, \key{SST1} at 82\,m, spectrometer magnet and timing detector behind.\\[1mm]
       Cavern wall at $x=-4.56$\,m, floor at $y=-3.36$\,m.\\[2mm]
       \legendline{Muons per type (slider): \sw{9400D3}\,bounced into SST1 \sw{D62728}\,SST1 $p>1$, timing \sw{FF9896}\,SST1 other \sw{1F77B4}\,through an SBT wall \sw{FF7F0E}\,through the UBT window \sw{E377C2}\,bounced in the rock \sw{7F7F7F}\,straight past \sw{8C564B}\,stop in the rock \sw{2B2B2B}\,stop in the shield.}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{One muon at a time}
-  \begin{columns}[T]
-    \begin{column}{0.27\textwidth}
-      \livewidget{mu_type}{\linewidth}{6.2cm}
-    \end{column}
-    \begin{column}{0.71\textwidth}
-      \livewidget{mu3d}{\linewidth}{0.6\textheight}\\[1mm]
-      \sld{mu_index}\\[0.3mm]
-      \legendline{15 typical muons per type (full run, drawn by weight); straight lines between the stored states. \textbullet\ $z = 30.6$\,m, $\blacksquare$ $z = 82$\,m or stop, \texttimes\ bounce.}
     \end{column}
   \end{columns}
 \end{frame}
@@ -123,9 +112,120 @@
   \end{columns}
 \end{frame}
 
+\begin{frame}{Three kinds of background}
+  \footnotesize
+  \begin{tabular}{@{}p{0.2\linewidth}p{0.24\linewidth}p{0.24\linewidth}p{0.24\linewidth}@{}}
+    \toprule
+    & \key{combinatorial} & \key{muon interactions} & \key{neutrino interactions}\\
+    \midrule
+    origin & two unrelated muons within $\pm200$\,ps & one muon interacts in the helium, the walls, the air or a veto plane & one neutrino interacts in the same materials\\[1mm]
+    vertex & fake (a coincidence) & real & real\\[1mm]
+    can the veto see it? & yes: each muon came in from outside & yes in principle: the parent crossed the UBT or a fin, but it was bent at the vertex & no: nothing charged comes in\\[1mm]
+    handled by & the veto & the veto with a \key{vertex cone} & the \key{selection} only\\
+    \bottomrule
+  \end{tabular}\\[3mm]
+  \takeaway[\footnotesize]{The first studies only had the first column. The other two are larger by orders of magnitude before any cut; they changed the selection, the veto and the objective.}
+\end{frame}
+
 % ======================================================================== PART 2
-\blurb{Two simulations: 20\,001 runs that keep only what reaches the spectrometer, and one run that keeps every muon.}
-\section{The data}
+\blurb{Before any statistics: what a single muon does after the shield, where it crosses the detector, how it bounces, scatters and interacts.}
+\section{One particle at a time}
+
+\begin{frame}{One muon at a time}
+  \begin{columns}[T]
+    \begin{column}{0.27\textwidth}
+      \livewidget{mu_type}{\linewidth}{6.2cm}
+    \end{column}
+    \begin{column}{0.71\textwidth}
+      \livewidget{mu3d}{\linewidth}{0.6\textheight}\\[1mm]
+      \sld{mu_index}\\[0.3mm]
+      \legendline{15 typical muons per type (full run, drawn by weight); straight lines between the stored states. \textbullet\ $z = 30.6$\,m, $\blacksquare$ $z = 82$\,m or stop, \texttimes\ bounce.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Bouncing off the cavern}
+  \livewidget{bounce_view}{0.6\linewidth}{0.56\textheight}\hfill\livewidget{bounce_map}{0.38\linewidth}{0.56\textheight}\\[1mm]
+  \sld[0.4\linewidth]{bounce_ev}\\[0.5mm]
+  \legendline{Grey dashed: straight line from the 30.6\,m state; orange dotted: backward line from the 82\,m state. They meet within 4\,cm (median) at the bounce point, on the $-x$ wall or the floor. Right: all reconstructed bounce points trace the cavern.}
+\end{frame}
+
+\begin{frame}{One muon at a time: what it crosses}
+  \livewidget{sim_mu_one3d}{\linewidth}{0.58\textheight}\\[1mm]
+  \begin{columns}[c]
+    \begin{column}{0.44\textwidth}\sld{sim_mu_pick}\end{column}
+    \begin{column}{0.52\textwidth}\livewidget{sim_mu_design}{\linewidth}{0.62cm}\end{column}
+  \end{columns}
+  \legendline{Muons that do interact somewhere. Blue: helium chord · red: PVC (exact chord) · grey: air · dots: planes. $P = n_\mathrm{area}\,\sigma(E)$, the chance to interact there.}
+\end{frame}
+
+\begin{frame}{Muon--nucleus interactions}
+  \begin{columns}[c]
+    \begin{column}{0.44\textwidth}\centering
+      \begin{tikzpicture}[x=1cm,y=1cm]
+        \draw[red, line width=1.2pt, -{Stealth}] (0,2.2) -- (1.6,1.4) node[midway, above, font=\scriptsize] {$\mu\,(E)$};
+        \draw[red, line width=1.2pt, -{Stealth}] (1.6,1.4) -- (3.6,2.3) node[midway, above, font=\scriptsize] {$\mu'\,(E-\nu)$};
+        \draw[accent, line width=1pt, decorate, decoration={snake, amplitude=2pt, segment length=6pt}] (1.6,1.4) -- (1.9,0.2);
+        \node[font=\scriptsize, color=accent] at (2.45,0.85) {$\gamma^*\ (\nu, Q^2)$};
+        \draw[ink, line width=1.6pt] (0,-0.2) -- (1.9,0.0); \node[font=\scriptsize, left] at (0,-0.2) {N};
+        \fill[ora!60] (1.9,0.0) circle (0.28);
+        \foreach \a in {-25,-10,5,18,32}{\draw[ora, line width=0.8pt, -{Stealth}] (2.15,0.0) -- ++(\a:1.5);}
+        \node[font=\scriptsize, color=ora] at (3.85,0.1) {hadrons, $W$};
+      \end{tikzpicture}\\[2mm]
+      {\footnotesize $W^2 = M^2 + 2M\nu - Q^2$}
+    \end{column}
+    \begin{column}{0.53\textwidth}\small
+      The muon exchanges a virtual photon with a nucleus: the muon goes on, \key{bent by a few mrad}, and hadrons
+      come out (pions, kaons, protons, K$^0_S$, $\Lambda$ that decay later).\\[1.5mm]
+      \key{Geant4} (muonNuclear): the soft part, resonances and nuclear break-up. \key{Pythia\,6}: the hard part, $W > 2$\,GeV.
+      \key{crossover} (our choice): Geant4 below an energy transfer $\nu_x(E)$, Pythia above.\\[1.5mm]
+      \begin{tabular}{@{}lrrr@{}}
+        $E_\mu$ [GeV] & 10 & 100 & 300\\\midrule
+        $\sigma$ per nucleon [$\mu$b] & 8.7 & 19.8 & 26.2\\
+        of which Pythia & 1\,\% & 11\,\% & 15\,\%\\
+      \end{tabular}\\[1mm]
+      \aside{Library: 50 energies 0.5--500\,GeV, 20\,k events per energy and material.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{One interaction at a time}
+  \livewidget{sim_int3d}{\linewidth}{0.56\textheight}\\[1mm]
+  \begin{columns}[c]
+    \begin{column}{0.3\textwidth}\sld{sim_i_E}\end{column}
+    \begin{column}{0.3\textwidth}\sld{sim_i_ev}\end{column}
+    \begin{column}{0.36\textwidth}\sld{sim_i_zoom}\end{column}
+  \end{columns}
+  \livewidget{sim_i_gen}{0.45\linewidth}{0.62cm}\quad
+  \legendline{Library events: beam along $z$; length $\propto\log p$; thick: the scattered muon; dashed: neutral; $\diamond$: decay point. E: 3, 10, 30, 100, 300\,GeV.}
+\end{frame}
+
+\begin{frame}{One applied interaction at a time}
+  \livewidget{sim_ai3d}{\linewidth}{0.58\textheight}\\[1mm]
+  \begin{columns}[c]
+    \begin{column}{0.32\textwidth}\sld{sim_v_ev}\end{column}
+    \begin{column}{0.66\textwidth}\livewidget{sim_v_tgt}{0.72\linewidth}{0.62cm}\ \livewidget{sim_v_kind}{0.26\linewidth}{0.62cm}\end{column}
+  \end{columns}
+  \legendline{Black: the parent muon (A, K, B); dotted grey: the parent neutrino. Products straight to $z = 82$\,m. "→ SST1": charged, $p > 1$\,GeV, in $|x|<2$, $|y|<3$\,m.}
+\end{frame}
+
+\begin{frame}{Decays: from where, into what}
+  \livewidget{sim_decay3d}{\linewidth}{0.58\textheight}\\[1mm]
+  \begin{columns}[c]
+    \begin{column}{0.55\textwidth}\livewidget{sim_dk_part}{\linewidth}{0.62cm}\end{column}
+    \begin{column}{0.42\textwidth}\sld{sim_dk_p}\end{column}
+  \end{columns}
+  \legendline{K$^0_S$, hyperons, $\pi^0$, $\eta$ are decayed in the library (main channels, decay point from $c\tau$): a K$^0_S$ made in the wall can decay inside the vessel into $\pi^+\pi^-$, a real two-track vertex.}
+\end{frame}
+
+\begin{frame}{Multiple scattering: one muon at a time}
+  \livewidget{sim_msc_traj}{\linewidth}{0.62\textheight}\\[1mm]
+  \sld[0.5\linewidth]{sim_ms_traj_p}\quad\legendline{60 muons on the axis; red: a hard single scatter. 1.5, 3, 10, 30, 100\,GeV.}
+\end{frame}
+
+% ======================================================================== PART 3
+\blurb{Our own production of the muons after the shield, an input enriched at high energy, and the forced interactions of muons and neutrinos on top. Simulated once; every design is then evaluated in seconds.}
+\section{Data and simulation}
 
 \begin{frame}{Two simulations of the same muons}
   \footnotesize
@@ -174,40 +274,271 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{Bouncing off the cavern}
-  \livewidget{bounce_view}{0.6\linewidth}{0.56\textheight}\hfill\livewidget{bounce_map}{0.38\linewidth}{0.56\textheight}\\[1mm]
-  \sld[0.4\linewidth]{bounce_ev}\\[0.5mm]
-  \legendline{Grey dashed: straight line from the 30.6\,m state; orange dotted: backward line from the 82\,m state. They meet within 4\,cm (median) at the bounce point, on the $-x$ wall or the floor. Right: all reconstructed bounce points trace the cavern.}
-\end{frame}
-
-\begin{frame}{The design-optimisation dataset}
+\begin{frame}{Our own muon production}
   \begin{columns}[c]
-    \begin{column}{0.55\textwidth}\footnotesize
-      \begin{tabular}{@{}llrr@{}}
-        \toprule
-        type & source & rows & muons / spill\\
-        \midrule
-        SST1, bounced & old runs & 6.0\,M & $1.0\cdot10^{4}$\\
-        SST1, $p>1$\,GeV, timing & old runs & 6.0\,M & $8.2\cdot10^{3}$\\
-        SST1, other & old runs & 14.5\,M & $1.2\cdot10^{4}$\\
-        veto only & full run & 975 & $3.3\cdot10^{4}$\\
-        bounced in the rock & full run & 575\,k & $1.8\cdot10^{7}$\\
-        straight past & full run & 15\,M of 125\,M & $2.7\cdot10^{9}$\\
-        stops in the rock & full run & 15\,M of 26\,M & $7.7\cdot10^{8}$\\
-        \bottomrule
-      \end{tabular}
+    \begin{column}{0.52\textwidth}\footnotesize
+      \texttt{bin/generate\_muon\_study.py}: G.~Frisella's shield simulation (TRY6, GPU propagation) imported unchanged; every muon taken to $z = 30.6$\,m and 82\,m and classified on the GPU (torch, identical to the CPU version, $2\times151$\,M muons checked).\\[1.5mm]
+      \key{One seed = one spill}: the same input muons, new random numbers. $\approx95$\,s per seed on one GPU.\\[1.5mm]
+      \key{Every category is kept} up to 15\,M rows, also the muons that stop in the shield. Storage is \emph{fill until the budget}: type $t$ (rate $R_t$ per seed) is kept by the first
+      \[ n_t = \max\big(\lceil 15\,\text{M}/R_t\rceil,\ 20\big) \]
+      seeds, each a random fraction re-weighted to the seed's total. SST1 and veto-only muons: all of them, in every seed.
     \end{column}
-    \begin{column}{0.42\textwidth}\footnotesize
-      \texttt{design-optimization-dataset-alpha-14-oct-2026}: 57\,M muons, 5.8\,GB.\\[1.5mm]
-      Each type capped at 15\,M rows and re-weighted, so \texttt{weight} is always muons per spill:
-      \[ w = w_\text{orig}\cdot\frac{1}{N_\text{runs}}\cdot\frac{N_\text{type}}{N_\text{kept}} \]
-      Columns: states at 30.6 and 82\,m, start state (old runs), bounce point, SBT walls crossed, type, run, \texttt{evt\_n}.\\[1.5mm]
-      \takeaway[\footnotesize]{Veto-only and rock-bounced come from one run: right rate, few distinct muons. A new run will fix that.}
+    \begin{column}{0.45\textwidth}\scriptsize
+      \begin{tabular}{@{}lrr@{}}
+        \toprule
+        type & per seed & seeds kept\\
+        \midrule
+        0 SST1, bounced & 299 & all\\
+        1 SST1, selected & 301 & all\\
+        2 SST1, other & 723 & all\\
+        3 veto only (walls, window) & 975 & all\\
+        4 bounced in the rock & 575\,k & 27\\
+        5 straight past the vessel & 125\,M & 20\\
+        6 stops at 30.6--82\,m & 26\,M & 20\\
+        7 stops in the shield & 355\,M & 20\\
+        \bottomrule
+      \end{tabular}\\[1.5mm]
+      \footnotesize Guglielmo's study files had 1\,500 picks per category, overlapping categories and a window cut too narrow for the UBT: the reason for our own production.\\[1mm]
+      \aside{20\,000 seeds on farm-gpu3, 4 GPUs (PR \#7).}
     \end{column}
   \end{columns}
 \end{frame}
 
-% ======================================================================== PART 3
+\begin{frame}{Three datasets}
+  \footnotesize
+  \begin{tabular}{@{}l>{\raggedright}p{0.4\textwidth}rr>{\raggedright\arraybackslash}p{0.2\textwidth}@{}}
+    \toprule
+    & built from & rows & size & used for\\
+    \midrule
+    \key{alpha} (14 Oct) & 20\,001 old runs (SST1 types) + the full run (everything else) & 57\,M & 5.8\,GB & first results, first evolution\\
+    \key{gamma} (17 Oct) & SST1 types from alpha; types 3--7 from 1\,715 seeds of our production & 88\,M & 8.9\,GB & interactions, cone\\
+    \key{delta} (19 Oct) & everything from 484 seeds of the \key{enriched} production (input with the Pythia\,6 tail) & 111\,M & 11\,GB & \key{the end-to-end results}\\
+    \bottomrule
+  \end{tabular}\\[3mm]
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}\footnotesize
+      Same columns in all three: states at 30.6 and 82\,m, start state, bounce point, walls crossed, type, seed, \texttt{evt\_n} (the input muon). \texttt{weight} is always muons per spill: a seed's rows of a type are re-weighted to its total and divided by the number of seeds that kept the type.
+    \end{column}
+    \begin{column}{0.46\textwidth}\footnotesize
+      Rows are not independent: every seed re-simulates the same input muons. What counts is the number of \key{independent input muons}, $n_\text{eff} = (\sum w)^2/\sum w^2$ with the weights summed per \texttt{evt\_n} first.\\[1mm]
+      \takeaway[\footnotesize]{More seeds of the same input do not help where a few heavy input muons dominate.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The enriched input: a Pythia\,6 tail}
+  \begin{columns}[c]
+    \begin{column}{0.6\textwidth}
+      \livewidget{ds_neff}{\linewidth}{0.66\textheight}
+    \end{column}
+    \begin{column}{0.38\textwidth}\footnotesize
+      In the 506\,M input muons, everything above 150\,GeV from minimum bias is a few rows of weight 768.75 each: in gamma \key{10 input muons carry 32\,\%} of the selected SST1 muons ($n_\text{eff} = 55$).\\[1.5mm]
+      \texttt{fast-veto-sim} replaces them by \key{Pythia\,6.4.28} muons (first collision, Geant4 cascade, $\pi$/K forced to decay, Mo+W target), normalised to the same flux above 150\,GeV: 601\,M rows.\\[1.5mm]
+      Selected SST1: $n_\text{eff}$ 55 $\to$ \key{18\,200}. The harder spectrum also gives \key{40--55\,\% more} SST1 muons.\\[1.5mm]
+      \takeaway[\footnotesize]{Veto-only muons (walls, window) are unchanged at $\approx12$\,k: not the high-energy tail.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Enough statistics everywhere?}
+  \begin{columns}[c]
+    \begin{column}{0.6\textwidth}
+      \livewidget{probe3d}{\linewidth}{0.6\textheight}\\[1mm]
+      \livewidget{probe_ds}{0.7\linewidth}{0.62cm}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \livewidget{probe_bands}{\linewidth}{0.36\textheight}\\[1mm]
+      \footnotesize A probe, not a design: the UBT at full height, 42 fins every 2.5\,m and 5 floor planes tilted by 30$^\circ$; per 25\,cm cell the independent input muons crossing it.\\[1mm]
+      \key{Thin}: the first metre from the vessel wall (median 11--14), the floor beyond 32\,m (8--13). Enrichment does not help there.\\[1mm]
+      \aside{Red dotted: 10. Fins beyond 1\,m and the UBT: 140--430.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{From the shield to SST1: the chain}
+  \begin{columns}[c]
+    \begin{column}{0.54\textwidth}\centering
+      \begin{tikzpicture}[node distance=1.6mm, every node/.append style={font=\scriptsize}]
+        \node[hbox, text width=6.3cm] (mu) {\semibold muons after the shield\\\faint{the dataset (delta: 111\,M rows): A at 30.6\,m, bounce K, B at 82\,m}};
+        \node[box, below=of mu, text width=6.3cm] (cross) {\semibold what each muon crosses\\\faint{helium chord, exact PVC chords, air, every plane: $P = n_\mathrm{area}\,\sigma(E)$}};
+        \node[abox, below=of cross, text width=6.3cm] (force) {\semibold forced interactions\\\faint{draw $M$ crossings $\propto wP$, weight $S/M$; final state from a library (Geant4 + Pythia\,6; GENIE for $\nu$)}};
+        \node[box, below=of force, text width=6.3cm] (tracks) {\semibold tracks to SST1\\\faint{straight lines, scattering with tails in walls, planes, helium, air}};
+        \node[hbox, below=of tracks, text width=6.3cm] (veto) {\semibold our selection and veto, as for the signal};
+        \draw[arr] (mu) -- (cross); \draw[arr] (cross) -- (force); \draw[aarr] (force) -- (tracks); \draw[arr] (tracks) -- (veto);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.43\textwidth}\footnotesize
+      Built in \texttt{fast-veto-sim} (Python + numpy at run time), used as it is.\\[1.5mm]
+      \begin{tabular}{@{}lr@{}}
+        \toprule
+        step & time\\
+        \midrule
+        muon interactions, one design (4\,M) & 60--80\,s\\
+        cache: helium, PVC, air (11\,M, delta) & 89\,s\\
+        neutrinos (4.2\,M, GENIE library) & $\sim$90\,s\\
+        \key{one design, all backgrounds} & \key{3--6\,s}\\
+        \bottomrule
+      \end{tabular}\\[1.5mm]
+      \takeaway[\footnotesize]{Helium, PVC and air do not depend on the design: drawn once. Each design only needs its veto.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Generators: Geant4, Pythia\,6 and GENIE}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}\footnotesize
+      \key{Libraries}, built once per material and energy (fast-veto-sim):
+      \begin{itemize}\scriptsize
+        \item \key{muons}: Geant4 muonNuclear for the soft part (resonances, nuclear break-up), \key{Pythia\,6} for the hard part ($W > 2$\,GeV); our default \emph{crossover}: Geant4 below an energy transfer $\nu_x(E)$, Pythia above. 50 energies 0.5--500\,GeV, 20\,k events per energy and material.
+        \item \key{neutrinos}: \key{GENIE 3.06.02} (G18\_02a, Pythia\,6 hadronisation, charm and $\tau$ decays): $\nu_\mu$, $\bar\nu_\mu$, $\nu_e$, $\bar\nu_e$ on every nucleus of our materials, 1--500\,GeV.
+        \item short-lived products (K$^0_S$, hyperons, $\pi^0$, $\eta$) decayed in the library, decay point from $c\tau$.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.47\textwidth}\footnotesize
+      \key{Applying} a library to our muons (or the neutrino flux):
+      \begin{enumerate}\scriptsize
+        \item every crossing of helium, PVC, air and each plane: $P = n_\text{area}\,\sigma(E)$;
+        \item per target, \key{force} $M$ interactions drawn $\propto wP$, each of weight $S/M$, $S = \sum wP$: the weights add up to the true rate;
+        \item vertex uniform along the crossing; a library event at a neighbouring energy, rotated onto the direction, random azimuth;
+        \item the scattered muon continues from its \key{parent's own path}: the parent's real hits upstream are digitised.
+      \end{enumerate}
+      \takeaway[\footnotesize]{Helium, PVC and air do not depend on the design: drawn once and cached. A design's own planes are drawn per design.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Forced interactions}
+  \begin{columns}[c]
+    \begin{column}{0.52\textwidth}\small
+      Real interactions are $10^{-6}$--$10^{-8}$ per crossing: far too rare to simulate muon by muon. So:
+      \begin{enumerate}\footnotesize
+        \item all crossings, $P = n_\mathrm{area}\sigma(E)$; per target group $g$ the total $S_g = \sum wP$ (interactions per spill);
+        \item draw $M_g$ crossings with probability $\propto wP$ and \key{make them interact}, each with weight $S_g/M_g$: the weights add up to the true rate;
+        \item vertex uniform along the crossing;
+        \item final state: a library event at a neighbouring energy, rotated onto the muon's direction, random azimuth.
+      \end{enumerate}
+      \aside{Every number later is $\sum$ weight $\times\,1.2\cdot10^{7}$ spills (15 years); errors: bootstrap over input muons.}
+    \end{column}
+    \begin{column}{0.45\textwidth}\footnotesize
+      Muon interactions per 15 years:\\[1mm]
+      \begin{tabular}{@{}lr@{}}
+        \toprule
+        helium & $1.5\cdot10^{6}$\\
+        PVC walls & $2.2\cdot10^{7}$\\
+        UBT (straw) & $3.2\cdot10^{4}$\\
+        one tile fin at 30.6\,m & $\sim10^{11}$\\
+        cavern air, 30.6--82\,m & $1.4\cdot10^{12}$\\
+        \bottomrule
+      \end{tabular}\\[1.5mm]
+      Helium agrees with the full-Geant4 rate study (1.46\,M).\\[1.5mm]
+      \takeaway[\footnotesize]{Most happen outside the vessel (air, fins): their products rarely make a vertex inside. The helium and the walls matter.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Cross sections}
+  \livewidget{sim_xs_mu}{\linewidth}{0.6\textheight}\\[1mm]
+  \begin{columns}[c]
+    \begin{column}{0.4\textwidth}\livewidget{sim_xs_split}{\linewidth}{0.62cm}\end{column}
+    \begin{column}{0.56\textwidth}\livewidget{sim_xs_mat}{\linewidth}{0.62cm}\end{column}
+  \end{columns}
+  \legendline{crossover: Geant4 below $\nu_x(E)$, Pythia above · w2: Geant4 below $W = 2$\,GeV · geant4: Geant4 only. Pythia gives 1.4--1.7$\times$ more extra tracks: the generator systematic.}
+\end{frame}
+
+\begin{frame}{Grazing walls: a factor 4.4}
+  \begin{columns}[c]
+    \begin{column}{0.66\textwidth}
+      \livewidget{sim_wall}{\linewidth}{0.62\textheight}\\[1mm]
+      \sld{sim_w_ang}
+    \end{column}
+    \begin{column}{0.32\textwidth}\footnotesize
+      The side walls lean outward by 30\,mrad. Muons cross them at a few degrees or less, where the path in 0.3\,mm of PVC
+      is centimetres to metres (here: 40\,mm on average).\\[1.5mm]
+      Our old scattering capped it at $50\times$ the thickness: \key{4.9\,M} interactions in the walls per 15 years. Exact chords:
+      \key{21.6\,M}, as the full-Geant4 studies (18--19\,M). Now in our scattering too.\\[1.5mm]
+      \aside{Right: angle to the wall of muons crossing a side wall; red line: the old cap.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Where the interactions are}
+  \begin{columns}[c]
+    \begin{column}{0.7\textwidth}
+      \livewidget{sim_vtx3d}{\linewidth}{0.58\textheight}\\[1mm]
+      \livewidget{sim_v_tgt}{\linewidth}{0.62cm}\\[0.5mm]
+      \livewidget{sim_v_kind}{0.5\linewidth}{0.62cm}
+    \end{column}
+    \begin{column}{0.28\textwidth}\footnotesize
+      Light blue: helium vertices, red: wall vertices (samples); black: the chosen target.\\[2mm]
+      Muon vertices in the helium follow the muons that enter the vessel; neutrino vertices fill it around the axis.\\[2mm]
+      \aside{D6\_straw; the helium, PVC and air rates are the same for every design.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Neutrinos}
+  \begin{columns}[c]
+    \begin{column}{0.5\textwidth}\small
+      fast-veto-sim's own \key{GENIE 3.06.02} (G18\_02a, Pythia\,6 hadronisation, charm and $\tau$ decays): a library of
+      $\nu_\mu$, $\bar\nu_\mu$, $\nu_e$, $\bar\nu_e$ on every nucleus of our materials, 1--500\,GeV, applied to the
+      neutrino flux through the same forced-interaction machinery.\\[1.5mm]
+      \key{No incoming charged particle}: nothing for a veto plane to see. Only the selection can remove them.\\[1.5mm]
+      \aside{One neutrino interaction at a time: Part 2, \emph{One applied interaction at a time}, from: neutrinos.}
+    \end{column}
+    \begin{column}{0.47\textwidth}\footnotesize
+      Per 15 years (D6\_straw; helium, PVC and air are design independent):\\[1mm]
+      \begin{tabular}{@{}lrr@{}}
+        \toprule
+        target & interactions & $\geq2$ tracks in SST1\\
+        \midrule
+        helium & 5\,290 & 1\,360\\
+        PVC walls & 3\,690 & 374\\
+        air & 5\,690 & 881\\
+        \bottomrule
+      \end{tabular}\\[1.5mm]
+      After our selection (Part 5): \key{0.8} per 15 years, $\approx0.5$ after the veto's random hits: a floor
+      for every design.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Multiple scattering: the tails}
+  \begin{columns}[c]
+    \begin{column}{0.64\textwidth}
+      \livewidget{sim_msc_hist}{\linewidth}{0.58\textheight}\\[1mm]
+      \sld{sim_ms_p}\\[0.3mm]
+      \livewidget{sim_ms_q}{0.5\linewidth}{0.62cm}
+    \end{column}
+    \begin{column}{0.34\textwidth}\footnotesize
+      Our scattering (now with fast-veto-sim's tails): Highland's Gaussian core over walls, planes, \key{helium and air}
+      (1\,m slices, on now), exact wall chords.\\[1.5mm]
+      \key{Tails}: rare large single scatters. Above $2\,\theta_0$, a Poisson number per scatterer from Rutherford,
+      $1/\theta^4$ up to the nuclear size; one parameter tuned to Geant4.\\[1.5mm]
+      RMS and 99\,\% quantile at 82\,m: within 5--8\,\% of Geant4 at 1.5--100\,GeV; Gaussian alone: 99\,\% 25\,\% too small.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Fast chain vs full Geant4}
+  \begin{columns}[c]
+    \begin{column}{0.66\textwidth}
+      \livewidget{sim_closure}{\linewidth}{0.66\textheight}
+    \end{column}
+    \begin{column}{0.32\textwidth}\footnotesize
+      2\,M interactions in helium and PVC in full Geant4 (everything transported to 82\,m) and the same draws through the
+      fast chain. Charged tracks besides the muon, $p > 1$\,GeV, in SST1:\\[1mm]
+      \begin{tabular}{@{}lrr@{}}
+        fast vs full (helium) & $\geq1$ & $\geq2$\\\midrule
+        Geant4 physics & $-5\,\%$ & $-9\,\%$\\
+        crossover (ours) & $\times1.3$ & $\times1.6$\\
+      \end{tabular}\\[1.5mm]
+      Missing in the fast chain: photon conversions, secondary interactions. Our default (crossover) is the
+      \key{conservative} side for two-track vertices.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ======================================================================== PART 4
 \blurb{A UBT on the vessel entrance and thin fins reaching out from the side walls, left and right. Nothing on top or below.}
 \section{The design space}
 
@@ -245,6 +576,8 @@
         D3 & 7 fins on the right up to the wall, 3 short on the left & 209\,m$^2$\\
         D4 & 8 fins per side, 5\,m, $y$ to 6\,m: the stress test & 624\,m$^2$\\
         D5 & D2 with 50\,cm or 5\,cm cells & 145\,m$^2$\\
+        D6 & D2-like with real technologies: straw, fibre, pixel, tile, tile2 & --\\
+        E1--E3 & evolved: a minimal UBT and two short tile2 fin pairs (30.6, 36\,m) & 4\,m$^2$\\
         \bottomrule
       \end{tabular}
     \end{column}
@@ -257,27 +590,27 @@
   \end{columns}
 \end{frame}
 
-% ======================================================================== PART 4
-\blurb{Events are short time windows around a spectrometer candidate. Each spectrometer track is followed back to the veto planes; a hit where it should be explains it.}
+% ======================================================================== PART 5
+\blurb{Events are short time windows around a spectrometer candidate. The selection keeps two-track vertices pointing at the target; every track is followed back to the veto planes, in a window that grows from the vertex.}
 \section{Reconstruction}
 
 \begin{frame}{The chain}
   \centering
   \begin{tikzpicture}[node distance=4mm and 5mm]
-    \node[hbox, text width=2.7cm] (paths) {\semibold true muon paths\\\faint{A (30.6\,m) $\to$ K $\to$ B (82\,m)}};
+    \node[hbox, text width=2.7cm] (paths) {\semibold true paths\\\faint{muons A $\to$ K $\to$ B; interaction products}};
     \node[box, right=of paths, text width=2.7cm] (dig) {\semibold digitization\\\faint{crossing $\to$ cell, $\varepsilon$, time $\pm\sigma_t$}};
     \node[box, below=of dig, text width=2.7cm] (acc) {\semibold accidental hits\\\faint{Poisson(rate $\times$ window) per plane, from rate maps}};
     \node[abox, right=of dig, text width=2.0cm, yshift=-6mm] (hits) {\semibold hits\\\faint{plane, cell, time}};
     \node[hbox, below=of paths, text width=2.7cm, yshift=-12mm] (spec) {\semibold spectrometer tracks\\\faint{position, slope, time, $p$ smeared}};
-    \node[box, right=of spec, text width=2.7cm, yshift=-10mm] (vtx) {\semibold candidate vertex\\\faint{pair: DOCA $<2$\,cm, IP $<2.5$\,m}};
-    \node[abox, right=of hits, text width=2.6cm, yshift=-12mm, line width=1.2pt] (algo) {\semibold algorithm A\\\faint{backward prediction, space + time window}};
-    \node[box, below=of algo, text width=2.6cm] (score) {\semibold veto / no veto\\\faint{TP · FN on muon pairs\\FP · TN on signal}};
+    \node[box, right=of spec, text width=2.7cm, yshift=-10mm] (vtx) {\semibold selection\\\faint{two tracks, DOCA $<2$\,cm, measured IP $<0.1$\,m, no third track}};
+    \node[abox, right=of hits, text width=2.6cm, yshift=-12mm, line width=1.2pt] (algo) {\semibold the veto\\\faint{every track back, window + vertex cone, time}};
+    \node[box, below=of algo, text width=2.6cm] (score) {\semibold veto / no veto\\\faint{pairs, $\mu$ and $\nu$ interactions\\signal: FP · TN}};
     \draw[arr] (paths) -- (dig); \draw[arr] (dig) -- (hits); \draw[arr] (acc) -- (hits);
     \draw[arr] (paths) -- (spec); \draw[arr] (spec) -- (vtx); \draw[aarr] (hits) -- (algo);
     \draw[aarr] (vtx.east) -- node[below, font=\scriptsize, color=accent] {tracks + vertex} ++(1.2,0) |- ([yshift=-2mm]algo.west);
     \draw[aarr] (algo) -- (score);
   \end{tikzpicture}\\[3mm]
-  \footnotesize Signal events: a long-lived neutral from the target decaying in the vessel into two tracks, with the pairs' selection; no own veto hits, only accidental hits can veto them.
+  \footnotesize Four samples, one chain: muon pairs, muon and neutrino interactions, and the signal (no own veto hits: only random hits veto it).
 \end{frame}
 
 \begin{frame}{Events are time windows, not spills}
@@ -318,13 +651,13 @@
       \end{itemize}
     \end{column}
     \begin{column}{0.48\textwidth}\footnotesize
-      \key{Direction comes only from the spectrometer.} The UBT gives no usable direction; neither do the fins.\\[2mm]
-      \key{Candidates}
-      \begin{itemize}\footnotesize
-        \item background: opposite-charge muon pairs of the same old run, $p>1$\,GeV, in the timing acceptance, DOCA $<2$\,cm, vertex in the vessel, IP $<2.5$\,m: \num{196\,736} pairs
-        \item each weighted by $w_1 w_2 N_\text{runs}\cdot 2\Delta t/T_\text{spill}$, $\Delta t = 200$\,ps
-        \item signal: long-lived neutrals from the target, nearly along the beam ($\theta\approx p_T/p$), decaying in the vessel into two tracks; same selection as the pairs
+      \key{Direction comes only from the spectrometer.} The UBT gives no usable direction; neither do the fins.\\[1.5mm]
+      \key{Samples}
+      \begin{itemize}\scriptsize
+        \item combinatorial: opposite-charge muon pairs of one seed in the selection, weight $w_1 w_2 N_\text{runs}\cdot 2\Delta t/T_\text{spill}$, $\Delta t = 200$\,ps: 197\,k (alpha); 25\,M (delta), subsampled $\propto$ weight to 400\,k (total within 0.05\,\%)
+        \item signal: long-lived neutrals from the target ($\theta\approx p_T/p$), decaying in the vessel into two tracks
         \item single SST1 muons (200\,k) for per-muon efficiencies
+        \item forced $\mu$ (11\,M) and $\nu$ (7--11\,M) interactions
       \end{itemize}
     \end{column}
   \end{columns}
@@ -341,6 +674,36 @@
       The pairs' selection: SST1, $p>1$\,GeV, timing, IP $<2.5$\,m. \key{37\,\%} pass; median daughter angle 22\,mrad.\\[1mm]
       Orange: its tracks followed back to $z = 30.6$\,m; grey: muon density.\\[1mm]
       \takeaway[\footnotesize]{Two thirds cross the quiet UBT; the rest hit the fins next to the wall, where random hits veto them.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The selection}
+  \begin{columns}[c]
+    \begin{column}{0.5\textwidth}\small
+      For \key{every} sample (signal, pairs, interactions):\\[1mm]
+      \begin{enumerate}\footnotesize
+        \item two opposite-charge tracks, $p > 1$\,GeV, in the SST1 and timing acceptance;
+        \item DOCA $< 2$\,cm, vertex in the vessel;
+        \item \key{pointing}: the measured tracks (smeared at 82\,m) give an IP at the target $< 0.1$\,m;
+        \item \key{two tracks}: no other track in SST1 in the event.
+      \end{enumerate}
+      A signal decay from the target points back (measured IP: median 2\,cm, 99.9\,\% below 8.3\,cm) and has two
+      tracks; interactions have more tracks, and their muons were swept by the shield.
+    \end{column}
+    \begin{column}{0.47\textwidth}\footnotesize
+      What survives the new cuts (3 + 4):\\[1mm]
+      \begin{tabular}{@{}lrr@{}}
+        \toprule
+        sample & before & after\\
+        \midrule
+        signal & 100\,\% & \key{99.98\,\%}\\
+        combinatorial pairs & 36 & 2.5\\
+        muon interactions & $1.25\cdot10^{5}$ & $2.0\cdot10^{3}$\\
+        neutrino interactions & 481 & \key{0.8}\\
+        \bottomrule
+      \end{tabular}\\[1mm]
+      \aside{Per 15 years, before the veto. Two-body signal model: decays with an invisible particle point back less well.}
     \end{column}
   \end{columns}
 \end{frame}
@@ -379,6 +742,32 @@
   \end{columns}
 \end{frame}
 
+\begin{frame}{The veto algorithm, step by step}
+  \begin{columns}[c]
+    \begin{column}{0.48\textwidth}\centering
+      \begin{tikzpicture}[node distance=2.4mm, every node/.append style={font=\scriptsize}]
+        \node[hbox, text width=5cm] (t) {\semibold every track of the event in SST1\\\faint{measured: position, slopes, time}};
+        \node[box, below=of t, text width=5cm] (p) {\semibold straight back to every plane upstream of the vertex\\\faint{UBT and fins, $z_\mathrm{plane} < z_\mathrm{vertex}$}};
+        \node[abox, below=of p, text width=5cm] (w) {\semibold search window on the plane\\\faint{$r = \max\big(r_A,\ r_0 + \theta_\mathrm{cone}\,(z_\mathrm{v} - z_\mathrm{plane})\big)$}};
+        \node[box, below=of w, text width=5cm] (m) {\semibold a hit inside $r$ and in time?\\\faint{$\pm3\sigma_t$; tiles $\pm1.5$\,ns; straws 50\,ns drift}};
+        \node[hbox, below=of m, text width=5cm] (v) {\semibold yes on any track: event vetoed};
+        \draw[arr] (t) -- (p); \draw[aarr] (p) -- (w); \draw[arr] (w) -- (m); \draw[arr] (m) -- (v);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.49\textwidth}\scriptsize
+      \key{Algorithm A} (as before): $r_A = r_0 + (r_\mathrm{slope} + r_\mathrm{ms}/p)\,d + \tfrac{\text{cell}}{2}$, $d$ the
+      distance from SST1: $r_0 = 5$\,cm, $r_\mathrm{slope} = 0.5$\,mrad, $r_\mathrm{ms} = 6$\,mrad\,GeV. Hits: the event's own
+      (efficiency, cells, timing) and random ones from the rate maps.\\[1.5mm]
+      \key{New 1, every track}: not only the two vertex tracks. The scattered muon of an interaction, followed back
+      past the vertex, points at its parent's hit.\\[1.5mm]
+      \key{New 2, the vertex cone}: the parent was bent at the vertex by a few mrad, so its hit is off the backward line
+      by $\approx$ angle $\times$ distance \emph{from the vertex}: the window grows from the vertex.
+      A design parameter: wider catches more parents and more random hits (signal loss).\\[1mm]
+      \faint{Single muons: no vertex, unchanged.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
 \begin{frame}{The spatial window}
   \begin{columns}[c]
     \begin{column}{0.6\textwidth}
@@ -398,6 +787,15 @@
   \sld[0.48\linewidth]{sig_t}\hfill\sld[0.48\linewidth]{n_sig}\\[1mm]
   \footnotesize The predicted time includes the time of flight from the plane to $z = 82$\,m. The window is $\pm n\sigma$ with $\sigma = \sigma_t^\text{veto}\oplus\sigma_t^\text{track}$: wider loses fewer own hits, but lets in proportionally more random hits.\\
   \legendline{Right: signal loss scaled from D2's 1.3\,\% at $3\sigma$ and 0.5\,ns, since random hits grow with the window.}
+\end{frame}
+
+\begin{frame}{Why the parent is missed, and the cone}
+  \livewidget{iv_event3d}{\linewidth}{0.6\textheight}\\[1mm]
+  \begin{columns}[c]
+    \begin{column}{0.44\textwidth}\sld{iv_ev}\end{column}
+    \begin{column}{0.54\textwidth}\livewidget{iv_cone}{\linewidth}{0.62cm}\end{column}
+  \end{columns}
+  \legendline{Selected muon interactions (helium / walls), E3\_robust, the heaviest 200. Black: the parent up to the vertex; red: the scattered muon; blue: products. Switch the cone and watch the windows grow.}
 \end{frame}
 
 \begin{frame}{Algorithm A on real events}
@@ -432,182 +830,44 @@
     \begin{column}{0.4\textwidth}\small
       A full evaluation of a design (196\,k pairs, 100\,k signal, 200\,k single muons) takes \key{$\approx$6\,s} on one core, linear in hits per event.\\[2mm]
       Nothing to cap: algorithm A never combines hits.\\[2mm]
-      \takeaway[\footnotesize]{On a GPU, or with the factorised estimate, 10--100\,ms per design: fast enough for an RL loop.}
+      The interaction backgrounds add 3--6\,s: only their veto runs per design.\\[2mm]\takeaway[\footnotesize]{Tens of seconds per design on the cluster, 8 in parallel: fast enough for an evolution loop.}
     \end{column}
   \end{columns}
 \end{frame}
 
-% ======================================================================== PART 5
-\blurb{The background is easy to veto. Keeping the signal, and catching the last muon pairs, is where designs differ.}
+% ======================================================================== PART 6
+\blurb{One design through everything: the enriched dataset, every background source before and after the veto, the vertex cone, the signal, the cost.}
 \section{Results}
 
-\begin{frame}{Seven designs}
-  \livewidget{compare}{\linewidth}{0.46\textheight}\\[1mm]
-  \footnotesize
-  \begin{tabular}{@{}lrrrrrrr@{}}
-    \toprule
-    & D0 & D1 & D2 & D3 & D4 & D5 coarse & D5 fine\\
-    \midrule
-    background vetoed & 25\,\% & 99.992\,\% & 99.997\,\% & 99.992\,\% & 100.000\,\% & 99.997\,\% & 99.997\,\%\\
-    pairs surviving & 171\,020 & 54 & 27 & 19 & 6 & 24 & 27\\
-    signal lost & 0 & 1.13\,\% & 1.28\,\% & 1.49\,\% & 1.76\,\% & 4.72\,\% & 1.00\,\%\\
-    \bottomrule
-  \end{tabular}
-\end{frame}
+\input{e2e_section}
 
-\begin{frame}{Turn the knobs}
-  \livewidget{knobs}{\linewidth}{0.5\textheight}\\[1mm]
-  \sld[0.32\linewidth]{k_design}\hfill\sld[0.32\linewidth]{k_eps}\hfill\sld[0.32\linewidth]{k_nsig}\\[0.4mm]
-  \sld[0.32\linewidth]{k_sigt}\hfill\hspace*{0.32\linewidth}\hfill\hspace*{0.32\linewidth}\\[0.3mm]
-  \legendline{design: 0 D0 · 1 D1 · 2 D2 · 3 D3 · 4 D4 · 5 D5 coarse · 6 D5 fine · 7 fibre · 8 pixel · 9 straw · 10 tile · 11 tile2 (fins) · 12 E1 · 13 E2 (LLM). The whole chain reruns: a quick answer on 15\,\% of the events, then all of them ($\approx$5--10\,s).}
-\end{frame}
-
-\begin{frame}{Figure of merit}
+\begin{frame}{What the first round taught}
   \begin{columns}[c]
-    \begin{column}{0.44\textwidth}
-      \livewidget{fom}{\linewidth}{0.55\textheight}\\[1mm]
-      \sld{fom_design}\\[0.3mm]
-      \legendline{Positive = vetoed. Background: events in 15 years; signal: fractions.}
+    \begin{column}{0.55\textwidth}\small
+      The first round (alpha dataset, combinatorial pairs only, no interactions, simpler scattering) is superseded by the numbers above. Its lessons hold:
+      \begin{itemize}\footnotesize
+        \item \key{time resolution} is the biggest lever on signal loss (0.5 $\to$ 0.1\,ns: $3\times$ less), then cell size
+        \item a fin pays for every muon crossing it: the muons it is there for cross it \key{near the wall}, not in the hot lobe 1.5--3\,m out
+        \item a single plane misses $\approx$1\,\% of the muons it should see (efficiency, time tails): \key{redundancy} has to be in the geometry, a 2-plane rule fails
+        \item bounced muons are the blind spot of a backward search (algorithm B)
+      \end{itemize}
     \end{column}
-    \begin{column}{0.54\textwidth}\tiny
-      \setlength{\tabcolsep}{3.5pt}
-      \begin{tabular}{@{}lrrrrrr@{}}
-        \toprule
-        design & TPR & FNR & FPR & TNR & $B$ / 15\,y & Punzi\\
-        \midrule
-        D0 & 25.2\,\% & 74.8\,\% & 0 & 100\,\% & 27 & 0.15\\
-        D1 & 99.992\,\% & 0.008\,\% & 1.13\,\% & 98.87\,\% & 0.003 & 0.637\\
-        D2 & 99.997\,\% & 0.003\,\% & 1.28\,\% & 98.72\,\% & 0.001 & 0.645\\
-        D3 & 99.992\,\% & 0.008\,\% & 1.49\,\% & 98.51\,\% & 0.003 & 0.634\\
-        D4 & 99.9998\,\% & 0.0002\,\% & 1.76\,\% & 98.24\,\% & 0.0001 & 0.651\\
-        D5 coarse & 99.997\,\% & 0.003\,\% & 4.72\,\% & 95.28\,\% & 0.001 & 0.623\\
-        D5 fine & 99.997\,\% & 0.003\,\% & 1.00\,\% & 99.00\,\% & 0.001 & 0.647\\
-        \bottomrule
-      \end{tabular}\\[2mm]
-      \footnotesize Punzi $= \varepsilon_S / (1.5 + \sqrt{B})$, $\varepsilon_S$ = TNR. Every design with fins has $B\ll1$, so the FoM is set by the signal efficiency.\\[1.5mm]
-      \takeaway[\footnotesize]{$B$ rests on a few dozen surviving pairs and some muons weigh 100$\times$ more: one pair can move it by $5\times$. The factorised estimate comes next.}
+    \begin{column}{0.4\textwidth}\footnotesize
+      \takeaway[\footnotesize]{The end-to-end study adds one more: the parents of interactions come in through the entrance, where a single plane with efficiency 0.999 is their only chance.}
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{Figure of merit: the 15-year run}
-  \begin{columns}[c]
-    \begin{column}{0.5\textwidth}
-      \livewidget{fom15}{\linewidth}{0.56\textheight}\\[1mm]
-      \sld{fom_design}\\[0.4mm]\sld{n_sig15}
-    \end{column}
-    \begin{column}{0.47\textwidth}\footnotesize
-      The same confusion matrix, as \key{counts over 15 years}: $6\cdot10^{20}$ POT in 1\,s spills of $5\cdot10^{13}$ POT, $1.2\cdot10^{7}$ spills.\\[1.5mm]
-      \key{Fake vertices}: 36 muon pairs over the whole run look like a decay in the vessel. The veto removes all but a tiny fraction: FN is the expected number of \key{fake discoveries}.\\[1.5mm]
-      \key{Signal}: its total is model dependent; the slider sets how many selected decays SHiP would see. FP are lost to random hits, TN kept.\\[1.5mm]
-      $P(\geq1\ \text{fake}) = 1 - e^{-\text{FN}}$: the chance the whole run has even one.\\[1.5mm]
-      \takeaway[\footnotesize]{Background-free means FN $\ll 1$: true for every design with fins. They differ in how much signal they keep.}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{Experiments}
-  \begin{columns}[c]
-    \begin{column}{0.56\textwidth}\scriptsize
-      \begin{tabular}{@{}lrrr@{}}
-        \toprule
-        variation of D2 & FPR & TPR & $B$ / 15\,y\\
-        \midrule
-        as is & 1.21\,\% & 99.997\,\% & 0.001\\
-        $\sigma_t$ 0.5 $\to$ \key{0.1\,ns} & \key{0.41\,\%} & 99.98\,\% & 0.006\\
-        $\sigma_t$ 1\,ns & 2.19\,\% & 99.997\,\% & 0.001\\
-        cells 10 $\to$ 3\,cm & 0.83\,\% & 99.997\,\% & 0.001\\
-        $\sigma_t$ 0.1\,ns \key{and} 5\,cm cells & \key{0.30\,\%} & 99.98\,\% & 0.006\\
-        time window 3 $\to$ 2$\sigma$ & 0.89\,\% & 99.91\,\% & 0.03\\
-        time window 4$\sigma$ & 1.65\,\% & 99.998\,\% & 0.0008\\
-        veto needs hits on 2 planes & 0.002\,\% & 36\,\% & 23\\
-        without the fins at 30.6\,m & 0.13\,\% & 61\,\% & 14\\
-        fins only 1\,m long & 0.20\,\% & 98.9\,\% & 0.4\\
-        fins only $y = -1$..$1$\,m & 1.21\,\% & 94.2\,\% & 2.1\\
-        \midrule
-        D4, $\sigma_t$ 0.1\,ns and 5\,cm cells & 0.49\,\% & 99.9998\,\% & 0.0001\\
-        \bottomrule
-      \end{tabular}\\[1mm]
-      \faint{60\,k signal decays per row; \texttt{bin/run\_reco.py} on one core.}
-    \end{column}
-    \begin{column}{0.41\textwidth}\footnotesize
-      \key{Time resolution} is the biggest lever on signal loss, then cell size: $3$--$4\times$ less, at no cost in background.\\[1.5mm]
-      The \key{fins at 30.6\,m} veto most of the background and cause most of the signal loss.\\[1.5mm]
-      A \key{2-plane rule} fails: most muons cross exactly one plane. Redundancy has to be built into the geometry.\\[1.5mm]
-      \takeaway[\footnotesize]{Short fins trade 0.2\,\% signal loss for about 0.4 background events: the kind of choice the optimiser has to make.}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{Why the last pairs survive}
-  \begin{columns}[c]
-    \begin{column}{0.62\textwidth}
-      \livewidget{missed_why}{\linewidth}{0.6\textheight}\\[1mm]
-      \sld[0.6\linewidth]{mw_design}
-    \end{column}
-    \begin{column}{0.36\textwidth}\footnotesize
-      A pair survives only if \key{neither} muon is explained. For a straight muon crossing a single plane that is one chance:
-      \[ P_\text{miss} \approx (1-\varepsilon) + 2\,\Phi(-n) \approx 1.3\,\% \]
-      so a pair escapes with $\approx2\cdot10^{-4}$: $\approx$\,30--40 of 196\,k.\\[1.5mm]
-      Bounced muons are followed back only after their bounce: the prediction misses the planes they crossed before it by metres.\\[1.5mm]
-      \takeaway[\footnotesize]{Redundancy: two planes on every incoming path square the miss probability.}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{Bounced muons, in perspective}
-  \begin{columns}[c]
-    \begin{column}{0.5\textwidth}\small
-      \begin{tabular}{@{}lrr@{}}
-        \toprule
-        background pairs & count & weight\\
-        \midrule
-        no bounced muon & 193\,873 & 98.7\,\%\\
-        one bounced muon & 2\,863 & 1.3\,\%\\
-        two bounced muons & 0 & 0\,\%\\
-        \bottomrule
-      \end{tabular}\\[3mm]
-      Single SST1 muons vetoed by algorithm A:\\[1mm]
-      \begin{tabular}{@{}lrrr@{}}
-        & D2 & D3 & D4\\
-        $p>1$\,GeV, timing & 99.1\,\% & 99.2\,\% & 99.3\,\%\\
-        other & 99.3\,\% & 99.7\,\% & 100.0\,\%\\
-        bounced & 74\,\% & 87\,\% & 88\,\%\\
-      \end{tabular}
-    \end{column}
-    \begin{column}{0.46\textwidth}\small
-      Bouncing costs most of the momentum (median 3 $\to$ 0.3\,GeV), so bounced muons rarely pass $p>1$\,GeV: 23\,\% of SST1 muons, 1.5\,\% of the pairs.\\[2mm]
-      For single muons algorithm A's blind spot is real; for the pair background it is a small effect, and the partner muon usually explains the pair.\\[2mm]
-      \takeaway[\footnotesize]{A hit-driven algorithm B could use the hits before the bounce: tracklets in the fins pointing at the vessel.}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{Granularity: the signal-loss knob}
-  \begin{columns}[c]
-    \begin{column}{0.62\textwidth}
-      \livewidget{cell_scan}{\linewidth}{0.58\textheight}\\[1mm]
-      \sld[0.6\linewidth]{cs_design}
-    \end{column}
-    \begin{column}{0.36\textwidth}\footnotesize
-      Same geometry, cell size from 3 to 50\,cm, 30\,k signal events per point.\\[1.5mm]
-      Smaller cells shrink the search box, so fewer random hits fall in it: signal loss drops from 4.7\,\% (50\,cm) to 1.0\,\% (5\,cm) for D2.\\[1.5mm]
-      But the busiest 10\,cm cell already sees \key{60\,MHz}, the UBT 400\,Hz. Dead time and pile-up are not modelled yet and will matter in the lobe.\\[1.5mm]
-      \takeaway[\footnotesize]{Detector technology near $|x|\approx2$\,m is a design question of its own.}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-% ======================================================================== PART 5b
-\blurb{An LLM proposes complete designs, the cluster scores them, the best ones breed.}
+% ======================================================================== PART 7
+\blurb{An LLM proposes complete designs, the cluster scores them on every background, the best ones breed.}
 \section{Optimisation}
 
 \begin{frame}{The loop: an LLM proposes, the cluster scores}
   \begin{columns}[c]
     \begin{column}{0.44\textwidth}\centering
       \begin{tikzpicture}[node distance=2.4mm, every node/.append style={font=\scriptsize}]
-        \node[abox, text width=4.3cm] (llm) {\semibold Claude (Sonnet), 8 in parallel\\\faint{writes a complete design JSON + two-sentence rationale}};
-        \node[box, below=of llm, text width=4.3cm] (eval) {\semibold farm-gpu3, 8 cores\\\faint{196\,k pairs, 40\,k signal decays, 200\,k muons:\\10 to 30\,s for all 8}};
+        \node[abox, text width=4.3cm] (llm) {\semibold an LLM, 8 in parallel\\\faint{Claude Code or OpenAI Codex, headless; a complete design JSON + rationale}};
+        \node[box, below=of llm, text width=4.3cm] (eval) {\semibold the cluster, 8 cores\\\faint{pairs, 40\,k signal decays, 200\,k muons, $\mu$ and $\nu$ interactions}};
         \node[box, below=of eval, text width=4.3cm] (obj) {\semibold reward\\\faint{\texttt{veto/lib/veto/objective.py} (G.~Frisella)}};
         \node[hbox, below=of obj, text width=4.3cm] (pop) {\semibold population of 12\\\faint{truncation selection}};
         \draw[aarr] (llm) -- (eval); \draw[arr] (eval) -- (obj); \draw[arr] (obj) -- (pop);
@@ -622,7 +882,7 @@
         \item \key{per design}: reward $\pm$ error, violations, tiers, false vertices, signal efficiency, cost; per plane: peak rate vs limit, cost, signal lost, pairs vetoed
       \end{itemize}
       At the end the top 5 are rerun with two more seeds: the best \key{mean} wins.\\[1mm]
-      \takeaway[\footnotesize]{25 + 15 generations, $\approx$340 LLM calls, 256 designs evaluated: an evening on one node.}
+      Backends: \texttt{--backend claude} (Claude Code CLI) or \texttt{codex} (\texttt{codex exec}), both on the user's own login, no tools, no session saved; usage limits are waited out.\\[1mm]\takeaway[\footnotesize]{Old runs: 25 + 15 generations, $\approx$340 LLM calls, 256 designs: an evening on one node.}
     \end{column}
   \end{columns}
 \end{frame}
@@ -638,20 +898,43 @@
         \midrule
         rate limits & $1 + \log_{10}(\text{peak}/\text{limit})$ per plane over it & 1000\\
         budget & $1 + $ overshoot / 8\,MCHF & 1000\\
-        background & $1 - e^{-N}$, $N$ = false vertices in 15\,y & 100\\
+        background & $1 - e^{-N}$, $N$ = all false vertices in 15\,y & 100\\
         signal & signal lost / 10\,\% & 10\\
         cost & $\log(\text{cost}/97\,\text{kCHF}) / \log 82$ & 1\\
         \bottomrule
       \end{tabular}\\[2mm]\footnotesize
-      Exchange rates: \key{0.01 false vertices} $=$ \key{1\,\% signal} $=$ a factor 82 in cost.\\[1.5mm]
+      Exchange rates: \key{0.01 false vertices} $=$ \key{1\,\% signal} $=$ a factor 82 in cost.\\[1mm]
       Every term carries its statistical error: rewards closer than $\approx 2\sigma \approx 0.1$ are a tie.
     \end{column}
     \begin{column}{0.42\textwidth}\footnotesize
-      $N$ two ways:\\[1mm]
+      $N$ = combinatorial + $\mu$ + $\nu$ interactions after selection and veto; the vertex cone is a design parameter (0--50\,mrad).\\[1mm]
+      Combinatorial $N$ two ways:\\[1mm]
       \key{direct}: weighted surviving pairs, 0--20 of 196\,k.\\[1mm]
       \key{factorised}: $N_0 \sum_{kl} f_{kl}\,\varepsilon_k\varepsilon_l$, $\varepsilon_k$ how often a muon of type $k$ in a pair escapes the veto (measured on the pair muons, not the single-muon sample: bounced muons of pairs escape twice as often).\\[1.5mm]
       The optimiser uses the \key{larger} of the two.\\[1.5mm]
       \takeaway[\footnotesize]{Every hand-made design with fins was infeasible: the tile fins at 30.6\,m see 2--10\,MHz per channel (limit 1), the right straw fin $6\cdot10^5$\,Hz/cm$^2$ (limit $5\cdot10^5$), fibre costs 48\,MCHF.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ======================================================================== PART 8
+\blurb{Two old runs on the combinatorial background only (outdated), and a new run on the full objective that found the next hole.}
+\section{Evolution}
+
+\begin{frame}{Three runs}
+  \begin{columns}[c]
+    \begin{column}{0.55\textwidth}\small
+      \key{Run 3} (19 October) is the current one: the full objective on the enriched dataset, all three backgrounds,
+      the vertex cone as a design parameter. \key{OpenAI Codex} (gpt-6.1-sol, high effort) on the cluster,
+      10 generations $\times$ 8 children: 80 designs, 74 feasible, 15 minutes.\\[2mm]
+      \key{Runs 1 and 2} (15 October, Claude Sonnet) optimised an older objective: alpha dataset, combinatorial
+      background only, no interactions, no cone. \textcolor[HTML]{B0352B}{Outdated}; their best, E2, became E3 of the
+      results.
+    \end{column}
+    \begin{column}{0.4\textwidth}\footnotesize
+      Run 3 starts from the hand-made designs and E1--E3. Its seeds already show the new picture: the UBT alone has
+      \key{1\,700} muon interactions per 15 years after the veto, E2 without a cone 91.\\[1.5mm]
+      \takeaway[\footnotesize]{The runs share the slider on the next slides: 0, 1 old · \key{2 the new run} (default).}
     \end{column}
   \end{columns}
 \end{frame}
@@ -661,13 +944,13 @@
     \begin{column}{0.62\textwidth}
       \livewidget{evo_curve}{\linewidth}{0.57\textheight}\\[1mm]
       \sld[0.6\linewidth]{evo_run}\\[0.3mm]
-      \legendline{each dot one design (grey: infeasible), orange: the best so far. Hover for names. run: 0 factorised background · 1 honest background.}
+      \legendline{each dot one design (grey: infeasible), orange: the best so far. Hover for names. run: 0, 1 old (combinatorial only) · 2 run 3, full objective.}
     \end{column}
     \begin{column}{0.36\textwidth}\footnotesize
-      \key{Run 1} starts from the hand-made designs: only the UBT alone is feasible ($-100$, $N = 27$).\\[1mm]
-      Generation 1: fibre at the hot entrance, tile2 behind ($-1.9$). Then it \key{shrinks the fins}, drops fibre in generation 6 ($-0.88$) and keeps trimming: $-0.49$.\\[1.5mm]
-      \key{Run 2} starts from run 1's best with the honest background ($-0.89$). Generation 2 moves the second pair from 41 to \key{36\,m}, after which the entrance fins can shrink to 0.6\,m: $-0.39$.\\[1.5mm]
-      \takeaway[\footnotesize]{Seed-to-seed spread of the top designs: 0.01--0.05. The top five of each run are one family.}
+      \key{Run 3} starts at $-100$: every seed lets at least one false vertex through in 15 years.\\[1mm]
+      Generation 1 adds a 22\,mrad cone and entrance fins: muon interactions 3, signal lost 2\,\%; still $-99.8$, since $100(1-e^{-N})$ hardly moves above $N \approx 3$.\\[1mm]
+      Then the reward only improves by \key{widening the cone} (40, then 50\,mrad) and adding planes: $-70$, $-68$, $-24$, $-17$.\\[1.5mm]
+      \takeaway[\footnotesize]{Old runs 1 and 2: from $-100$ to $-0.39$ by shrinking the fins (E1, E2); combinatorial background only.}
     \end{column}
   \end{columns}
 \end{frame}
@@ -683,38 +966,78 @@
   \end{columns}
   \vspace{1mm}
   \sld[0.32\linewidth]{evo_run}\hfill\sld[0.62\linewidth]{evo_step}\\[0.3mm]
-  \legendline{each step: a new best design. 3D: planes coloured by muon density. Top view: fins green / orange / red below 50\,\%, below 100\,\%, above their rate limit.}
+  \legendline{run: 0, 1 old · 2 run 3. Each step: a new best design. 3D: planes coloured by muon density. Top view: fins green / orange / red below 50\,\%, below 100\,\%, above their rate limit.}
 \end{frame}
 
-\begin{frame}{Where the evolved designs sit}
+\begin{frame}{What the optimiser bought}
   \begin{columns}[c]
-    \begin{column}{0.5\textwidth}
-      \livewidget{evo_map}{\linewidth}{0.62\textheight}
+    \begin{column}{0.52\textwidth}
+      \livewidget{evo_drift}{\linewidth}{0.7\textheight}
     \end{column}
-    \begin{column}{0.48\textwidth}\scriptsize
-      \setlength{\tabcolsep}{3pt}
+    \begin{column}{0.46\textwidth}\tiny
+      \setlength{\tabcolsep}{2pt}
       \begin{tabular}{@{}lrrrrr@{}}
         \toprule
-        design & reward & feasible & MCHF & signal & $N$ / 15\,y\\
+        best at & reward & MCHF & sig.\ lost & $\mu$ & $\nu$\\
         \midrule
-        D0 UBT only & $-100$ & yes & 0.10 & 100\,\% & 27\\
-        D6 straw & $-1109$ & no & 5.2 & 95.18\,\% & $1\cdot10^{-4}$\\
-        D6 tile2 & $-2670$ & no & 4.4 & 99.15\,\% & $1\cdot10^{-4}$\\
-        D1 wide UBT & $-3874$ & no & 1.7 & 99.13\,\% & $4\cdot10^{-4}$\\
-        D6 fibre & $-6060$ & no & 48 & 99.27\,\% & $4\cdot10^{-4}$\\
+        seed (UBT) & $-100$ & 0.10 & 0 & 1\,724 & 0.58\\
+        gen 1 & $-99.8$ & 0.70 & 2.1\,\% & 3.1 & 0.48\\
+        gen 3 & $-70.5$ & 2.3 & 16\,\% & 0.5 & 0.39\\
+        gen 5 & $-68.3$ & 7.2 & 36\,\% & 0.5 & 0.33\\
+        gen 8 & $-23.8$ & 7.7 & 63\,\% & 0 & 0.14\\
+        gen 10 & \key{$-17.0$} & 7.2 & \key{74\,\%} & 0 & \key{0.06}\\
         \midrule
-        \key{E1} (run 1) & $-0.89$ & yes & 0.43 & 99.89\,\% & $4.5\cdot10^{-3}$\\
-        \key{E2} (run 2) & $\mathbf{-0.39}$ & yes & \key{0.37} & \key{99.95\,\%} & $4\cdot10^{-4}$\\
+        E4\_entry2 & $-49.2$ & 0.61 & 2.9\,\% & 0 & 0.62\\
         \bottomrule
-      \end{tabular}\\[2mm]
-      \footnotesize
-      \key{E2}: tile2 fins 0.6\,m at 30.6\,m and 1.0\,m at 36\,m, $|y| < 1.3$ and 1.5\,m, plus the minimal UBT; 26\,400 channels, peak 0.11\,MHz per channel.\\[1.5mm]
-      \takeaway[\footnotesize]{Short fins near the wall veto the pairs: the muons that make fake vertices enter close to the vessel, not in the hot lobe 1.5--3\,m out.}
+      \end{tabular}\\[2mm]\footnotesize
+      Every step trades signal for background: the muon interactions are gone by generation 8; after that the wider cone
+      only removes \key{neutrinos}, by random hits, exactly as it removes the signal.
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{The optimiser found a hole in the objective}
+\begin{frame}{Where the evolved designs sit}
+  \begin{columns}[c]
+    \begin{column}{0.58\textwidth}
+      \livewidget{evo_map}{\linewidth}{0.66\textheight}
+    \end{column}
+    \begin{column}{0.4\textwidth}\footnotesize
+      Every feasible design of the three runs: cost against signal lost, coloured by all false vertices in 15 years.\\[1.5mm]
+      Runs 1 and 2 (combinatorial only) sit at 0.3--0.5\,MCHF and 0.05--0.3\,\% signal lost. Run 3 climbs straight up the
+      plot: \key{above the dotted line} (10\,\%) the signal term no longer grows, so more cone, more planes and more
+      signal lost cost nothing extra.\\[1.5mm]
+      \takeaway[\footnotesize]{The reasonable region, 1--3\,\% signal lost at under 1\,MCHF with no muon interactions, is where E4\_entry2 sits; run 3 passed through it in generation 1 and left.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+
+
+\begin{frame}{The new evolution found the next hole}
+  \begin{columns}[c]
+    \begin{column}{0.52\textwidth}\footnotesize
+      Codex (OpenAI), 10 generations $\times$ 8 children on the full objective and the enriched dataset, 80 calls, 15 minutes. Its best: \key{reward $-17$}, against $-49$ for E4\_entry2.\\[1.5mm]
+      \begin{tabular}{@{}lrr@{}}
+        \toprule
+        & E4\_entry2, 17.5\,mrad & evolved best\\
+        \midrule
+        planes & 5 (+3 second stations) & 15 \\
+        cone & 17.5\,mrad & \key{50\,mrad}\\
+        cost & 0.61\,MCHF & 7.2\,MCHF\\
+        signal lost & 2.8\,\% & \key{74\,\%}\\
+        $\mu$ / $\nu$ interactions & 0 / 0.62 & 0 / 0.06\\
+        \bottomrule
+      \end{tabular}
+    \end{column}
+    \begin{column}{0.45\textwidth}\footnotesize
+      The signal tier saturates at 10\,\% loss (10 points); the neutrino floor costs $\approx$40 points through $100(1 - e^{-N})$. A huge cone vetoes neutrinos with \key{random hits}, exactly as it vetoes the signal: killing three quarters of the signal pays.\\[1.5mm]
+      \takeaway[\footnotesize]{Again the optimiser is an adversary of the objective. The objective needs the signal loss unclipped (or as a constraint), or a sensitivity-like figure of merit (Punzi) where random-hit vetoes of background and signal cancel.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{An earlier hole (old run 1)}
   \begin{columns}[c]
     \begin{column}{0.52\textwidth}\footnotesize
       Run 1 used the \key{factorised} background only. Its best designs:\\[1.5mm]
@@ -743,99 +1066,47 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{The evolved designs: figure of merit}
-  \begin{columns}[c]
-    \begin{column}{0.48\textwidth}
-      \livewidget{fom_evo}{\linewidth}{0.55\textheight}
-    \end{column}
-    \begin{column}{0.5\textwidth}
-      \livewidget{fom15_evo}{\linewidth}{0.55\textheight}
-    \end{column}
-  \end{columns}
-  \vspace{1mm}
-  \sld[0.4\linewidth]{evo_pick}\hfill\sld[0.4\linewidth]{n_sig15}\\[0.3mm]
-  \legendline{design: 0 E1 (run 1) · 1 E2 (run 2). Algorithm A on 196\,736 pairs and 60\,k signal decays, as for the hand-made designs (no multiple scattering here).}
-\end{frame}
 
-\begin{frame}{The evolved designs: events}
-  \begin{columns}[c]
-    \begin{column}{0.38\textwidth}
-      \livewidget{ev3d_evo}{\linewidth}{0.6\textheight}
-    \end{column}
-    \begin{column}{0.6\textwidth}
-      \livewidget{ev_side_evo}{\linewidth}{0.6\textheight}
-    \end{column}
-  \end{columns}
-  \vspace{1mm}
-  \sld[0.32\linewidth]{evo_pick}\hfill\sld[0.32\linewidth]{evo_kind}\hfill\sld[0.32\linewidth]{evo_index}\\[0.3mm]
-  \legendline{design: 0 E1 · 1 E2.\quad kind: 0 pair vetoed · 1 pair missed · 2 signal lost to a random hit · 3 bounced muon missed.}
-\end{frame}
-
-% ======================================================================== PART 6
-\blurb{What the reconstruction still ignores, and how the design loop will use it.}
+% ======================================================================== PART 9
+\blurb{What the simulation and the reconstruction still ignore, and what comes next.}
 \section{Next}
 
 \begin{frame}{What is not in yet}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}\small
+      \key{Objective and optimisation}
+      \begin{itemize}\footnotesize
+        \item the signal tier saturates at 10\,\% loss: unclip it, or use a sensitivity (Punzi-like) figure of merit
+        \item second stations as a design choice (layers per plane, with their cost and random hits)
+        \item a new evolution on the fixed objective (Codex on the cluster, ready)
+      \end{itemize}
       \key{Reconstruction}
       \begin{itemize}\footnotesize
-        \item algorithm B: hit-driven tracklets across fins (sees bounces), with a time cap per event
-        \item factorised background: $\sum w\,P^{(1)}_\text{miss}P^{(2)}_\text{miss}$ instead of counting a handful of survivors
-        \item dead time and pile-up at MHz rates per cell
-        \item tilted fins (geometry and hits exist, not in the reconstruction)
+        \item a dedicated search for the parent's entry hit, instead of a wide cone
+        \item algorithm B: hit-driven tracklets (sees bounces); dead time and pile-up; tilted fins
       \end{itemize}
     \end{column}
     \begin{column}{0.48\textwidth}\small
       \key{Physics and data}
       \begin{itemize}\footnotesize
-        \item muon DIS in the walls and fins, neutrinos
-        \item muons from the same proton collision (correlated in time)
-        \item specific signal models (masses, decay modes, lifetimes) beyond the generic two-body decay
-        \item more runs of the veto-only muons: per seed, everything crossing the vessel walls or UBT window, plus a $10^{-5}$ sample of UBT-plane crossers
+        \item statistics: the surviving muon interactions are a handful of simulated events (weight 0.5 each); the first metre beside the walls and the floor have $\sim$10 independent input muons per cell
+        \item the rest of the enriched production (484 of 2\,000 seeds) and of our 20\,000-seed production
+        \item photon conversions and secondary interactions (fast chain $-5$ to $-9$\,\% vs Geant4); shield and rock interactions
+        \item specific signal models beyond the two-body decay
       \end{itemize}
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{Towards the optimisation loop}
-  \begin{columns}[c]
-    \begin{column}{0.5\textwidth}\centering
-      \begin{tikzpicture}[node distance=5mm]
-        \node[abox, text width=3.6cm] (agent) {\semibold agent\\\faint{places UBT and fins, one after another in $z$}};
-        \node[box, below=of agent, text width=3.6cm] (eval) {\semibold evaluation\\\faint{algorithm A, 1.5--2\,M tracks, rate maps}};
-        \node[box, below=of eval, text width=3.6cm] (rew) {\semibold reward\\\faint{background, signal loss, area / channels, rates}};
-        \draw[aarr] (agent) -- (eval); \draw[arr] (eval) -- (rew);
-        \draw[arr] (rew.east) -- ++(0.6,0) |- (agent.east);
-      \end{tikzpicture}
-    \end{column}
-    \begin{column}{0.46\textwidth}\small
-      Per design: $\approx$1\,M SST1 muons, $2\cdot10^{5}$ pairs, $10^{5}$ signal decays, and \key{no} flux muons as particles: they enter as rate maps.\\[2mm]
-      Accidental vetoes analytic, $1 - e^{-\sum \text{rate}\times\text{window}}$: no Monte-Carlo noise in the reward.\\[2mm]
-      \takeaway[\footnotesize]{Expect the agent to cover incoming paths twice near the wall and to stay out of the lobe.}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{Open questions}
-  \begin{itemize}\small
-    \item POT per spill: are the weights muons per 1\,s spill of $5\cdot10^{13}$ POT?
-    \item The repeated-\texttt{evt\_n} weight correction of the original analysis: the dataset uses the plain average over runs.
-    \item Cavern geometry in the simulation: muons cross $x = -4.56$\,m and reach $x\approx-9$\,m.
-    \item Veto technology near the vessel: rates per cell, time resolution, dead time.
-    \item The new run: what to store per seed (above), and keep the start state and \texttt{evt\_n}.
-  \end{itemize}
-\end{frame}
-
 \begin{frame}{Summary}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}\small
-      \key{Data}: the full run and 20\,001 old runs, combined into a 57\,M-muon design dataset with per-spill weights; cavern bounces reconstructed to 4\,cm.\\[2mm]
-      \key{Design space}: a UBT plus fins from the side walls; seven designs from minimal to dense.
+      \key{Data}: our own production keeps every muon category; an input enriched with a Pythia\,6 tail gives the high-energy SST1 muons $300\times$ more independent statistics.\\[2mm]
+      \key{Backgrounds}: combinatorial pairs, muon interactions (Geant4 + Pythia\,6) and neutrino interactions (GENIE), all through one selection (pointing, two tracks) and one veto with a vertex cone.
     \end{column}
     \begin{column}{0.48\textwidth}\small
-      \key{Reconstruction}: time-window events with accidental hits from full-statistics rate maps; a track-driven veto, $\approx$10\,µs per event, no combinatorics.\\[2mm]
-      \takeaway[\footnotesize]{Background is vetoed at $>99.99\,\%$ by any design with fins ($B\ll1$ in 15 years). The figure of merit is then the signal efficiency: 98.7\,\% for D2, 99.7\,\% with 0.1\,ns timing and 5\,cm cells.}
+      \key{End to end}: the combinatorial background is gone ($<10^{-4}$); muon interactions in the walls and planes are always vetoed; in the helium they need the cone \emph{and} a second station at the entrance.\\[2mm]
+      \takeaway[\footnotesize]{E4\_entry2 at 17.5\,mrad: 0.6 background events in 15 years, the neutrino floor; 2.8\,\% signal lost; 0.6\,MCHF. The optimiser's next run needs an objective that cannot trade signal for neutrinos.}
     \end{column}
   \end{columns}
 \end{frame}
