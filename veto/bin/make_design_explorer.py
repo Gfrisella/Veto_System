@@ -6,7 +6,7 @@ Design (what the RL environment will choose):
   wings  thin vertical fins on the left (+x) and right (-x, looking from the target) of the vessel.
          A fin touches the vessel only with its inner edge, on the side wall at |x| = X(z), reaches
          out in x by `length` and can lean downstream by `tilt` (0 = perpendicular to the beam);
-         it covers y from `bottom` (>= -3.2 m, above the floor) to `top`. Right-side fins stop at
+         it covers y from `bottom` (>= -3.36 m, the floor) to `top`. Right-side fins stop at
          the cavern wall x = -4.56 m. The UBT covers at least the 1 x 2.7 m vessel entrance. A fin at
          z = 30.6 m extends the UBT sideways. Left and right are independent and every fin has its own
          z (the RL environment will place them one after another with a minimum gap instead).
@@ -205,7 +205,7 @@ TEMPLATE = r"""<!doctype html>
   <h1>Veto design explorer</h1>
   <div class="note">UBT at z = 30.6 m (|x| &lt; 0.5 m, at least the 1 × 2.7 m vessel entrance) and fins ("wings")
   on the left and right: thin planes that touch the side wall with their inner edge, reach out in x and can lean
-  downstream (tilt). Each fin has its own z. Fins and UBT stay above y = −3.2 m; right-side fins stop at the
+  downstream (tilt). Each fin has its own z. Fins and UBT may reach down to the floor, y = −3.36 m; right-side fins stop at the
   cavern wall (x = −4.56 m).
   Muons of <i>design-optimization-dataset-alpha-14-oct-2026</i>; rates in muons per spill.</div>
 
@@ -233,7 +233,7 @@ const NSTATIC = __NSTATIC__;
 const G = D.geo;
 const X = z => G.x_in + (G.x_out - G.x_in) / (G.z_vmax - G.z_vmin) * (z - G.z_vmin);
 const N_FINS = 4;
-const Y_MIN = -3.2, X_WALL = -4.56, DEG = Math.PI / 180;
+const Y_MIN = -3.36, X_WALL = -4.56, DEG = Math.PI / 180;
 const S = {};
 
 function slider(parent, key, label, min, max, step, value, unit) {
@@ -258,7 +258,7 @@ for (const [side, el] of [['R', 'right'], ['L', 'left']]) {
   for (let i = 0; i < N_FINS; i++) {
     const h = document.createElement('div'); h.innerHTML = `<b>fin ${i + 1}</b>`; box.appendChild(h);
     const [z, len, tilt, lo, hi] = defaults[i];
-    slider(box, `${side}${i}_zpos`, 'z position', 30.6, 82, 0.1, z, ' m');
+    slider(box, `${side}${i}_zpos`, 'z position', 30.6, 80.6, 0.1, z, ' m');     // attached to the vessel
     slider(box, `${side}${i}_len`, 'length', 0, 7.5, 0.05, len, ' m');
     slider(box, `${side}${i}_tilt`, 'tilt downstr.', 0, 80, 1, tilt, '°');
     slider(box, `${side}${i}_lo`, 'bottom y', Y_MIN, 0, 0.05, lo, ' m');

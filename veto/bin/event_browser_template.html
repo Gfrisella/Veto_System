@@ -1,0 +1,427 @@
+<title>Veto Event Browser</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
+<style>
+/* Layout: an instrument panel. Controls and the current muon on the left, the cavern in 3D on the
+   right, the per-category rates and confusion matrices underneath. */
+:root {
+  --bg: #f4f6f9; --panel: #ffffff; --fg: #142030; --muted: #586779; --line: #d7dee7; --grid: #e6ebf1;
+  --accent: #0053a1; --accent-soft: #e3edf8;
+  --c-wall: #eb6834; --c-floor: #eda100; --c-sel: #2a78d6; --c-other: #1baf7a;   /* validated categorical slots 2, 4, 1, 3 */
+  --ok: #1d7f4e; --ok-soft: #e1f3e9; --bad: #c2410c; --bad-soft: #fbe9df;
+  --t-straw: #8b95a3; --t-tile: #2f3b4c; --t-tile2: #8a5a2b; --t-fiber: #9a5fb0; --t-pixel: #5b4a8a;
+  --geo-shield: #9aa5b3; --geo-vessel: #4a7fc1; --geo-sst: #c2410c; --geo-magnet: #5f9e5f; --geo-cavern: #8d8676;
+  --f-display: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0c1219; --panel: #131b25; --fg: #e4ebf3; --muted: #93a1b2; --line: #263342; --grid: #1c2633;
+  --accent: #5aa2f0; --accent-soft: #16273b;
+  --c-wall: #d95926; --c-floor: #c98500; --c-sel: #3987e5; --c-other: #199e70;
+  --ok: #4cc68a; --ok-soft: #12291e; --bad: #f08a5d; --bad-soft: #2e1a12;
+  --t-straw: #9aa6b6; --t-tile: #c9d3e0; --t-tile2: #c48a52; --t-fiber: #c38ad6; --t-pixel: #9b8bd0;
+  --geo-shield: #6c7786; --geo-vessel: #6a9ee0; --geo-sst: #f08a5d; --geo-magnet: #7dbb7d; --geo-cavern: #a49d8c;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0c1219; --panel: #131b25; --fg: #e4ebf3; --muted: #93a1b2; --line: #263342; --grid: #1c2633;
+  --accent: #5aa2f0; --accent-soft: #16273b;
+  --c-wall: #d95926; --c-floor: #c98500; --c-sel: #3987e5; --c-other: #199e70;
+  --ok: #4cc68a; --ok-soft: #12291e; --bad: #f08a5d; --bad-soft: #2e1a12;
+  --t-straw: #9aa6b6; --t-tile: #c9d3e0; --t-tile2: #c48a52; --t-fiber: #c38ad6; --t-pixel: #9b8bd0;
+  --geo-shield: #6c7786; --geo-vessel: #6a9ee0; --geo-sst: #f08a5d; --geo-magnet: #7dbb7d; --geo-cavern: #a49d8c;
+  color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 var(--f-body); }
+.wrap { max-width: 1500px; margin: 0 auto; padding-block: 18px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 16px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; }
+h1 { font: 700 26px/1.1 var(--f-display); letter-spacing: .01em; margin: 0; text-wrap: balance; }
+.settings { color: var(--muted); font-size: 13.5px; }
+.settings b { color: var(--fg); font-weight: 600; }
+h2 { font: 600 13px/1 var(--f-display); text-transform: uppercase; letter-spacing: .09em; color: var(--muted); margin: 0 0 8px; }
+.main { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; min-width: 0; }
+.side { display: grid; gap: 12px; }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.radios { display: grid; gap: 4px; }
+.radios.row { grid-template-columns: repeat(3, 1fr); }
+.opt { position: relative; }
+.opt input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.opt span { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 7px;
+  cursor: pointer; font-size: 14px; line-height: 1.25; }
+.opt input:checked + span { border-color: var(--accent); background: var(--accent-soft); }
+.opt input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.radios.row .opt span { justify-content: center; font-family: var(--f-display); font-weight: 600; letter-spacing: .02em; }
+.sw { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+.cat-name { font-weight: 600; }
+.cat-rate { margin-left: auto; font: 12px var(--f-mono); color: var(--muted); white-space: nowrap; }
+.stepper { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; }
+button { font: 600 14px var(--f-display); letter-spacing: .03em; color: var(--fg); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 7px; padding: 7px 12px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.evnum { display: flex; align-items: center; justify-content: center; gap: 6px; font: 14px var(--f-mono); }
+.evnum input { width: 70px; font: 14px var(--f-mono); padding: 5px 6px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--bg); color: var(--fg); text-align: right; }
+input[type=range] { width: 100%; accent-color: var(--accent); margin: 10px 0 2px; }
+.hint { color: var(--muted); font-size: 12.5px; }
+.card { display: grid; gap: 8px; }
+.card-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pill { font: 700 12px/1 var(--f-display); letter-spacing: .08em; text-transform: uppercase; padding: 5px 8px; border-radius: 99px; }
+.pill.ok { color: var(--ok); background: var(--ok-soft); }
+.pill.bad { color: var(--bad); background: var(--bad-soft); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 13.5px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; font-family: var(--f-mono); font-size: 12.5px; overflow-wrap: anywhere; }
+.why { font-size: 13.5px; border-left: 3px solid var(--line); padding-left: 9px; }
+.cross-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 3px; font-size: 13px; }
+.cross-list li { display: flex; gap: 8px; align-items: baseline; }
+.cross-list .z { font: 12px var(--f-mono); color: var(--muted); margin-left: auto; white-space: nowrap; }
+.toggles { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13.5px; }
+.toggles label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+.plotbox { padding: 6px; }
+.cams { display: flex; gap: 6px; flex-wrap: wrap; padding: 6px 8px 0; }
+#plot { width: 100%; height: min(74vh, 720px); min-height: 420px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 4px 10px 8px; font-size: 12.5px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.bottom { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 13.5px; }
+th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font: 600 12px var(--f-display); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+td.num { font-family: var(--f-mono); font-size: 12.5px; }
+tr.cur td { background: var(--accent-soft); }
+.cm td.cell { font-family: var(--f-mono); font-size: 12.5px; text-align: center; }
+.cm th.colh { text-align: center; }
+.note { color: var(--muted); font-size: 12.5px; margin: 8px 0 0; max-width: 75ch; }
+.big { font: 600 22px/1.1 var(--f-display); }
+.figs { display: flex; flex-wrap: wrap; gap: 10px 26px; margin-bottom: 10px; }
+.figs div { display: grid; gap: 2px; }
+.figs .lab { font-size: 12px; color: var(--muted); }
+@media (max-width: 860px) { .main { grid-template-columns: minmax(0, 1fr); } #plot { height: 62vh; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Veto Event Browser</h1>
+    <div class="settings" id="settings"></div>
+  </header>
+
+  <div class="main">
+    <div class="side">
+      <section class="panel">
+        <h2>Design</h2>
+        <fieldset class="radios row" id="designs"></fieldset>
+      </section>
+      <section class="panel">
+        <h2>Muon category at SST1</h2>
+        <fieldset class="radios" id="cats"></fieldset>
+        <h2 style="margin-top:12px">Show</h2>
+        <fieldset class="radios row" id="shows"></fieldset>
+      </section>
+      <section class="panel">
+        <h2>Event</h2>
+        <div class="stepper">
+          <button id="prev" type="button" aria-label="Previous muon">◀ Prev</button>
+          <div class="evnum"><input id="evin" type="number" min="1" value="1" aria-label="Muon number"><span id="evtot">/ 0</span></div>
+          <button id="next" type="button" aria-label="Next muon">Next ▶</button>
+        </div>
+        <input id="evslider" type="range" min="1" max="1" value="1" aria-label="Muon number slider">
+        <div class="hint">Arrow keys ← → step through the muons.</div>
+      </section>
+      <section class="panel card" id="card" aria-live="polite"></section>
+    </div>
+
+    <section class="panel plotbox">
+      <div class="cams">
+        <button type="button" data-cam="3d">3D</button>
+        <button type="button" data-cam="side">Side (y–z)</button>
+        <button type="button" data-cam="top">Top (x–z)</button>
+        <button type="button" data-cam="beam">Along the beam</button>
+        <div class="toggles" style="margin-left:auto">
+          <label><input type="checkbox" id="ctx" checked> other muons of the category</label>
+          <label><input type="checkbox" id="shield" checked> muon shield</label>
+        </div>
+      </div>
+      <div id="plot" role="img" aria-label="3D view of the SHiP cavern, the veto planes and the selected muon"></div>
+      <div class="legend" id="legend"></div>
+    </section>
+  </div>
+
+  <div class="bottom">
+    <section class="panel">
+      <h2>Fake signal: two muons forming a vertex</h2>
+      <div class="figs" id="figs"></div>
+      <div class="tablewrap"><table id="cmpairs" class="cm"></table></div>
+      <p class="note" id="pairnote"></p>
+    </section>
+    <section class="panel">
+      <h2>Single muons per category (confusion matrix)</h2>
+      <div class="tablewrap"><table id="cmsingle" class="cm"></table></div>
+      <p class="note">Rates in Hz per category, one spill = 5×10¹³ PoT in 1 s. Weighted with the muon weights,
+        ± is the statistical error. The truth is "a muon reaches SST1", so only vetoed (TP) and missed (FN) exist.</p>
+    </section>
+    <section class="panel" style="grid-column: 1 / -1">
+      <h2>Designs compared</h2>
+      <div class="tablewrap"><table id="compare"></table></div>
+    </section>
+  </div>
+</div>
+
+<script>
+const D = __DATA__;
+const CATS = D.cats;
+const CATVAR = ["--c-wall", "--c-floor", "--c-sel", "--c-other"];
+const CATDESC = ["bounced off the cavern wall (x = −4.56 m)", "bounced off the floor (y = −3.36 m)",
+                 "p > 1 GeV, into the timing detector: can make a fake vertex", "everything else"];
+const TECHVAR = {straw: "--t-straw", tile: "--t-tile", tile2: "--t-tile2", fiber: "--t-fiber", pixel: "--t-pixel"};
+const TECHNAME = {straw: "straw", tile: "tile 4 cm", tile2: "tile 2 cm", fiber: "fibre", pixel: "pixel"};
+const S = { design: Math.min(2, D.designs.length - 1), cat: 1, show: "missed", idx: 0, cam: "3d" };
+const $ = id => document.getElementById(id);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmt = (v, d = 0) => (v == null || !isFinite(v)) ? "–" : Number(v).toLocaleString("en-US", {maximumFractionDigits: d, minimumFractionDigits: d});
+const sci = (v, d = 2) => { if (!isFinite(v) || v === 0) return v === 0 ? "0" : "–"; const e = Math.floor(Math.log10(Math.abs(v)));
+  const m = v / 10 ** e; return `${m.toFixed(d - 1)}×10<sup>${e}</sup>`; };
+const rateHz = v => v >= 1000 ? `${fmt(v / 1000, 2)} kHz` : `${fmt(v, v < 10 ? 1 : 0)} Hz`;
+
+// ------------------------------------------------------------------ controls
+function radio(container, name, items, checked, onChange) {
+  container.innerHTML = "";
+  items.forEach((it, i) => {
+    const lab = document.createElement("label"); lab.className = "opt";
+    lab.innerHTML = `<input type="radio" name="${name}" id="${name}_${i}" value="${it.value}" ${it.value === checked ? "checked" : ""}><span>${it.html}</span>`;
+    lab.querySelector("input").addEventListener("change", e => onChange(it.value));
+    container.appendChild(lab);
+  });
+}
+function buildControls() {
+  radio($("designs"), "design", D.designs.map((d, i) => ({value: i, html: d.label.split(" (")[0]})), S.design,
+        v => { S.design = +v; S.idx = 0; update(true); });
+  const d = D.designs[S.design];
+  radio($("cats"), "cat", CATS.map((c, i) => {
+    const s = d.single[c];
+    return {value: i, html: `<i class="sw" style="background:var(${CATVAR[i]})"></i><span class="cat-name">${c}</span>
+      <span class="cat-rate">${rateHz(s.after)} of ${rateHz(s.before)} missed</span>`};
+  }), S.cat, v => { S.cat = +v; S.idx = 0; update(false); });
+  radio($("shows"), "show", [{value: "missed", html: "missed"}, {value: "vetoed", html: "vetoed"}, {value: "all", html: "all"}], S.show,
+        v => { S.show = v; S.idx = 0; update(false); });
+}
+function events() {
+  const m = D.designs[S.design].muons, out = [];
+  for (let i = 0; i < m.cat.length; i++)
+    if (m.cat[i] === S.cat && (S.show === "all" || m.vetoed[i] === (S.show === "vetoed" ? 1 : 0))) out.push(i);
+  return out;
+}
+
+// ------------------------------------------------------------------ geometry traces (plot axes: x = z, y = x, z = y)
+const BI = [0, 0, 4, 4, 0, 0, 1, 1, 2, 2, 3, 3], BJ = [1, 2, 5, 6, 1, 5, 2, 6, 3, 7, 0, 4], BK = [2, 3, 6, 7, 5, 4, 6, 5, 7, 6, 4, 7];
+function box(b, color, opacity, name, show) {
+  const xs = [-b.hx0, b.hx0, b.hx0, -b.hx0, -b.hx1, b.hx1, b.hx1, -b.hx1], ys = [-b.hy0, -b.hy0, b.hy0, b.hy0, -b.hy1, -b.hy1, b.hy1, b.hy1];
+  return {type: "mesh3d", x: [b.z0, b.z0, b.z0, b.z0, b.z1, b.z1, b.z1, b.z1], y: xs, z: ys, i: BI, j: BJ, k: BK,
+          color, opacity, flatshading: true, name, hoverinfo: "name", showlegend: false, visible: show};
+}
+function edges(b, color, name) {
+  const c0 = [[-b.hx0, -b.hy0], [b.hx0, -b.hy0], [b.hx0, b.hy0], [-b.hx0, b.hy0]], c1 = [[-b.hx1, -b.hy1], [b.hx1, -b.hy1], [b.hx1, b.hy1], [-b.hx1, b.hy1]];
+  const X = [], Y = [], Z = [];
+  [[c0, b.z0], [c1, b.z1]].forEach(([c, z]) => { [...c, c[0]].forEach(([x, y]) => { X.push(z); Y.push(x); Z.push(y); }); X.push(null); Y.push(null); Z.push(null); });
+  c0.forEach(([x, y], i) => { X.push(b.z0, b.z1, null); Y.push(x, c1[i][0], null); Z.push(y, c1[i][1], null); });
+  return {type: "scatter3d", mode: "lines", x: X, y: Y, z: Z, line: {color, width: 2.5}, hoverinfo: "skip", showlegend: false, name};
+}
+function quad(c, color, opacity, name) {
+  return {type: "mesh3d", x: c.map(p => p[2]), y: c.map(p => p[0]), z: c.map(p => p[1]), i: [0, 0], j: [1, 2], k: [2, 3],
+          color, opacity, flatshading: true, name, hoverinfo: "name", showlegend: false};
+}
+function quadEdge(c, color, name, width = 3) {
+  const p = [...c, c[0]];
+  return {type: "scatter3d", mode: "lines", x: p.map(q => q[2]), y: p.map(q => q[0]), z: p.map(q => q[1]),
+          line: {color, width}, hoverinfo: "skip", showlegend: false, name};
+}
+function staticTraces() {
+  const G = D.geometry, t = [], showShield = $("shield").checked;
+  G.boxes.forEach(b => {
+    if (b.group === "shield") { t.push(box(b, css("--geo-shield"), 0.22, b.name, showShield)); return; }
+    const col = {target: css("--fg"), vessel: css("--geo-vessel"), magnet: css("--geo-magnet")}[b.group];
+    t.push(box(b, col, b.group === "vessel" ? 0.07 : 0.10, b.name, true));
+    if (b.group !== "target") t.push(edges(b, col, b.name));
+  });
+  G.planes.forEach(p => {
+    const c = [[-p.hx, -p.hy, p.z], [p.hx, -p.hy, p.z], [p.hx, p.hy, p.z], [-p.hx, p.hy, p.z]];
+    const col = p.group === "sst1" ? css("--geo-sst") : css("--muted");
+    t.push(quad(c, col, 0.18, p.name)); t.push(quadEdge(c, col, p.name, 2));
+  });
+  const cv = G.cavern, cc = css("--geo-cavern");
+  t.push(quad([[cv.x_wall, cv.y_floor, cv.z0], [cv.x_wall, cv.y_floor, cv.z1], [cv.x_wall, 4, cv.z1], [cv.x_wall, 4, cv.z0]], cc, 0.06, "Cavern wall x = −4.56 m"));
+  t.push(quad([[cv.x_wall, cv.y_floor, cv.z0], [4.6, cv.y_floor, cv.z0], [4.6, cv.y_floor, cv.z1], [cv.x_wall, cv.y_floor, cv.z1]], cc, 0.10, "Floor y = −3.36 m"));
+  return t;
+}
+function designTraces() {
+  const t = [];
+  D.designs[S.design].planes.forEach(p => {
+    const col = css(TECHVAR[p.technology] || "--t-straw");
+    const op = p.kind === "bottom" ? 0.75 : p.kind === "ubt" ? 0.55 : 0.42;
+    t.push(quad(p.corners, col, op, `${p.name} · ${TECHNAME[p.technology] || p.technology}`));
+    t.push(quadEdge(p.corners, col, p.name, p.kind === "bottom" ? 5 : 3));
+  });
+  return t;
+}
+function path(m, i) {
+  const pts = [m.a[i]]; if (m.k[i][2] != null) pts.push(m.k[i]); pts.push(m.b[i]); return pts;
+}
+function muonTraces(list) {
+  const m = D.designs[S.design].muons, col = css(CATVAR[S.cat]), t = [];
+  if ($("ctx").checked && list.length > 1) {
+    const X = [], Y = [], Z = [];
+    list.slice(0, 120).forEach(i => { if (i === list[S.idx]) return; path(m, i).forEach(p => { X.push(p[2]); Y.push(p[0]); Z.push(p[1]); }); X.push(null); Y.push(null); Z.push(null); });
+    t.push({type: "scatter3d", mode: "lines", x: X, y: Y, z: Z, line: {color: col, width: 1.5}, opacity: 0.18, hoverinfo: "skip", showlegend: false});
+  }
+  if (!list.length) return t;
+  const i = list[S.idx], pts = path(m, i);
+  t.push({type: "scatter3d", mode: "lines+markers", x: pts.map(p => p[2]), y: pts.map(p => p[0]), z: pts.map(p => p[1]),
+          line: {color: col, width: 8}, marker: {size: 4, color: col},
+          text: pts.map((p, j) => j === 0 ? "A, z = 30.6 m" : (j === pts.length - 1 ? "B, SST1" : "bounce point K")),
+          hovertemplate: "%{text}<br>z %{x:.2f} m · x %{y:.2f} m · y %{z:.2f} m<extra></extra>", showlegend: false});
+  const cr = m.cross[i], planes = D.designs[S.design].planes;
+  if (cr.length) t.push({type: "scatter3d", mode: "markers", x: cr.map(c => c[3]), y: cr.map(c => c[1]), z: cr.map(c => c[2]),
+          marker: {size: 6, symbol: "diamond", color: css("--panel"), line: {color: css("--fg"), width: 2}},
+          text: cr.map(c => planes[c[0]].name), hovertemplate: "crosses %{text}<br>z %{x:.2f} m · x %{y:.2f} m · y %{z:.2f} m<extra></extra>", showlegend: false});
+  return t;
+}
+const CAMS = {
+  "3d":   {eye: {x: -0.55, y: -2.4, z: 1.15}, up: {x: 0, y: 0, z: 1}, center: {x: 0.12, y: 0, z: -0.05}},
+  side:   {eye: {x: 0.0001, y: -3.2, z: 0.0}, up: {x: 0, y: 0, z: 1}, center: {x: 0.12, y: 0, z: 0}},
+  top:    {eye: {x: 0.0001, y: 0.0, z: 3.2}, up: {x: 0, y: 1, z: 0}, center: {x: 0.12, y: 0, z: 0}},
+  beam:   {eye: {x: -2.8, y: 0.0, z: 0.25}, up: {x: 0, y: 0, z: 1}, center: {x: 0.1, y: 0, z: 0}},
+};
+function layout(keepCam) {
+  const fg = css("--muted"), grid = css("--grid"), bg = css("--panel");
+  const ax = (title, range) => ({title: {text: title, font: {color: fg, size: 12}}, range, color: fg, gridcolor: grid, zerolinecolor: grid,
+                                 backgroundcolor: bg, showbackground: false, tickfont: {size: 10, color: fg}});
+  const lo = {paper_bgcolor: bg, plot_bgcolor: bg, margin: {l: 0, r: 0, t: 0, b: 0}, showlegend: false, uirevision: keepCam ? "keep" : String(Date.now()),
+    font: {family: "Barlow, system-ui, sans-serif", color: css("--fg")},
+    scene: {xaxis: ax("z [m]", [$("shield").checked ? -3 : 27, 97]), yaxis: ax("x [m]", [-5, 5]), zaxis: ax("y [m]", [-4, 4.5]),
+            aspectmode: "manual", aspectratio: $("shield").checked ? {x: 4, y: 0.42, z: 0.36} : {x: 3, y: 0.45, z: 0.38},
+            camera: CAMS[S.cam]}};
+  return lo;
+}
+
+// ------------------------------------------------------------------ text panels
+function why(m, i) {
+  const cr = m.cross[i], k = m.k[i];
+  if (m.vetoed[i]) return "Vetoed: a hit on a crossed plane lies inside the space and time window of the track extrapolated back from SST1.";
+  if (!cr.length) return "Missed: its path crosses no veto plane.";
+  if (k[2] != null && cr.every(c => c[3] < k[2]))
+    return "Missed: it crosses veto planes only before its bounce. The track measured at SST1, extrapolated back in a straight line, points elsewhere there.";
+  return "Missed although it crosses a plane after any bounce: the hit was lost (plane efficiency, time window or cell edge).";
+}
+function card(list) {
+  const el = $("card"), d = D.designs[S.design], m = d.muons;
+  if (!list.length) { el.innerHTML = `<h2>Muon</h2><div class="hint">No ${S.show} muons of this category in the sample for this design.</div>`; return; }
+  const i = list[S.idx], v = m.vetoed[i], a = m.a[i], k = m.k[i], b = m.b[i];
+  const cr = m.cross[i].map(c => `<li><i class="sw" style="background:var(${TECHVAR[d.planes[c[0]].technology] || "--t-straw"})"></i>${d.planes[c[0]].name}
+      <span class="z">z ${fmt(c[3], 1)} m</span></li>`).join("");
+  el.innerHTML = `<h2>Muon ${S.idx + 1} of ${list.length}</h2>
+    <div class="card-head"><i class="sw" style="background:var(${CATVAR[S.cat]})"></i><b>${CATS[S.cat]}</b>
+      <span class="pill ${v ? "ok" : "bad"}">${v ? "vetoed" : "missed"}</span></div>
+    <dl class="kv">
+      <dt>p at SST1</dt><dd>${fmt(m.p[i], m.p[i] < 10 ? 2 : 1)} GeV</dd>
+      <dt>at z = 30.6 m</dt><dd>x ${fmt(a[0], 2)}, y ${fmt(a[1], 2)} m</dd>
+      <dt>bounce point</dt><dd>${k[2] == null ? "none" : `z ${fmt(k[2], 1)}, x ${fmt(k[0], 2)}, y ${fmt(k[1], 2)} m`}</dd>
+      <dt>at SST1</dt><dd>x ${fmt(b[0], 2)}, y ${fmt(b[1], 2)} m</dd>
+    </dl>
+    <div class="why">${why(m, i)}</div>
+    <div><h2 style="margin:4px 0 6px">Veto planes crossed (${m.cross[i].length})</h2>
+      ${m.cross[i].length ? `<ul class="cross-list">${cr}</ul>` : `<div class="hint">none</div>`}</div>
+    <div class="hint">Sampled muons, half missed and half vetoed per category (drawn by weight), from the validation run.</div>`;
+}
+function tables() {
+  const d = D.designs[S.design], f = d.fake, fu = d.fake_unweighted, before = f.before_per_spill, after = f.per_spill;
+  $("figs").innerHTML = `
+    <div><span class="lab">fake vertices per spill (Hz)</span><span class="big">${sci(after)}</span><span class="lab">± ${sci(f.per_spill_err, 1)}</span></div>
+    <div><span class="lab">in 15 years (6×10²⁰ PoT)</span><span class="big">${sci(f.per_15y)}</span><span class="lab">± ${sci(f.per_15y_err, 1)}</span></div>
+    <div><span class="lab">signal lost (decays from the target)</span><span class="big">${fmt(100 * d.signal.target.lost, 2)} %</span><span class="lab">uniform in the vessel ${fmt(100 * d.signal.uniform.lost, 2)} %</span></div>`;
+  const sig = d.signal.target.lost;
+  $("cmpairs").innerHTML = `<tr><th>truth \\ veto</th><th class="colh">vetoed</th><th class="colh">accepted</th></tr>
+    <tr><td>muon pair (fake vertex)<br><span class="hint">${fmt(before, 0)} per spill before the veto</span></td>
+      <td class="cell" style="background:var(--ok-soft)">TP<br>${fmt(100 * (1 - f.FN), 5)} %</td>
+      <td class="cell" style="background:var(--bad-soft)">FN<br>${sci(f.FN)}<br>${sci(after)} /spill</td></tr>
+    <tr><td>signal decay</td>
+      <td class="cell" style="background:var(--bad-soft)">FP<br>${fmt(100 * sig, 2)} %</td>
+      <td class="cell" style="background:var(--ok-soft)">TN<br>${fmt(100 * (1 - sig), 2)} %</td></tr>`;
+  const td = d.settings.coincidence_ps != null;
+  $("pairnote").innerHTML = `${td ? `With timing detector: pairs are two muons within ±${d.settings.coincidence_ps} ps` :
+    "No timing detector: pairs are any two muons of the same 1 s spill (no 200 ps coincidence)"}, the veto
+    matches a ${d.settings.sigma_t_track_ns} ns track time within ±${d.settings.n_sigma_t}σ. Factorised estimate N = N<sub>pairs</sub> Σ f<sub>kl</sub> ε<sub>k</sub> ε<sub>l</sub>
+    with the inefficiencies of muons that can be in a pair. Without weights: ${sci(fu.per_spill)} per spill (the weighted number is
+    driven by a heavy-weight tail). Direct count: ${d.fake_direct.survive} of ${fmt(d.fake_direct.pairs)} candidate pairs survive.`;
+  let rows = `<tr><th>category</th><th class="colh">vetoed (TP)</th><th class="colh">missed (FN)</th><th>missed</th></tr>`;
+  CATS.forEach((c, i) => {
+    const s = d.single[c], vet = s.before - s.after;
+    rows += `<tr class="${i === S.cat ? "cur" : ""}"><td><i class="sw" style="background:var(${CATVAR[i]});display:inline-block;margin-right:6px"></i>${c}</td>
+      <td class="cell">${rateHz(vet)}</td><td class="cell">${rateHz(s.after)} ± ${fmt(s.after_err, s.after_err < 10 ? 1 : 0)}</td>
+      <td class="num">${fmt(100 * s.after / s.before, 2)} %</td></tr>`;
+  });
+  const tb = CATS.reduce((a, c) => a + d.single[c].before, 0), ta = CATS.reduce((a, c) => a + d.single[c].after, 0);
+  rows += `<tr><td><b>all SST1 muons</b></td><td class="cell">${rateHz(tb - ta)}</td><td class="cell"><b>${rateHz(ta)}</b></td><td class="num">${fmt(100 * ta / tb, 2)} %</td></tr>`;
+  $("cmsingle").innerHTML = rows;
+  let cmp = `<tr><th>design</th>${CATS.map(c => `<th>${c} missed</th>`).join("")}<th>all missed</th><th>fake / spill</th><th>fake / 15 y</th><th>signal lost</th><th>cost</th><th>planes</th></tr>`;
+  D.designs.forEach((x, j) => {
+    const all = CATS.reduce((a, c) => a + x.single[c].after, 0);
+    cmp += `<tr class="${j === S.design ? "cur" : ""}"><td>${x.label}</td>${CATS.map(c => `<td class="num">${rateHz(x.single[c].after)}</td>`).join("")}
+      <td class="num">${rateHz(all)}</td><td class="num">${sci(x.fake.per_spill)}</td><td class="num">${sci(x.fake.per_15y)}</td>
+      <td class="num">${fmt(100 * x.signal.target.lost, 2)} %</td><td class="num">${fmt(x.cost_kchf / 1000, 2)} MCHF</td><td class="num">${x.planes.length}</td></tr>`;
+  });
+  $("compare").innerHTML = cmp;
+}
+function legend() {
+  const used = [...new Set(D.designs[S.design].planes.map(p => p.technology))];
+  $("legend").innerHTML = used.map(t => `<span><i class="sw" style="background:var(${TECHVAR[t]})"></i>${TECHNAME[t] || t}</span>`).join("") +
+    `<span><i class="sw" style="background:var(--geo-vessel)"></i>decay vessel</span><span><i class="sw" style="background:var(--geo-sst)"></i>SST1</span>
+     <span><i class="sw" style="background:var(--geo-cavern)"></i>cavern wall and floor</span><span>◇ plane crossings of the muon</span>`;
+}
+function settings() {
+  const s = D.designs[S.design].settings;
+  const td = s.coincidence_ps != null;
+  $("settings").innerHTML = `<b>${td ? "With timing detector" : "No timing detector"}</b> · track time ${s.sigma_t_track_ns} ns, ±${s.n_sigma_t}σ ·
+    pairs: ${td ? `within ±${s.coincidence_ps} ps` : "same 1 s spill"} · 5×10¹³ PoT/spill · 3 M muons per type, seed ${s.seed}`;
+}
+
+// ------------------------------------------------------------------ update
+let plotted = false;
+function update(designChanged) {
+  if (designChanged) buildControls();
+  const list = events();
+  S.idx = Math.max(0, Math.min(S.idx, list.length - 1));
+  $("evin").max = Math.max(list.length, 1); $("evin").value = list.length ? S.idx + 1 : 0;
+  $("evslider").max = Math.max(list.length, 1); $("evslider").value = S.idx + 1;
+  $("evtot").textContent = `/ ${list.length}`;
+  const traces = [...staticTraces(), ...designTraces(), ...muonTraces(list)];
+  Plotly.react("plot", traces, layout(plotted), {responsive: true, displaylogo: false, modeBarButtonsToRemove: ["toImage"]});
+  plotted = true;
+  card(list); tables(); legend(); settings();
+}
+function step(n) { const L = events().length; if (!L) return; S.idx = (S.idx + n + L) % L; update(false); }
+$("prev").addEventListener("click", () => step(-1));
+$("next").addEventListener("click", () => step(1));
+$("evin").addEventListener("change", e => { S.idx = (+e.target.value || 1) - 1; update(false); });
+$("evslider").addEventListener("input", e => { S.idx = +e.target.value - 1; update(false); });
+$("ctx").addEventListener("change", () => update(false));
+$("shield").addEventListener("change", () => { plotted = false; update(false); });
+document.querySelectorAll("[data-cam]").forEach(b => b.addEventListener("click", () => { S.cam = b.dataset.cam; plotted = false; update(false); }));
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT" && e.target.type === "number") return;
+  if (e.key === "ArrowRight") { step(1); e.preventDefault(); }
+  if (e.key === "ArrowLeft") { step(-1); e.preventDefault(); }
+});
+const rerender = () => update(false);
+try { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", rerender); } catch (e) {}
+new MutationObserver(rerender).observe(document.documentElement, {attributes: true, attributeFilter: ["data-theme"]});
+buildControls(); update(false);
+</script>

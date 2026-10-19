@@ -108,10 +108,11 @@ GEOMETRY (metres; z along the beam; looking from the target, right = -x, left = 
 - Decay vessel: frustum z = 30.6 .. 80.6, half widths x 0.5 -> 2.0, y 1.35 -> 3.0. SST1 tracker at z = 82
   (|x| < 2, |y| < 3), the spectrometer that measures the tracks. Cavern wall at x = -4.56, floor y = -3.36.
 - UBT: a straw plane at z = 30.6 on the vessel entrance, |x| < 0.5 (fixed), y from y_lo to y_hi; it must cover
-  at least y = -1.35 .. 1.35 and stays above y = -3.2. Always straws (technology fixed).
-- Fins: thin vertical x-y planes at a fixed z (30.6 .. 82) on the right or left side. A fin touches the vessel
+  at least y = -1.35 .. 1.35 and may reach down to the floor y = -3.36. Always straws (technology fixed).
+- Fins: thin vertical x-y planes at a fixed z (30.6 .. 80.6) on the right or left side. Fins are attached to the
+  vessel structure (wall and its support frame, down to the floor), so z must be on the vessel. A fin touches the vessel
   side wall with its inner edge (|x| = X(z) = 0.5 + 0.03 (z - 30.6)) and reaches OUT in x by `length`; it covers
-  y from y_lo (>= -3.2) to y_hi. Right fins are cut at the cavern wall x = -4.56 (the loader does it and notes it).
+  y from y_lo (>= -3.36, the floor) to y_hi. Right fins are cut at the cavern wall x = -4.56 (the loader does it and notes it).
   Each fin has a technology (straw, fiber, pixel, tile, tile2); tilt must be 0.
 - No detector on top of or below the vessel.
 

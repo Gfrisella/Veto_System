@@ -1,4 +1,4 @@
-"""Multiple Coulomb scattering of the muons after z = 30.6 m (ISSUES.txt B1), small-angle and analytic.
+"""Multiple Coulomb scattering of the muons after z = 30.6 m (ISSUES.md B1), small-angle and analytic.
 
 The stored muon states have no scattering after the shield: A (z = 30.6 m) and B (z = 82 m) are
 joined by straight lines (through the bounce point K for bounced muons). Here every muon collects
@@ -97,7 +97,7 @@ def scatterers(tr, design, media=None):
     zs.append(np.where(in_win, geo.Z_UBT, np.nan)); xs.append(np.where(in_win, PVC_THICKNESS / X0_PVC / cos_z, 0.0))
 
     # fins: planes of constant z
-    for plane in design.planes[1:]:
+    for plane in [pl for pl in design.planes[1:] if pl.kind == "fin"]:     # bottom panel: not modelled yet
         pt = _at_z(p, q, np.full(n, plane.z))
         u = plane.to_local(pt[:, 0])
         hit = np.isfinite(pt[:, 2]) & plane.inside(u, pt[:, 1])

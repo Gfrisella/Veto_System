@@ -43,6 +43,7 @@ class RecoConfig:
     min_planes: int = 1                # a track is explained by hits on at least this many planes
     multiple_scattering: bool = False  # scatter the muons after z = 30.6 m (scattering.py)
     seed: int = 1
+    common_random: bool = True         # per-track random numbers fixed per plane geometry (crn_seed)
     extra: dict = field(default_factory=dict)
 
 
@@ -57,6 +58,17 @@ def true_crossing(tr, plane):
         x, y = a[:, 0], a[:, 1]
         ok = tr["apz"] > 0
         p = a
+    elif plane.kind == "bottom":
+        # a floor-bounced muon can cross the panel twice: keep the crossing after the bounce, the one
+        # the spectrometer track points back to (the first one is a hit too, but it explains nothing)
+        (ok1, p1, v1), (ok2, p2, v2) = mt.bottom_crossings(a, k, b, plane.z, plane.y0, plane.tilt,
+                                                           plane.x_lo, plane.to_global(plane.u_max), plane.y_hi)
+        ok = ok1 | ok2
+        p = np.where(ok2[:, None], p2, p1)
+        x, y = p[:, 0], np.where(ok2, v2, v1)          # y = local v along the panel
+    elif plane.tilt:
+        ok, p = mt.fin_hits(a, k, b, plane.z, plane.sign, plane.tilt, plane.u_max, plane.y_lo, plane.y_hi)
+        x, y = p[:, 0], p[:, 1]
     else:
         x, y, ok = mt.path_at_z(a, k, b, plane.z)
         p = np.stack([x, y, np.full(len(x), plane.z)], 1)
@@ -69,8 +81,24 @@ def true_crossing(tr, plane):
     return u, y, length, ok
 
 
-def own_hits(tr, event, design, rng, tracks_mask=None):
-    """Hits of the events' own muons. Returns dict of arrays event, track, plane, u, y, t."""
+def plane_key(plane):
+    """Integers that identify a plane's geometry (not its index in the design): common random numbers."""
+    kind = {"ubt": 1, "fin": 2, "bottom": 3}[plane.kind]
+    return [kind, int(round(plane.z * 1000)), plane.sign + 1, int(round(plane.tilt * 1e4)) % 2 ** 31,
+            int(round((plane.x_lo + 10) * 1000)), int(round((plane.y0 + 10) * 1000))]
+
+
+def crn_seed(tr, cfg):
+    """Seed of the per-track random numbers: the same tracks with the same cfg.seed give the same
+    efficiency rolls, hit times and track smearing in every design (common random numbers), so two
+    designs differ only where their planes differ."""
+    ref = np.nan_to_num(np.abs(tr["bx"][:32])).sum() + np.nan_to_num(np.abs(tr["by"][:32])).sum()
+    return [cfg.seed, len(tr["bx"]), int(ref * 1e6) % 2 ** 31]
+
+
+def own_hits(tr, event, design, rng, tracks_mask=None, crn=None):
+    """Hits of the events' own muons. Returns dict of arrays event, track, plane, u, y, t.
+    crn: seed list (crn_seed); then every plane draws its per-track numbers from its own stream."""
     out = {k: [] for k in ("event", "track", "plane", "u", "y", "t")}
     sel = np.ones(len(event), bool) if tracks_mask is None else tracks_mask
     kicks = tr.get("_kicks")
@@ -81,13 +109,26 @@ def own_hits(tr, event, design, rng, tracks_mask=None):
             crossed = np.isfinite(u) & np.isfinite(y)
             if plane.kind == "ubt":
                 crossed &= tr["apz"] > 0
-            u, y = u + (dx if plane.kind == "ubt" else plane.sign * dx), y + dy
+            if plane.kind == "bottom":          # v runs along z: a sideways kick moves u only
+                u = u + dx
+            else:
+                u, y = u + (dx if plane.kind == "ubt" else plane.sign * dx), y + dy
             ok = crossed & plane.inside(u, y)
-        ok &= sel & (rng.random(len(ok)) < plane.efficiency)
+        if crn is not None:                     # one number per track, independent of the other planes
+            r = np.random.default_rng(list(crn) + plane_key(plane))
+            roll, gauss, flat = r.random(len(ok)), r.normal(0, 1, len(ok)), r.uniform(-0.5, 0.5, len(ok))
+        else:
+            roll = rng.random(len(ok))
+        ok &= sel & (roll < plane.efficiency)
         uc, yc = plane.cell_centre(u[ok], y[ok])
-        t = -length[ok] / C + rng.normal(0, plane.sigma_t * 1e9, ok.sum())
-        if plane.time_window:                   # drift-limited (straws): anywhere in the window
-            t += rng.uniform(-0.5, 0.5, ok.sum()) * plane.time_window * 1e9
+        if crn is not None:
+            t = -length[ok] / C + gauss[ok] * plane.sigma_t * 1e9
+            if plane.time_window:
+                t += flat[ok] * plane.time_window * 1e9
+        else:
+            t = -length[ok] / C + rng.normal(0, plane.sigma_t * 1e9, ok.sum())
+            if plane.time_window:                   # drift-limited (straws): anywhere in the window
+                t += rng.uniform(-0.5, 0.5, ok.sum()) * plane.time_window * 1e9
         out["event"].append(event[ok]); out["track"].append(np.where(ok)[0])
         out["plane"].append(np.full(ok.sum(), plane.index))
         out["u"].append(uc); out["y"].append(yc); out["t"].append(t)
@@ -102,6 +143,22 @@ def plane_rate_map(plane, maps):
         yb = maps["ubt_y_bins"]
         ub = np.array([0.0, plane.u_max])
         h = maps["ubt_hist"][None, :]
+    elif plane.kind == "bottom":
+        return bottom_rate_map(plane, maps)
+    elif plane.tilt:
+        # tilted fin: each strip du of the fin is read from the map of its own z, at its own distance
+        # from the vessel wall; muons travel along z, so a strip sees the x-y density times du cos(tilt)
+        side = 0 if plane.sign > 0 else 1
+        mu, yb = maps["u_bins"], maps["y_bins"]
+        step = mu[1] - mu[0]
+        ub = np.append(np.arange(0.0, plane.u_max, step), plane.u_max)
+        uc = 0.5 * (ub[1:] + ub[:-1])
+        z_u = plane.z_at(uc)
+        iz = np.clip(np.round(z_u - maps["z_slices"][0]).astype(int), 0, len(maps["z_slices"]) - 1)
+        d = mt.side_plane_x(plane.z) + uc * np.cos(plane.tilt) - mt.side_plane_x(z_u)
+        iu = np.clip((d / step).astype(int), 0, len(mu) - 2)
+        density = maps["fin_maps"][side, iz, iu] / (step * np.diff(yb))[None, :]
+        h = density * (np.diff(ub) * np.cos(plane.tilt))[:, None] * np.diff(yb)[None, :]
     else:
         side = 0 if plane.sign > 0 else 1
         iz = int(np.clip(np.round(plane.z - maps["z_slices"][0]), 0, len(maps["z_slices"]) - 1))
@@ -152,6 +209,27 @@ def plane_rates(design, maps, spill_s=1.0):
     return out
 
 
+_BOTTOM_CACHE = {}
+
+
+def bottom_rate_map(plane, maps, step=0.2):
+    """Rate map of a bottom panel from the paths of every muon passing under the vessel
+    (results/reco/bottom_rates.npz, in maps["bottom"]): both crossings of each path count."""
+    key = (plane.z, plane.y0, plane.tilt, plane.x_lo, plane.u_max, plane.y_hi)
+    if key not in _BOTTOM_CACHE:
+        r = maps["bottom"]
+        ub = np.append(np.arange(0.0, plane.u_max, step), plane.u_max)
+        vb = np.append(np.arange(0.0, plane.y_hi, step), plane.y_hi)
+        h = np.zeros((len(ub) - 1, len(vb) - 1))
+        for ok, p, v in mt.bottom_crossings(r["a"], r["k"], r["b"], plane.z, plane.y0, plane.tilt,
+                                            plane.x_lo, plane.to_global(plane.u_max), plane.y_hi):
+            h += np.histogram2d(p[ok, 0] - plane.x_lo, v[ok], (ub, vb), weights=r["w"][ok])[0]
+        if len(_BOTTOM_CACHE) > 64:
+            _BOTTOM_CACHE.clear()
+        _BOTTOM_CACHE[key] = (ub, vb, h)
+    return _BOTTOM_CACHE[key]
+
+
 ACC_MARGIN_NS = 2.0     # random hits are drawn this much beyond a plane's time window (inclined tracks)
 
 
@@ -175,7 +253,7 @@ def accidental_hits(design, maps, n_events, window_ns, cfg, rng):
         u = np.clip(ub[iu] + rng.random(total) * np.diff(ub)[iu], 0, plane.u_max)
         y = np.clip(yb[iy] + rng.random(total) * np.diff(yb)[iy], plane.y_lo, plane.y_hi)
         u, y = plane.cell_centre(u, y)
-        nominal = -(geo.Z_SST1 - plane.z) / C
+        nominal = -(geo.Z_SST1 - plane.z_local(u, y)) / C
         out["event"].append(np.repeat(np.arange(n_events), n)); out["plane"].append(np.full(total, plane.index))
         out["u"].append(u); out["y"].append(y)
         out["t"].append(nominal + rng.uniform(-window_ns, window_ns, total))
@@ -200,19 +278,40 @@ def measure(tr, cfg, rng):
 def predictions(meas, event, z_limit, design, cfg):
     """Backward straight-line prediction on every plane upstream of z_limit: one query per
     (track, plane) that lands within reach of the plane. Returns dict of query arrays."""
-    q = {k: [] for k in ("track", "event", "plane", "u", "y", "t", "r")}
+    q = {k: [] for k in ("track", "event", "plane", "u", "y", "t", "r", "ru")}
     track = np.arange(len(event))
     for plane in design.planes:
-        dz = meas["z"] - plane.z
+        if plane.kind == "bottom":
+            # line y = y_m - ty (z_m - z) on the plane (y - y0) cos = (z - z0) sin
+            c, s = np.cos(plane.tilt), np.sin(plane.tilt)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                zc = ((plane.y0 - meas["y"] + meas["ty"] * meas["z"]) * c - plane.z * s) / (meas["ty"] * c - s)
+            zc = np.where(np.isfinite(zc), zc, np.nan)          # parallel to the panel: no query
+        elif plane.kind == "fin" and plane.tilt:
+            # line x = x_m + tx (z - z_m) on the plane (z - z0) cos = (sign x - X0) sin
+            c, s = np.cos(plane.tilt), np.sin(plane.tilt)
+            x0 = mt.side_plane_x(plane.z)
+            zc = (plane.z * c + (plane.sign * (meas["x"] - meas["tx"] * meas["z"]) - x0) * s) \
+                / (c - plane.sign * meas["tx"] * s)
+        else:
+            zc = np.full(len(meas["z"]), plane.z)
+        dz = meas["z"] - zc
         x = meas["x"] - meas["tx"] * dz
         y = meas["y"] - meas["ty"] * dz
         dist = dz * np.sqrt(1 + meas["tx"] ** 2 + meas["ty"] ** 2)
         r = cfg.r0 + (cfg.r_slope + cfg.r_ms / np.maximum(meas["p"], 0.1)) * dist
         u = plane.to_local(x)
-        reach = ((plane.z < z_limit) & (u >= -r - plane.cell_u) & (u <= plane.u_max + r + plane.cell_u)
+        ru = r / np.cos(plane.tilt)          # an error dx is dx / cos(tilt) along a tilted fin
+        if plane.kind == "bottom":
+            # local y is v along the panel; an error r across the track is r / sin(angle track-panel) along it
+            y = (zc - plane.z) / np.cos(plane.tilt)
+            norm = np.sqrt(1 + meas["tx"] ** 2 + meas["ty"] ** 2)
+            sin_a = np.abs(meas["ty"] * np.cos(plane.tilt) - np.sin(plane.tilt)) / norm
+            ru, r = r, r / np.maximum(sin_a, 0.02)
+        reach = ((zc < z_limit) & (dz > 0) & (u >= -ru - plane.cell_u) & (u <= plane.u_max + ru + plane.cell_u)
                  & (y >= plane.y_lo - r - plane.cell_y) & (y <= plane.y_hi + r + plane.cell_y))
         for k, v in (("track", track), ("event", event), ("u", u), ("y", y), ("t", meas["t"] - dist / C),
-                     ("r", r)):
+                     ("r", r), ("ru", ru)):
             q[k].append(v[reach])
         q["plane"].append(np.full(reach.sum(), plane.index))
     return {k: np.concatenate(v) for k, v in q.items()}
@@ -227,7 +326,8 @@ def time_window(design, cfg):
     # technologies with a fixed veto window (tiles: +- 1.5 ns) use it instead of +- n_sigma_t
     fixed = np.array([(tech.TECHNOLOGIES[p.technology].get("veto_window") or np.nan) * 1e9 if p.technology
                       else np.nan for p in design.planes])
-    return np.where(np.isnan(fixed), drift + sig, fixed)
+    # (without a precise track time a fixed window would lose the muon's own hits: never below drift + sig)
+    return np.where(np.isnan(fixed), drift + sig, np.fmax(fixed, drift + sig))
 
 
 def match(queries, hits, design, cfg):
@@ -246,7 +346,7 @@ def match(queries, hits, design, cfg):
     counts = hi - lo
     qi = np.repeat(np.arange(len(key_q)), counts)
     hi_idx = np.repeat(lo - np.cumsum(counts) + counts, counts) + np.arange(counts.sum())
-    du = np.abs(hu[hi_idx] - queries["u"][qi]) <= queries["r"][qi] + cell_u[hp[hi_idx]] / 2
+    du = np.abs(hu[hi_idx] - queries["u"][qi]) <= queries["ru"][qi] + cell_u[hp[hi_idx]] / 2
     dy = np.abs(hy[hi_idx] - queries["y"][qi]) <= queries["r"][qi] + cell_y[hp[hi_idx]] / 2
     dt = np.abs(ht[hi_idx] - queries["t"][qi]) <= window_t[hp[hi_idx]]
     ok = du & dy & dt
@@ -271,7 +371,8 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
         t0 = time.perf_counter()
     else:
         tr_true = tr
-    own = own_hits(tr_true, event, design, rng) if with_own_hits else {k: np.empty(0) for k in
+    crn = crn_seed(tr, cfg) if cfg.common_random else None
+    own = own_hits(tr_true, event, design, rng, crn=crn) if with_own_hits else {k: np.empty(0) for k in
                                                                    ("event", "track", "plane", "u", "y", "t")}
     window = time_window(design, cfg) + ACC_MARGIN_NS        # each plane its own window
     acc = accidental_hits(design, maps, n_events, window, cfg, rng)
@@ -281,7 +382,7 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
     hits["event"] = hits["event"].astype(np.int64); hits["plane"] = hits["plane"].astype(np.int64)
     timing["digitize"] = time.perf_counter() - t0
     t0 = time.perf_counter()
-    meas = measure(tr, cfg, rng)
+    meas = measure(tr, cfg, np.random.default_rng(crn + [7]) if crn is not None else rng)
     q = predictions(meas, event, z_limit, design, cfg)
     found, n_compared, hit_of_query = match(q, hits, design, cfg)
     explained = np.bincount(q["track"][found], minlength=len(event)) >= cfg.min_planes

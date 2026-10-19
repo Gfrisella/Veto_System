@@ -16,8 +16,19 @@ its cell sizes in the JSON are ignored. Without a technology a fin is the generi
 before (efficiency and sigma_t of "detector", cells as given, no cost).
 
 Sides are seen from the target looking downstream: right = -x (cavern wall at x = -4.56 m),
-left = +x. A fin touches the side wall at |x| = X(z) and reaches out by `length`; its local
-coordinate u is the distance from that inner edge. Only untilted fins (tilt = 0) for now.
+left = +x. A fin is attached to the vessel structure: its inner edge is on the side wall at
+|x| = X(z), 30.6 <= z <= 80.6 m (the support frame carries it down to the floor), and it reaches
+OUTWARD (away from the beam) by `length`: no fin is inside the decay vessel. Its local
+coordinate u is the distance from that inner edge, along the fin. `tilt` [degrees] leans the fin
+downstream (> 0) or upstream (< 0) about its inner edge: the point at u is at
+x = sign * (X(z) + u cos(tilt)), z + u sin(tilt). Any number of fins, on either side, independently.
+
+Optionally ONE panel under the decay vessel ("bottom", independent of the vessel structure):
+    "bottom": {"z": 55, "length": 3, "x_lo": -1.5, "x_hi": 1.5, "y": -3.3, "pitch": 0, "technology": "straw"}
+a flat panel from z to z + length cos(pitch), across x_lo .. x_hi, at height y at its upstream edge
+rising downstream by pitch [deg]. It stays between the floor and the vessel bottom (BOTTOM_GAP below
+it) and is at most BOTTOM_MAX_AREA. Local coordinates: u = x - x_lo, v = distance along the panel
+(stored as y_lo = 0 .. y_hi = length).
 """
 
 import json
@@ -32,17 +43,23 @@ from . import technology as tech
 
 DESIGN_DIR = Path(__file__).resolve().parents[2] / "designs"
 SIDES = {"right": -1, "left": 1}
+MAX_TILT_DEG = 75.0
+MAX_PITCH_DEG = 30.0
+BOTTOM_MAX_AREA = 10.0      # m^2: "one small panel"
+BOTTOM_GAP = 0.05           # m between the panel and the vessel bottom
+BOTTOM_Z_MAX = 81.5         # downstream end, before SST1
 
 
 @dataclass
 class Plane:
     """One detector plane at fixed z. Local coordinates (u, y), cells of size (cell_u, cell_y).
 
-    UBT: u = x + 0.5. Fin: u = sign * x - X(z).
+    UBT: u = x + 0.5. Fin: u = sign * x - X(z). Bottom panel: u = x - x_lo, "y" = distance along the
+    panel from its upstream edge (z, y0), which rises by tilt (the pitch).
     """
     index: int
     name: str
-    kind: str            # "ubt" or "fin"
+    kind: str            # "ubt", "fin" or "bottom"
     z: float
     sign: int            # fin side (+1 left, -1 right); 0 for the UBT
     u_max: float
@@ -54,6 +71,9 @@ class Plane:
     sigma_t: float = 0.5e-9     # [s], Gaussian time smearing
     technology: str = None      # key of tech.TECHNOLOGIES, None = generic detector
     time_window: float = None   # [s] drift-limited technologies: hit time uniform in this full width
+    tilt: float = 0.0           # [rad] fins: leaning downstream about the inner edge (0 = x-y plane); bottom: pitch
+    x_lo: float = 0.0           # bottom panel: x of its edge at u = 0
+    y0: float = 0.0             # bottom panel: y of its upstream edge
 
     @property
     def area(self):
@@ -92,14 +112,40 @@ class Plane:
         return int(np.ceil(self.u_max / self.cell_u - 1e-9)) * int(np.ceil((self.y_hi - self.y_lo) / self.cell_y - 1e-9))
 
     def to_local(self, x):
+        """u of a point of the plane from its x (the point must be on the plane)."""
         if self.kind == "ubt":
             return x + geo.UBT_HALF_X
-        return self.sign * x - mt.side_plane_x(self.z)
+        if self.kind == "bottom":
+            return x - self.x_lo
+        return (self.sign * x - mt.side_plane_x(self.z)) / np.cos(self.tilt)
 
     def to_global(self, u):
         if self.kind == "ubt":
             return u - geo.UBT_HALF_X
-        return self.sign * (u + mt.side_plane_x(self.z))
+        if self.kind == "bottom":
+            return u + self.x_lo
+        return self.sign * (mt.side_plane_x(self.z) + u * np.cos(self.tilt))
+
+    def z_at(self, u):
+        """z of the point at u (fins lean by tilt; the UBT is at one z; bottom: see z_local)."""
+        if self.kind == "bottom":
+            return np.full(np.shape(u), self.z) if np.ndim(u) else self.z
+        return self.z + u * np.sin(self.tilt)
+
+    def z_local(self, u, v):
+        """z of the local point (u, v) of any plane."""
+        if self.kind == "bottom":
+            return self.z + v * np.cos(self.tilt)
+        return self.z_at(u)
+
+    @property
+    def z_end(self):
+        """Downstream end of a bottom panel."""
+        return self.z + self.y_hi * np.cos(self.tilt)
+
+    @property
+    def y_end(self):
+        return self.y0 + self.y_hi * np.sin(self.tilt)
 
     def inside(self, u, y):
         return (u >= 0) & (u <= self.u_max) & (y >= self.y_lo) & (y <= self.y_hi)
@@ -145,7 +191,8 @@ class Design:
 
 
 def validate(raw):
-    """Apply the physical limits: UBT of straw tubes covering at least the vessel entrance, nothing below y = -3.2 m,
+    """Apply the physical limits: UBT of straw tubes covering at least the vessel entrance, nothing below the floor (y = -3.36 m),
+    fins attached to the vessel structure (inner edge at 30.6 <= z <= 80.6 m),
     right fins stop at the cavern wall. Returns a list of what was changed."""
     notes = []
     u = raw["ubt"]
@@ -158,21 +205,77 @@ def validate(raw):
     for k in ("cell_x", "cell_y"):
         u.pop(k, None)
     if u["y_lo"] < mt.FIN_Y_MIN:
-        notes.append("UBT bottom raised to y = -3.2 m")
+        notes.append(f"UBT bottom raised to the floor, y = {mt.FIN_Y_MIN} m")
         u["y_lo"] = mt.FIN_Y_MIN
     for i, f in enumerate(raw["fins"]):
-        if f.get("tilt", 0) != 0:
-            raise NotImplementedError("tilted fins are not in the reconstruction yet")
+        tilt = f.get("tilt", 0)
+        if abs(tilt) > MAX_TILT_DEG:
+            raise ValueError(f"fin {i}: |tilt| = {abs(tilt)} > {MAX_TILT_DEG} degrees")
         if f["y_lo"] < mt.FIN_Y_MIN:
-            notes.append(f"fin {i}: bottom raised to y = -3.2 m")
+            notes.append(f"fin {i}: bottom raised to the floor, y = {mt.FIN_Y_MIN} m")
             f["y_lo"] = mt.FIN_Y_MIN
-        if not geo.Z_UBT <= f["z"] <= geo.Z_SST1:
-            raise ValueError(f"fin {i}: z = {f['z']} outside 30.6 .. 82 m")
+        if not geo.Z_UBT <= f["z"] <= geo.Z_VESSEL_MAX:     # attached to the vessel structure
+            raise ValueError(f"fin {i}: z = {f['z']} outside the vessel, {geo.Z_UBT} .. {geo.Z_VESSEL_MAX} m")
+        c, s = np.cos(np.radians(tilt)), np.sin(np.radians(tilt))
         if f["side"] == "right":
-            room = -mt.CAVERN_X_WALL - mt.side_plane_x(f["z"])
+            room = (-mt.CAVERN_X_WALL - mt.side_plane_x(f["z"])) / c
             if f["length"] > room:
                 notes.append(f"fin {i}: cut at the cavern wall ({f['length']:.2f} -> {room:.2f} m)")
                 f["length"] = room
+        if s != 0:      # the outer edge stays between the UBT and SST1
+            room = ((geo.Z_SST1 if s > 0 else geo.Z_UBT) - f["z"]) / s
+            if f["length"] > room:
+                notes.append(f"fin {i}: cut at z = {geo.Z_SST1 if s > 0 else geo.Z_UBT} m "
+                             f"({f['length']:.2f} -> {room:.2f} m)")
+                f["length"] = room
+        if f["length"] < 0.1:
+            raise ValueError(f"fin {i}: no room left (length {f['length']:.2f} m after the cuts)")
+        # from the vessel wall outward only: every point of the fin is outside the vessel
+        u = np.linspace(0, f["length"], 21)
+        z_u = f["z"] + u * s
+        out = mt.side_plane_x(f["z"]) + u * c - mt.side_plane_x(np.minimum(z_u, geo.Z_VESSEL_MAX))
+        if (out < -1e-9).any():
+            raise ValueError(f"fin {i}: enters the decay vessel (tilt {tilt} degrees)")
+    if raw.get("bottom"):
+        notes += validate_bottom(raw["bottom"])
+    return notes
+
+
+def vessel_bottom(z):
+    """y of the vessel bottom at z (the vessel half height, constant past its end)."""
+    return -geo.vessel_half_widths(np.minimum(z, geo.Z_VESSEL_MAX))[1]
+
+
+def validate_bottom(b):
+    """Limits of the panel under the vessel; modifies b, returns notes, ValueError if it cannot fit."""
+    notes = []
+    p = b.setdefault("pitch", 0.0)
+    if abs(p) > MAX_PITCH_DEG:
+        raise ValueError(f"bottom: |pitch| = {abs(p)} > {MAX_PITCH_DEG} degrees")
+    c, s = np.cos(np.radians(p)), np.sin(np.radians(p))
+    if b["z"] < geo.Z_UBT:
+        raise ValueError(f"bottom: z = {b['z']} upstream of the vessel")
+    b["x_lo"], b["x_hi"] = max(b["x_lo"], geo.CAVERN_X_WALL), min(b["x_hi"], -geo.CAVERN_X_WALL)
+    width = b["x_hi"] - b["x_lo"]
+    if width < 0.2:
+        raise ValueError(f"bottom: width {width:.2f} m < 0.2 m")
+    room = (BOTTOM_Z_MAX - b["z"]) / c
+    if b["length"] > room:
+        notes.append(f"bottom: cut at z = {BOTTOM_Z_MAX} m ({b['length']:.2f} -> {room:.2f} m)")
+        b["length"] = room
+    if b["length"] * width > BOTTOM_MAX_AREA:
+        new = BOTTOM_MAX_AREA / width
+        notes.append(f"bottom: length cut to the {BOTTOM_MAX_AREA:g} m2 limit ({b['length']:.2f} -> {new:.2f} m)")
+        b["length"] = new
+    if b["length"] < 0.2:
+        raise ValueError(f"bottom: no room left (length {b['length']:.2f} m)")
+    if b["y"] < mt.FIN_Y_MIN:
+        notes.append(f"bottom: raised to the floor, y = {mt.FIN_Y_MIN} m")
+        b["y"] = mt.FIN_Y_MIN
+    z1, y1 = b["z"] + b["length"] * c, b["y"] + b["length"] * s
+    for z, y in ((b["z"], b["y"]), (z1, y1)):
+        if y < mt.FIN_Y_MIN - 1e-9 or y > vessel_bottom(z) - BOTTOM_GAP + 1e-9:
+            raise ValueError(f"bottom: y = {y:.2f} m at z = {z:.1f} m is not between the floor and the vessel")
     return notes
 
 
@@ -210,13 +313,21 @@ def from_dict(raw):
         cu, cy = spec.get(cu_key, cu), spec.get("cell_y", cy)
         if cu is None or cy is None:
             raise ValueError(f"{name}: give {cu_key} / cell_y or a technology")
+        tilt = {"fin": spec.get("tilt", 0.0), "bottom": spec.get("pitch", 0.0)}.get(kind, 0.0)
         return Plane(index, name, kind, z, sign, u_max, spec["y_lo"], spec["y_hi"], cu, cy,
-                     s["efficiency"], s["sigma_t"], s["technology"], s["time_window"])
+                     s["efficiency"], s["sigma_t"], s["technology"], s["time_window"], np.radians(tilt),
+                     spec.get("x_lo", 0.0), spec.get("y", 0.0))
 
     planes = [plane(0, "UBT", "ubt", geo.Z_UBT, 0, 2 * geo.UBT_HALF_X, raw["ubt"], "cell_x")]
     for f in sorted(raw["fins"], key=lambda f: (f["z"], f["side"])):
-        planes.append(plane(len(planes), f"{f['side']} fin z={f['z']:.1f}", "fin", f["z"], SIDES[f["side"]],
+        name = f"{f['side']} fin z={f['z']:.1f}" + (f" tilt={f['tilt']:+.0f}" if f.get("tilt") else "")
+        planes.append(plane(len(planes), name, "fin", f["z"], SIDES[f["side"]],
                             f["length"], f, "cell_u"))
+    if raw.get("bottom"):
+        b = raw["bottom"]
+        name = f"bottom z={b['z']:.1f}-{b['z'] + b['length'] * np.cos(np.radians(b['pitch'])):.1f}"
+        planes.append(plane(len(planes), name, "bottom", b["z"], 0, b["x_hi"] - b["x_lo"],
+                            dict(b, y_lo=0.0, y_hi=b["length"]), "cell_u"))
     d = Design(raw["name"], planes, base["efficiency"], base["sigma_t"], raw)
     d.notes = notes
     return d

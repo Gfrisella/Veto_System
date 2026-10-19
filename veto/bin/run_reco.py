@@ -36,7 +36,12 @@ SPILLS_15Y = DEFAULT_CONFIG["pot_15_years"] / DEFAULT_CONFIG["pot_spill"]
 def load_inputs():
     f = np.load(paths.results_dir() / "reco" / "inputs.npz")
     tr = {k[3:]: f[k].astype(np.float64) for k in f.files if k.startswith("tr_")}
-    return tr, {k: f[k] for k in f.files if not k.startswith("tr_")}
+    inp = {k: f[k] for k in f.files if not k.startswith("tr_")}
+    bottom = paths.results_dir() / "reco" / "bottom_rates.npz"     # rate sample for a panel under the vessel
+    if bottom.exists():
+        g = np.load(bottom)
+        inp["bottom"] = {k: g[k].astype(np.float64) for k in ("a", "k", "b", "w")}
+    return tr, inp
 
 
 def take(tr, rows):

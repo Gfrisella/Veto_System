@@ -155,7 +155,7 @@ def path_at_z(a, k, b, z):
 
 
 CAVERN_X_WALL = geo.CAVERN_X_WALL   # fins on the -x side (right, looking from the target) stop here
-FIN_Y_MIN = -3.2                    # fins and UBT stay above the cavern floor (y = -3.36 m)
+FIN_Y_MIN = geo.CAVERN_Y_FLOOR       # every detector (UBT, fins) may reach down to the cavern floor, y = -3.36 m
 
 
 def fin_geometry(z0, sign, theta, length):
@@ -192,3 +192,29 @@ def fin_hits(a, k, b, z0, sign, theta, length, y_lo, y_hi):
                & (cross[:, 1] >= y_lo) & (cross[:, 1] <= y_hi) & np.isnan(point[:, 0]))
         point[hit] = cross[hit]
     return np.isfinite(point[:, 0]), point
+
+
+def bottom_crossings(a, k, b, z0, y0, pitch, x_lo, x_hi, length):
+    """Where paths a -> (k) -> b cross a flat panel under the vessel: upstream edge at (z0, y0), rising
+    downstream by pitch, across x_lo .. x_hi, `length` along the panel.
+
+    The panel plane: (y - y0) cos(pitch) = (z - z0) sin(pitch). A path can cross it twice (down, and
+    up again after a floor bounce). Returns two (hit mask, points (n, 3), distance v along the panel):
+    the first segment (A -> K, or A -> B without a bounce) and the second (K -> B).
+    """
+    a, k, b = (np.asarray(v, np.float64) for v in (a, k, b))
+    c, s = np.cos(pitch), np.sin(pitch)
+    bounced = np.isfinite(k[:, 2])
+    end = np.where(bounced[:, None], k, b)
+    g = lambda p: (p[:, 1] - y0) * c - (p[:, 2] - z0) * s
+    out = []
+    for p, q, use in ((a, end, np.ones(len(a), bool)), (k, b, bounced)):
+        gp, gq = g(p), g(q)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            t = gp / (gp - gq)
+            cross = p + t[:, None] * (q - p)
+        v = (cross[:, 2] - z0) * c + (cross[:, 1] - y0) * s
+        hit = (use & (q[:, 2] > p[:, 2]) & (t >= 0) & (t <= 1) & (v >= 0) & (v <= length)
+               & (cross[:, 0] >= x_lo) & (cross[:, 0] <= x_hi))
+        out.append((hit, np.where(hit[:, None], cross, np.nan), np.where(hit, v, np.nan)))
+    return out

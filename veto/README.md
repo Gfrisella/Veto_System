@@ -42,6 +42,8 @@ veto/
     make_design_explorer.py   interactive HTML: UBT + fins with sliders, live veto numbers
     make_reco_inputs.py       muon-pair candidates, single-track sample, rate maps -> results/reco
     run_reco.py               designs -> digitization -> reconstruction -> TP / FN / FP / TN, rates
+    validate_design.py        full-statistics validation of designs (3 M muons per type, no timing detector by default)
+    event_browser.sh          interactive HTML event browser by muon category (rebuild / validate / serve / list)
     benchmark.py              timing of the building blocks, CPU vs GPU
     benchmark_designs.py      per-design cost for arbitrary UBT/SBT geometries (truth crossings)
     benchmark_digitization.py per-design cost with digitization + hit-to-track matching
@@ -49,7 +51,7 @@ veto/
     remote.sh                 sync code / run / launch tmux jobs on the cluster
   designs/   veto designs (JSON): D0 minimal ... D4 dense, D5 cell-size variants,
              D6 technology variants (straw, fiber, pixel, tile, tile2 fins)
-  ISSUES.txt open problems before optimising, with status (keep it updated)
+  ISSUES.md  open problems before optimising, with status (keep it updated)
   data/      local copy of the inputs (git-ignored)
   results/   everything we produce (git-ignored)
 ```
@@ -227,7 +229,7 @@ simplified vessel geometry.
 
 ### Open problems before optimising
 
-`ISSUES.txt` lists what is still missing, with a status (OPEN / IN PROGRESS / DONE / DEFERRED / OK)
+`ISSUES.md` lists what is still missing, with a status (OPEN / IN PROGRESS / DONE / DEFERRED / OK)
 and a priority (A: before optimising, B: changes the results, C: second order). In short:
 
 - **A, blockers:** the pair background is saturated (2-3 survivors, use single-muon inefficiency
