@@ -59,7 +59,8 @@ print = functools.partial(print, flush=True)
 
 REMOTE_VETO = "/disk/users/sqasim/workspace/uzh/Veto_System/veto"
 EXEC = "bash /disk/lhcb_data/sqasim/images/shared/exec_cudabear_november_2025.sh python3"
-SEEDS = ["D0_minimal", "D1_wide_ubt", "D3_heavy_right", "D6_tile2", "D6_fiber", "D6_straw", "E1_llm_run1", "E2_llm_run2", "E3_robust"]
+SEEDS = ["D0_minimal", "D1_wide_ubt", "D3_heavy_right", "D6_tile2", "D6_fiber", "D6_straw", "E1_llm_run1", "E2_llm_run2", "E3_robust",
+         "E4_ubt2", "E4_entry2"]
 DIRECTIVES = {
     "refine": "Refine the parent: keep its structure, fix its clearest weakness from the report "
               "(a violation first: a plane over its rate limit or the budget; then a plane costing signal "
@@ -110,7 +111,7 @@ def technology_table():
 
 def system_prompt():
     return f"""You design the veto (UBT + side fins) of the SHiP decay vessel. You propose COMPLETE design JSON files;
-each is simulated and reconstructed (196 736 muon-pair background candidates, signal decays, 200 k single muons)
+each is simulated and reconstructed (muon-pair background candidates, muon and neutrino interactions, signal decays, single muons)
 and scored. Your goal: the highest score.
 
 GEOMETRY (metres; z along the beam; looking from the target, right = -x, left = +x):
@@ -157,9 +158,11 @@ DESIGN JSON (all lengths in metres):
 r0 + cone x (distance from the vertex to the plane) on every plane upstream, which catches the parents of muon
 interactions (bent by a few mrad at the vertex) but picks up random hits, so it costs signal on busy planes:
 on the small-fin designs ~0.9 % signal at 10 mrad, ~3.7 % at 20 mrad, much more with large tile fins.
+"stations": 2 (or 3) in the "ubt" or a fin entry: identical layers behind each other read out as an OR, plane
+inefficiency 1e-3 -> 1e-6, n x channels, cost and material; rates and random hits as one station.
 A fin may also give "cell_u"/"cell_y" (readout cell size, m) to read a technology out more coarsely: this only
 loses signal (bigger search windows), it changes neither rates, channels nor cost.
-Each evaluation reports: reward +- error, feasibility and violations, the four tiers, false vertices in 15 years,
+Each evaluation reports: reward +- error, feasibility and violations, the reward terms and the sensitivity, false vertices in 15 years,
 signal efficiency, cost, how often the muons of the background pairs escape the veto per type, and per plane:
 peak rates vs limits, cost, signal decays it loses (random hits) and background pairs it vetoes (a pair is
 often vetoed by several planes, so these overlap).
@@ -190,8 +193,9 @@ def compact(report):
             "signal_lost": lost.get(g["name"], 0), "pairs_vetoed": vetoed.get(g["name"], 0)})
     return {
         "reward": round(sc["reward"], 3), "reward_err": round(sc["reward_err"], 3), "feasible": sc["feasible"],
-        "tiers": {k: round(-v, 3) for k, (v, _) in sc["terms"].items()},
-        "violations": sc["over_rate_limit"] + (["over the 8 MCHF budget"] if sc["over_budget"] else []),
+        "terms": {k: round(-v, 3) for k, (v, _) in sc["terms"].items()},
+        "sensitivity": round(sc["sensitivity"], 4),
+        "violations": sc["over_rate_limit"] + ([f"over the {objective.CONFIG.cost_budget_kchf / 1000:g} MCHF budget"] if sc["over_budget"] else []),
         "false_vertices_15y": f"{sc['bkg_events_15y']:.2g} +- {sc['bkg_events_15y_err']:.1g}",
         "false_vertices_15y_by_source": {k: f"{v:.2g} +- {e:.1g}" for k, (v, e) in sc["bkg_by_source"].items()},
         "combinatorial_factorised_vs_direct": f"{bg['FN_factorised'] * bg['events_15y_before']:.2g} / {bg['FN_direct'] * bg['events_15y_before']:.2g}",

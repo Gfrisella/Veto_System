@@ -29,7 +29,8 @@ SRC_COL = {"combinatorial": MUT, "muon": RED, "nu": ACC}
 
 
 def layout(fig, **kw):
-    lay = dict(font=FONT, paper_bgcolor="white", plot_bgcolor="white", margin=dict(l=40, r=10, t=22, b=28), showlegend=False)
+    # uirevision: a redraw (slider moved) keeps what the presenter did, e.g. a rotated 3D camera
+    lay = dict(uirevision="keep", font=FONT, paper_bgcolor="white", plot_bgcolor="white", margin=dict(l=40, r=10, t=22, b=28), showlegend=False)
     lay.update(kw)
     fig.update_layout(**lay)
     return fig
@@ -158,8 +159,8 @@ def register(pres, plane_meshes, geometry, scene):
                                  textposition="outside", textfont=dict(size=6)))
         fig.update_xaxes(type="log", title_text="events per 15 years", range=[-4.2, 5.6])
         fig.add_annotation(x=0.99, y=0.02, xref="paper", yref="paper", xanchor="right", showarrow=False, align="right",
-                           text=(f"<b>total after veto {r['total']:.2g} ± {r['total_err']:.1g}</b><br>signal lost "
-                                 f"{100 * r['signal_lost']:.2f} %  ·  {r['cost_kchf']:.0f} kCHF  ·  reward {r['reward']:.1f}"),
+                           text=(f"<b>FN {r['total']:.2g} ± {r['total_err']:.1g} / 15 y</b><br>FP {100 * r['signal_lost']:.2f} "
+                                 f"of 100 signal  ·  {r['cost_kchf']:.0f} kCHF  ·  reward {r['reward']:.1f}"),
                            font=dict(size=6.5))
         return layout(fig, showlegend=True, barmode="overlay", legend=dict(x=0.55, y=1.06, orientation="h", font=dict(size=6)),
                       margin=dict(l=70, r=10, t=14, b=30))
@@ -176,8 +177,8 @@ def register(pres, plane_meshes, geometry, scene):
                                      error_y=dict(array=[r["total_err"] for r in rr], thickness=0.8, width=2),
                                      mode="lines+markers+text", text=[f"{r['cone_mrad']:g}" for r in rr], textposition="top right",
                                      textfont=dict(size=6, color=col), line=dict(color=col, width=2), marker=dict(size=6), name=name))
-        fig.update_xaxes(type="log", title_text="signal lost to random hits [%]")
-        fig.update_yaxes(type="log", title_text="all backgrounds after veto / 15 y")
+        fig.update_xaxes(type="log", title_text="FP: signal events vetoed, of 100")
+        fig.update_yaxes(type="log", title_text="FN: background events / 15 y")
         return layout(fig, showlegend=True, legend=dict(x=0.02, y=0.04, font=dict(size=6.5)), margin=dict(l=46, r=10, t=10, b=30))
 
     @pres.output("e2e_design3d", inputs=["e2e_design"])

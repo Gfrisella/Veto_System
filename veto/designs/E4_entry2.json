@@ -1,10 +1,10 @@
 {
  "name": "E4_entry2",
- "description": "E3_robust with a second station on the UBT and on both fins at 30.6 m (efficiency 1 - 1e-6 each); the second stations cost 206.4 kCHF (extra_cost_kchf)",
+ "description": "E3_robust with a second station on the UBT and on both fins at 30.6 m (\"stations\": 2)",
  "ubt": {
   "y_lo": -1.35,
   "y_hi": 1.35,
-  "efficiency": 0.999999
+  "stations": 2
  },
  "fins": [
   {
@@ -15,7 +15,7 @@
    "y_hi": 1.3,
    "tilt": 0,
    "technology": "tile2",
-   "efficiency": 0.999999
+   "stations": 2
   },
   {
    "side": "left",
@@ -25,7 +25,7 @@
    "y_hi": 1.3,
    "tilt": 0,
    "technology": "tile2",
-   "efficiency": 0.999999
+   "stations": 2
   },
   {
    "side": "right",
@@ -46,6 +46,5 @@
    "technology": "tile2"
   }
  ],
- "detector": {},
- "extra_cost_kchf": 206.4
+ "detector": {}
 }

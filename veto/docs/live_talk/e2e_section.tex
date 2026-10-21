@@ -14,7 +14,7 @@
         \item \key{E4\_entry2}: two stations on the UBT and both 30.6\,m fins ($+206$\,kCHF)
       \end{itemize}
       \key{Iteration 2}: the cone of E4\_entry2, 0--20\,mrad.\\[1mm]
-      \aside{A second station: efficiency $1 - 10^{-6}$ and its cost added; same geometry, so the same interactions.}
+      \aside{A second station (\texttt{"stations": 2}): an identical layer behind, efficiency $1 - 10^{-6}$, twice the channels and cost.}
     \end{column}
   \end{columns}
 \end{frame}
@@ -68,8 +68,8 @@
       \livewidget{e2e_trade}{\linewidth}{0.66\textheight}
     \end{column}
     \begin{column}{0.38\textwidth}\footnotesize
-      Each line one design, each point a cone (labels in mrad); all background sources together, per 15 years, against the signal lost to random hits.\\[1.5mm]
-      The cone costs signal through the random hits it lets in: cheap on short fins near the wall (E3, E4: 1\,\% at 10\,mrad), expensive on D6\_tile2's busy fins (6\,\% at 10, 18\,\% at 20\,mrad).\\[1.5mm]
+      Each line one design, each point a cone (labels in mrad); all background sources together, per 15 years, against FP: of 100 signal events, how many random hits veto.\\[1.5mm]
+      The cone costs signal through the random hits it lets in: cheap on short fins near the wall (E3, E4: FP 1 at 10\,mrad), expensive on D6\_tile2's busy fins (FP 6 at 10, 18 at 20\,mrad).\\[1.5mm]
       \takeaway[\footnotesize]{With a second station at the entrance the muon interactions go to zero at 17.5\,mrad: what is left is the neutrino floor.}
     \end{column}
   \end{columns}
@@ -77,44 +77,47 @@
 
 \begin{frame}{End-to-end figure of merit}
   \begin{columns}[c]
-    \begin{column}{0.6\textwidth}\tiny
-      \setlength{\tabcolsep}{2.4pt}
-      \begin{tabular}{@{}lrrrrrrrr@{}}
+    \begin{column}{0.62\textwidth}\tiny
+      \setlength{\tabcolsep}{2.2pt}
+      \begin{tabular}{@{}lrrrrrrrrr@{}}
         \toprule
-        design & cone & signal lost & comb. & $\mu$ helium & $\nu$ helium & \key{total} & MCHF & reward\\
+        & & & \multicolumn{4}{c}{FN per 15 years} & & &\\
+        \cmidrule(lr){4-7}
+        design & cone & \key{FP} & comb. & $\mu$ helium & $\nu$ helium & \key{total} & MCHF & sens. & reward\\
         \midrule
-        E3\_robust & 0 & 0.06\,\% & $9\cdot10^{-5}$ & $76\pm6$ & 0.72 & $76\pm6$ & 0.40 & $-100.4$\\
-         & 10 & 0.92\,\% & $4\cdot10^{-5}$ & $3.1\pm1.3$ & 0.64 & $3.8\pm1.3$ & & $-98.9$\\
-         & 20 & 3.60\,\% & $3\cdot10^{-5}$ & $1.6\pm0.9$ & 0.54 & $2.1\pm0.9$ & & $-91.7$\\
-        E4\_ubt2 & 10 & 0.90\,\% & $4\cdot10^{-5}$ & $1.6\pm0.9$ & 0.67 & $2.2\pm0.9$ & 0.50 & $-90.4$\\
-         & 17.5 & 2.76\,\% & $4\cdot10^{-5}$ & $0.5\pm0.5$ & 0.62 & $1.1\pm0.5$ & & $-71.0$\\
-        E4\_entry2 & 10 & 0.90\,\% & $2\cdot10^{-5}$ & $1.0\pm0.7$ & 0.67 & $1.7\pm0.7$ & 0.61 & $-83.1$\\
-         & \key{17.5} & \key{2.85\,\%} & $1\cdot10^{-5}$ & \key{0} & 0.62 & \key{$0.62\pm0.06$} & & \key{$-49.2$}\\
-         & 20 & 3.78\,\% & $1\cdot10^{-5}$ & 0 & 0.61 & $0.61\pm0.06$ & & $-49.6$\\
-        D6\_tile2 & 10 & 5.89\,\% & $3\cdot10^{-5}$ & $1.0\pm0.7$ & 0.43 & $1.5\pm0.7$ & 4.4 & rates\\
-         & 20 & 17.8\,\% & $1\cdot10^{-5}$ & $1.0\pm0.7$ & 0.37 & $1.4\pm0.7$ & & rates\\
+        E3\_robust & 0 & 0.06 & $9\cdot10^{-5}$ & $76\pm6$ & 0.72 & $76\pm6$ & 0.40 & 0.14 & $-87.1$\\
+         & 10 & 0.92 & $4\cdot10^{-5}$ & $3.1\pm1.3$ & 0.64 & $3.8\pm1.3$ & & 0.47 & $-54.2$\\
+         & 20 & 3.60 & $3\cdot10^{-5}$ & $1.6\pm0.9$ & 0.54 & $2.1\pm0.9$ & & 0.54 & $-46.4$\\
+        E4\_ubt2 & 10 & 0.90 & $4\cdot10^{-5}$ & $1.6\pm0.9$ & 0.67 & $2.2\pm0.9$ & 0.50 & 0.55 & $-46.0$\\
+         & 16 & 2.32 & $4\cdot10^{-5}$ & $0.5\pm0.5$ & 0.63 & $1.2\pm0.5$ & & 0.65 & $-36.2$\\
+        E4\_entry2 & 10 & 0.90 & $2\cdot10^{-5}$ & $1.0\pm0.7$ & 0.67 & $1.7\pm0.7$ & 0.61 & 0.59 & $-41.9$\\
+         & \key{16} & \key{2.35} & $1\cdot10^{-5}$ & \key{0} & 0.63 & \key{$0.63\pm0.06$} & & \key{0.74} & \key{$-27.3$}\\
+         & 20 & 3.78 & $1\cdot10^{-5}$ & 0 & 0.61 & $0.61\pm0.06$ & & 0.73 & $-27.9$\\
+        D6\_tile2 & 10 & 5.89 & $3\cdot10^{-5}$ & $1.0\pm0.7$ & 0.43 & $1.5\pm0.7$ & 4.4 & 0.59 & rates\\
+         & 20 & 17.8 & $1\cdot10^{-5}$ & $1.0\pm0.7$ & 0.37 & $1.4\pm0.7$ & & 0.52 & rates\\
         \bottomrule
       \end{tabular}\\[1.5mm]
-      {\color{muted}\lightfont\tiny Per 15 years after selection and veto; $\mu$ interactions in air, PVC and the planes and $\nu$ in air and PVC: 0 in every row. 100\,k signal decays, 400\,k pairs, 11\,M + 7\,M forced interactions; delta dataset, 484 seeds.}
+      {\color{muted}\lightfont\tiny FP: of 100 signal events. FN: per 15 years after selection and veto; $\mu$ interactions in air, PVC and the planes and $\nu$ in air and PVC: 0 in every row. Sensitivity and reward: see Optimisation. 100\,k signal decays, 400\,k pairs, 11--16\,M $\mu$ + 7\,M $\nu$ forced interactions; delta dataset, 484 seeds. D6\_tile2: its 30.6\,m tile fins are over their rate limit.}
     \end{column}
-    \begin{column}{0.38\textwidth}\footnotesize
-      Confusion matrix of \key{E4\_entry2 at 17.5\,mrad}, per 15 years:\\[1mm]
+    \begin{column}{0.36\textwidth}\footnotesize
+      \key{E4\_entry2 at 16\,mrad}, 15 years, 100 signal events:\\[1mm]
       {\scriptsize\setlength{\tabcolsep}{3pt}\begin{tabular}{@{}lrrr@{}}
         \toprule
-        & before & TP & FN\\
+        & selected & vetoed & let through\\
         \midrule
-        combinatorial & 16.8 & 16.8 & $10^{-5}$\\
+        \key{signal} & 100 & FP 2.35 & TN 97.65\\
+        \midrule
+        combinatorial & 16.8 & TP 16.8 & FN $10^{-5}$\\
         $\mu$ helium & 4\,307 & 4\,307 & 0\\
         $\mu$ PVC walls & 128 & 128 & 0\\
         $\mu$ veto planes & 80 & 80 & 0\\
-        $\nu$ helium & 0.92 & 0.30 & 0.62\\
+        $\nu$ helium & 0.92 & 0.29 & 0.63\\
         $\nu$ veto planes & 0.06 & 0.06 & 0\\
         \midrule
-        signal & & FP 2.85\,\% & TN 97.2\,\%\\
+        \key{background} & 4\,532 & TP 4\,532 & \key{FN 0.63}\\
         \bottomrule
       \end{tabular}}\\[1.5mm]
-      \takeaway[\scriptsize]{0 muon interactions: fewer than one simulated event of weight 0.52, i.e.\ below $\approx$1.2 per 15 years at 90\,\% CL.}
+      \takeaway[\scriptsize]{0 muon interactions: fewer than one simulated event of weight 0.52, i.e.\ below $\approx$1.2 per 15 years at 90\,\% CL. What is left is the neutrino floor.}
     \end{column}
   \end{columns}
 \end{frame}
-

@@ -1,10 +1,10 @@
 {
  "name": "E4_ubt2",
- "description": "E3_robust with a second UBT station (two independent straw stations: efficiency 1 - 1e-6); the second stations cost 97.2 kCHF (extra_cost_kchf)",
+ "description": "E3_robust with a second UBT station (\"stations\": 2)",
  "ubt": {
   "y_lo": -1.35,
   "y_hi": 1.35,
-  "efficiency": 0.999999
+  "stations": 2
  },
  "fins": [
   {
@@ -44,6 +44,5 @@
    "technology": "tile2"
   }
  ],
- "detector": {},
- "extra_cost_kchf": 97.2
+ "detector": {}
 }

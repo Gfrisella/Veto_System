@@ -31,17 +31,17 @@
 
 \begin{frame}{How to read this talk}
   \begin{columns}[c]
-    \begin{column}{0.56\textwidth}\small
+    \begin{column}{0.56\textwidth}\footnotesize
       Every plot with a slider is computed while you watch, by the code of the study (\texttt{veto/lib/veto}):
       \begin{itemize}
         \item muons after the shield from our own production (the enriched input), and the older samples
-        \item interactions of muons and neutrinos in everything after the shield (fast-veto-sim)
+        \item interactions of muons and neutrinos after the shield (fast-veto-sim)
         \item digitization, random hits, the selection and the veto
         \item designs scored on every background source, by hand and by an LLM-driven evolution
       \end{itemize}
       \vspace{1mm}
-      Slow widgets show a spinner and fill in. 3D views rotate and zoom.\\[1mm]
-      \takeaway[\footnotesize]{The spill is \key{1 s} of $5\cdot10^{13}$ POT and the weights are muons per spill, so muons per spill and Hz are the same number. 15 years $= 1.2\cdot10^{7}$ spills.}
+      Slow widgets show a spinner and fill in; 3D views rotate and zoom. The spill is \key{1 s} of $5\cdot10^{13}$ POT, weights are muons per spill (= Hz); 15 years $= 1.2\cdot10^{7}$ spills.\\[0.3mm]
+      \takeaway[\footnotesize]{\key{The standard}: \key{100 signal events} (dark-matter decays passing the selection) in 15 years. \key{FP} / \key{TN}: how many of the 100 the veto throws away / keeps. \key{TP} / \key{FN}: background events in 15 years vetoed / let through.}
     \end{column}
     \begin{column}{0.4\textwidth}\centering
       \begin{tikzpicture}[node distance=1.6mm, every node/.append style={font=\scriptsize}]
@@ -841,23 +841,6 @@
 
 \input{e2e_section}
 
-\begin{frame}{What the first round taught}
-  \begin{columns}[c]
-    \begin{column}{0.55\textwidth}\small
-      The first round (alpha dataset, combinatorial pairs only, no interactions, simpler scattering) is superseded by the numbers above. Its lessons hold:
-      \begin{itemize}\footnotesize
-        \item \key{time resolution} is the biggest lever on signal loss (0.5 $\to$ 0.1\,ns: $3\times$ less), then cell size
-        \item a fin pays for every muon crossing it: the muons it is there for cross it \key{near the wall}, not in the hot lobe 1.5--3\,m out
-        \item a single plane misses $\approx$1\,\% of the muons it should see (efficiency, time tails): \key{redundancy} has to be in the geometry, a 2-plane rule fails
-        \item bounced muons are the blind spot of a backward search (algorithm B)
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.4\textwidth}\footnotesize
-      \takeaway[\footnotesize]{The end-to-end study adds one more: the parents of interactions come in through the entrance, where a single plane with efficiency 0.999 is their only chance.}
-    \end{column}
-  \end{columns}
-\end{frame}
-
 % ======================================================================== PART 7
 \blurb{An LLM proposes complete designs, the cluster scores them on every background, the best ones breed.}
 \section{Optimisation}
@@ -868,8 +851,8 @@
       \begin{tikzpicture}[node distance=2.4mm, every node/.append style={font=\scriptsize}]
         \node[abox, text width=4.3cm] (llm) {\semibold an LLM, 8 in parallel\\\faint{Claude Code or OpenAI Codex, headless; a complete design JSON + rationale}};
         \node[box, below=of llm, text width=4.3cm] (eval) {\semibold the cluster, 8 cores\\\faint{pairs, 40\,k signal decays, 200\,k muons, $\mu$ and $\nu$ interactions}};
-        \node[box, below=of eval, text width=4.3cm] (obj) {\semibold reward\\\faint{\texttt{veto/lib/veto/objective.py} (G.~Frisella)}};
-        \node[hbox, below=of obj, text width=4.3cm] (pop) {\semibold population of 12\\\faint{truncation selection}};
+        \node[box, below=of eval, text width=4.3cm] (obj) {\semibold reward\\\faint{\texttt{veto/lib/veto/objective.py}, sensitivity form}};
+        \node[hbox, below=of obj, text width=4.3cm] (pop) {\semibold population of 10\\\faint{truncation selection}};
         \draw[aarr] (llm) -- (eval); \draw[arr] (eval) -- (obj); \draw[arr] (obj) -- (pop);
         \draw[arr] (pop.west) -- ++(-0.35,0) |- (llm.west);
       \end{tikzpicture}
@@ -879,78 +862,54 @@
       \begin{itemize}\scriptsize
         \item \key{once}: geometry and limits, how the veto works, technologies, muon flux by side, $z$ and distance from the wall, the objective, the JSON schema
         \item \key{per child}: a directive (refine / explore / combine), the parent and 3 inspirations with their reports, the population's rewards
-        \item \key{per design}: reward $\pm$ error, violations, tiers, false vertices, signal efficiency, cost; per plane: peak rate vs limit, cost, signal lost, pairs vetoed
+        \item \key{per design}: reward $\pm$ error, violations, sensitivity, FN per source, FP, cost; per plane: peak rate vs limit, cost, signal it vetoes, pairs it vetoes
       \end{itemize}
       At the end the top 5 are rerun with two more seeds: the best \key{mean} wins.\\[1mm]
-      Backends: \texttt{--backend claude} (Claude Code CLI) or \texttt{codex} (\texttt{codex exec}), both on the user's own login, no tools, no session saved; usage limits are waited out.\\[1mm]\takeaway[\footnotesize]{Old runs: 25 + 15 generations, $\approx$340 LLM calls, 256 designs: an evening on one node.}
+      Backends: \texttt{--backend claude} (Claude Code CLI) or \texttt{codex} (\texttt{codex exec}), both on the user's own login, no tools, no session saved; usage limits are waited out.\\[1mm]\takeaway[\footnotesize]{10 generations, 80 LLM calls, 80 designs: 7 minutes on one node.}
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{The objective}
+\begin{frame}{The objective: sensitivity}
   \begin{columns}[c]
-    \begin{column}{0.55\textwidth}\footnotesize
-      Reward $= -\sum$ tiers, lexicographic through the weights:\\[1.5mm]
-      \setlength{\tabcolsep}{3pt}\scriptsize
-      \begin{tabular}{@{}llr@{}}
+    \begin{column}{0.53\textwidth}\footnotesize
+      Of \key{100 signal events}, \key{FP} are vetoed by random hits; \key{FN}: background events surviving selection and veto in 15 years,
+      $N$ = combinatorial + $\mu$ + $\nu$ interactions.\\[1.5mm]
+      \[ \text{sensitivity} = \frac{100 - \text{FP}}{100} \cdot \frac{S_{90}(0)}{S_{90}(N)} \in (0, 1] \]
+      $S_{90}(N)$: the expected 90\,\% CL upper limit on the signal with $N$ background events expected.
+      Sensitivity 0.8 means the smallest signal we can exclude is $1/0.8 = 1.25\times$ that of a perfect detector.\\[1.5mm]
+      {\scriptsize\setlength{\tabcolsep}{4pt}\begin{tabular}{@{}lrrrrrr@{}}
         \toprule
-        tier & term & weight\\
-        \midrule
-        rate limits & $1 + \log_{10}(\text{peak}/\text{limit})$ per plane over it & 1000\\
-        budget & $1 + $ overshoot / 8\,MCHF & 1000\\
-        background & $1 - e^{-N}$, $N$ = all false vertices in 15\,y & 100\\
-        signal & signal lost / 10\,\% & 10\\
-        cost & $\log(\text{cost}/97\,\text{kCHF}) / \log 82$ & 1\\
+        $N$ & 0 & 0.06 & 0.3 & 0.6 & 1 & 3\\
+        $S_{90}$ & 2.30 & 2.39 & 2.71 & 3.02 & 3.36 & 4.55\\
         \bottomrule
-      \end{tabular}\\[2mm]\footnotesize
-      Exchange rates: \key{0.01 false vertices} $=$ \key{1\,\% signal} $=$ a factor 82 in cost.\\[1mm]
-      Every term carries its statistical error: rewards closer than $\approx 2\sigma \approx 0.1$ are a tie.
+      \end{tabular}}\\[2mm]
+      reward $= -100\,(1 - \text{sensitivity}) - \text{cost} - \text{constraints}$
     \end{column}
-    \begin{column}{0.42\textwidth}\footnotesize
-      $N$ = combinatorial + $\mu$ + $\nu$ interactions after selection and veto; the vertex cone is a design parameter (0--50\,mrad).\\[1mm]
-      Combinatorial $N$ two ways:\\[1mm]
-      \key{direct}: weighted surviving pairs, 0--20 of 196\,k.\\[1mm]
-      \key{factorised}: $N_0 \sum_{kl} f_{kl}\,\varepsilon_k\varepsilon_l$, $\varepsilon_k$ how often a muon of type $k$ in a pair escapes the veto (measured on the pair muons, not the single-muon sample: bounced muons of pairs escape twice as often).\\[1.5mm]
-      The optimiser uses the \key{larger} of the two.\\[1.5mm]
-      \takeaway[\footnotesize]{Every hand-made design with fins was infeasible: the tile fins at 30.6\,m see 2--10\,MHz per channel (limit 1), the right straw fin $6\cdot10^5$\,Hz/cm$^2$ (limit $5\cdot10^5$), fibre costs 48\,MCHF.}
+    \begin{column}{0.44\textwidth}\footnotesize
+      \key{cost}: 2 points per MCHF up to 5\,MCHF, 4 above; over \key{10\,MCHF} or any rate limit: infeasible.\\[1.5mm]
+      \key{Exchange rates}, 1 point each: FP $+1$ (of 100) $\approx$ FN $+0.03$ (near $N = 0.6$) $\approx$ 0.5\,MCHF.\\[1.5mm]
+      \key{Why not tiers}: the first objective ranked background strictly before signal and capped the signal term at 10\,\% loss. Neutrinos are vetoed only by random hits, like the signal, so the previous run vetoed everything: \key{FP 74} of 100 for FN 0.06, 7\,MCHF.\\[1.5mm]
+      \takeaway[\footnotesize]{With the sensitivity, one more FP to remove neutrinos buys back 0.07 points: it never pays.}
     \end{column}
   \end{columns}
 \end{frame}
 
 % ======================================================================== PART 8
-\blurb{Two old runs on the combinatorial background only (outdated), and a new run on the full objective that found the next hole.}
+\blurb{Codex evolves the design on the sensitivity objective: 10 generations, 80 designs, 7 minutes.}
 \section{Evolution}
-
-\begin{frame}{Three runs}
-  \begin{columns}[c]
-    \begin{column}{0.55\textwidth}\small
-      \key{Run 3} (19 October) is the current one: the full objective on the enriched dataset, all three backgrounds,
-      the vertex cone as a design parameter. \key{OpenAI Codex} (gpt-6.1-sol, high effort) on the cluster,
-      10 generations $\times$ 8 children: 80 designs, 74 feasible, 15 minutes.\\[2mm]
-      \key{Runs 1 and 2} (15 October, Claude Sonnet) optimised an older objective: alpha dataset, combinatorial
-      background only, no interactions, no cone. \textcolor[HTML]{B0352B}{Outdated}; their best, E2, became E3 of the
-      results.
-    \end{column}
-    \begin{column}{0.4\textwidth}\footnotesize
-      Run 3 starts from the hand-made designs and E1--E3. Its seeds already show the new picture: the UBT alone has
-      \key{1\,700} muon interactions per 15 years after the veto, E2 without a cone 91.\\[1.5mm]
-      \takeaway[\footnotesize]{The runs share the slider on the next slides: 0, 1 old · \key{2 the new run} (default).}
-    \end{column}
-  \end{columns}
-\end{frame}
 
 \begin{frame}{Evolution}
   \begin{columns}[c]
     \begin{column}{0.62\textwidth}
-      \livewidget{evo_curve}{\linewidth}{0.57\textheight}\\[1mm]
-      \sld[0.6\linewidth]{evo_run}\\[0.3mm]
-      \legendline{each dot one design (grey: infeasible), orange: the best so far. Hover for names. run: 0, 1 old (combinatorial only) · 2 run 3, full objective.}
+      \livewidget{evo_curve}{\linewidth}{0.66\textheight}\\[0.5mm]
+      \legendline{each dot one design (grey: infeasible), orange: the best so far. Hover for names.}
     \end{column}
     \begin{column}{0.36\textwidth}\footnotesize
-      \key{Run 3} starts at $-100$: every seed lets at least one false vertex through in 15 years.\\[1mm]
-      Generation 1 adds a 22\,mrad cone and entrance fins: muon interactions 3, signal lost 2\,\%; still $-99.8$, since $100(1-e^{-N})$ hardly moves above $N \approx 3$.\\[1mm]
-      Then the reward only improves by \key{widening the cone} (40, then 50\,mrad) and adding planes: $-70$, $-68$, $-24$, $-17$.\\[1.5mm]
-      \takeaway[\footnotesize]{Old runs 1 and 2: from $-100$ to $-0.39$ by shrinking the fins (E1, E2); combinatorial background only.}
+      OpenAI Codex (gpt-6.1-sol, high effort) on the cluster, 10 generations $\times$ 8 children, seeded with the hand-made designs, E1--E3 and E4. Enriched dataset, all backgrounds.\\[1.5mm]
+      The seeds sit at $\approx -88$: without a cone, 76 muon interactions per 15 years survive.\\[1mm]
+      Generation 1 adds a \key{cone} and \key{second stations}: $-24.7$. After that the fins are trimmed centimetre by centimetre: $-22.2$ from generation 4 on.\\[1.5mm]
+      \takeaway[\footnotesize]{The top five, rerun with two other seeds, agree within 0.03.}
     \end{column}
   \end{columns}
 \end{frame}
@@ -958,114 +917,31 @@
 \begin{frame}{Watch the design evolve}
   \begin{columns}[c]
     \begin{column}{0.44\textwidth}
-      \livewidget{evo3d}{\linewidth}{0.56\textheight}
+      \livewidget{evo3d}{\linewidth}{0.6\textheight}
     \end{column}
     \begin{column}{0.54\textwidth}
-      \livewidget{evo_top}{\linewidth}{0.56\textheight}
+      \livewidget{evo_top}{\linewidth}{0.6\textheight}
     \end{column}
   \end{columns}
   \vspace{1mm}
-  \sld[0.32\linewidth]{evo_run}\hfill\sld[0.62\linewidth]{evo_step}\\[0.3mm]
-  \legendline{run: 0, 1 old · 2 run 3. Each step: a new best design. 3D: planes coloured by muon density. Top view: fins green / orange / red below 50\,\%, below 100\,\%, above their rate limit.}
+  \sld[0.6\linewidth]{evo_step}\\[0.3mm]
+  \legendline{Each step: a new best design. 3D: planes coloured by muon density. Top view: fins green / orange / red below 50\,\%, below 100\,\%, above their rate limit; thick: two stations.}
 \end{frame}
 
-\begin{frame}{What the optimiser bought}
-  \begin{columns}[c]
-    \begin{column}{0.52\textwidth}
-      \livewidget{evo_drift}{\linewidth}{0.7\textheight}
-    \end{column}
-    \begin{column}{0.46\textwidth}\tiny
-      \setlength{\tabcolsep}{2pt}
-      \begin{tabular}{@{}lrrrrr@{}}
-        \toprule
-        best at & reward & MCHF & sig.\ lost & $\mu$ & $\nu$\\
-        \midrule
-        seed (UBT) & $-100$ & 0.10 & 0 & 1\,724 & 0.58\\
-        gen 1 & $-99.8$ & 0.70 & 2.1\,\% & 3.1 & 0.48\\
-        gen 3 & $-70.5$ & 2.3 & 16\,\% & 0.5 & 0.39\\
-        gen 5 & $-68.3$ & 7.2 & 36\,\% & 0.5 & 0.33\\
-        gen 8 & $-23.8$ & 7.7 & 63\,\% & 0 & 0.14\\
-        gen 10 & \key{$-17.0$} & 7.2 & \key{74\,\%} & 0 & \key{0.06}\\
-        \midrule
-        E4\_entry2 & $-49.2$ & 0.61 & 2.9\,\% & 0 & 0.62\\
-        \bottomrule
-      \end{tabular}\\[2mm]\footnotesize
-      Every step trades signal for background: the muon interactions are gone by generation 8; after that the wider cone
-      only removes \key{neutrinos}, by random hits, exactly as it removes the signal.
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{Where the evolved designs sit}
+\begin{frame}{Where the designs sit}
   \begin{columns}[c]
     \begin{column}{0.58\textwidth}
-      \livewidget{evo_map}{\linewidth}{0.66\textheight}
+      \livewidget{evo_map}{\linewidth}{0.7\textheight}
     \end{column}
     \begin{column}{0.4\textwidth}\footnotesize
-      Every feasible design of the three runs: cost against signal lost, coloured by all false vertices in 15 years.\\[1.5mm]
-      Runs 1 and 2 (combinatorial only) sit at 0.3--0.5\,MCHF and 0.05--0.3\,\% signal lost. Run 3 climbs straight up the
-      plot: \key{above the dotted line} (10\,\%) the signal term no longer grows, so more cone, more planes and more
-      signal lost cost nothing extra.\\[1.5mm]
-      \takeaway[\footnotesize]{The reasonable region, 1--3\,\% signal lost at under 1\,MCHF with no muon interactions, is where E4\_entry2 sits; run 3 passed through it in generation 1 and left.}
+      Every feasible design: sensitivity against cost, coloured by FP (of 100 signal events); dotted lines of equal reward.\\[1.5mm]
+      The best designs pile up at \key{0.5\,MCHF and sensitivity 0.79}: none of the 80 found a reason to spend more. Bigger fins only add random hits, and nothing a plane can buy removes the neutrinos.\\[1.5mm]
+      \takeaway[\footnotesize]{Diamonds: the hand-made E3 and E4 and the evolved E5, end to end.}
     \end{column}
   \end{columns}
 \end{frame}
 
-
-
-
-\begin{frame}{The new evolution found the next hole}
-  \begin{columns}[c]
-    \begin{column}{0.52\textwidth}\footnotesize
-      Codex (OpenAI), 10 generations $\times$ 8 children on the full objective and the enriched dataset, 80 calls, 15 minutes. Its best: \key{reward $-17$}, against $-49$ for E4\_entry2.\\[1.5mm]
-      \begin{tabular}{@{}lrr@{}}
-        \toprule
-        & E4\_entry2, 17.5\,mrad & evolved best\\
-        \midrule
-        planes & 5 (+3 second stations) & 15 \\
-        cone & 17.5\,mrad & \key{50\,mrad}\\
-        cost & 0.61\,MCHF & 7.2\,MCHF\\
-        signal lost & 2.8\,\% & \key{74\,\%}\\
-        $\mu$ / $\nu$ interactions & 0 / 0.62 & 0 / 0.06\\
-        \bottomrule
-      \end{tabular}
-    \end{column}
-    \begin{column}{0.45\textwidth}\footnotesize
-      The signal tier saturates at 10\,\% loss (10 points); the neutrino floor costs $\approx$40 points through $100(1 - e^{-N})$. A huge cone vetoes neutrinos with \key{random hits}, exactly as it vetoes the signal: killing three quarters of the signal pays.\\[1.5mm]
-      \takeaway[\footnotesize]{Again the optimiser is an adversary of the objective. The objective needs the signal loss unclipped (or as a constraint), or a sensitivity-like figure of merit (Punzi) where random-hit vetoes of background and signal cancel.}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{An earlier hole (old run 1)}
-  \begin{columns}[c]
-    \begin{column}{0.52\textwidth}\footnotesize
-      Run 1 used the \key{factorised} background only. Its best designs:\\[1.5mm]
-      \begin{tabular}{@{}lrr@{}}
-        \toprule
-        E1 & factorised & direct\\
-        \midrule
-        false vertices / 15\,y & $5\cdot10^{-4}$ & $\mathbf{4.5\cdot10^{-3}}$\\
-        surviving pairs & -- & 17 of 196\,736\\
-        reward & $-0.50$ & $-0.89$\\
-        \bottomrule
-      \end{tabular}\\[2mm]
-      Factorising assumes the two muons of a pair escape \key{independently}. With small fins they escape \key{together}: both enter through the same uncovered region. The optimiser trimmed into exactly that blind spot.
-    \end{column}
-    \begin{column}{0.45\textwidth}\footnotesize
-      Fix: the larger of the two estimates. Run 2 then pays for the 17 pairs and finds a design that lets only 5 through (1 in the talk's sample), at lower cost.\\[1.5mm]
-      Still in the model, not in the detector:
-      \begin{itemize}\scriptsize
-        \item no bounced muon of a pair is vetoed by E2; they are 0.7\,\% of the pairs
-        \item $N$ rests on a handful of pairs: check on the bigger dataset
-        \item fibre and pixel have no rate limit in \texttt{technology.py} (none in the documents)
-        \item helium and air scattering, tilted fins: not yet
-      \end{itemize}
-      \takeaway[\footnotesize]{An optimiser is an adversary of the objective: every shortcut in the estimate becomes a design.}
-    \end{column}
-  \end{columns}
-\end{frame}
-
+\input{e5_section}
 
 % ======================================================================== PART 9
 \blurb{What the simulation and the reconstruction still ignore, and what comes next.}
@@ -1076,12 +952,12 @@
     \begin{column}{0.48\textwidth}\small
       \key{Objective and optimisation}
       \begin{itemize}\footnotesize
-        \item the signal tier saturates at 10\,\% loss: unclip it, or use a sensitivity (Punzi-like) figure of merit
-        \item second stations as a design choice (layers per plane, with their cost and random hits)
-        \item a new evolution on the fixed objective (Codex on the cluster, ready)
+        \item a cautious variant: rate limits at half their value, plane efficiency 0.99
+        \item evolve against independent interaction samples (the evolution sees one fixed draw)
       \end{itemize}
       \key{Reconstruction}
       \begin{itemize}\footnotesize
+        \item tag the neutrino event's own extra products on the fins (wide-angle hadrons downstream of the vertex): the one handle on the neutrino floor
         \item a dedicated search for the parent's entry hit, instead of a wide cone
         \item algorithm B: hit-driven tracklets (sees bounces); dead time and pile-up; tilted fins
       \end{itemize}
@@ -1102,11 +978,13 @@
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}\small
       \key{Data}: our own production keeps every muon category; an input enriched with a Pythia\,6 tail gives the high-energy SST1 muons $300\times$ more independent statistics.\\[2mm]
-      \key{Backgrounds}: combinatorial pairs, muon interactions (Geant4 + Pythia\,6) and neutrino interactions (GENIE), all through one selection (pointing, two tracks) and one veto with a vertex cone.
+      \key{Backgrounds}: combinatorial pairs, muon interactions (Geant4 + Pythia\,6) and neutrino interactions (GENIE), all through one selection (pointing, two tracks) and one veto with a vertex cone.\\[2mm]
+      \key{End to end}: the combinatorial background is gone ($<10^{-2}$); muon interactions need the cone \emph{and} a second station where their parents enter.
     \end{column}
     \begin{column}{0.48\textwidth}\small
-      \key{End to end}: the combinatorial background is gone ($<10^{-4}$); muon interactions in the walls and planes are always vetoed; in the helium they need the cone \emph{and} a second station at the entrance.\\[2mm]
-      \takeaway[\footnotesize]{E4\_entry2 at 17.5\,mrad: 0.6 background events in 15 years, the neutrino floor; 2.8\,\% signal lost; 0.6\,MCHF. The optimiser's next run needs an objective that cannot trade signal for neutrinos.}
+      \key{Objective}: the sensitivity, signal efficiency $\times\ S_{90}(0)/S_{90}(N)$, plus a cost of 2 points per MCHF, 10\,MCHF at most. It cannot be gamed by vetoing signal.\\[2mm]
+      \key{Evolution}: 80 designs in 7 minutes; the best one, E5, beats the hand-made E4 on signal and cost.\\[2mm]
+      \takeaway[\footnotesize]{E5\_evolved, 15 years, 100 signal events: FP 0.3, TN 99.7; background TP 4\,588, FN 0.6 (all neutrinos). 0.54\,MCHF, sensitivity 0.76.}
     \end{column}
   \end{columns}
 \end{frame}
