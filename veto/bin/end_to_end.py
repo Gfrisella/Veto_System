@@ -5,8 +5,8 @@ Sources (per 15 years, after the selection of RecoConfig: measured IP < 0.1 m, a
   combinatorial        two unrelated SST1 muons in time (run_reco.evaluate + veto.objective, bkg_estimate "max")
   muon interactions    fastveto.dis.run on the muon dataset (library split crossover), per target: helium, air,
                        PVC walls and every plane of the design; veto level b (interactions.evaluate)
-  neutrino interactions  fast-veto-sim scripts/nu_dis_apply.py for the design (GENIE), same targets and veto
-Plus the signal lost to random hits, the cost and the objective (veto.objective with all sources).
+  neutrino interactions  bin/nu_dis_apply.py for the design (GENIE, --out results/end_to_end/<design>_nu.npz)
+Plus the signal lost to random hits, the cost and the objective (veto.objective, form "sensitivity", all sources).
 Stage 1 (--stage generate) draws the muon interactions of each design (results/end_to_end/<design>_mu.npz);
 stage 2 (--stage evaluate) runs every (design, cone) and writes results/end_to_end/<tag>.json.
 
@@ -19,14 +19,13 @@ import _bootstrap  # noqa: F401
 import argparse
 import json
 import math
-import sys
 import time
 from multiprocessing import Pool
 from pathlib import Path
 
 import numpy as np
 
-from run_interactions import FVS, load_npz
+from run_interactions import load_npz
 from run_reco import evaluate, load_inputs
 from veto import design as dsg
 from veto import interactions as ix
@@ -44,9 +43,8 @@ def load_design(name):
 
 
 def generate(args):
-    sys.path.insert(0, str(FVS))
     from fastveto import dis
-    lib = dis.MuonLibrary(str(FVS / "data/dis/mu_library.npz"), split="crossover")
+    lib = dis.MuonLibrary(str(paths.mu_library()), split="crossover")
     muons, _ = io.open_store(paths.store_dir(args.dataset))
     draws = dict(zip(("helium", "pvc", "air", "planes"), args.draws))
     for name in args.designs:
@@ -86,7 +84,6 @@ def job(arg):
     d = load_design(name)
     cfg = reco.RecoConfig(seed=1, multiple_scattering=True, cone=cone * 1e-3)
     r = evaluate(d, _S["tr"], _S["inp"], cfg, args.n_signal, DEFAULT_CONFIG["time_window"], "target")
-    r["cost_kchf"] += float(d.raw.get("extra_cost_kchf", 0.0))     # e.g. second stations (efficiency overrides)
     comb = objective.score(r, _S["stats"], objective.ObjectiveConfig(bkg_estimate="max"))
     mu = ix.evaluate(*load_npz(OUT / f"{d.name}_mu.npz"), d, _S["inp"], cfg, np.random.default_rng(1), muons=_S["muons"])
     nu_file = OUT / f"{d.name}_nu.npz"
@@ -94,7 +91,7 @@ def job(arg):
     mu_g, nu_g = group(mu, d), group(nu, d)
     tot = lambda g: (sum(v["after"] for v in g.values()), math.sqrt(sum(v["after_err"] ** 2 for v in g.values())))
     r["interactions"] = {"muon": dict(zip(("total", "total_err"), tot(mu_g))), "nu": dict(zip(("total", "total_err"), tot(nu_g)))}
-    s = objective.score(r, _S["stats"], objective.ObjectiveConfig(bkg_estimate="max"))
+    s = objective.score(r, _S["stats"], objective.ObjectiveConfig(bkg_estimate="max", form="sensitivity", cost_budget_kchf=10000.0))
     cb = comb["confusion"]["background"]
     return dict(design=d.name, cone_mrad=cone, cost_kchf=s["cost_kchf"], n_channels=r["n_channels"],
                 feasible=s["feasible"], over_rate_limit=s["over_rate_limit"],
@@ -102,7 +99,7 @@ def job(arg):
                 combinatorial=dict(before=cb["events_15y_before"], after=comb["bkg_events_15y"], after_err=comb["bkg_events_15y_err"],
                                    single_inefficiency=comb["confusion"]["single_inefficiency"]),
                 muon=mu_g, nu=nu_g, total=s["bkg_events_15y"], total_err=s["bkg_events_15y_err"],
-                reward=s["reward"], reward_err=s["reward_err"], terms={k: v[0] for k, v in s["terms"].items()},
+                sensitivity=s["sensitivity"], reward=s["reward"], reward_err=s["reward_err"], terms={k: v[0] for k, v in s["terms"].items()},
                 per_plane_mu={k: dict(interactions=v["interactions"], selected=v["selected"], after=v.get("survive_b", 0.0))
                               for k, v in mu.items() if k not in ("helium", "air", "pvc")},
                 planes=[dict(name=p["plane"], technology=p["technology"], peak_hz_cm2=p["peak_hz_cm2"],
@@ -131,13 +128,13 @@ def main():
         rows = pool.map(job, jobs)
     f = lambda v, e=None: f"{v:.3g}" + (f" ± {e:.2g}" if e is not None else "")
     print(f"\n{'design':<12}{'cone':>5}{'signal lost':>13}{'comb.':>10}{'μ He':>9}{'μ air':>9}{'μ PVC':>9}{'μ planes':>9}"
-          f"{'ν He':>8}{'ν air':>8}{'ν PVC':>8}{'ν planes':>9}{'total':>17}{'reward':>10}   (per 15 years, after the veto)")
+          f"{'ν He':>8}{'ν air':>8}{'ν PVC':>8}{'ν planes':>9}{'total':>17}{'sens':>7}{'reward':>10}   (per 15 years, after the veto)")
     for r in rows:
         g = lambda kind, t: r[kind].get(t, {}).get("after", 0.0)
         print(f"{r['design']:<12}{r['cone_mrad']:>5g}{100 * r['signal_lost']:>11.2f} %{r['combinatorial']['after']:>10.2g}"
               + "".join(f"{g('muon', t):>9.3g}" for t in ("helium", "air", "pvc", "planes"))
               + "".join(f"{g('nu', t):>8.3g}" for t in ("helium", "air", "pvc")) + f"{g('nu', 'planes'):>9.3g}"
-              + f"{f(r['total'], r['total_err']):>17}{r['reward']:>10.2f}")
+              + f"{f(r['total'], r['total_err']):>17}{r['sensitivity']:>7.3f}{r['reward']:>10.2f}")
     print(f"\nconfusion matrix per source, events per 15 years (TP vetoed, FN survive; signal: FP lost, TN kept)")
     for r in rows:
         print(f"\n{r['design']}, cone {r['cone_mrad']:g} mrad: signal FP {100 * r['signal_lost']:.2f} %  TN {100 * (1 - r['signal_lost']):.2f} %")

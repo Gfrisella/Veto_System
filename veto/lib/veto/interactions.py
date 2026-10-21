@@ -1,6 +1,6 @@
-"""Backgrounds from particle interactions after the muon shield (fast-veto-sim) through our selection and veto.
+"""Backgrounds from particle interactions after the muon shield (lib/fastveto) through our selection and veto.
 
-fast-veto-sim (fastveto.dis for muons, fastveto.nudis for neutrinos) forces interactions in the vessel helium, the
+fastveto (fastveto.dis for muons, fastveto.nudis for neutrinos) forces interactions in the vessel helium, the
 air (z = 30.6 - 82 m), the PVC walls and every plane of a design, with a weight (interactions per spill) and the
 final-state particles (pdg, momentum, production point, beam = the scattered muon / outgoing lepton). Here:
 
@@ -152,7 +152,7 @@ def bootstrap(w, groups, n_boot=200, rng=None):
 
 
 def evaluate(inter, part, design, maps, cfg, rng, muons=None, levels=("a", "b"), max_tracks="cfg"):
-    """Selection and veto of one design's interactions. inter / part: fast-veto-sim's int_* / part_* arrays
+    """Selection and veto of one design's interactions. inter / part: the int_* / part_* arrays of fastveto
     (muons: the muon dataset the interactions were drawn from, for the parents; None for neutrinos).
     Returns per target: interactions, selected and surviving (a, b, c) per 15 years, errors, counts."""
     n_inter = len(inter["weight"])

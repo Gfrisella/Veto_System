@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""Interaction backgrounds of one design: fast-veto-sim's forced interactions through our selection and veto.
+"""Interaction backgrounds of one design: forced interactions (lib/fastveto) through our selection and veto.
 
   bin/remote.sh run bin/run_interactions.py --design E2_llm_run2            # muons (generated if needed)
-  bin/remote.sh run bin/run_interactions.py --design D6_straw --kind nu     # neutrinos (fast-veto-sim npz)
+  bin/remote.sh run bin/run_interactions.py --design D6_straw --kind nu     # neutrinos (bin/nu_dis_apply.py npz)
 
-Muons: the interactions come from fast-veto-sim's data/dis/apply_<design>.npz if it exists (--interactions to give
-another file), else fastveto.dis.run is called on the muon dataset (library split "crossover", --workers forked
-processes). Neutrinos: data/genie/apply_<design>.npz (fast-veto-sim scripts/nu_dis_apply.py). Selection and veto:
+Muons: fastveto.dis.run on the muon dataset (library split "crossover", --workers forked processes), or the file
+given with --interactions. Neutrinos: paths.apply_file("nu", design) (bin/nu_dis_apply.py). Selection and veto:
 lib/veto/interactions.py, with the full reconstruction (multiple scattering with tails, helium and air).
 Writes results/interactions/<design>_<kind>.json and prints the table per target.
 """
@@ -15,7 +14,6 @@ import _bootstrap  # noqa: F401
 
 import argparse
 import json
-import sys
 import time
 from pathlib import Path
 
@@ -26,7 +24,6 @@ from veto import design as dsg
 from veto import interactions as ix
 from veto import io, paths, reco
 
-FVS = Path("/disk/users/sqasim/workspace/uzh/fast-veto-sim")
 DATASET = "design-optimization-dataset-gamma-2026-10-17"
 
 
@@ -38,11 +35,9 @@ def load_npz(path):
 
 
 def generate_muon_interactions(design, store, args):
-    """fastveto.dis.run on the muon dataset for this design (our veto package is already loaded, so fastveto
-    uses it, not its own copy)."""
-    sys.path.insert(0, str(FVS))
+    """fastveto.dis.run on the muon dataset for this design."""
     from fastveto import dis
-    lib = dis.MuonLibrary(str(FVS / "data/dis/mu_library.npz"), split=args.split)
+    lib = dis.MuonLibrary(str(paths.mu_library()), split=args.split)
     meta = json.load(open(store / "meta.json"))
     cols = {k: np.load(store / f"{k}.npy", mmap_mode="r") for k in meta["columns"]}
     draws = {"helium": args.draws[0], "pvc": args.draws[1], "air": args.draws[2], "planes": args.draws[3]}
@@ -54,7 +49,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--design", required=True, help="designs/<name>.json or a path")
     ap.add_argument("--kind", choices=["muon", "nu"], default="muon")
-    ap.add_argument("--interactions", default=None, help="fast-veto-sim npz (default: its apply_<design>.npz)")
+    ap.add_argument("--interactions", default=None, help="interaction npz (default: generate muons; neutrinos: paths.apply_file)")
     ap.add_argument("--split", default="crossover", help="muon library: crossover | geant4 | w2")
     ap.add_argument("--draws", type=float, nargs=4, default=[1e6, 1e6, 2e5, 2e5], help="helium pvc air planes")
     ap.add_argument("--workers", type=int, default=40)
@@ -66,9 +61,8 @@ def main():
     p = Path(args.design)
     design = dsg.load(p if p.exists() else args.design)
     store = paths.store_dir(args.dataset)
-    sub = "dis" if args.kind == "muon" else "genie"
-    # muons: generated fresh by default (fast-veto-sim's older apply files predate its exact PVC chords)
-    npz = Path(args.interactions) if args.interactions else (None if args.kind == "muon" else FVS / f"data/{sub}/apply_{design.name}.npz")
+    # muons: generated fresh by default (the older cached apply files predate the exact PVC chords)
+    npz = Path(args.interactions) if args.interactions else (None if args.kind == "muon" else paths.apply_file("nu", design.name))
     if npz is not None and npz.exists():
         inter, part = load_npz(npz)
         source = str(npz)
@@ -76,7 +70,7 @@ def main():
         inter, part = generate_muon_interactions(design, store, args)
         source = f"fastveto.dis.run (split {args.split}, draws {args.draws})"
     else:
-        raise SystemExit(f"no {npz}: run fast-veto-sim scripts/nu_dis_apply.py --design {design.name}")
+        raise SystemExit(f"no {npz}: run bin/nu_dis_apply.py --design {design.name}")
     if args.kind == "muon" and not args.interactions:
         save = paths.results_dir() / "interactions" / f"{design.name}_muon_interactions.npz"
         save.parent.mkdir(parents=True, exist_ok=True)

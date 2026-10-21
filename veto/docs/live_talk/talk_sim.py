@@ -1,15 +1,14 @@
 """Live-talk widgets for the simulation after the shield and the interaction backgrounds (registered by veto_talk.py).
 
-  sim_*  ported from fast-veto-sim's talk (docs/live_talk/fvs_talk.py there): what a muon crosses, cross sections,
+  sim_*  ported from fast-veto-sim's talk: what a muon crosses, cross sections,
          one library interaction at a time, grazing walls, forced interactions in a design, decays, multiple
-         scattering with tails, closure against Geant4. Data: fast-veto-sim's docs/live_talk/data (talk_data.npz,
-         geant4_samples.npz) and results; code: fastveto, loaded after our veto package (so it runs on ours).
+         scattering with tails, closure against Geant4. Data: results/talk_sim (talk_data.npz, geant4_samples.npz,
+         closure.json, copied from fast-veto-sim on 2026-10-21); code: lib/fastveto.
   iv_*   our selection and veto on the interaction backgrounds: one selected muon-interaction event with the
          backward search and the vertex cone, the cone trade-off, the background by source.
 """
 import json
-import sys
-from pathlib import Path
+import math
 
 import numpy as np
 import plotly.graph_objects as go
@@ -20,18 +19,17 @@ from veto import geometry as geo
 from veto import muon_types as mt
 from veto import paths, reco, scattering, viz3d
 
-FVS = Path.home() / "workspace/uzh/fast-veto-sim"
-sys.path.insert(0, str(FVS))
-from fastveto import decay as fdecay  # noqa: E402
-from fastveto import kokoulin  # noqa: E402
-from fastveto import targets as tg  # noqa: E402
+from fastveto import decay as fdecay
+from fastveto import kokoulin
+from fastveto import targets as tg
 
 INK, ACC, ORA, GRN, RED, MUT = "#1C2230", "#2459A8", "#D07A2D", "#2A7F3F", "#B0352B", "#5B6475"
 FONT = dict(family="Fira Sans, Helvetica, sans-serif", size=7, color=INK)
 SPILLS_15Y = 6e20 / 5e13
-D = dict(np.load(FVS / "docs/live_talk/data/talk_data.npz"))
-G4MSC = dict(np.load(FVS / "docs/live_talk/data/geant4_samples.npz"))
-CLOSURE = json.loads((FVS / "results/dis_closure/closure.json").read_text())
+TALK_DATA = paths.results_dir() / "talk_sim"
+D = dict(np.load(TALK_DATA / "talk_data.npz"))
+G4MSC = dict(np.load(TALK_DATA / "geant4_samples.npz"))
+CLOSURE = json.loads((TALK_DATA / "closure.json").read_text())
 IX = paths.results_dir() / "interactions"
 TECH_COL = {"straw": "#8c6bb1", "fiber": "#41ab5d", "pixel": "#2171b5", "tile": ORA, "tile2": "#e6550d"}
 PART = {13: ("μ⁻", RED, None), -13: ("μ⁺", RED, None), 11: ("e⁻", ORA, None), -11: ("e⁺", ORA, None),
@@ -52,7 +50,8 @@ def pname(q):
 
 
 def layout(fig, **kw):
-    lay = dict(font=FONT, paper_bgcolor="white", plot_bgcolor="white", margin=dict(l=40, r=10, t=22, b=28), showlegend=False)
+    # uirevision: a redraw (slider moved) keeps what the presenter did, e.g. a rotated 3D camera
+    lay = dict(uirevision="keep", font=FONT, paper_bgcolor="white", plot_bgcolor="white", margin=dict(l=40, r=10, t=22, b=28), showlegend=False)
     lay.update(kw)
     fig.update_layout(**lay)
     return fig
@@ -175,17 +174,22 @@ def register(pres, maps):
         A = {"helium": 4.0, "pvc": 20.8, "mylar": 12.7, "silicon": 28.1, "pvt": 11.7}[mat]
         k = kokoulin.sigma(E, A=A) / A
         p6, g4 = D[f"sig_mu_{split}_{mat}_p6"], D[f"sig_mu_{split}_{mat}_g4"]
-        fig = make_subplots(rows=1, cols=2, column_widths=[0.6, 0.4], horizontal_spacing=0.12)
+        fig = make_subplots(rows=1, cols=2, column_widths=[0.6, 0.4], horizontal_spacing=0.1,
+                            subplot_titles=(f"σ per nucleon, {mat}", "library total / Geant4 total"))
         fig.add_trace(go.Scatter(x=E, y=k, line=dict(color=INK, width=2), name="Geant4 total (Kokoulin)"), 1, 1)
         fig.add_trace(go.Scatter(x=E, y=g4, line=dict(color=GRN, width=1.5), name="Geant4 part"), 1, 1)
         fig.add_trace(go.Scatter(x=E, y=p6, line=dict(color=RED, width=1.5), name="Pythia 6 part"), 1, 1)
         fig.add_trace(go.Scatter(x=E, y=p6 + g4, line=dict(color=ACC, width=3), opacity=0.6, name="library total"), 1, 1)
         fig.add_trace(go.Scatter(x=E, y=(p6 + g4) / np.where(k > 0, k, np.nan), line=dict(color=ACC, width=2), showlegend=False), 1, 2)
         fig.add_trace(go.Scatter(x=E, y=np.ones_like(E), line=dict(color=MUT, width=0.8, dash="dot"), showlegend=False), 1, 2)
-        fig.update_xaxes(type="log", title_text="muon energy [GeV]")
-        fig.update_yaxes(type="log", range=[-3, 1.6], title_text="σ per nucleon [μb]", row=1, col=1)
-        fig.update_yaxes(range=[0, 1.5], title_text="library / Geant4", row=1, col=2)
-        return layout(fig, showlegend=True, legend=dict(x=0.02, y=0.02, font=dict(size=6)))
+        # 1.3-500 GeV only: below ~1 GeV the muon barely gets out of the shield and the library has no events
+        fig.update_xaxes(type="log", range=[0.1, math.log10(500)], tickvals=[2, 5, 10, 20, 50, 100, 200, 500], title_text="muon energy [GeV]", title_standoff=4)
+        fig.update_yaxes(type="log", range=[-2, 1.6], dtick=1, title_text="σ per nucleon [μb]", title_standoff=2, row=1, col=1)
+        fig.update_yaxes(range=[0.8, 1.2], dtick=0.1, title_text="ratio", title_standoff=2, row=1, col=2)
+        fig.update_annotations(font=dict(size=7))
+        return layout(fig, showlegend=True, legend=dict(x=0.01, y=0.02, xanchor="left", yanchor="bottom", font=dict(size=6),
+                                                         bgcolor="rgba(0,0,0,0)"),
+                      margin=dict(l=40, r=10, t=20, b=30))
 
     # ---------------------------------------------------------------- one library interaction at a time
     pres.slider("sim_i_E", label="E", min=0, max=4, value=3, step=1, decimals=0)

@@ -2,7 +2,7 @@
 """Cache the design-independent interaction backgrounds for the objective: selected events, ready for any veto.
 
 Muons: fastveto.dis.run on the muon dataset for the helium, the air and the PVC only (library split crossover),
-with --draws interactions per target. Neutrinos: fast-veto-sim's apply file (--nu, its helium / air / PVC rows).
+with --draws interactions per target. Neutrinos: a bin/nu_dis_apply.py file (--nu, its helium / air / PVC rows).
 Both through the selection of RecoConfig (measured IP < 0.1 m, at most 2 tracks in SST1); the tracks of the
 selected events are stored, so bin/evolve and run_reco only run the veto per design (interactions.veto).
 
@@ -12,12 +12,11 @@ selected events are stored, so bin/evolve and run_reco only run the veto per des
 import _bootstrap  # noqa: F401
 
 import argparse
-import sys
 import time
 
 import numpy as np
 
-from run_interactions import DATASET, FVS, load_npz
+from run_interactions import DATASET, load_npz
 from veto import design as dsg
 from veto import interactions as ix
 from veto import io, paths, reco
@@ -26,7 +25,7 @@ from veto import io, paths, reco
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--draws", type=float, nargs=3, default=[5e6, 5e6, 1e6], help="helium pvc air")
-    ap.add_argument("--nu", default=str(FVS / "data/genie/apply_D6_straw.npz"))
+    ap.add_argument("--nu", default=str(paths.apply_file("nu", "D6_straw")))
     ap.add_argument("--workers", type=int, default=40)
     ap.add_argument("--seed", type=int, default=11)
     ap.add_argument("--dataset", default=DATASET, help="muon dataset (parents of the muon interactions)")
@@ -39,9 +38,8 @@ def main():
     store = paths.store_dir(args.dataset)
     muons, meta = io.open_store(store)
 
-    sys.path.insert(0, str(FVS))
     from fastveto import dis
-    lib = dis.MuonLibrary(str(FVS / "data/dis/mu_library.npz"), split="crossover")
+    lib = dis.MuonLibrary(str(paths.mu_library()), split="crossover")
     draws = {"helium": args.draws[0], "pvc": args.draws[1], "air": args.draws[2]}
     design = dsg.load("D0_minimal")                  # any design: helium / air / PVC do not depend on it
     inter, part, _ = dis.run(muons, design, lib, draws, np.random.default_rng(args.seed),

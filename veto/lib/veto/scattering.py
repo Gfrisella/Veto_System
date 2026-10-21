@@ -17,7 +17,7 @@ The angular spread follows Highland for the muon's TOTAL x/X0, shared between th
 proportion to their x/X0 (Gaussian kicks in x and y). Bounced muons scatter only after their bounce
 point (the transport handled the rock). Signal daughters scatter from their decay vertex.
 
-From fast-veto-sim (fastveto/vessel.py, fastveto/msc.py, validated against Geant4 there):
+From fast-veto-sim (lib/fastveto/vessel.py; its msc.py, validated against Geant4, lives on here):
   EXACT_CHORDS   the PVC is the shell between the helium surface and its outer surface 0.3 mm further out;
                  a straight piece crosses it in at most two chords (entrance window or a lateral wall on the
                  way in, a lateral wall or the exit wall on the way out), with their exact lengths. The old

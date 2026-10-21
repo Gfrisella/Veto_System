@@ -18,6 +18,7 @@ walls, type, weight, scale, source 3, run = seed.
 import _bootstrap  # noqa: F401
 
 import argparse
+import ast
 import datetime
 import json
 import time
@@ -37,6 +38,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--production", default=str(Path(__file__).resolve().parents[1] / "data" / "sim" / "veto_muons_v1"))
     ap.add_argument("--max-seed", type=int, default=None, help="only seeds below this (e.g. a fixed snapshot)")
+    ap.add_argument("--seeds-like", default=None, help="only the seeds of this existing dataset (its meta), to rebuild it")
     ap.add_argument("--name", default=f"{NAME}-{datetime.date.today().isoformat()}")
     ap.add_argument("--old-types", default="0,1,2", help="types taken from alpha's old-run rows ('' = none)")
     ap.add_argument("--alpha", default="design-optimization-dataset-alpha-14-oct-2026")
@@ -45,6 +47,13 @@ def main():
     files = sorted(Path(args.production).glob("seed_*.npz"), key=lambda f: int(f.stem.split("_")[1]))
     if args.max_seed is not None:
         files = [f for f in files if int(f.stem.split("_")[1]) < args.max_seed]
+    if args.seeds_like:
+        _, meta_like = io.open_store(paths.store_dir(args.seeds_like))
+        like = meta_like["seeds"]
+        like = set(ast.literal_eval(like) if isinstance(like, str) else like)
+        files = [f for f in files if int(f.stem.split("_")[1]) in like]
+        if len(files) != len(like):
+            raise SystemExit(f"{len(like) - len(files)} seeds of {args.seeds_like} are missing in {args.production}")
     if not files:
         raise SystemExit(f"no seed files in {args.production}")
 

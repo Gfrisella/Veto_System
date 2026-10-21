@@ -64,6 +64,38 @@ def field_map_h5() -> Path:
     return data_root() / "MainSpectrometerField.h5"
 
 
+def interactions_data() -> Path:
+    """Interaction libraries (muon DIS, GENIE), GENIE splines, neutrino flux stores, cached apply files."""
+    return Path(os.environ.get("VETO_INTERACTIONS", PROJECT_DIR / "data" / "interactions"))
+
+
+def source_data() -> Path:
+    """Source muons at the target: the enriched input file and the tail production it is built from."""
+    return Path(os.environ.get("VETO_SOURCE", PROJECT_DIR / "data" / "source"))
+
+
+def mu_library() -> Path:
+    return interactions_data() / "dis" / "mu_library.npz"
+
+
+def nu_library() -> Path:
+    return interactions_data() / "genie" / "nu_library.npz"
+
+
+def apply_file(kind: str, design: str) -> Path:
+    """Cached per-design interaction file: kind "mu" (bin/muon_dis_apply.py) or "nu" (bin/nu_dis_apply.py)."""
+    return interactions_data() / {"mu": "dis", "nu": "genie"}[kind] / f"apply_{design}.npz"
+
+
+def enriched_input_h5() -> Path:
+    return source_data() / "full_sample_after_target_enriched_p6.h5"
+
+
+def cpp_build() -> Path:
+    """Compiled modules and executables (outside lib/ and bin/, which bin/remote.sh sync replaces)."""
+    return PROJECT_DIR / "cpp" / "build"
+
+
 def results_dir() -> Path:
     path = Path(os.environ.get("VETO_RESULTS", PROJECT_DIR / "results"))
     path.mkdir(parents=True, exist_ok=True)
