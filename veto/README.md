@@ -16,9 +16,14 @@ veto/
                    memory-mapped columns of large pickles (open_pickle_columns)
     muon_types.py  muon types from the z = 30.6 / 82 m states, bounce points, SBT wall crossings,
                    path position at any z, fin hits
-    design.py      veto designs (UBT + fins) from designs/*.json, physical limits
+    muon_types_torch.py  the same classification on the GPU (float64, for the muon production)
+    design.py      veto designs (UBT + fins) from designs/*.json, physical limits, stations per plane
     technology.py  detector technologies (straw, fibre, pixel, tile, tile2): layers, timing, rates, material, cost
-    reco.py        digitization, accidental hits from rate maps, spectrometer, veto algorithm A
+    reco.py        digitization, accidental hits from rate maps, spectrometer, veto algorithm A, vertex cone
+    scattering.py  multiple scattering: planes, exact PVC chords, helium / air slices, single-scattering tails
+    vertex_selection.py  the signal selection shared by every sample (measured IP < 0.1 m, <= 2 SST1 tracks)
+    interactions.py  forced muon / neutrino interactions through the same selection and veto
+    objective.py   reward of a design: "tiers" or "sensitivity" (expected 90 % CL limit), all background sources
     tracks.py      straight-line extrapolation, back-tracking to the vessel walls, categories
     weights.py     repeated-evt_n weight corrections
     pairs.py       all pairs / time-window pairs / KD-tree candidates, DOCA + vertex
@@ -26,6 +31,9 @@ veto/
     plotting.py    matplotlib style, geometry overlays, diagnostic plots
     maps.py        chunk-fillable histograms: SBT wall maps, side views, x-y maps
     viz3d.py       interactive plotly 3D view
+  lib/fastveto/    ported from fast-veto-sim (2026-10-21): muon DIS (dis), neutrino DIS (nudis, neutrinos),
+                   targets and materials, vessel geometry, Kokoulin cross sections, decays
+                   (docs/fast_veto_sim.md, docs/fastveto_physics.md)
   bin/
     run_selection.py          pair background: --pairing per-file | time-window | kdtree
     make_vessel_dataset.py    -> muon_vessel_dataset.npz (input to the SBT optimisation)
@@ -47,8 +55,35 @@ veto/
     benchmark_digitization.py per-design cost with digitization + hit-to-track matching
     fetch_data.sh             copy N output files (+ derived datasets) from the cluster
     remote.sh                 sync code / run / launch tmux jobs on the cluster
+    -- muon production and datasets (see "Muon production" below)
+    generate_muon_study.py    seeds of the new production, every muon type kept (run_muon_study.sh,
+                              status_muon_study.sh)
+    make_design_dataset_beta.py / _gamma.py   beta and gamma design datasets
+    make_crossrun_pairs.py    independent pair sample (muons of different runs)
+    subsample_candidates.py   Poisson subsample of the pair candidates proportional to weight
+    replace_rate_maps.py      patch corrected rate maps into a reco-inputs file
+    neff_by_type.py, neff_vs_seeds.py, probe_statistics.py, make_probe_html.py, scan_shah_study.py
+                              statistics checks: independent input muons per type, per-cell probe
+    -- interactions and end to end (see "Interactions" below)
+    prepare_interactions.py   cache the selected muon / neutrino interactions (design independent)
+    run_interactions.py       one design: interactions through selection and veto
+    scan_cone.py              scan of the vertex cone
+    end_to_end.py             every background source before / after the veto, per design and cone
+    muon_dis_apply.py, nu_dis_apply.py   per-design forced muon DIS / GENIE neutrino interactions
+    dis_library.py, genie_splines.py, nu_library.py, extract_neutrinos.py, nu_prepare.py
+                              interaction libraries and neutrino flux (checks: dis_closure.py, dis_check.py,
+                              g4dis_smoke.py, plot_dis_library.py)
+    tail_produce.py, build_enriched.py, run_slices_any.sh, charm_*.py, tail_*.py, ...
+                              Pythia 6 tail production and the enriched input file
+    g4.sh, lcg.sh, genie.sh   containers (cudabear + Geant4, LCG_106, GENIE)
+  cpp/       g4dis.cc (Geant4 DIS), tailgen/ (Pythia 6 / 8 + Geant4 transport), genie/ (GENIE build);
+             builds in cpp/build, cpp/tailgen/build, external/ (git-ignored, not touched by remote.sh sync)
+  evolve/    LLM evolution of designs (see below)
+  docs/      SUMMARY_2026-10-20.md (state of the study), fast_veto_sim.md, fastveto_physics.md,
+             geant4_neutrino_notes.md, live_talk/ (the talk: veto_talk.tex, run.sh)
   designs/   veto designs (JSON): D0 minimal ... D4 dense, D5 cell-size variants,
-             D6 technology variants (straw, fiber, pixel, tile, tile2 fins)
+             D6 technology variants (straw, fiber, pixel, tile, tile2 fins),
+             E1–E5 evolved designs (E3_robust, E4_ubt2 / E4_entry2 with second stations, E5_evolved)
   ISSUES.txt open problems before optimising, with status (keep it updated)
   data/      local copy of the inputs (git-ignored)
   results/   everything we produce (git-ignored)
@@ -81,8 +116,9 @@ Inputs are Guglielmo's, on the physik cluster, in
 
 On the cluster the code reads that directory directly; locally it reads
 `veto/data` (`bin/fetch_data.sh 200 --derived`). Set `VETO_DATA_ROOT` to point
-somewhere else and `VETO_RESULTS` to change the output directory. Nothing is
-ever written into Guglielmo's directory.
+somewhere else and `VETO_RESULTS` to change the output directory. The interaction
+libraries are in `data/interactions` (`VETO_INTERACTIONS`) and the source muons at the
+target in `data/source` (`VETO_SOURCE`). Nothing is ever written into Guglielmo's directory.
 
 ### The UBT-plane dataset
 
@@ -152,6 +188,35 @@ bounce point `kx, ky, kz`, `walls` (bitmask of SBT walls +x, -x, +y, -y and the 
 crossed by the path), `type`, `run`, `source`, `evt_n`, `pdg`. The veto_only and
 rock_bounced types come from a single run: limited statistics, easy to overfit.
 
+### Muon production and the later datasets
+
+`bin/generate_muon_study.py` reruns Guglielmo's MuonsAndMatter simulation (imported read only,
+TRY6 settings of his shah_study runs) and keeps **every** muon type, including type 7
+`stops_before` (stopped in the shield; its "30.6 m state" is the stop point). One seed = one
+spill; each type fills a fixed row budget, so the rare types (SST1, veto-only) are kept complete
+in every seed. The classification runs on the GPU (`lib/veto/muon_types_torch.py`, checked muon
+by muon against `muon_types.py`). Run with `bin/run_muon_study.sh`, monitor with
+`bin/status_muon_study.sh`.
+
+| dataset | rows | made from | `$R/data/store/` |
+|---|---|---|---|
+| alpha | 57 M | old SST1 runs + one full run | `design-optimization-dataset-alpha-14-oct-2026` |
+| beta | alpha + ~240 per seed | alpha + veto-only muons of the shah_study seeds (central entrance) | (`bin/make_design_dataset_beta.py`) |
+| gamma | 88 M | old SST1 runs + the new production (every type) | `design-optimization-dataset-gamma-2026-10-17` |
+| **delta** | 111.4 M | 484 seeds of the enriched production | `design-optimization-dataset-delta-enriched-2026-10-19` |
+
+`$R` = `/disk/users/sqasim/workspace/uzh/Veto_System/veto`. **Enriched input**: in
+`full_sample_after_target.h5` the muons above ~150 GeV rest on ~9 k minimum-bias rows, so the
+SST1-selected rate had a 13.5 % error that more seeds cannot reduce. `full_sample_after_target_enriched_p6.h5`
+replaces them by a Pythia 6.4.28 + Geant4 tail production (1.2e8 PoT, `bin/tail_produce.py`,
+`bin/build_enriched.py`) with the same flux normalisation: n_eff of SST1-selected goes from 55 to
+18 170 (`bin/neff_by_type.py`). Details in `docs/fast_veto_sim.md`. Weights are muons per spill;
+15 years = 1.2e7 spills. Near the walls (first metre) statistics stay thin
+(`bin/probe_statistics.py`, `results/probe/`).
+
+The 25 M delta pair candidates are Poisson-subsampled to 400 k (`bin/subsample_candidates.py`,
+unbiased for every weighted sum): `results/reco/inputs_delta_s.npz`.
+
 ### Designs and reconstruction
 
 A design (`designs/*.json`) is a UBT at z = 30.6 m (|x| < 0.5 m, at least the vessel entrance)
@@ -164,6 +229,17 @@ spectrometer track backward in a straight line to the planes upstream of its ver
 for a hit in a space / time window; no combinatorics. Background = muon pairs of the old runs
 (TP vetoed, FN survive), signal = hypothetical neutral decays in the vessel (FP = lost to
 accidental hits). Bounced muons can only be predicted after their bounce.
+
+Every sample (signal, pairs, interactions) goes through the same selection
+(`lib/veto/vertex_selection.py`): measured IP < 0.1 m at the target and at most 2 tracks in the
+SST1 acceptance. Two design options:
+
+- `"stations": 2` (or 3) on the `ubt` or a fin: identical layers behind each other read out as an
+  OR, efficiency 1 − (1 − e)ⁿ, n × channels, cost and material; random hits and per-channel rates
+  are those of one station.
+- `"detector": {"cone_mrad": ...}` (vertex cone, `RecoConfig.cone`): upstream of the vertex the search
+  radius is max(r_A, r0 + cone · (z_vertex − z_plane)). It recovers the parent of a muon interaction
+  that kinked by a few mrad at the vertex, at the price of more random hits (signal loss).
 
 ### Detector technology
 
@@ -217,9 +293,11 @@ the generic detector of D0–D5 (no cost, no material).
   × its area. `run_reco.py` prints `OVER RATE LIMIT` for a plane above its density limit
   (area in m²) or its per-channel limit. Rates assume a 1 s spill (`--spill`); the fin maps have
   20 × 20 cm bins, so a narrower peak is averaged down.
+- **Material:** multiple scattering in the planes, the PVC walls (exact chords) and helium / air
+  (`lib/veto/scattering.py`, with single-scattering tails tuned to Geant4); muon and neutrino
+  interactions in the planes, walls, air and helium (see "Interactions").
 - **Not modelled yet:** σ_x (the 5 cm search window is far larger); ghost hits from combining
-  views when several muons share a time window; the material of the planes (it is reported,
-  not simulated: no scattering, conversions or neutrino interactions).
+  views when several muons share a time window; photon conversions in the planes.
 
 For reference, the OPT_BT layout had three straw entrance planes at z = 30.7, 30.8, 30.9 m
 (±1.8 × ±1.35 m) and lateral rings around the tapered vessel at z = 40–78 m, with its own
@@ -236,25 +314,59 @@ and a priority (A: before optimising, B: changes the results, C: second order). 
 - **B, physics:** multiple scattering (air 29.89-30.6 m and 80.6-82 m, 0.3 mm PVC walls at the
   vessel entrance and exit, helium in the vessel, the veto planes; for bounced muons only after
   the bounce); EM debris from the last 20 cm of shield iron, estimated from the full dataset;
-  a literature-based HNL / dark-photon signal model. Neutrino and muon DIS are deferred.
+  a literature-based HNL / dark-photon signal model. Neutrino and muon DIS are now modelled
+  (see "Interactions"); `ISSUES.txt` may still list them as deferred.
 - **C, detector:** response simplifications, dead material, validation against FairShip,
   weights and statistics of the single-run classes.
 
+### Interactions and end to end
+
+Ported from fast-veto-sim into `lib/fastveto` (nothing reads the old repository any more): forced
+muon DIS (Geant4 library, `cpp/g4dis.cc`) and neutrino interactions (GENIE 3.06.02) in every target:
+helium, air, PVC walls and every plane of the design. `lib/veto/interactions.py` puts them through
+the same selection and veto; the scattered muon's path starts from its parent's 30.6 m state and
+kinks at the vertex, so the parent's real upstream hits are digitised. Veto levels: (a) the two
+vertex tracks, (b) every reconstructed track, (c) a truth bound.
+
+`bin/end_to_end.py` gives every background source per 15 years, before and after the veto, per
+design and cone (`results/end_to_end/e2e.json`); neutrinos come from `bin/nu_dis_apply.py`. On
+delta (`docs/SUMMARY_2026-10-20.md`): combinatorial falls from 16.8 to ~1e-5, muon interactions in
+PVC and planes are all vetoed; E4_entry2 (second stations at the entrance, cone 17.5 mrad, 0.61 MCHF)
+leaves 0.62 ± 0.06 events, all neutrino DIS in the helium, with 2.85 % of the signal lost. That
+neutrino floor (no incoming charged particle) can only be vetoed by random hits, like the signal.
+Builds and containers: see `docs/fast_veto_sim.md`.
+
+```bash
+GPU_HOST=farm-gpu5 bin/remote.sh run bin/end_to_end.py --stage generate --designs E3_robust D6_tile2
+GPU_HOST=farm-gpu5 bin/remote.sh run bin/end_to_end.py --stage evaluate --designs E3_robust D6_tile2 --cones 0 10 20
+```
+
 ### Design optimisation: LLM evolution (AlphaEvolve-style)
 
-`evolve/evolve_designs.py` runs on the laptop: an LLM (OpenRouter, key from `OPENROUTER_API_KEY` or the
-supply2 `.env`) proposes complete design JSONs from a rank-weighted parent, the top designs as
-inspiration and a directive (refine / explore / combine), with the problem context: geometry and limits,
-the JSON schema, technologies, the muon density per side / z / distance from the wall, the objective.
-Each generation's designs are evaluated in parallel on farm-gpu3 (`evolve/evaluate_designs.py`, sent over
-the SSH proxy, so the key stays local): the full run_reco chain with multiple scattering, reported back
-per plane (rates, limits, cost, which planes veto and which lose signal). `evolve/objective.py` is a
-PLACEHOLDER score (signal kept - cost - rate-limit and background penalties). Everything goes to
-`results/evolve/<run>/` (`history.jsonl`, `best.json`, the system prompt).
+`evolve/evolve_designs.py`: an LLM proposes complete design JSONs from a rank-weighted parent, the top
+designs as inspiration and a directive (refine / explore / combine), with the problem context: geometry and
+limits, the JSON schema, technologies, the muon density per side / z / distance from the wall, the objective.
+Backends: `--backend claude` (Claude Code CLI, default), `codex` (Codex CLI) or `openrouter` (key from
+`OPENROUTER_API_KEY` or the supply2 `.env`). Each generation's designs are evaluated in parallel
+(`evolve/evaluate_designs.py`, on farm-gpu3 over the SSH proxy, or `--host local`): the full run_reco chain
+with multiple scattering and the interactions, reported back per plane (rates, limits, cost, which planes
+veto and which lose signal). `--inputs` / `--prep-tag` pick the dataset (`inputs_delta_s.npz`, `_delta`).
+Everything goes to `results/evolve/<run>/` (`config.json`, `history.jsonl`, `best.json`, the system prompt).
+
+**Objective** (`evolve/objective.py`, `lib/veto/objective.py` form `"sensitivity"`, since 2026-10-20):
+```
+reward = - 100 (1 - sensitivity) - cost points - constraint penalties
+sensitivity = (1 - signal lost) * S90(0) / S90(N)        S90 = expected 90 % CL upper limit
+```
+N sums every source (combinatorial + muon + neutrino interactions); cost is 2 points per MCHF up to 5 MCHF,
+4 above; a plane over its rate limit or a design over 10 MCHF is infeasible. The older "tiers" form capped the
+signal term at 10 % loss, and Codex run 3 exploited it (74 % of the signal given up to cut neutrinos 0.6 → 0.06).
 
 ```bash
 bin/remote.sh sync                                   # the cluster needs the current code
-evolve/evolve_designs.py --generations 20 --children 8 [--model anthropic/claude-sonnet-4.5]
+evolve/evolve_designs.py --generations 20 --children 8 [--backend codex] [--inputs inputs_delta_s.npz --prep-tag _delta]
+# or entirely on a cluster node, in tmux (log in to claude / codex there once):
+evolve/run_on_cluster.sh --generations 25 --children 8
 ```
 
 ## Running
@@ -277,8 +389,9 @@ bin/remote.sh peek sel_tw
 bin/remote.sh fetch-results
 ```
 
-Needs numpy, scipy, matplotlib, h5py and plotly. The cluster container
-(`exec_cudabear_november_2025.sh`) has these.
+Needs numpy, scipy, matplotlib, h5py and plotly (torch for the muon production and the GPU paths).
+The cluster container (`exec_cudabear_november_2025.sh`) has these; Geant4, LCG and GENIE jobs run
+through `bin/g4.sh`, `bin/lcg.sh`, `bin/genie.sh`.
 
 ## Things to know
 
@@ -293,7 +406,8 @@ Needs numpy, scipy, matplotlib, h5py and plotly. The cluster container
   points off the vessel surface, and most of the "SBT ±y" entries came from this. It is
   replaced by `tracks.vessel_crossings` (exact clipping of the line against the frustum).
   The existing `muon_vessel_dataset.npz` was made with the old version.
-- Straight lines ignore multiple scattering in the vessel walls and in air.
+- The geometry-only scripts (`tracks.py`, `analyse_ubt_plane.py`, the selection) use straight lines
+  without scattering; `run_reco.py` and the evolution add it through `lib/veto/scattering.py`.
 - `analysis_multifiles.ipynb` unpacked `backtrack_to_lateral` as `(x, y, z)` although it
   returns `(z, x, y)`, so its `x_decay_vessel`/`z_decay_vessel` columns were swapped.
   Those columns were never used downstream, and the vessel dataset is not affected.
