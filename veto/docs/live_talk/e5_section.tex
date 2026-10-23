@@ -1,0 +1,44 @@
+% The evolved design E5_evolved (evolution run 20261020_003353) end to end, with interactions drawn afresh (bin/end_to_end.py).
+
+\begin{frame}{The evolved design, end to end}
+  \begin{columns}[c]
+    \begin{column}{0.5\textwidth}\footnotesize
+      \key{E5\_evolved} at 16\,mrad, 15 years, \key{100 signal events}:\\[1mm]
+      {\scriptsize\setlength{\tabcolsep}{3pt}\begin{tabular}{@{}lrrr@{}}
+        \toprule
+        & selected & vetoed & let through\\
+        \midrule
+        \key{signal} & 100 & \key{FP 0.32} & TN 99.68\\
+        \midrule
+        combinatorial & 16.8 & TP 16.8 & FN 0.004\\
+        $\mu$ helium & 4\,330 & 4\,330 & 0\\
+        $\mu$ PVC walls & 161 & 161 & 0\\
+        $\mu$ veto planes & 80 & 80 & 0\\
+        $\nu$ helium & 0.87 & 0.27 & 0.60\\
+        $\nu$ veto planes & 0.06 & 0.06 & 0\\
+        \midrule
+        \key{background} & 4\,589 & TP 4\,588 & \key{FN 0.61}\\
+        \bottomrule
+      \end{tabular}}\\[1.5mm]
+      Rerun with \key{new} interactions (16\,M $\mu$, 7.4\,M $\nu$): 0 of 8\,337 selected muon interactions survive, i.e.\ below $\approx$1.2 at 90\,\% CL.
+    \end{column}
+    \begin{column}{0.48\textwidth}\scriptsize
+      {\setlength{\tabcolsep}{3pt}\begin{tabular}{@{}lrr@{}}
+        \toprule
+        & E4\_entry2 & \key{E5\_evolved}\\
+        \midrule
+        fins at 30.6\,m & 0.70\,m $\times2$ & \key{0.38\,m} $\times2$\\
+        later fins & 36\,m: 1.1\,m & 38.6\,m: 0.5 / 0.6\,m $\times2$\\
+        cost & 0.61\,MCHF & \key{0.54\,MCHF}\\
+        FP / TN (of 100) & 2.35 / 97.65 & \key{0.32 / 99.68}\\
+        FN ($\mu$ / $\nu$) & 0 / 0.63 & 0 / 0.61\\
+        sensitivity & 0.739 & \key{0.759}\\
+        reward & $-27.3$ & \key{$-25.2$}\\
+        \bottomrule
+      \end{tabular}}\\[0.5mm]
+      {\color{muted}\lightfont\tiny both: UBT $\times2$ (two stations), cone 16\,mrad}\\[1.5mm]
+      Shorter entrance fins still catch every parent, and the cone picks up fewer random hits on them. (Evolution: $-22.2$, with a smaller $\nu$ sample.)\\[1.5mm]
+      \takeaway[\footnotesize]{Of 100 signal events 99.7 are kept, next to 0.6 background events: 99.4\,\% pure. The 0.6 is all neutrinos.}
+    \end{column}
+  \end{columns}
+\end{frame}

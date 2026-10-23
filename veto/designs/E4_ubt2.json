@@ -1,0 +1,48 @@
+{
+ "name": "E4_ubt2",
+ "description": "E3_robust with a second UBT station (\"stations\": 2)",
+ "ubt": {
+  "y_lo": -1.35,
+  "y_hi": 1.35,
+  "stations": 2
+ },
+ "fins": [
+  {
+   "side": "right",
+   "z": 30.6,
+   "length": 0.7,
+   "y_lo": -1.3,
+   "y_hi": 1.3,
+   "tilt": 0,
+   "technology": "tile2"
+  },
+  {
+   "side": "left",
+   "z": 30.6,
+   "length": 0.7,
+   "y_lo": -1.3,
+   "y_hi": 1.3,
+   "tilt": 0,
+   "technology": "tile2"
+  },
+  {
+   "side": "right",
+   "z": 36.0,
+   "length": 1.1,
+   "y_lo": -1.5,
+   "y_hi": 1.5,
+   "tilt": 0,
+   "technology": "tile2"
+  },
+  {
+   "side": "left",
+   "z": 36.0,
+   "length": 1.1,
+   "y_lo": -1.5,
+   "y_hi": 1.5,
+   "tilt": 0,
+   "technology": "tile2"
+  }
+ ],
+ "detector": {}
+}

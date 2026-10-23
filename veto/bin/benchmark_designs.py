@@ -59,25 +59,61 @@ def candidates(t, dev, spill_chunk=400, dtype=torch.float64, opposite_charge=Tru
             q = t["pdg"][a] * t["pdg"][b] < 0
             a, b = a[q], b[q]
         n_pairs += len(a)
-        r1, r2, p1, p2 = r[a], r[b], p[a], p[b]
-        dr = r1 - r2
-        cross = torch.linalg.cross(p1, p2)
-        doca = (dr * cross).sum(1).abs() / cross.norm(dim=1)
-        aa, bb, cc = (p1 * p1).sum(1), (p1 * p2).sum(1), (p2 * p2).sum(1)
-        dd, ee = (p1 * dr).sum(1), (p2 * dr).sum(1)
-        den = aa * cc - bb * bb
-        v = 0.5 * (r1 + ((bb * ee - cc * dd) / den)[:, None] * p1 + r2 + ((aa * ee - bb * dd) / den)[:, None] * p2)
-        hx = G.VESSEL_X_IN + (G.VESSEL_X_OUT - G.VESSEL_X_IN) * (v[:, 2] - G.Z_VESSEL_MIN) / 50
-        hy = G.VESSEL_Y_IN + (G.VESSEL_Y_OUT - G.VESSEL_Y_IN) * (v[:, 2] - G.Z_VESSEL_MIN) / 50
-        mom = p1 + p2
-        dz = G.Z_TARGET - v[:, 2]
-        ip = torch.hypot(v[:, 0] + mom[:, 0] / mom[:, 2] * dz, v[:, 1] + mom[:, 1] / mom[:, 2] * dz)
-        keep = ((doca < 0.02) & (v[:, 2] > G.Z_VESSEL_MIN) & (v[:, 2] < G.Z_VESSEL_MAX)
-                & (v[:, 0].abs() < hx) & (v[:, 1].abs() < hy) & (ip < 2.5))
-        out.append((torch.stack([a[keep], b[keep]], 1), v[keep]))
+        a, b, v = _pair_cut(a, b, r, p)
+        out.append((torch.stack([a, b], 1), v))
     pairs = torch.cat([o[0] for o in out])
     vertex = torch.cat([o[1] for o in out])
     return pairs, vertex, n_pairs
+
+
+def _pair_cut(a, b, r, p):
+    """The candidate cuts on muon pairs (a, b): DOCA < 2 cm, vertex in the vessel, IP < 2.5 m."""
+    r1, r2, p1, p2 = r[a], r[b], p[a], p[b]
+    dr = r1 - r2
+    cross = torch.linalg.cross(p1, p2)
+    doca = (dr * cross).sum(1).abs() / cross.norm(dim=1)
+    aa, bb, cc = (p1 * p1).sum(1), (p1 * p2).sum(1), (p2 * p2).sum(1)
+    dd, ee = (p1 * dr).sum(1), (p2 * dr).sum(1)
+    den = aa * cc - bb * bb
+    v = 0.5 * (r1 + ((bb * ee - cc * dd) / den)[:, None] * p1 + r2 + ((aa * ee - bb * dd) / den)[:, None] * p2)
+    hx = G.VESSEL_X_IN + (G.VESSEL_X_OUT - G.VESSEL_X_IN) * (v[:, 2] - G.Z_VESSEL_MIN) / 50
+    hy = G.VESSEL_Y_IN + (G.VESSEL_Y_OUT - G.VESSEL_Y_IN) * (v[:, 2] - G.Z_VESSEL_MIN) / 50
+    mom = p1 + p2
+    dz = G.Z_TARGET - v[:, 2]
+    ip = torch.hypot(v[:, 0] + mom[:, 0] / mom[:, 2] * dz, v[:, 1] + mom[:, 1] / mom[:, 2] * dz)
+    keep = ((doca < 0.02) & (v[:, 2] > G.Z_VESSEL_MIN) & (v[:, 2] < G.Z_VESSEL_MAX)
+            & (v[:, 0].abs() < hx) & (v[:, 1].abs() < hy) & (ip < 2.5))
+    return a[keep], b[keep], v[keep]
+
+
+def candidates_blocked(t, dev, block=4096, dtype=torch.float64, opposite_charge=True):
+    """candidates() for big spills (tens of thousands of muons each): every spill's pairs in blocks of
+    block x block muons, so memory stays bounded. Same pairs, same cuts."""
+    fi = t["file_index"].cpu().numpy()
+    order = np.argsort(fi, kind="stable")
+    counts = np.bincount(fi)
+    starts = np.cumsum(counts) - counts
+    r = torch.stack([t["x"], t["y"], t["z"]], 1).to(dtype)
+    p = torch.stack([t["px"], t["py"], t["pz"]], 1).to(dtype)
+    out, n_pairs = [], 0
+    for s0, c in zip(starts, counts):
+        if c < 2:
+            continue
+        idx = torch.as_tensor(order[s0:s0 + c], device=dev)
+        for i0 in range(0, c, block):
+            for j0 in range(i0, c, block):
+                ni, nj = min(block, c - i0), min(block, c - j0)
+                ia = torch.arange(ni, device=dev)[:, None].expand(ni, nj)
+                jb = torch.arange(nj, device=dev)[None, :].expand(ni, nj)
+                m = (i0 + ia) < (j0 + jb)
+                a, b = idx[i0 + ia[m]], idx[j0 + jb[m]]
+                if opposite_charge:
+                    q = t["pdg"][a] * t["pdg"][b] < 0
+                    a, b = a[q], b[q]
+                n_pairs += len(a)
+                a, b, v = _pair_cut(a, b, r, p)
+                out.append((torch.stack([a, b], 1), v))
+    return torch.cat([o[0] for o in out]), torch.cat([o[1] for o in out]), n_pairs
 
 
 def random_design(rng):

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Design dataset from our own muon production (bin/generate_muon_study.py): every type from the new seeds.
+"""Design dataset from our own muon production (bin/generate_muon_study.py), with the SST1 types of alpha.
+
+Types --old-types (default 0, 1, 2: the SST1 types) are alpha's rows from the 20 001 old runs (all of them,
+weight / 20 001); every other type, including the muons that stop in the shield (type 7, new), comes from
+the production seeds finished so far.
 
 Each seed file keeps, per type, all muons or a random fraction re-weighted to the seed's total of that type
 (kept_types, kept_fraction), so for type t the dataset takes the rows of the seeds that kept t and divides
@@ -14,6 +18,7 @@ walls, type, weight, scale, source 3, run = seed.
 import _bootstrap  # noqa: F401
 
 import argparse
+import ast
 import datetime
 import json
 import time
@@ -33,12 +38,22 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--production", default=str(Path(__file__).resolve().parents[1] / "data" / "sim" / "veto_muons_v1"))
     ap.add_argument("--max-seed", type=int, default=None, help="only seeds below this (e.g. a fixed snapshot)")
+    ap.add_argument("--seeds-like", default=None, help="only the seeds of this existing dataset (its meta), to rebuild it")
     ap.add_argument("--name", default=f"{NAME}-{datetime.date.today().isoformat()}")
+    ap.add_argument("--old-types", default="0,1,2", help="types taken from alpha's old-run rows ('' = none)")
+    ap.add_argument("--alpha", default="design-optimization-dataset-alpha-14-oct-2026")
     args = ap.parse_args()
     t0 = time.time()
     files = sorted(Path(args.production).glob("seed_*.npz"), key=lambda f: int(f.stem.split("_")[1]))
     if args.max_seed is not None:
         files = [f for f in files if int(f.stem.split("_")[1]) < args.max_seed]
+    if args.seeds_like:
+        _, meta_like = io.open_store(paths.store_dir(args.seeds_like))
+        like = meta_like["seeds"]
+        like = set(ast.literal_eval(like) if isinstance(like, str) else like)
+        files = [f for f in files if int(f.stem.split("_")[1]) in like]
+        if len(files) != len(like):
+            raise SystemExit(f"{len(like) - len(files)} seeds of {args.seeds_like} are missing in {args.production}")
     if not files:
         raise SystemExit(f"no seed files in {args.production}")
 
@@ -65,10 +80,26 @@ def main():
     del data["weight_raw"]
     data = finish({k: v for k, v in data.items() if k != "type"}, source=3)
     assert np.array_equal(data["type"], typ), "classification differs from the production's"
+    old_types = [int(t) for t in args.old_types.split(",") if t != ""]
+    if old_types:                                   # these types from alpha's old runs instead
+        new_keep = ~np.isin(typ, old_types)
+        store, meta_a = io.open_store(paths.store_dir(args.alpha))
+        ta = np.asarray(store["type"])
+        rows_a = np.nonzero(np.isin(ta, old_types) & (np.asarray(store["source"]) == 0))[0]
+        merged = {}
+        for k in data:
+            col = np.asarray(store[k])[rows_a] if k in meta_a["columns"] else None
+            assert col is not None, f"column {k} not in {args.alpha}"
+            merged[k] = np.concatenate([col, data[k][new_keep].astype(col.dtype)])
+        data = merged
+        typ = data["type"].astype(np.int8)
+        for t in old_types:
+            n_seeds_by_type[t] = meta_a["per_type"][mt.TYPES[t]]["runs"]
     per_type = {}
     print(f"{len(files)} seed files, {len(typ):,} rows, {time.time() - t0:.0f} s\n")
     print(f"{'type':<15}{'seeds':>8}{'rows':>13}{'muons/spill':>14}{'all muons/spill (check)':>26}")
     for t in range(N_TYPES):
+        n_rows_by_type[t] = int((typ == t).sum())
         w = float(data["weight"][typ == t].sum())
         check = w_all[t] / len(files)
         per_type[mt.TYPES[t]] = dict(seeds=int(n_seeds_by_type[t]), rows=int(n_rows_by_type[t]), muons_per_spill=w,
@@ -77,8 +108,11 @@ def main():
     out = paths.store_dir(args.name)
     io.write_store(out, data, meta={
         "name": args.name, "created": datetime.date.today().isoformat(),
-        "description": "Muons for veto design optimisation, every type from our production "
-                       "(generate_muon_study.py: Guglielmo's simulation, our types, fill-until-budget storage)",
+        "description": ("Muons for veto design optimisation: " + ("SST1 types from the 20 001 old runs (alpha), every other "
+                        "type" if old_types else "every type") + " from our production (generate_muon_study.py: Guglielmo's "
+                        "simulation, our types, fill-until-budget storage), including the muons that stop in the shield"),
+        "input_muons": json.loads(str(np.load(files[0])["meta"])).get("input"),
+        "old_types": old_types, "alpha": args.alpha,
         "weight": "muons per spill: a seed's rows of a type are re-weighted to its total, divided by the number of "
                   "seeds that kept the type",
         "production": str(Path(args.production).resolve()), "seeds": [int(f.stem.split("_")[1]) for f in files],

@@ -25,6 +25,7 @@ import time
 
 import numpy as np
 
+from veto import vertex_selection as vsel  # noqa: E402
 from veto import design as dsg
 from veto import paths, reco
 from veto.config import DEFAULT_CONFIG
@@ -72,15 +73,22 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
            "n_channels": design.n_channels, "cost_kchf": design.cost, "rel_cost": design.rel_cost,
            "ubt_x0": design.ubt_x0}
 
-    # background candidates
-    cand = inp["cand"]
+    # background candidates, with the pointing cut on measured tracks (fixed seed: the same pairs for every design)
+    keep = np.arange(len(inp["cand"]))
+    if cfg.ip_max is not None:
+        c = inp["cand"]
+        st = lambda i: (np.stack([tr["bx"][i], tr["by"][i], tr["bz"][i]], 1), np.stack([tr["bpx"][i], tr["bpy"][i], tr["bpz"][i]], 1))
+        ip = vsel.measured_ip(*st(c[:, 0]), *st(c[:, 1]), cfg, np.random.default_rng(777))
+        keep = np.nonzero(ip < cfg.ip_max)[0]
+    cand, cand_w = inp["cand"][keep], inp["cand_w"][keep]
+    res["candidates_kept"] = int(len(keep))
     rows = cand.ravel()
     event = np.repeat(np.arange(len(cand)), 2)
-    z_lim = np.repeat(inp["cand_vertex"][:, 2], 2)
+    z_lim = np.repeat(inp["cand_vertex"][keep, 2], 2)
     t0 = time.perf_counter()
     b = reco.run_events(take(tr, rows), event, z_lim, design, inp, cfg, rng)
     t_bkg = time.perf_counter() - t0
-    w = inp["cand_w"] * 2 * dt_pair / cfg.spill_s           # random-coincidence candidates per spill
+    w = cand_w * 2 * dt_pair / cfg.spill_s                  # random-coincidence candidates per spill
     surv = ~b["vetoed"]
     res["background"] = dict(n=len(cand), n_vetoed=int(b["vetoed"].sum()), n_survive=int(surv.sum()),
                              TP_frac=float(1 - w[surv].sum() / w.sum()), FN_frac=float(w[surv].sum() / w.sum()),
@@ -90,7 +98,7 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
                              veto_by_plane={design.planes[i].name: int(c) for i, c in enumerate(b["by_plane"]) if c},
                              seconds=t_bkg, us_per_event=1e6 * t_bkg / len(cand), timing=b["timing"])
     # veto efficiency of the muons in the pairs, per type (for the factorised background, objective.py)
-    ty, wt = tr["type"][rows].astype(int), np.repeat(inp["cand_w"], 2)
+    ty, wt = tr["type"][rows].astype(int), np.repeat(cand_w, 2)
     res["pair_muons"] = {TYPE_NAMES[k]: float((wt * b["explained"])[ty == k].sum() / wt[ty == k].sum())
                          for k in range(3) if (ty == k).any()}
 
@@ -99,6 +107,15 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
         sig, z_v, ev, acceptance = reco.signal_from_target(n_signal, rng)
     else:
         (sig, z_v, ev), acceptance = reco.signal_tracks(n_signal, rng), {}
+    if cfg.ip_max is not None:                               # the same pointing cut (signal: rows i and i + n pair up)
+        n2 = len(ev) // 2
+        st = lambda i: (np.stack([sig["bx"][i], sig["by"][i], sig["bz"][i]], 1), np.stack([sig["bpx"][i], sig["bpy"][i], sig["bpz"][i]], 1))
+        ok = vsel.measured_ip(*st(np.arange(n2)), *st(np.arange(n2, 2 * n2)), cfg, np.random.default_rng(778)) < cfg.ip_max
+        acceptance = dict(acceptance, ip_cut_efficiency=float(ok.mean()))
+        new_id = np.cumsum(ok) - 1
+        rows_ok = ok[ev]
+        sig = {k: v[rows_ok] for k, v in sig.items()}
+        z_v, ev = z_v[rows_ok], new_id[ev[rows_ok]]
     t0 = time.perf_counter()
     s = reco.run_events(sig, ev, z_v, design, inp, cfg, rng, with_own_hits=False)
     t_sig = time.perf_counter() - t0
@@ -195,11 +212,12 @@ def main():
     parser.add_argument("--multiple-scattering", action="store_true",
                         help="scatter the muons after z = 30.6 m: walls, helium, air, UBT and fins (scattering.py)")
     parser.add_argument("--out", default=None, help="output file name in results/reco (default: results[_tw..][_oldsignal].json)")
+    parser.add_argument("--inputs", default="inputs.npz", help="results/reco file from make_reco_inputs.py")
     args = parser.parse_args()
     names = args.designs or sorted(p.stem for p in dsg.DESIGN_DIR.glob("*.json"))
     cfg = reco.RecoConfig(spill_s=args.spill, seed=args.seed, time_window_ns=args.time_window,
                           multiple_scattering=args.multiple_scattering)
-    tr, inp = load_inputs()
+    tr, inp = load_inputs(args.inputs)
     dt_pair = DEFAULT_CONFIG["time_window"] * 1e9 * 1e-9    # two-track coincidence window [s]
     results = []
     for name in names:
@@ -217,7 +235,7 @@ def main():
               f"{f['punzi']:>7.3f}{r['cost_kchf']:>11,.0f}{r['n_channels']:>14,}")
     name = args.out or f"results{tag(cfg)}{'_oldsignal' if args.signal == 'old' else ''}.json"
     out = paths.results_dir() / "reco" / name
-    out.write_text(json.dumps(dict(config=vars(cfg), spill_s=args.spill, signal=args.signal, results=results),
+    out.write_text(json.dumps(dict(config=vars(cfg), spill_s=args.spill, inputs=args.inputs, signal=args.signal, results=results),
                               indent=1, default=float))
     print(f"\nsaved {out}")
 

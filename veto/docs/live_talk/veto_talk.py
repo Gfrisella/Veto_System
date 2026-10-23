@@ -81,7 +81,8 @@ def text_block(fig, lines, x0, y0=0.97, dy=0.085, size=6.5, bold_first=True):
 
 
 def layout(fig, **kw):
-    lay = dict(font=FONT, paper_bgcolor="white", plot_bgcolor="white", margin=dict(l=40, r=10, t=22, b=28),
+    # uirevision: a redraw (slider moved) keeps what the presenter did, e.g. a rotated 3D camera
+    lay = dict(uirevision="keep", font=FONT, paper_bgcolor="white", plot_bgcolor="white", margin=dict(l=40, r=10, t=22, b=28),
                showlegend=False)
     lay.update(kw)
     fig.update_layout(**lay)
@@ -393,7 +394,7 @@ def rate_map(z, side):
     dens = INP["fin_maps"][s, iz] / np.outer(np.diff(ub), np.diff(yb))
     fig = go.Figure(go.Heatmap(x=0.5 * (ub[1:] + ub[:-1]), y=0.5 * (yb[1:] + yb[:-1]), z=np.log10(np.maximum(dens.T, 1)),
                                zmin=2, zmax=9, colorscale="Viridis",
-                               colorbar=dict(title=dict(text="log₁₀ muons/m²/spill", side="right", font=dict(size=6)),
+                               colorbar=dict(title=dict(text="log₁₀ muons/m²/spill", side="top", font=dict(size=6)),
                                              thickness=7, tickfont=dict(size=6))))
     xw = mt.side_plane_x(INP["z_slices"][iz])
     if int(side) == 0:
@@ -473,7 +474,7 @@ def time_trade(sig_t):
     ref = 3 * math.hypot(0.5, CFG.sigma_t_track)
     plot = LinePlot(xlabel="window [σ]", ylabel="%", xrange=(1.5, 5), yrange=(0, 15), title="misses against accidental vetoes")
     plot.add(n, [100 * tail(v) for v in n], label="own hits outside")
-    plot.add(n, 100 * fp_d2 * (n * sc) / ref, label="signal lost, D2 (≈)")
+    plot.add(n, 100 * fp_d2 * (n * sc) / ref, label="FP of 100 signal, D2 (≈)")
     return plot
 
 
@@ -658,7 +659,7 @@ def knobs_figure(res, final):
     rows = [["design", f"{res['d'].name}, {res['d'].area:.0f} m²"],
             ["pairs surviving", f"{res['surv']:,} of {res['n']:,}"],
             ["events / 15 y", f"{before:.3g} → {before * res['fn']:.2g}"],
-            ["signal lost", f"{100 * res['fp']:.2f} %"], ["hits / event", f"{res['hits']:.1f}"],
+            ["FP (of 100 signal)", f"{100 * res['fp']:.2f}"], ["hits / event", f"{res['hits']:.1f}"],
             ["time / event", f"{res['us']:.1f} µs"], ["sample", "20 k pairs, 10 k signal"]]
     text_block(fig, [f"{a}: {b}" for a, b in rows], 0.64, y0=0.97, dy=0.12, size=7, bold_first=False)
     return layout(fig, margin=dict(l=100, r=4, t=4, b=26))
@@ -689,7 +690,7 @@ def compare():
                 "D5 coarse": "top center"}.get(label, "middle right")
         fig.add_trace(go.Scatter(x=[r["area_m2"]], y=[worst], mode="markers+text", text=[label],
                                  textposition=pos2, textfont=dict(size=6.5), marker=dict(size=7, color=ORA)), 1, 2)
-    fig.update_xaxes(title="signal lost to random hits [%]", range=[-0.3, 7.5], row=1, col=1)
+    fig.update_xaxes(title="FP: signal events vetoed, of 100", range=[-0.3, 7.5], row=1, col=1)
     fig.update_yaxes(title="bkg surviving", type="log", range=[-6.8, 0.4], row=1, col=1,
                      tickvals=[1e-6, 1e-4, 1e-2, 1], ticktext=["10⁻⁶", "10⁻⁴", "10⁻²", "1"])
     fig.update_xaxes(title="detector area [m²]", range=[-20, 720], row=1, col=2)
@@ -740,7 +741,7 @@ def cell_scan(di):
     fig.add_trace(go.Scatter(x=[100 * c for c in CELLS], y=fp, mode="lines+markers", line=dict(color=ORA)), 1, 1)
     fig.add_trace(go.Scatter(x=[100 * c for c in CELLS], y=peak, mode="lines+markers", line=dict(color=RED)), 1, 2)
     fig.update_xaxes(title="cell size [cm]", row=1, col=1); fig.update_xaxes(title="cell size [cm]", row=1, col=2)
-    fig.update_yaxes(title="signal lost [%]", rangemode="tozero", row=1, col=1)
+    fig.update_yaxes(title="FP of 100 signal", rangemode="tozero", row=1, col=1)
     fig.update_yaxes(title="busiest cell [Hz]", type="log", row=1, col=2, tickvals=[1e5, 1e6, 1e7, 1e8, 1e9],
                      ticktext=["10⁵", "10⁶", "10⁷", "10⁸", "10⁹"])
     return layout(fig, title=dict(text=DESIGNS[int(di)], font=dict(size=8), x=0.02), margin=dict(l=40, r=8, t=18, b=30))
@@ -849,10 +850,13 @@ from veto import objective as vobj  # noqa: E402
 from veto import technology as tech  # noqa: E402
 
 EVO_DIR = paths.results_dir() / "evolve"
-EVO_RUNS = [("run 1 · factorised background", "20261015_175718"), ("run 2 · honest background", "20261015_213509")]
-EVO_PICK = ["E1_llm_run1", "E2_llm_run2"]
+EVO_RUN = "20261020_003353"          # Codex, sensitivity objective, enriched dataset
 OBJ_STATS = vobj.sample_stats()
-OBJ_CFG = vobj.ObjectiveConfig(bkg_estimate="max")
+# the pair statistics of the reco inputs the run was evaluated on (the candidates; the rate maps do not enter)
+_inp = json.loads((EVO_DIR / EVO_RUN / "config.json").read_text()).get("inputs", "inputs.npz") if (EVO_DIR / EVO_RUN).exists() else None
+_inp = _inp if _inp and (paths.results_dir() / "reco" / _inp).exists() else "inputs_delta_s_amaps.npz"
+RUN_STATS = vobj.sample_stats(np.load(paths.results_dir() / "reco" / _inp)) if (paths.results_dir() / "reco" / _inp).exists() else OBJ_STATS
+OBJ_CFG = vobj.ObjectiveConfig(bkg_estimate="max", form="sensitivity", cost_budget_kchf=10000.0)
 
 
 def evo_history(run):
@@ -871,70 +875,66 @@ def evo_lineage(hist):
     return out
 
 
-EVO = {run: evo_history(run) for _, run in EVO_RUNS} if EVO_DIR.exists() else {}
-LINEAGE = {run: evo_lineage(h) for run, h in EVO.items()}
+EVO = evo_history(EVO_RUN) if (EVO_DIR / EVO_RUN).exists() else []
+LINEAGE = evo_lineage(EVO) if EVO else []
 
 
-def honest(c):
-    """veto.objective with the max(direct, factorised) background, for every design alike."""
-    return vobj.score(c["report"]["result"], OBJ_STATS, OBJ_CFG)
+def evo_score(c):
+    return vobj.score(c["report"]["result"], RUN_STATS, OBJ_CFG)
 
 
-pres.slider("evo_run", label="run", min=0, max=len(EVO_RUNS) - 1, value=1, step=1, decimals=0)
-pres.slider("evo_step", label="step", min=0, max=max([len(v) for v in LINEAGE.values()] + [1]) - 1, value=0, step=1, decimals=0)
+pres.slider("evo_step", label="step", min=0, max=max(len(LINEAGE), 1) - 1, value=max(len(LINEAGE), 1) - 1, step=1, decimals=0)
 
 
-@pres.output("evo_curve", inputs=["evo_run"])
-def evo_curve(ri):
+@pres.output("evo_curve")
+def evo_curve():
     """Every design the LLM proposed: penalty (-reward, log) per generation, the best so far as a line."""
-    label, run = EVO_RUNS[int(ri)]
-    hist, lin = EVO[run], LINEAGE[run]
+    if not EVO:
+        return layout(go.Figure())
     rng = np.random.default_rng(0)
-    pen = np.array([-c["score"] for c in hist])
-    gen = np.array([c["gen"] for c in hist]) + rng.uniform(-0.25, 0.25, len(hist))
+    pen = np.array([-c["score"] for c in EVO])
+    gen = np.array([c["gen"] for c in EVO]) + rng.uniform(-0.25, 0.25, len(EVO))
     feas = pen < 999
     fig = go.Figure()
-    for band, (lo, hi, txt, col) in enumerate(((999, 2e4, "infeasible: over a rate limit or the budget", "#f3e3e1"),
-                                                (5, 999, "background: false vertices ≳ 0.05 in 15 y", "#fbf1e4"),
-                                                (0.1, 5, "signal and cost", "#e7f1e9"))):
+    for lo, hi, txt, col in ((999, 2e4, "infeasible: over a rate limit or the budget", "#f3e3e1"),
+                             (50, 999, "muon interactions survive (no cone or one station)", "#fbf1e4"),
+                             (10, 50, "neutrino floor + signal + cost", "#e7f1e9")):
         fig.add_shape(type="rect", xref="paper", x0=0, x1=1, y0=lo, y1=hi, fillcolor=col, line=dict(width=0), layer="below")
-        fig.add_annotation(xref="paper", x=0.995, y=math.log10(hi) - 0.05, text=txt, showarrow=False, xanchor="right",
+        fig.add_annotation(xref="paper", x=0.995, y=math.log10(hi) - 0.03, text=txt, showarrow=False, xanchor="right",
                            yanchor="top", font=dict(size=6, color=MUT))
     fig.add_trace(go.Scatter(x=gen[~feas], y=pen[~feas], mode="markers", marker=dict(size=4, color=GREY, opacity=0.6),
-                             text=[c["id"] for c, f in zip(hist, feas) if not f], hoverinfo="text"))
+                             text=[c["id"] for c, f in zip(EVO, feas) if not f], hoverinfo="text"))
     fig.add_trace(go.Scatter(x=gen[feas], y=pen[feas], mode="markers", marker=dict(size=4.5, color=ACC, opacity=0.75),
-                             text=[c["id"] for c, f in zip(hist, feas) if f], hoverinfo="text"))
-    gl = [g for g, _ in lin] + [max(c["gen"] for c in hist)]
-    pl = [-c["score"] for _, c in lin] + [-lin[-1][1]["score"]]
-    fig.add_trace(go.Scatter(x=gl, y=pl, mode="lines+markers", line=dict(color=ORA, width=2, shape="hv"),
-                             marker=dict(size=5, color=ORA)))
-    best = lin[-1][1]
-    fig.update_xaxes(title="generation", range=[-0.6, max(c["gen"] for c in hist) + 0.6], dtick=5)
-    fig.update_yaxes(title="penalty = −reward", type="log", range=[-0.75, 4.2],
-                     tickvals=[0.3, 1, 3, 10, 100, 1000, 1e4], ticktext=["0.3", "1", "3", "10", "100", "1000", "10⁴"])
-    title = f"{label}: {len(hist)} designs · best {best['id']} = {best['score']:.3f}"
+                             text=[c["id"] for c, f in zip(EVO, feas) if f], hoverinfo="text"))
+    last = max(c["gen"] for c in EVO)
+    gl = [g for g, _ in LINEAGE] + [last]
+    pl = [-c["score"] for _, c in LINEAGE] + [-LINEAGE[-1][1]["score"]]
+    fig.add_trace(go.Scatter(x=gl, y=pl, mode="lines+markers", line=dict(color=ORA, width=2, shape="hv"), marker=dict(size=5, color=ORA)))
+    best = LINEAGE[-1][1]
+    fig.update_xaxes(title="generation", range=[-0.6, last + 0.6], dtick=1)
+    fig.update_yaxes(title="penalty = −reward", type="log", range=[1.0, 4.2],
+                     tickvals=[10, 20, 30, 50, 100, 1000, 1e4], ticktext=["10", "20", "30", "50", "100", "1000", "10⁴"])
+    title = f"Codex, sensitivity objective: {len(EVO)} designs · best {best['id']} = {best['score']:.1f}"
     return layout(fig, title=dict(text=title, font=dict(size=7.5), x=0.02), margin=dict(l=40, r=8, t=18, b=28))
 
 
-def lineage_step(ri, step):
-    run = EVO_RUNS[int(ri)][1]
-    lin = LINEAGE[run]
-    g, c = lin[min(int(step), len(lin) - 1)]
-    return run, g, c, dsg.from_dict(c["design"]), len(lin)
+def lineage_step(step):
+    g, c = LINEAGE[min(int(step), len(LINEAGE) - 1)]
+    return g, c, dsg.from_dict(c["design"]), len(LINEAGE)
 
 
-@pres.output("evo3d", inputs=["evo_run", "evo_step"])
-def evo3d(ri, step):
-    _, _, _, d, _ = lineage_step(ri, step)
+@pres.output("evo3d", inputs=["evo_step"])
+def evo3d(step):
+    _, _, d, _ = lineage_step(step)
     traces = geometry(ubt=False) + plane_meshes(d, scale=False)
     return layout(go.Figure(traces), scene=scene(z_range=(20, 90)), margin=dict(l=0, r=0, t=0, b=0))
 
 
-@pres.output("evo_top", inputs=["evo_run", "evo_step"])
-def evo_top(ri, step):
+@pres.output("evo_top", inputs=["evo_step"])
+def evo_top(step):
     """Top view (x against z) of the best design at this step, fins coloured by peak rate / limit, and its numbers."""
-    run, g, c, d, n = lineage_step(ri, step)
-    sc = honest(c)
+    g, c, d, n = lineage_step(step)
+    sc = evo_score(c)
     res = c["report"]["result"]
     rates = {p["plane"]: p for p in res["planes"]}
     fig = make_subplots(rows=1, cols=1)
@@ -952,22 +952,26 @@ def evo_top(ri, step):
                                                                   if r.get("max_rate_hz_cm2") else 0)
         col = RED if frac > 1 else ORA if frac > 0.5 else GRN
         xs = [plane.to_global(0), plane.to_global(plane.u_max)]
-        fig.add_trace(go.Scatter(x=[plane.z, plane.z], y=xs, mode="lines", line=dict(color=col, width=5), opacity=0.8))
+        fig.add_trace(go.Scatter(x=[plane.z, plane.z], y=xs, mode="lines", line=dict(color=col, width=5 + 3 * (plane.stations - 1)),
+                                 opacity=0.8))
         if plane.kind == "fin":
-            fig.add_annotation(x=plane.z, y=xs[1], text=f"{plane.u_max:.1f} m", showarrow=False, font=dict(size=5.5, color=MUT),
+            fig.add_annotation(x=plane.z, y=xs[1], text=f"{plane.u_max:.2g} m" + (f" ×{plane.stations}" if plane.stations > 1 else ""),
+                               showarrow=False, font=dict(size=5.5, color=MUT),
                                xanchor="left", yanchor="bottom" if plane.sign > 0 else "top", xshift=2)
     fig.update_xaxes(title="z [m]", range=[28, 84])
     fig.update_yaxes(title="x [m]", range=[-5.2, 5.2])
-    bg, sg = sc["confusion"]["background"], sc["confusion"]["signal"]
+    sg = sc["confusion"]["signal"]
     techs = sorted({p.technology for p in d.planes[1:]}) or ["UBT only"]
     over = len(sc["over_rate_limit"])
+    two = sum(p.stations > 1 for p in d.planes)
+    inter = res.get("interactions") or {}
     lines = [f"step {min(int(step), n - 1) + 1} of {n} · generation {g}", c["id"][:30],
-             f"reward {c['score']:.3f} (as optimised)", f"honest objective {sc['reward']:.3f}",
+             f"reward {sc['reward']:.1f} · sensitivity {sc['sensitivity']:.3f}",
              "feasible" if sc["feasible"] else f"INFEASIBLE: {over} rate limit{'s' * (over != 1)}" + (" + budget" if sc["over_budget"] else ""),
              f"{sc['cost_kchf'] / 1000:.2f} MCHF · {', '.join(techs)}",
-             f"signal kept {100 * sg['efficiency']:.2f} %",
-             f"false vertices {bg['events_15y_after']:.1g} / 15 y",
-             f"{bg['n_survive_direct']} of 196 k pairs survive"]
+             f"{len(d.planes)} planes, {two} with two stations · cone {res.get('cone_mrad', 0):g} mrad",
+             f"100 signal: FP {100 * sg['FP']:.2f}, TN {100 * (1 - sg['FP']):.2f}",
+             f"FN {sc['bkg_events_15y']:.2g} / 15 y" + (f" (μ {inter['muon']['total']:.2g}, ν {inter['nu']['total']:.2g})" if inter else "")]
     why = textwrap.wrap(c.get("rationale", ""), 42)[:5]
     text_block(fig, lines, 0.5, y0=0.99, dy=0.068, size=5.8)
     text_block(fig, ["the LLM's reason:"] + why, 0.5, y0=0.36, dy=0.062, size=5.3)
@@ -976,60 +980,46 @@ def evo_top(ri, step):
 
 @pres.output("evo_map")
 def evo_map():
-    """All feasible designs of both runs, honest objective: signal lost against cost, coloured by false vertices."""
+    """Every feasible design of the run: sensitivity against cost, coloured by FP (of 100 signal); lines of equal reward."""
     fig = go.Figure()
-    for (label, run), sym in zip(EVO_RUNS, ("circle", "diamond")):
-        pts = [(c, honest(c)) for c in EVO[run]]
-        pts = [(c, s) for c, s in pts if s["feasible"]]
-        n = np.array([s["bkg_events_15y"] for _, s in pts])
-        fig.add_trace(go.Scatter(
-            x=[s["cost_kchf"] / 1000 for _, s in pts], y=[100 * s["confusion"]["signal"]["FP"] for _, s in pts],
-            mode="markers", text=[f"{c['id']}: N = {s['bkg_events_15y']:.1g}" for c, s in pts], hoverinfo="text",
-            marker=dict(size=5, symbol=sym, color=np.log10(np.maximum(n, 1e-5)), cmin=-4, cmax=0, colorscale="RdYlGn_r",
-                        line=dict(width=0.3, color=INK), showscale=run == EVO_RUNS[-1][1],
-                        colorbar=dict(title=dict(text="log₁₀ false vertices / 15 y", side="right", font=dict(size=6)),
-                                      thickness=7, len=0.8, tickfont=dict(size=6)))))
-    for name, sym in zip(EVO_PICK, ("circle", "diamond")):
-        c = next((c for _, run in EVO_RUNS for c in EVO[run] if c["design"]["fins"] == json.loads(
-            (dsg.DESIGN_DIR / f"{name}.json").read_text())["fins"]), None)
-        if c:
-            s = honest(c)
-            fig.add_trace(go.Scatter(x=[s["cost_kchf"] / 1000], y=[100 * s["confusion"]["signal"]["FP"]], mode="markers+text",
-                                     text=[name.split("_")[0]], textposition="top right" if name.startswith("E1") else "bottom left",
-                                     textfont=dict(size=8, color=INK),
-                                     marker=dict(size=11, symbol=sym, color="rgba(0,0,0,0)", line=dict(width=1.6, color=INK))))
-    fig.update_xaxes(title="cost [MCHF]", type="log", range=[math.log10(0.25), math.log10(9)],
-                     tickvals=[0.3, 0.5, 1, 2, 4, 8], ticktext=["0.3", "0.5", "1", "2", "4", "8"])
-    fig.update_yaxes(title="signal lost [%]", type="log", range=[-1.6, 0.3], tickvals=[0.03, 0.1, 0.3, 1],
-                     ticktext=["0.03", "0.1", "0.3", "1"])
-    return layout(fig, title=dict(text="every feasible design the LLM proposed (● run 1, ◆ run 2)", font=dict(size=7.5), x=0.02),
+    pts = [(c, evo_score(c)) for c in EVO]
+    pts = [(c, s) for c, s in pts if s["feasible"]]
+    cost = np.linspace(0.05, 10, 200)
+    for r in (-20, -30, -40, -60):
+        sens = 1 + (r + np.minimum(cost, 5) * 2 + np.maximum(cost - 5, 0) * 4) / 100
+        fig.add_trace(go.Scatter(x=cost, y=sens, mode="lines", line=dict(color=GREY, width=0.7, dash="dot"), hoverinfo="skip"))
+        fig.add_annotation(x=math.log10(0.07), y=float(sens[0]) + 0.012, text=f"reward {r}", showarrow=False, xanchor="left",
+                           font=dict(size=5.5, color=MUT))
+    fig.add_trace(go.Scatter(
+        x=[s["cost_kchf"] / 1000 for _, s in pts], y=[s["sensitivity"] for _, s in pts], mode="markers",
+        text=[f"{c['id']}: FP {100 * s['confusion']['signal']['FP']:.1f} of 100, FN {s['bkg_events_15y']:.2g}" for c, s in pts],
+        hoverinfo="text",
+        marker=dict(size=5.5, color=[100 * s["confusion"]["signal"]["FP"] for _, s in pts], cmin=0, cmax=10, colorscale="RdYlGn_r",
+                    line=dict(width=0.3, color=INK), colorbar=dict(title=dict(text="FP of 100", side="top", font=dict(size=6)),
+                                                                  thickness=7, len=0.8, tickfont=dict(size=6)))))
+    f = paths.results_dir() / "end_to_end" / "e2e.json"
+    if f.exists():
+        for r in json.loads(f.read_text())["rows"]:
+            if (r["design"], r["cone_mrad"]) in (("E4_entry2", 17.5), ("E3_robust", 20.0), ("E5_evolved", 16.0)) and "sensitivity" in r:
+                fig.add_trace(go.Scatter(x=[r["cost_kchf"] / 1000], y=[r["sensitivity"]], mode="markers+text",
+                                         text=[f"{r['design']} (end to end)"], textposition="bottom right", textfont=dict(size=6.5, color=INK),
+                                         marker=dict(size=10, symbol="diamond", color="rgba(0,0,0,0)", line=dict(width=1.4, color=INK))))
+    fig.update_xaxes(title="cost [MCHF]", type="log", range=[math.log10(0.07), 1.0], tickvals=[0.1, 0.3, 0.5, 1, 2, 5, 10],
+                     ticktext=["0.1", "0.3", "0.5", "1", "2", "5", "10"])
+    fig.update_yaxes(title="sensitivity", range=[0.0, 1.0])
+    return layout(fig, title=dict(text="every feasible design the LLM proposed (dotted: equal reward)", font=dict(size=7.5), x=0.02),
                   margin=dict(l=36, r=8, t=18, b=28))
 
 
-pres.slider("evo_pick", label="design", min=0, max=len(EVO_PICK) - 1, value=1, step=1, decimals=0)
-pres.slider("evo_kind", label="kind", min=0, max=3, value=1, step=1, decimals=0)
-pres.slider("evo_index", label="event", min=0, max=9, value=0, step=1, decimals=0)
+# ====================================================================== PART 7: simulation after the shield, interactions
+import talk_sim  # noqa: E402
 
+talk_sim.register(pres, INP)
 
-@pres.output("fom_evo", inputs=["evo_pick"])
-def fom_evo(pi):
-    return fom_figure(EVO_PICK[int(pi)])
+# ====================================================================== datasets and end-to-end results
+import talk_e2e  # noqa: E402
 
-
-@pres.output("fom15_evo", inputs=["evo_pick", "n_sig15"])
-def fom15_evo(pi, n_sig):
-    return fom15_figure(EVO_PICK[int(pi)], n_sig)
-
-
-@pres.output("ev3d_evo", inputs=["evo_pick", "evo_kind", "evo_index"])
-def ev3d_evo(pi, kind, k):
-    return ev3d_figure(EVO_PICK[int(pi)], kind, k)
-
-
-@pres.output("ev_side_evo", inputs=["evo_pick", "evo_kind", "evo_index"])
-def ev_side_evo(pi, kind, k):
-    return ev_side_figure(EVO_PICK[int(pi)], kind, k, plot_width=0.58, text_size=5.6)
-
+talk_e2e.register(pres, plane_meshes, geometry, scene)
 
 if __name__ == "__main__":
     pres.run()

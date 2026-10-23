@@ -1,0 +1,47 @@
+{
+ "name": "E3_robust",
+ "description": "E2 with 0.1 m more on every fin (0.7 m at z = 30.6, 1.1 m at z = 36): robust on cross-run pairs",
+ "ubt": {
+  "y_lo": -1.35,
+  "y_hi": 1.35
+ },
+ "fins": [
+  {
+   "side": "right",
+   "z": 30.6,
+   "length": 0.7,
+   "y_lo": -1.3,
+   "y_hi": 1.3,
+   "tilt": 0,
+   "technology": "tile2"
+  },
+  {
+   "side": "left",
+   "z": 30.6,
+   "length": 0.7,
+   "y_lo": -1.3,
+   "y_hi": 1.3,
+   "tilt": 0,
+   "technology": "tile2"
+  },
+  {
+   "side": "right",
+   "z": 36.0,
+   "length": 1.1,
+   "y_lo": -1.5,
+   "y_hi": 1.5,
+   "tilt": 0,
+   "technology": "tile2"
+  },
+  {
+   "side": "left",
+   "z": 36.0,
+   "length": 1.1,
+   "y_lo": -1.5,
+   "y_hi": 1.5,
+   "tilt": 0,
+   "technology": "tile2"
+  }
+ ],
+ "detector": {}
+}

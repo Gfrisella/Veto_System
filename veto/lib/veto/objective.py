@@ -35,9 +35,22 @@ and to the reward. Cost and rate limits have no statistical error (cost is an or
 model). Every design is run on the same events (fixed seed), so errors are largely correlated
 between designs: differences between designs are better known than the absolute numbers.
 
+Sensitivity form (form = "sensitivity", used by the evolution since 2026-10-20). The tiers above rank
+background strictly before signal and cap the signal term at sig_loss_max; once a background that looks like
+signal dominates N (neutrino DIS in the helium: nothing comes in, it is only vetoed by random hits, like the
+signal), the cheapest way to reduce N is to veto everything, and an optimiser gives up most of the signal
+(Codex run 20261019_212211: 74 % lost). Instead:
+    sensitivity = (1 - signal lost) * S90(0) / S90(N)                in (0, 1]
+with S90(N) the expected 90 % CL upper limit on the signal for N expected background events (flat prior,
+averaged over Poisson observations; S90(0) = 2.30, S90(0.6) = 3.02, S90(3) = 4.55): the smallest signal a
+perfect detector excludes over the smallest this design excludes. Reward:
+    - w_sens (1 - sensitivity) - cost points - constraints
+cost points: cost_slope per MCHF up to cost_knee, cost_slope_high per MCHF above; budget cost_budget_kchf.
+
     python -m veto.objective                      # score results/reco/results.json
 """
 
+import functools
 import json
 import math
 from dataclasses import asdict, dataclass
@@ -68,6 +81,12 @@ class ObjectiveConfig:
     w_bkg: float = 100.0
     w_sig: float = 10.0
     w_cost: float = 1.0
+    form: str = "tiers"               # "tiers" (above) | "sensitivity" (see the module doc)
+    cl: float = 0.90                  # sensitivity: confidence level of the expected upper limit
+    w_sens: float = 100.0             # sensitivity: reward points for the whole range 0 .. 1
+    cost_slope: float = 2.0           # sensitivity: points per MCHF up to cost_knee_kchf
+    cost_slope_high: float = 4.0      # sensitivity: points per MCHF above it
+    cost_knee_kchf: float = 5000.0
 
 
 def wilson_sigma(p, n):
@@ -160,6 +179,53 @@ def cost_kchf(res, cfg=ObjectiveConfig()):
     return c
 
 
+def _log_poisson_cdf(n, mu):
+    logs = [k * math.log(mu) - math.lgamma(k + 1) for k in range(n + 1)] if mu > 0 else [0.0]
+    m = max(logs)
+    return -mu + m + math.log(sum(math.exp(v - m) for v in logs))
+
+
+def upper_limit(n, b, cl=0.90):
+    """Bayesian (flat prior) upper limit on the signal for n observed events and known background b."""
+    target, c0 = math.log(1 - cl), _log_poisson_cdf(n, b)
+    lo, hi = 0.0, n + 10 * math.sqrt(n + 1) + 20
+    for _ in range(50):
+        mid = 0.5 * (lo + hi)
+        lo, hi = (mid, hi) if _log_poisson_cdf(n, mid + b) - c0 > target else (lo, mid)
+    return 0.5 * (lo + hi)
+
+
+@functools.lru_cache(maxsize=4)
+def _s90_table(cl):
+    grid = np.concatenate([[0.0], np.logspace(-4, 2, 100)])
+    vals = []
+    for b in grid:
+        ns = np.arange(0, int(b + 10 * math.sqrt(b) + 15))
+        p = np.exp(ns * math.log(max(b, 1e-300)) - b - np.array([math.lgamma(k + 1) for k in ns])) if b > 0 else (ns == 0) * 1.0
+        keep = p > 1e-10
+        vals.append(sum(pi * upper_limit(int(k), b, cl) for k, pi in zip(ns[keep], p[keep])) / p[keep].sum())
+    return grid, np.array(vals)
+
+
+def expected_limit(b, cl=0.90):
+    """Expected (Poisson-averaged) upper limit S90(b) on the signal for b expected background events
+    (tabulated up to b = 100, then scaled as sqrt(b))."""
+    grid, vals = _s90_table(cl)
+    if b > grid[-1]:
+        return float(vals[-1] * math.sqrt(b / grid[-1]))
+    return float(np.interp(b, grid, vals))
+
+
+def sensitivity(eff, n_bkg, cl=0.90):
+    return eff * expected_limit(0.0, cl) / expected_limit(n_bkg, cl)
+
+
+def cost_points(cost, cfg=ObjectiveConfig()):
+    """Sensitivity form: cost_slope per MCHF up to the knee, cost_slope_high above."""
+    m, knee = cost / 1000, cfg.cost_knee_kchf / 1000
+    return cfg.cost_slope * min(m, knee) + cfg.cost_slope_high * max(m - knee, 0.0)
+
+
 def background_term(n, n_max, cfg=ObjectiveConfig()):
     """T_bkg in [0, 1] and dT/dN."""
     if cfg.bkg_form == "exp":
@@ -174,8 +240,15 @@ def score(res, stats, cfg=ObjectiveConfig()):
     """Reward (higher is better, <= 0) with its 1-sigma statistical error, and a breakdown for logging."""
     cm = confusion_matrix(res, stats, cfg)
     bg, sg = cm["background"], cm["signal"]
-    t_bkg, dt_dn = background_term(bg["events_15y_after"], bg["events_15y_before"], cfg)
-    t_bkg_err = dt_dn * bg["events_15y_after_err"]
+    # every background source: combinatorial pairs, plus muon / neutrino interactions after the veto if the result
+    # has them (run_reco / evaluate_designs "interactions": lib/veto/interactions.veto)
+    sources = {"combinatorial": (bg["events_15y_after"], bg["events_15y_after_err"])}
+    for kind, r in (res.get("interactions") or {}).items():
+        sources[f"{kind}_interactions"] = (r["total"], r["total_err"])
+    n_bkg = sum(v for v, _ in sources.values())
+    n_bkg_err = math.sqrt(sum(e * e for _, e in sources.values()))
+    t_bkg, dt_dn = background_term(n_bkg, bg["events_15y_before"] + n_bkg, cfg)
+    t_bkg_err = dt_dn * n_bkg_err
     clipped = sg["FP"] > cfg.sig_loss_max
     t_sig = min(sg["FP"] / cfg.sig_loss_max, 1.0)
     t_sig_err = 0.0 if clipped else sg["FP_err"] / cfg.sig_loss_max
@@ -183,15 +256,24 @@ def score(res, stats, cfg=ObjectiveConfig()):
     t_cost = min(max(math.log(cost / cfg.cost_min_kchf) / math.log(cfg.cost_max_kchf / cfg.cost_min_kchf), 0.0), 1.0)
     p_rate, over = rate_penalty(res, cfg)
     p_budget = budget_penalty(cost, cfg)
-    terms = {"rate": (cfg.w_rate * p_rate, 0.0), "budget": (cfg.w_budget * p_budget, 0.0), "background": (cfg.w_bkg * t_bkg, cfg.w_bkg * t_bkg_err),
-             "signal": (cfg.w_sig * t_sig, cfg.w_sig * t_sig_err), "cost": (cfg.w_cost * t_cost, 0.0)}
+    sens = sensitivity(1 - sg["FP"], n_bkg, cfg.cl)
+    if cfg.form == "sensitivity":
+        # 1 sigma: N and the signal loss, propagated numerically
+        dn = max(1e-3, 1e-2 * n_bkg)
+        ds_dn = (sensitivity(1 - sg["FP"], n_bkg + dn, cfg.cl) - sens) / dn
+        sens_err = math.hypot(ds_dn * n_bkg_err, sens / max(1 - sg["FP"], 1e-9) * sg["FP_err"])
+        terms = {"rate": (cfg.w_rate * p_rate, 0.0), "budget": (cfg.w_budget * p_budget, 0.0),
+                 "sensitivity": (cfg.w_sens * (1 - sens), cfg.w_sens * sens_err), "cost": (cost_points(cost, cfg), 0.0)}
+    else:
+        terms = {"rate": (cfg.w_rate * p_rate, 0.0), "budget": (cfg.w_budget * p_budget, 0.0), "background": (cfg.w_bkg * t_bkg, cfg.w_bkg * t_bkg_err),
+                 "signal": (cfg.w_sig * t_sig, cfg.w_sig * t_sig_err), "cost": (cfg.w_cost * t_cost, 0.0)}
     return {"design": res["design"],
             "reward": -sum(v for v, _ in terms.values()),
             "reward_err": math.sqrt(sum(e * e for _, e in terms.values())),
             "terms": terms, "feasible": not over and not p_budget, "over_rate_limit": over,
-            "over_budget": bool(p_budget), "cost_kchf": cost,
-            "bkg_events_15y": bg["events_15y_after"], "bkg_events_15y_err": bg["events_15y_after_err"],
-            "p_at_least_one_false_vertex": 1 - math.exp(-bg["events_15y_after"]),
+            "over_budget": bool(p_budget), "cost_kchf": cost, "sensitivity": sens,
+            "bkg_events_15y": n_bkg, "bkg_events_15y_err": n_bkg_err, "bkg_by_source": sources,
+            "p_at_least_one_false_vertex": 1 - math.exp(-n_bkg),
             "confusion": cm, "config": asdict(cfg)}
 
 

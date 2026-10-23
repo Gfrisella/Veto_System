@@ -1,0 +1,54 @@
+{
+ "name": "E5_evolved",
+ "description": "Codex run 20261020_003353 (sensitivity objective), best design g9c2_lean_merge: Compact double-station tile2 fins combine narrow entrance coverage with asymmetric early downstream coverage and a 16 mrad vertex cone.",
+ "ubt": {
+  "y_lo": -1.35,
+  "y_hi": 1.35,
+  "stations": 2
+ },
+ "fins": [
+  {
+   "side": "right",
+   "z": 30.6,
+   "length": 0.38,
+   "y_lo": -1.35,
+   "y_hi": 1.35,
+   "tilt": 0,
+   "technology": "tile2",
+   "stations": 2
+  },
+  {
+   "side": "left",
+   "z": 30.6,
+   "length": 0.38,
+   "y_lo": -1.35,
+   "y_hi": 1.35,
+   "tilt": 0,
+   "technology": "tile2",
+   "stations": 2
+  },
+  {
+   "side": "right",
+   "z": 38.6,
+   "length": 0.5,
+   "y_lo": -1.65,
+   "y_hi": 1.65,
+   "tilt": 0,
+   "technology": "tile2",
+   "stations": 2
+  },
+  {
+   "side": "left",
+   "z": 38.6,
+   "length": 0.6,
+   "y_lo": -1.65,
+   "y_hi": 1.65,
+   "tilt": 0,
+   "technology": "tile2",
+   "stations": 2
+  }
+ ],
+ "detector": {
+  "cone_mrad": 16
+ }
+}

@@ -72,7 +72,7 @@ def storage_plan(rank, budget, min_seeds):
 class Simulation:
     """His geometry, field, materials and input muons, set up once; run(seed) propagates every muon."""
 
-    def __init__(self, mm_dir, params_name, device, n_muons=0):
+    def __init__(self, mm_dir, params_name, device, n_muons=0, input_file=None):
         mm = Path(mm_dir)
         os.environ.setdefault("PROJECTS_DIR", str(mm.parent))        # as his shell_container.sh: materials
         os.environ.setdefault("PYTHONDONTWRITEBYTECODE", "1")
@@ -92,7 +92,7 @@ class Simulation:
         torch.cuda.set_device(device)
 
         t0 = time.time()
-        with h5py.File(mm / INPUT, "r") as f:
+        with h5py.File(input_file or (mm / INPUT), "r") as f:
             n = n_muons or len(f["px"])
             muons = np.empty((n, 8), np.float32)
             for j, k in enumerate(("px", "py", "pz", "x", "y", "z", "pdg", "weight")):
@@ -224,6 +224,7 @@ def main():
     ap.add_argument("--params", default="TRY6")
     ap.add_argument("--mm-dir", default=str(MM_DIR))
     ap.add_argument("--out-dir", default=str(HERE.parent / "data" / "sim" / "veto_muons_v1"))
+    ap.add_argument("--input", default=None, help="input muon h5 (default: MuonsAndMatter's full_sample_after_target.h5; the enriched one: paths.enriched_input_h5())")
     args = ap.parse_args()
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -232,7 +233,7 @@ def main():
     print(f"{len(todo)} of {len(seeds)} seeds to run on GPU {args.gpu}", flush=True)
     if not todo:
         return
-    sim = Simulation(args.mm_dir, args.params, args.gpu, args.n_muons)
+    sim = Simulation(args.mm_dir, args.params, args.gpu, args.n_muons, args.input)
     w = sim.muons[:, 7].astype(np.float64)
     for seed in todo:
         if (out_dir / f"seed_{seed}.npz").exists():                  # another process got there first
@@ -250,7 +251,7 @@ def main():
         rows["pdg"] = np.sign(sim.charge.numpy()[rows["evt_n"]]).astype(np.int8)   # charge sign, as run_from_params' "pdg"
         del cols
         meta = dict(seed=seed, rank=rank, budget=args.budget, min_seeds=args.min_seeds, rates=RATES.tolist(),
-                    n_input=int(len(typ)), params=args.params, mm_dir=args.mm_dir, input=INPUT, planes=PLANES,
+                    n_input=int(len(typ)), params=args.params, mm_dir=args.mm_dir, input=args.input or INPUT, planes=PLANES,
                     types=mt.TYPES, created=time.strftime("%Y-%m-%d %H:%M:%S"),
                     settings="TRY6, diluted iron, NI from B, cavern, field simulated, n_steps 5000, every muon to every plane")
         tmp = out_dir / f".seed_{seed}.tmp.npz"

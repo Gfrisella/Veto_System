@@ -17,3 +17,8 @@ __pycache__/
 *.pdf
 veto/knowledge/
 !veto/evolve/*.sh
+# fastveto port (2026-10-21): build scripts are source, builds and external packages are not
+!veto/cpp/**/*.sh
+veto/cpp/build/
+veto/cpp/**/build/
+veto/external/

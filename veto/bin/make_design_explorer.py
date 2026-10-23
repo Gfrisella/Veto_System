@@ -53,7 +53,7 @@ def stack(d, fmt):
 
 
 def collect(args):
-    store, meta = io.open_store(paths.store_dir(DATASET))
+    store, meta = io.open_store(paths.store_dir(args.dataset))
     n = meta["n"]
     rng = np.random.default_rng(args.seed)
     types = np.asarray(store["type"])
@@ -68,11 +68,14 @@ def collect(args):
     fin_maps = np.zeros((2, len(Z_SLICES), nu * ny))
     ubt_hist = np.zeros(len(UBT_Y_BINS) - 1)
     cols = ["x_30", "y_30", "z_30", "pz_30", "x_82", "y_82", "z_82", "kx", "ky", "kz", "weight"]
+    # type 7 (stops in the shield, only in our production's datasets): its "30.6 m" state is the stop point inside
+    # the shield, so it never reaches a veto plane; leave it out of the maps
     start = time.time()
     for a in range(0, n, args.chunk):
-        d = {c: np.asarray(store[c][a:a + args.chunk]) for c in cols}
+        reach = np.asarray(store["type"][a:a + args.chunk]) != 7
+        d = {c: np.asarray(store[c][a:a + args.chunk])[reach] for c in cols}
         w = d["weight"].astype(np.float64)
-        on_ubt = (np.abs(d["x_30"]) < geo.UBT_HALF_X) & (d["pz_30"] > 0)
+        on_ubt = (np.abs(d["x_30"]) < geo.UBT_HALF_X) & (d["pz_30"] > 0) & (d["z_30"] > geo.Z_UBT - 0.05)
         ubt_hist += np.histogram(d["y_30"][on_ubt], UBT_Y_BINS, weights=w[on_ubt])[0]
         pa, pk, pb = stack(d, "{}_30"), np.stack([d["kx"], d["ky"], d["kz"]], 1), stack(d, "{}_82")
         for iz, z in enumerate(Z_SLICES):
@@ -100,8 +103,8 @@ def collect(args):
     out["type_totals"] = np.array([weight_all[types == t].sum() for t in range(7)])
     outdir = paths.results_dir() / "design_explorer"
     outdir.mkdir(parents=True, exist_ok=True)
-    np.savez(outdir / "sample.npz", **out)
-    print(f"saved {outdir / 'sample.npz'}: {len(w):,} sampled muons")
+    np.savez(outdir / args.out, **out)
+    print(f"saved {outdir / args.out}: {len(w):,} sampled muons")
 
 
 def r(a, digits=3):
@@ -444,6 +447,8 @@ def main():
     parser.add_argument("--html", action="store_true", help="build the HTML from results/design_explorer/sample.npz")
     parser.add_argument("--chunk", type=int, default=10_000_000)
     parser.add_argument("--seed", type=int, default=7)
+    parser.add_argument("--dataset", default=DATASET)
+    parser.add_argument("--out", default="sample.npz", help="file name in results/design_explorer")
     args = parser.parse_args()
     if args.html:
         build_html(args)

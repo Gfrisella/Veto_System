@@ -8,6 +8,10 @@ A design is a JSON file (veto/designs/*.json):
                "cell_u": 0.1, "cell_y": 0.1}, ...],
      "detector": {"efficiency": 0.99, "sigma_t": 0.5e-9}}
 
+"stations": 2 (or 3) in the "ubt" or a fin entry puts identical layers behind each other, read out as an OR:
+efficiency 1 - (1 - e)^n, n times the channels, cost and material. A muon leaves its hit in every station at the
+same place, so random hits (signal loss) are those of one station; rates per channel are unchanged.
+
 Detector technology (technology.py: straw, fiber, pixel, tile): "technology" in "detector" applies
 to every fin, "technology" in a fin overrides it for that fin. A technology sets the plane's
 efficiency, timing, cell size, channels, material and cost (kCHF); explicit "efficiency" /
@@ -54,6 +58,7 @@ class Plane:
     sigma_t: float = 0.5e-9     # [s], Gaussian time smearing
     technology: str = None      # key of tech.TECHNOLOGIES, None = generic detector
     time_window: float = None   # [s] drift-limited technologies: hit time uniform in this full width
+    stations: int = 1           # identical layers behind each other (OR): efficiency 1 - (1 - e)^n, n x channels and cost
 
     @property
     def area(self):
@@ -64,14 +69,14 @@ class Plane:
         """Readout channels: from the technology, or one per cell for the generic detector."""
         if self.technology is None:
             return self.n_cells
-        return tech.n_channels(tech.TECHNOLOGIES[self.technology], self.u_max, self.y_hi - self.y_lo)
+        return self.stations * tech.n_channels(tech.TECHNOLOGIES[self.technology], self.u_max, self.y_hi - self.y_lo)
 
     @property
     def cost(self):
         """kCHF; nan for the generic detector or a technology without a cost."""
         if self.technology is None:
             return float("nan")
-        return tech.cost(tech.TECHNOLOGIES[self.technology], self.area)
+        return self.stations * tech.cost(tech.TECHNOLOGIES[self.technology], self.area)
 
     @property
     def rel_cost(self):
@@ -85,7 +90,7 @@ class Plane:
         """Material in radiation lengths; nan for the generic detector."""
         if self.technology is None:
             return float("nan")
-        return tech.x0(tech.TECHNOLOGIES[self.technology])
+        return self.stations * tech.x0(tech.TECHNOLOGIES[self.technology])
 
     @property
     def n_cells(self):
@@ -210,8 +215,11 @@ def from_dict(raw):
         cu, cy = spec.get(cu_key, cu), spec.get("cell_y", cy)
         if cu is None or cy is None:
             raise ValueError(f"{name}: give {cu_key} / cell_y or a technology")
+        n = int(spec.get("stations", 1))
+        if not 1 <= n <= 3:
+            raise ValueError(f"{name}: stations must be 1, 2 or 3")
         return Plane(index, name, kind, z, sign, u_max, spec["y_lo"], spec["y_hi"], cu, cy,
-                     s["efficiency"], s["sigma_t"], s["technology"], s["time_window"])
+                     1 - (1 - s["efficiency"]) ** n, s["sigma_t"], s["technology"], s["time_window"], n)
 
     planes = [plane(0, "UBT", "ubt", geo.Z_UBT, 0, 2 * geo.UBT_HALF_X, raw["ubt"], "cell_x")]
     for f in sorted(raw["fins"], key=lambda f: (f["z"], f["side"])):

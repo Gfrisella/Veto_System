@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<!--
+***************************************************************************************************
+This file defines parameters sets for parameters which are common between algorithms and therefore
+has to be the same for those parameters to be meaningful.
+This is file is read from the AlgConfigPool and the parameters set are expected to be used by the
+algorithms to configure these common parameters.
+
+Author:
+Costas Andreopoulos <c.andreopoulos \at cern.ch>
+University of Liverpool
+
+and
+Marco Roda <marco.roda \at liverpool.ac.uk>
+University of Liverpool
+***************************************************************************************************
+-->
+
+
+
+<!-- fast-veto-sim: GENIE 3.06.02 default with charmed hadrons and taus decayed by GENIE (Pythia 6): their muons
+     matter for veto backgrounds and there is no detector simulation after us. Hyperons, K0 -> K_S / K_L and pi0
+     are decayed later by fastveto.decay (with displaced decay points). -->
+<common_Decay_list>
+
+  <param_set name="DecayFlags"> 
+
+     <!--
+	     Pi0's: Decays inhibited by default, as per popular request
+     -->
+     <param type="bool" name="DecayParticleWithCode=111">   false </param>  <!--  pi^{0}            -->
+
+     <!--
+	     Charmed hadrons: Not decayed by default.
+	     Switch on charm decays if your detector doesn't see charm hadron tracks and
+	     your detector simulation doesn't want to handle these decays.
+     -->
+     <param type="bool" name="DecayParticleWithCode=411">   true  </param>  <!--  D^{+}             -->
+     <param type="bool" name="DecayParticleWithCode=-411">  true  </param>  <!--  D^{-}             -->
+     <param type="bool" name="DecayParticleWithCode=421">   true  </param>  <!--  D^{0}             -->
+     <param type="bool" name="DecayParticleWithCode=-421">  true  </param>  <!--  \bar{D^{0}}       -->
+     <param type="bool" name="DecayParticleWithCode=431">   true  </param>  <!--  D_{s}^{+}         -->
+     <param type="bool" name="DecayParticleWithCode=-431">  true  </param>  <!--  D_{s}^{-}         -->
+     <param type="bool" name="DecayParticleWithCode=4122">  true  </param>  <!--  Lambda_{c}^{+}    -->
+     <param type="bool" name="DecayParticleWithCode=4112">  true  </param>  <!--  Sigma_{c}^{0}     -->
+     <param type="bool" name="DecayParticleWithCode=4212">  true  </param>  <!--  Sigma_{c}^{+}     -->
+     <param type="bool" name="DecayParticleWithCode=4222">  true  </param>  <!--  Sigma_{c}^{++}    -->
+
+     <!--
+	     Taus: Not decayed by default.
+	     Switch on tau decays if your detector doesn't see tau tracks and
+	     your detector simulation doesn't want to handle these decays.
+     -->
+     <param type="bool" name="DecayParticleWithCode=15">    true  </param>  <!--  tau^{-}           -->
+     <param type="bool" name="DecayParticleWithCode=-15">   true  </param>  <!--  tau^{+}           -->
+
+     <!--
+	     Standard particles that get decayed by GENIE
+     -->
+     <param type="bool" name="DecayParticleWithCode=221">    true  </param>  <!-- eta                -->
+     <param type="bool" name="DecayParticleWithCode=331">    true  </param>  <!-- eta^{prime}        -->
+     <param type="bool" name="DecayParticleWithCode=113">    true  </param>  <!-- rho^{0}            -->
+     <param type="bool" name="DecayParticleWithCode=213">    true  </param>  <!-- rho^{+}            -->
+     <param type="bool" name="DecayParticleWithCode=-213">   true  </param>  <!-- rho^{-}            -->
+     <param type="bool" name="DecayParticleWithCode=223">    true  </param>  <!-- omega              -->
+     <param type="bool" name="DecayParticleWithCode=333">    true  </param>  <!-- phi                -->
+     <param type="bool" name="DecayParticleWithCode=1114">   true  </param>  <!-- P33(1232) Delta-   -->
+     <param type="bool" name="DecayParticleWithCode=2114">   true  </param>  <!-- P33(1232) Delta0   -->
+     <param type="bool" name="DecayParticleWithCode=2214">   true  </param>  <!-- P33(1232) Delta+   -->
+     <param type="bool" name="DecayParticleWithCode=2224">   true  </param>  <!-- P33(1232) Delta++  -->
+     <param type="bool" name="DecayParticleWithCode=102112"> true  </param>  <!-- S11(1535) N0       -->
+     <param type="bool" name="DecayParticleWithCode=102212"> true  </param>  <!-- S11(1535) N+       -->
+     <param type="bool" name="DecayParticleWithCode=102114"> true  </param>  <!-- D13(1520) N0       -->
+     <param type="bool" name="DecayParticleWithCode=102214"> true  </param>  <!-- D13(1520) N+       -->
+     <param type="bool" name="DecayParticleWithCode=132112"> true  </param>  <!-- S11(1650) N0       -->
+     <param type="bool" name="DecayParticleWithCode=132212"> true  </param>  <!-- S11(1650) N+       -->
+     <param type="bool" name="DecayParticleWithCode=112114"> true  </param>  <!-- D13(1700) N0       -->
+     <param type="bool" name="DecayParticleWithCode=112214"> true  </param>  <!-- D13(1700) N+       -->
+     <param type="bool" name="DecayParticleWithCode=102116"> true  </param>  <!-- D15(1675) N0       -->
+     <param type="bool" name="DecayParticleWithCode=102216"> true  </param>  <!-- D15(1675) N+       -->
+     <param type="bool" name="DecayParticleWithCode=111112"> true  </param>  <!-- S31(1620) Delta-   -->
+     <param type="bool" name="DecayParticleWithCode=112112"> true  </param>  <!-- S31(1620) Delta0   -->
+     <param type="bool" name="DecayParticleWithCode=112212"> true  </param>  <!-- S31(1620) Delta+   -->
+     <param type="bool" name="DecayParticleWithCode=112222"> true  </param>  <!-- S31(1620) Delta++  -->
+     <param type="bool" name="DecayParticleWithCode=121114"> true  </param>  <!-- D33(1700) Delta-   -->
+     <param type="bool" name="DecayParticleWithCode=122114"> true  </param>  <!-- D33(1700) Delta0   -->
+     <param type="bool" name="DecayParticleWithCode=122214"> true  </param>  <!-- D33(1700) Delta+   -->
+     <param type="bool" name="DecayParticleWithCode=122224"> true  </param>  <!-- D33(1700) Delta++  -->
+     <param type="bool" name="DecayParticleWithCode=202112"> true  </param>  <!-- P11(1440) N0       -->
+     <param type="bool" name="DecayParticleWithCode=202212"> true  </param>  <!-- P11(1440) N+       -->
+     <param type="bool" name="DecayParticleWithCode=211114"> true  </param>  <!-- P33(1600) Delta-   -->
+     <param type="bool" name="DecayParticleWithCode=212114"> true  </param>  <!-- P33(1600) Delta0  -->
+     <param type="bool" name="DecayParticleWithCode=212214"> true  </param>  <!-- P33(1600) Delta+  -->
+     <param type="bool" name="DecayParticleWithCode=212224"> true  </param>  <!-- P33(1600) Delta++  -->
+     <param type="bool" name="DecayParticleWithCode=202114"> true  </param>  <!-- P13(1720) N0       -->
+     <param type="bool" name="DecayParticleWithCode=202214"> true  </param>  <!-- P13(1720) N+       -->
+     <param type="bool" name="DecayParticleWithCode=202116"> true  </param>  <!-- F15(1680) N0       -->
+     <param type="bool" name="DecayParticleWithCode=202216"> true  </param>  <!-- F15(1680) N+       -->
+     <param type="bool" name="DecayParticleWithCode=221112"> true  </param>  <!-- P31(1910) Delta-   -->
+     <param type="bool" name="DecayParticleWithCode=222112"> true  </param>  <!-- P31(1910) Delta0   -->
+     <param type="bool" name="DecayParticleWithCode=222212"> true  </param>  <!-- P31(1910) Delta+   -->
+     <param type="bool" name="DecayParticleWithCode=222222"> true  </param>  <!-- P31(1910) Delta++  -->
+     <param type="bool" name="DecayParticleWithCode=221114"> true  </param>  <!-- P33(1920) Delta-   -->
+     <param type="bool" name="DecayParticleWithCode=222114"> true  </param>  <!-- P33(1920) Delta0   -->
+     <param type="bool" name="DecayParticleWithCode=222214"> true  </param>  <!-- P33(1920) Delta+   -->
+     <param type="bool" name="DecayParticleWithCode=222224"> true  </param>  <!-- P33(1920) Delta++  -->
+     <param type="bool" name="DecayParticleWithCode=211116"> true  </param>  <!-- F35(1905) Delta-   -->
+     <param type="bool" name="DecayParticleWithCode=212116"> true  </param>  <!-- F35(1905) Delta0   -->
+     <param type="bool" name="DecayParticleWithCode=212216"> true  </param>  <!-- F35(1905) Delta+   -->
+     <param type="bool" name="DecayParticleWithCode=212226"> true  </param>  <!-- F35(1905) Delta++  -->
+     <param type="bool" name="DecayParticleWithCode=201118"> true  </param>  <!-- F37(1950) Delta-   -->
+     <param type="bool" name="DecayParticleWithCode=202118"> true  </param>  <!-- F37(1950) Delta0   -->
+     <param type="bool" name="DecayParticleWithCode=202218"> true  </param>  <!-- F37(1950) Delta+   -->
+     <param type="bool" name="DecayParticleWithCode=202228"> true  </param>  <!-- F37(1950) Delta++  -->
+     <param type="bool" name="DecayParticleWithCode=212112"> true  </param>  <!-- P11(1710) N0       -->
+     <param type="bool" name="DecayParticleWithCode=212212"> true  </param>  <!-- P11(1710) N+       -->
+     <param type="bool" name="DecayParticleWithCode=212118"> true  </param>  <!-- F17(1970) N0       --> 
+     <param type="bool" name="DecayParticleWithCode=212218"> true  </param>  <!-- F17(1970) N+       --> 
+     <param type="bool" name="DecayParticleWithCode=-24">   false </param>  <!-- W- from Glashow Resonance reactions -->
+
+     <!--
+	    For particles to be decayed, all decay channels are open.
+	    To inhibit specific decay channels use as many of following configuration options as is needed
+	    specifying the particle PDG code and the inhibited TDecayChannel id.
+	    To print out the decay channel ids for any particle, use $GENIE/src/contrib/misc/print_decay_channel.C
+
+	    <param type="bool" name="InhibitDecay/Particle=15,Channel=0"> true </param>
+	    <param type="bool" name="InhibitDecay/Particle=15,Channel=1"> true </param>
+	    ...
+	    ...
+     -->
+  </param_set>
+
+</common_Decay_list>
