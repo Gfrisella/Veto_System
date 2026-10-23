@@ -3,6 +3,45 @@
 Changes to the veto optimisation code, newest first. Each entry gives the branch, the base commit and
 what changed. Open problems are in `ISSUES.md`; running jobs and results are in `STATUS.md`.
 
+## 2026-10-20 — branch `veto-all-sst1` (not committed yet)
+
+### Large-UBT designs (no code change)
+- `designs/U1_ubt4x6_tile.json`, `designs/U1_ubt4x6_tile2.json`: a 4 × 6 m² UBT at z = 30.6 m (x −2..2, y −3..3 m) =
+  the straw UBT with y −3..3 m + one fin per side at z = 30.6 m, 1.5 m long, in tile / tile2. Nothing else.
+- Validation `results/validate/ubt4x6.json` (job 1869918, with D0_minimal; log `results/validate/logs/`). Needs
+  `VETO_STORE=/disk/users/sqasim/workspace/uzh/Veto_System/veto/data/store` (veto/data/ does not exist here).
+- Result: all bounced muons still missed (the back-extrapolated SST1 line misses the true z = 30.6 m hit by 6–10 m);
+  lateral tiles 1.0–1.4 GHz per plane, 10.1 (tile) / 2.5 (tile2) MHz per channel > 1 MHz limit: infeasible;
+  1.0e6 fake vertices in 15 y, 3.5–3.8 % signal lost, 0.756 MCHF.
+- Same designs with a two-track time coincidence ±35 ns (5 ns tracks, σΔt 7.1 ns, ±5σ; `--coincidence-ps 35355`,
+  job 1869967): `results/validate/ubt4x6_t5ns.json`. Fake in 15 y: D0_minimal 3.4e3, 4 × 6 m² 0.07 (flat time in the spill).
+
+## 2026-10-19 (evening) — branch `veto-all-sst1` (on top of `b868e9e`, not committed yet)
+
+### Fixed-tilt search (`bin/optimize_fins.py`)
+- New `--fixed-tilt DEG`: every fin (seeds, random fins, mutations) gets this tilt; the tilt is not searched.
+- Run `results/optimize_tilt0/run.sh`: `--fixed-tilt 0`, otherwise the settings of the OPT2 search
+  (bottom panel, goal pairs, 5 ns ±5σ, unweighted, w_mu 30, 30 generations, μ 16, λ 56), seeded from the
+  best layouts of `optimize_fins` and `optimize_bottom` and OPT1 / OPT2 with tilt 0. The bottom-panel pitch is still free.
+
+### Side-wall planes (`lib/veto/design.py`, `lib/veto/muon_types.py`, `lib/veto/reco.py`)
+- New plane kind `wall`: a detector ON a lateral vessel wall (SBT side wall), at most one per side:
+  ```
+  "walls": [{"side": "left", "z_lo": 30.6, "z_hi": 80.6, "technology": "straw"}]
+  ```
+  full wall height |y| ≤ Y(z) (trapezoid: area, cost and channels are the trapezoid's), u = z − z_lo.
+- `muon_types.wall_crossings()`: crossings of the paths A → (K) → B with the wall (up to two; the later one is kept).
+- `reco`: true crossings, track queries (z where the track meets the wall; window along z r / sin(track–wall
+  angle), capped at 1/0.02; y window widened by |ty|·ru), rate map `wall_rate_map()` from
+  `results/reco/wall_rates.npz` (new `bin/make_wall_rates.py`: every muon crossing a ±x wall, 5.7e4 per
+  spill; SST1 types subsampled to 1 M rows each, weights scaled), multiple scattering moves y only.
+- Design `designs/W1_side_walls_straw.json`: both walls fully covered with straws, minimal UBT (|y| ≤ 1.35 m),
+  no fins, no bottom panel. 435 m² of walls + 2.7 m² UBT, 15.8 MCHF.
+- Results (details in `STATUS.md`): tilt-0 best OPT3 rank2 736 missed SST1 muons per spill, 3.3e-3 fake per spill,
+  2.9 % signal lost, 7.0 MCHF (OPT2: 737, 2.2e-3, 4.9 %, 7.6 MCHF); W1 side walls 2729, 7.8e-2, 0.01 %, 15.8 MCHF.
+- Known limitation: very soft muons (p < 0.4 GeV) scattered between z = 30.6 and 82 m are not matched by the
+  straight-line track model (≈ 0.6 % of the wall-crossers; the fins have the same limitation).
+
 ## 2026-10-19 — branch `veto-all-sst1` (base `main` @ `dd7c5f6`, not committed yet)
 
 Goal: a veto for every SST1-acceptance muon (not only the muons that make background pairs), with no

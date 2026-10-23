@@ -66,13 +66,19 @@ def true_crossing(tr, plane):
         ok = ok1 | ok2
         p = np.where(ok2[:, None], p2, p1)
         x, y = p[:, 0], np.where(ok2, v2, v1)          # y = local v along the panel
+    elif plane.kind == "wall":
+        # like the bottom panel: of two crossings keep the later one, the one the track points back to
+        (ok1, p1), (ok2, p2) = mt.wall_crossings(a, k, b, plane.sign, plane.z, plane.z + plane.u_max)
+        ok = ok1 | ok2
+        p = np.where(ok2[:, None], p2, p1)
+        x, y = p[:, 0], p[:, 1]
     elif plane.tilt:
         ok, p = mt.fin_hits(a, k, b, plane.z, plane.sign, plane.tilt, plane.u_max, plane.y_lo, plane.y_hi)
         x, y = p[:, 0], p[:, 1]
     else:
         x, y, ok = mt.path_at_z(a, k, b, plane.z)
         p = np.stack([x, y, np.full(len(x), plane.z)], 1)
-    u = plane.to_local(x)
+    u = p[:, 2] - plane.z if plane.kind == "wall" else plane.to_local(x)
     ok = ok & plane.inside(u, y)
     bounced = np.isfinite(k[:, 2])
     before_k = bounced & (p[:, 2] < k[:, 2])
@@ -83,7 +89,7 @@ def true_crossing(tr, plane):
 
 def plane_key(plane):
     """Integers that identify a plane's geometry (not its index in the design): common random numbers."""
-    kind = {"ubt": 1, "fin": 2, "bottom": 3}[plane.kind]
+    kind = {"ubt": 1, "fin": 2, "bottom": 3, "wall": 4}[plane.kind]
     return [kind, int(round(plane.z * 1000)), plane.sign + 1, int(round(plane.tilt * 1e4)) % 2 ** 31,
             int(round((plane.x_lo + 10) * 1000)), int(round((plane.y0 + 10) * 1000))]
 
@@ -111,6 +117,8 @@ def own_hits(tr, event, design, rng, tracks_mask=None, crn=None):
                 crossed &= tr["apz"] > 0
             if plane.kind == "bottom":          # v runs along z: a sideways kick moves u only
                 u = u + dx
+            elif plane.kind == "wall":          # u runs along z: the kick moves y only (dx ignored)
+                y = y + dy
             else:
                 u, y = u + (dx if plane.kind == "ubt" else plane.sign * dx), y + dy
             ok = crossed & plane.inside(u, y)
@@ -145,6 +153,8 @@ def plane_rate_map(plane, maps):
         h = maps["ubt_hist"][None, :]
     elif plane.kind == "bottom":
         return bottom_rate_map(plane, maps)
+    elif plane.kind == "wall":
+        return wall_rate_map(plane, maps)
     elif plane.tilt:
         # tilted fin: each strip du of the fin is read from the map of its own z, at its own distance
         # from the vessel wall; muons travel along z, so a strip sees the x-y density times du cos(tilt)
@@ -230,6 +240,24 @@ def bottom_rate_map(plane, maps, step=0.2):
     return _BOTTOM_CACHE[key]
 
 
+_WALL_CACHE = {}
+
+
+def wall_rate_map(plane, maps, step=0.2):
+    """Rate map of a side-wall plane from the paths of every muon crossing a lateral vessel wall
+    (results/reco/wall_rates.npz, in maps["wall"]): both crossings of each path count."""
+    key = (plane.z, plane.sign, plane.u_max)
+    if key not in _WALL_CACHE:
+        r = maps["wall"]
+        ub = np.append(np.arange(0.0, plane.u_max, step), plane.u_max)
+        yb = np.append(np.arange(plane.y_lo, plane.y_hi, step), plane.y_hi)
+        h = np.zeros((len(ub) - 1, len(yb) - 1))
+        for ok, p in mt.wall_crossings(r["a"], r["k"], r["b"], plane.sign, plane.z, plane.z + plane.u_max):
+            h += np.histogram2d(p[ok, 2] - plane.z, p[ok, 1], (ub, yb), weights=r["w"][ok])[0]
+        _WALL_CACHE[key] = (ub, yb, h)
+    return _WALL_CACHE[key]
+
+
 ACC_MARGIN_NS = 2.0     # random hits are drawn this much beyond a plane's time window (inclined tracks)
 
 
@@ -293,6 +321,14 @@ def predictions(meas, event, z_limit, design, cfg):
             x0 = mt.side_plane_x(plane.z)
             zc = (plane.z * c + (plane.sign * (meas["x"] - meas["tx"] * meas["z"]) - x0) * s) \
                 / (c - plane.sign * meas["tx"] * s)
+        elif plane.kind == "wall":
+            # line x = x_m + tx (z - z_m) on the wall sign x = X0 + a (z - z0)
+            a = (geo.VESSEL_X_OUT - geo.VESSEL_X_IN) / (geo.Z_VESSEL_MAX - geo.Z_VESSEL_MIN)
+            x0 = mt.side_plane_x(plane.z)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                zc = (x0 - a * plane.z - plane.sign * (meas["x"] - meas["tx"] * meas["z"])) \
+                    / (plane.sign * meas["tx"] - a)
+            zc = np.where(np.isfinite(zc), zc, np.nan)          # parallel to the wall: no query
         else:
             zc = np.full(len(meas["z"]), plane.z)
         dz = meas["z"] - zc
@@ -300,7 +336,7 @@ def predictions(meas, event, z_limit, design, cfg):
         y = meas["y"] - meas["ty"] * dz
         dist = dz * np.sqrt(1 + meas["tx"] ** 2 + meas["ty"] ** 2)
         r = cfg.r0 + (cfg.r_slope + cfg.r_ms / np.maximum(meas["p"], 0.1)) * dist
-        u = plane.to_local(x)
+        u = zc - plane.z if plane.kind == "wall" else plane.to_local(x)
         ru = r / np.cos(plane.tilt)          # an error dx is dx / cos(tilt) along a tilted fin
         if plane.kind == "bottom":
             # local y is v along the panel; an error r across the track is r / sin(angle track-panel) along it
@@ -308,6 +344,12 @@ def predictions(meas, event, z_limit, design, cfg):
             norm = np.sqrt(1 + meas["tx"] ** 2 + meas["ty"] ** 2)
             sin_a = np.abs(meas["ty"] * np.cos(plane.tilt) - np.sin(plane.tilt)) / norm
             ru, r = r, r / np.maximum(sin_a, 0.02)
+        elif plane.kind == "wall":
+            # u runs along z: an error r across the track is r / sin(angle track-wall) along the wall
+            norm = np.sqrt(1 + meas["tx"] ** 2 + meas["ty"] ** 2) * np.sqrt(1 + a ** 2)
+            sin_a = np.abs(plane.sign * meas["tx"] - a) / norm
+            ru = r / np.maximum(sin_a, 0.02)
+            r = r + np.abs(meas["ty"]) * ru      # a shift du along the wall moves the track by ty du in y
         reach = ((zc < z_limit) & (dz > 0) & (u >= -ru - plane.cell_u) & (u <= plane.u_max + ru + plane.cell_u)
                  & (y >= plane.y_lo - r - plane.cell_y) & (y <= plane.y_hi + r + plane.cell_y))
         for k, v in (("track", track), ("event", event), ("u", u), ("y", y), ("t", meas["t"] - dist / C),

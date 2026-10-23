@@ -29,6 +29,12 @@ a flat panel from z to z + length cos(pitch), across x_lo .. x_hi, at height y a
 rising downstream by pitch [deg]. It stays between the floor and the vessel bottom (BOTTOM_GAP below
 it) and is at most BOTTOM_MAX_AREA. Local coordinates: u = x - x_lo, v = distance along the panel
 (stored as y_lo = 0 .. y_hi = length).
+
+Optionally detectors ON the lateral vessel walls (the SBT side walls, "walls", at most one per side):
+    "walls": [{"side": "left", "z_lo": 30.6, "z_hi": 80.6, "technology": "straw"}, ...]
+covering the wall x = sign * X(z) from z_lo to z_hi over its full height |y| <= Y(z) (a trapezoid).
+Local coordinates: u = z - z_lo (along the beam), y. The plane's y_lo / y_hi are the bounding box
+(-Y(z_hi) .. Y(z_hi)); `inside` also checks |y| <= Y(z); area, cost and channels are the trapezoid's.
 """
 
 import json
@@ -59,7 +65,7 @@ class Plane:
     """
     index: int
     name: str
-    kind: str            # "ubt", "fin" or "bottom"
+    kind: str            # "ubt", "fin", "bottom" or "wall"
     z: float
     sign: int            # fin side (+1 left, -1 right); 0 for the UBT
     u_max: float
@@ -77,6 +83,9 @@ class Plane:
 
     @property
     def area(self):
+        if self.kind == "wall":     # trapezoid: full wall height 2 Y(z), linear in z
+            z1 = self.z + self.u_max
+            return float(self.u_max * (wall_half_height(self.z) + wall_half_height(z1)))
         return self.u_max * (self.y_hi - self.y_lo)
 
     @property
@@ -84,7 +93,10 @@ class Plane:
         """Readout channels: from the technology, or one per cell for the generic detector."""
         if self.technology is None:
             return self.n_cells
-        return tech.n_channels(tech.TECHNOLOGIES[self.technology], self.u_max, self.y_hi - self.y_lo)
+        n = tech.n_channels(tech.TECHNOLOGIES[self.technology], self.u_max, self.y_hi - self.y_lo)
+        if self.kind == "wall":     # bounding box -> trapezoid
+            n = int(np.ceil(n * self.area / (self.u_max * (self.y_hi - self.y_lo))))
+        return n
 
     @property
     def cost(self):
@@ -117,6 +129,8 @@ class Plane:
             return x + geo.UBT_HALF_X
         if self.kind == "bottom":
             return x - self.x_lo
+        if self.kind == "wall":
+            raise ValueError("wall plane: u = z - z_lo, not a function of x")
         return (self.sign * x - mt.side_plane_x(self.z)) / np.cos(self.tilt)
 
     def to_global(self, u):
@@ -124,12 +138,16 @@ class Plane:
             return u - geo.UBT_HALF_X
         if self.kind == "bottom":
             return u + self.x_lo
+        if self.kind == "wall":
+            return self.sign * mt.side_plane_x(self.z + u)
         return self.sign * (mt.side_plane_x(self.z) + u * np.cos(self.tilt))
 
     def z_at(self, u):
         """z of the point at u (fins lean by tilt; the UBT is at one z; bottom: see z_local)."""
         if self.kind == "bottom":
             return np.full(np.shape(u), self.z) if np.ndim(u) else self.z
+        if self.kind == "wall":
+            return self.z + u
         return self.z + u * np.sin(self.tilt)
 
     def z_local(self, u, v):
@@ -148,7 +166,10 @@ class Plane:
         return self.y0 + self.y_hi * np.sin(self.tilt)
 
     def inside(self, u, y):
-        return (u >= 0) & (u <= self.u_max) & (y >= self.y_lo) & (y <= self.y_hi)
+        ok = (u >= 0) & (u <= self.u_max) & (y >= self.y_lo) & (y <= self.y_hi)
+        if self.kind == "wall":
+            ok = ok & (np.abs(y) <= wall_half_height(self.z + np.clip(u, 0, self.u_max)))
+        return ok
 
     def cell_centre(self, u, y):
         """Digitize: the centre of the cell (u, y) falls in."""
@@ -238,7 +259,20 @@ def validate(raw):
             raise ValueError(f"fin {i}: enters the decay vessel (tilt {tilt} degrees)")
     if raw.get("bottom"):
         notes += validate_bottom(raw["bottom"])
+    sides = [w["side"] for w in raw.get("walls", [])]
+    if len(set(sides)) < len(sides):
+        raise ValueError("walls: at most one per side")
+    for w in raw.get("walls", []):
+        w["z_lo"], w["z_hi"] = max(w.get("z_lo", geo.Z_VESSEL_MIN), geo.Z_VESSEL_MIN), \
+            min(w.get("z_hi", geo.Z_VESSEL_MAX), geo.Z_VESSEL_MAX)
+        if w["z_hi"] - w["z_lo"] < 0.1:
+            raise ValueError(f"wall {w['side']}: z {w['z_lo']} .. {w['z_hi']} m is not on the vessel")
     return notes
+
+
+def wall_half_height(z):
+    """Half height Y(z) of the lateral vessel walls."""
+    return geo.vessel_half_widths(np.clip(z, geo.Z_VESSEL_MIN, geo.Z_VESSEL_MAX))[1]
 
 
 def vessel_bottom(z):
@@ -328,6 +362,10 @@ def from_dict(raw):
         name = f"bottom z={b['z']:.1f}-{b['z'] + b['length'] * np.cos(np.radians(b['pitch'])):.1f}"
         planes.append(plane(len(planes), name, "bottom", b["z"], 0, b["x_hi"] - b["x_lo"],
                             dict(b, y_lo=0.0, y_hi=b["length"]), "cell_u"))
+    for w in sorted(raw.get("walls", []), key=lambda w: w["side"]):
+        h = float(wall_half_height(w["z_hi"]))
+        planes.append(plane(len(planes), f"{w['side']} wall z={w['z_lo']:.1f}-{w['z_hi']:.1f}", "wall", w["z_lo"],
+                            SIDES[w["side"]], w["z_hi"] - w["z_lo"], dict(w, y_lo=-h, y_hi=h), "cell_u"))
     d = Design(raw["name"], planes, base["efficiency"], base["sigma_t"], raw)
     d.notes = notes
     return d

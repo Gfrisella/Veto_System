@@ -218,3 +218,29 @@ def bottom_crossings(a, k, b, z0, y0, pitch, x_lo, x_hi, length):
                & (cross[:, 0] >= x_lo) & (cross[:, 0] <= x_hi))
         out.append((hit, np.where(hit[:, None], cross, np.nan), np.where(hit, v, np.nan)))
     return out
+
+
+def wall_crossings(a, k, b, sign, z_lo, z_hi):
+    """Where paths a -> (k) -> b cross a lateral vessel wall (SBT side wall): the plane
+    sign * x = X(z) between z_lo and z_hi, inside the wall's height |y| <= Y(z).
+
+    A path can cross it twice (one per segment, e.g. in through the wall and out again after a
+    bounce). Returns two (hit mask, points (n, 3)): the first segment and the second (K -> B).
+    """
+    a, k, b = (np.asarray(v, np.float64) for v in (a, k, b))
+    bounced = np.isfinite(k[:, 2])
+    end = np.where(bounced[:, None], k, b)
+    g = lambda p: sign * p[:, 0] - side_plane_x(p[:, 2])
+    out = []
+    for p, q, use, first in ((a, end, np.ones(len(a), bool), True), (k, b, bounced, False)):
+        gp, gq = g(p), g(q)
+        dz = q[:, 2] - p[:, 2]
+        with np.errstate(invalid="ignore", divide="ignore"):
+            t = gp / (gp - gq)
+            t_min = -A_TOLERANCE / dz if first else 0.0
+            cross = p + t[:, None] * (q - p)
+        half_y = geo.vessel_half_widths(np.clip(cross[:, 2], geo.Z_VESSEL_MIN, geo.Z_VESSEL_MAX))[1]
+        hit = (use & (dz > 0) & (t >= t_min) & (t <= 1) & (cross[:, 2] >= z_lo) & (cross[:, 2] <= z_hi)
+               & (np.abs(cross[:, 1]) <= half_y))
+        out.append((hit, np.where(hit[:, None], cross, np.nan)))
+    return out

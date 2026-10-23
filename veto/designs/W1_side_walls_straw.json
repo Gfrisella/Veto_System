@@ -1,0 +1,11 @@
+{
+ "name": "W1_side_walls_straw",
+ "notes_user": "Both lateral walls of the decay vessel fully covered (z 30.6-80.6 m, full height), straw; minimal UBT (vessel entrance only, |y| <= 1.35 m); no fins, no floor / bottom detector.",
+ "ubt": {"y_lo": -1.35, "y_hi": 1.35, "technology": "straw"},
+ "fins": [],
+ "walls": [
+  {"side": "left", "z_lo": 30.6, "z_hi": 80.6, "technology": "straw"},
+  {"side": "right", "z_lo": 30.6, "z_hi": 80.6, "technology": "straw"}
+ ],
+ "detector": {}
+}

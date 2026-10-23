@@ -41,6 +41,10 @@ def load_inputs():
     if bottom.exists():
         g = np.load(bottom)
         inp["bottom"] = {k: g[k].astype(np.float64) for k in ("a", "k", "b", "w")}
+    wall = paths.results_dir() / "reco" / "wall_rates.npz"         # rate sample for the side-wall planes
+    if wall.exists():
+        g = np.load(wall)
+        inp["wall"] = {k: g[k] for k in ("a", "k", "b", "w")}
     return tr, inp
 
 

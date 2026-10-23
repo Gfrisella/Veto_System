@@ -1,0 +1,10 @@
+{
+ "name": "U1_ubt4x6_tile",
+ "notes_user": "One large UBT at the vessel entrance, 4 x 6 m^2 (x -2..2 m, y -3..3 m): straw centre (x +-0.5 m, the UBT plane) plus one lateral plane per side at z = 30.6 m, 1.5 m long, in tile. No fins downstream, no walls, no bottom panel. Bridge slide: why a single big plane is not enough.",
+ "ubt": {"y_lo": -3.0, "y_hi": 3.0, "technology": "straw"},
+ "fins": [
+  {"side": "left", "z": 30.6, "length": 1.5, "y_lo": -3.0, "y_hi": 3.0, "tilt": 0.0, "technology": "tile"},
+  {"side": "right", "z": 30.6, "length": 1.5, "y_lo": -3.0, "y_hi": 3.0, "tilt": 0.0, "technology": "tile"}
+ ],
+ "detector": {}
+}

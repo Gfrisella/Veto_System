@@ -21,6 +21,7 @@ New fins go to the right (-x, the side of the cavern wall the muons bounce off) 
 
   bin/optimize_fins.py --generations 25 --workers 12        # results/optimize_fins/
   bin/optimize_fins.py --resume                             # continue from archive.jsonl
+  bin/optimize_fins.py ... --fixed-tilt 0                   # every fin perpendicular to the beam
   bin/optimize_fins.py --bottom --goal pairs --sigma-t-track 5 --out optimize_bottom \
       --seed-from results/optimize_fins/archive.jsonl --seed-design results/optimize_fins/OPT1_tile2_flames.json
 """
@@ -52,6 +53,7 @@ BOTTOM_BOUNDS = {"z": (30.6, 80.0), "length": (0.5, 10.0), "x_c": (-3.5, 3.5), "
 SEEDS = ["D2_default", "D4_dense", "D6_straw", "D6_tile", "D6_tile2"]
 _S = {}
 OBJ = obj.ObjectiveConfig()
+FIXED_TILT = None       # --fixed-tilt: every fin gets this tilt [deg], never mutated
 
 
 # ---------------------------------------------------------------- evaluation (worker processes)
@@ -107,6 +109,7 @@ def _evaluate(raw):
 
 def random_fin(rng):
     tilt = float(rng.uniform(-45, 45)) if rng.random() < 0.6 else 0.0
+    tilt = tilt if FIXED_TILT is None else float(FIXED_TILT)
     return {"side": "right" if rng.random() < 0.7 else "left", "z": float(rng.uniform(40, geo.Z_VESSEL_MAX)),
             "length": float(rng.uniform(1, 4)), "y_lo": float(rng.choice([mt.FIN_Y_MIN, rng.uniform(-3.36, -1)])),
             "y_hi": float(rng.uniform(1, 4)), "tilt": round(tilt, 1), "technology": str(rng.choice(TECHS))}
@@ -117,7 +120,7 @@ def clean_fin(f, default_tech):
     for k, (lo, hi) in BOUNDS.items():
         out[k] = float(np.clip(f.get(k, 0.0), lo, hi))
     out["y_hi"] = max(out["y_hi"], out["y_lo"] + 0.3)
-    out["tilt"] = round(out["tilt"], 1)
+    out["tilt"] = round(out["tilt"], 1) if FIXED_TILT is None else float(FIXED_TILT)
     return out
 
 
@@ -332,7 +335,11 @@ def main():
     parser.add_argument("--seed-from", nargs="*", default=[], help="archive.jsonl of an earlier search")
     parser.add_argument("--seed-top", type=int, default=8)
     parser.add_argument("--seed-design", nargs="*", default=[], help="design JSONs to start from")
+    parser.add_argument("--fixed-tilt", type=float, default=None,
+                        help="every fin at this tilt [deg] (seeds included), tilt not searched")
     args = parser.parse_args()
+    global FIXED_TILT
+    FIXED_TILT = args.fixed_tilt
     OBJ.goal = args.goal
     OBJ.coincidence_s = None if args.coincidence_ps is None else args.coincidence_ps * 1e-12
     if args.goal == "pairs":
