@@ -8,16 +8,21 @@ Same recipe as supply2/srq_alphaevolve/evolve_heuristic.py, with designs instead
      context: geometry and limits, the JSON schema, technologies, where the muons are, the objective;
   3. all children of a generation are evaluated in parallel on the cluster (evaluate_designs.py,
      sent over our SSH proxy: the LLM key never leaves this machine);
-  4. truncation selection on objective.score (placeholder until the real objective is in).
+  4. truncation selection on the reward of objective.py (veto.objective on the run_reco result);
+  5. at the end the best designs are re-evaluated with other random seeds (--confirm-top, --confirm-seeds):
+     rewards differ by about their statistical error from seed to seed, best.json is the best mean.
 Every candidate, its report and the LLM's rationale go to results/evolve/<run>/history.jsonl; the best
 design so far is written to results/evolve/<run>/best.json (a normal designs/*.json file).
 
   bin/remote.sh sync                                  # once, so the cluster has the current code
-  evolve/evolve_designs.py --generations 10 --children 8
-  evolve/evolve_designs.py --model anthropic/claude-sonnet-4.5 --generations 20
+  evolve/evolve_designs.py --generations 10 --children 8                 # Claude Code CLI, sonnet
+  evolve/evolve_designs.py --model opus --generations 20
+  evolve/evolve_designs.py --backend openrouter --model anthropic/claude-sonnet-4.5
+  evolve/run_on_cluster.sh                            # everything on farm-gpu3 (LLM there too), in tmux
 
-The OpenRouter key is read from OPENROUTER_API_KEY, else from the .env file at --env-file
-(default: the supply2 project's .env, like its openrouter_client.py).
+LLM backends: "claude" runs the Claude Code CLI headless (`claude -p`, the user's own login, no tools,
+no session saved, run from an empty directory); "openrouter" reads OPENROUTER_API_KEY from the
+environment, else from the .env file at --env-file (default: the supply2 project's .env).
 """
 
 import argparse
@@ -28,6 +33,7 @@ import os
 import random
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -51,10 +57,11 @@ print = functools.partial(print, flush=True)
 
 REMOTE_VETO = "/disk/users/sqasim/workspace/uzh/Veto_System/veto"
 EXEC = "bash /disk/lhcb_data/sqasim/images/shared/exec_cudabear_november_2025.sh python3"
-SEEDS = ["D1_wide_ubt", "D2_default", "D3_heavy_right", "D6_tile2", "D6_fiber", "D6_straw"]
+SEEDS = ["D0_minimal", "D1_wide_ubt", "D3_heavy_right", "D6_tile2", "D6_fiber", "D6_straw"]
 DIRECTIVES = {
     "refine": "Refine the parent: keep its structure, fix its clearest weakness from the report "
-              "(a plane over its rate limit, a plane costing signal for little veto, a gap that lets muons through).",
+              "(a violation first: a plane over its rate limit or the budget; then a plane costing signal "
+              "for little veto, a gap that lets muons through, or cost that buys nothing).",
     "explore": "Try a substantially different layout from the parent (other fin positions, reaches, heights, "
                "technologies, or fewer / more fins), even at a risk.",
     "combine": "Combine the strongest ideas of the parent and the inspirations into one design.",
@@ -131,7 +138,11 @@ TECHNOLOGIES:
 WHERE THE MUONS ARE:
 {flux_summary()}
 
-OBJECTIVE (higher is better):
+RATE LIMITS: a plane's peak rate per channel (or per cm^2) is set by its technology's pitch and the muon
+density where it sits (table above); readout cell sizes do not change it. The report of every design lists
+each plane's peak rate next to its limit.
+
+OBJECTIVE (the reward; higher is better):
 {objective.__doc__}
 
 DESIGN JSON (all lengths in metres):
@@ -140,7 +151,12 @@ DESIGN JSON (all lengths in metres):
   "fins": [{{"side": "right"|"left", "z": 30.6, "length": 3.0, "y_lo": -3.0, "y_hi": 3.0, "tilt": 0,
             "technology": "tile"}}, ...],
   "detector": {{}}}}
-A fin may also give "cell_u"/"cell_y" (readout cell size, m) to read a technology out more coarsely.
+A fin may also give "cell_u"/"cell_y" (readout cell size, m) to read a technology out more coarsely: this only
+loses signal (bigger search windows), it changes neither rates, channels nor cost.
+Each evaluation reports: reward +- error, feasibility and violations, the four tiers, false vertices in 15 years,
+signal efficiency, cost, how often the muons of the background pairs escape the veto per type, and per plane:
+peak rates vs limits, cost, signal decays it loses (random hits) and background pairs it vetoes (a pair is
+often vetoed by several planes, so these overlap).
 
 Return JSON only: {{"design": <the complete design JSON>, "rationale": "<two sentences: what you changed and why>"}}"""
 
@@ -149,28 +165,104 @@ def compact(report):
     """The parts of an evaluation report the LLM needs, rounded."""
     if report.get("error"):
         return {"error": report["error"]}
-    sc, terms = objective.score(report)
-    f = report["fom"]
+    sc, r = objective.evaluate(report), report["result"]
+    bg, sg = sc["confusion"]["background"], sc["confusion"]["signal"]
+    rates = {p["plane"]: p for p in r["planes"]}
+    lost, vetoed = r["signal"].get("FP_by_plane", {}), r["background"].get("veto_by_plane", {})
+    planes = []
+    for g in report["planes"]:
+        p = rates[g["name"]]
+        t = tech.TECHNOLOGIES.get(p["technology"]) if p["technology"] else None
+        ch_limit = t.get("max_channel_rate") if t else None
+        planes.append({
+            "name": g["name"], "tech": g["technology"], "reach": g["reach_m"], "y": [g["y_lo"], g["y_hi"]],
+            "muons_per_s": f"{p['rate']:.2g}",
+            "peak_MHz_per_channel": round(p["peak_channel_hz"] / 1e6, 3),
+            "limit_MHz_per_channel": ch_limit / 1e6 if ch_limit else None,
+            "peak_Hz_per_cm2": f"{p['peak_hz_cm2']:.2g}", "limit_Hz_per_cm2": p["max_rate_hz_cm2"],
+            "cost_kCHF": round(p["cost"]) if p["cost"] == p["cost"] else None,
+            "signal_lost": lost.get(g["name"], 0), "pairs_vetoed": vetoed.get(g["name"], 0)})
     return {
-        "score": round(sc, 3), "score_terms": {k: round(v, 3) for k, v in terms.items()},
-        "signal_lost_pct": round(100 * f["FPR"], 3), "background_vetoed_pct": round(100 * f["TPR"], 5),
-        "surviving_pairs": f"{f['n_survive']} of {f['n_candidates']}",
-        "background_15y": f"{'<' if f['B_15y_is_upper_limit'] else ''}{f['B_15y'] if f['B_15y'] > 0 else f['B_15y_err']:.2g}",
-        "cost_MCHF": round(report["cost_kchf"] / 1000, 2), "channels": report["n_channels"],
-        "planes_over_rate_limit": report["n_planes_over_limit"],
-        "single_muons_vetoed_pct": {k: round(100 * v, 2) for k, v in report["single"].items() if k != "us_per_event"},
-        "signal_lost_by_plane": report["signal_lost_by_plane"], "bkg_vetoed_by_plane": report["bkg_vetoed_by_plane"],
-        "planes": [{"name": p["name"], "tech": p["technology"], "reach": p["reach_m"], "y": [p["y_lo"], p["y_hi"]],
-                    "muons_per_s": f"{p['muons_per_spill']:.2g}", "peak_channel_MHz": round(p["peak_channel_hz"] / 1e6, 2),
-                    "over_limit": bool(p["channel_over_limit"] or p["area_over_density_limit_m2"] > 0),
-                    "cost_kCHF": round(p["cost_kchf"]) if p["cost_kchf"] == p["cost_kchf"] else None}
-                   for p in report["planes"]],
+        "reward": round(sc["reward"], 3), "reward_err": round(sc["reward_err"], 3), "feasible": sc["feasible"],
+        "tiers": {k: round(-v, 3) for k, (v, _) in sc["terms"].items()},
+        "violations": sc["over_rate_limit"] + (["over the 8 MCHF budget"] if sc["over_budget"] else []),
+        "false_vertices_15y": f"{bg['events_15y_after']:.2g} +- {bg['events_15y_after_err']:.1g}",
+        "false_vertices_15y_factorised": f"{bg['FN_factorised'] * bg['events_15y_before']:.2g}",
+        "false_vertices_15y_direct": f"{bg['FN_direct'] * bg['events_15y_before']:.2g}",
+        "surviving_pairs_counted": f"{bg['n_survive_direct']} of {bg['n_candidates']}",
+        "signal_efficiency_pct": f"{100 * sg['efficiency']:.2f} +- {100 * sg['efficiency_err']:.2f}",
+        "signal_decays_simulated": sg["n"],
+        "cost_MCHF": round(sc["cost_kchf"] / 1000, 3), "channels": r["n_channels"],
+        "pair_muons_unvetoed": {k: f"{e:.2g} +- {de:.1g}" for k, (e, de) in sc["confusion"]["single_inefficiency"].items()},
+        "planes": planes,
         "loader_notes": report.get("notes", []),
     }
 
 
-# ------------------------------------------------------------------ LLM (OpenRouter)
-class LLM:
+def parse_json(text):
+    """The JSON object in an LLM answer (code fences and text around it ignored)."""
+    text = text.strip()
+    return json.loads(text[text.index("{"):text.rindex("}") + 1])
+
+
+# ------------------------------------------------------------------ LLM backends
+_LIMIT_LOCK = threading.Lock()
+
+
+def wait_for_limit(msg):
+    """Sleep until the usage limit resets ("... resets 7:40pm (Europe/Zurich)"), else 15 min; one thread
+    reports it, the others wait on the same lock."""
+    import re
+    with _LIMIT_LOCK:
+        wait = 900
+        m = re.search(r"resets (\d{1,2})(?::(\d\d))?\s*([ap]m)", msg, re.I)
+        if m:
+            h = int(m.group(1)) % 12 + (12 if m.group(3).lower() == "pm" else 0)
+            now = datetime.now()
+            reset = now.replace(hour=h, minute=int(m.group(2) or 0), second=0, microsecond=0)
+            ahead = (reset - now).total_seconds()
+            wait = ahead + 120 if 0 <= ahead < 6 * 3600 else (120 if -3600 < ahead < 0 else 900)
+        print(f"  [llm] usage limit ({msg.strip()[:80]}): waiting {wait / 60:.0f} min")
+        time.sleep(wait)
+
+
+class ClaudeCLI:
+    """Claude Code headless (`claude -p`) on the user's own login: no tools, no settings, no session saved,
+    run from an empty directory so no project context is picked up."""
+
+    def __init__(self, model, effort=None):
+        self.model, self.effort = model, effort
+        self.cost, self.calls = 0.0, 0
+        self.lock = threading.Lock()
+        self.cwd = tempfile.mkdtemp(prefix="veto_evolve_llm_")
+
+    def ask(self, system, user, retries=3):
+        cmd = ["claude", "-p", "--model", self.model, "--system-prompt", system, "--tools", "",
+               "--no-session-persistence", "--strict-mcp-config", "--setting-sources", "", "--output-format", "json"]
+        if self.effort:
+            cmd += ["--effort", self.effort]
+        attempt = 0
+        while attempt < retries:
+            try:
+                proc = subprocess.run(cmd, input=user, capture_output=True, text=True, timeout=900, cwd=self.cwd)
+                js = json.loads(proc.stdout)
+                with self.lock:
+                    self.cost += float(js.get("total_cost_usd") or 0)
+                    self.calls += 1
+                if js.get("is_error"):
+                    msg = str(js.get("result"))
+                    if "limit" in msg.lower():           # usage limit of the subscription: wait, not an attempt
+                        wait_for_limit(msg)
+                        continue
+                    raise RuntimeError(msg[:300])
+                return parse_json(js["result"])
+            except Exception as e:  # noqa: BLE001
+                attempt += 1
+                print(f"  [llm] attempt {attempt} failed: {str(e)[:200]} {proc.stderr[-200:] if 'proc' in locals() else ''}")
+        return None
+
+
+class OpenRouter:
     def __init__(self, model, env_file, temperature, max_tokens):
         if not os.environ.get("OPENROUTER_API_KEY") and Path(env_file).exists():
             for line in Path(env_file).read_text().splitlines():
@@ -197,25 +289,32 @@ class LLM:
                 with self.lock:
                     self.cost += float((js.get("usage") or {}).get("cost") or 0)
                     self.calls += 1
-                text = js["choices"][0]["message"]["content"].strip()
-                if text.startswith("```"):
-                    text = text.strip("`").split("\n", 1)[1]
-                return json.loads(text)
+                return parse_json(js["choices"][0]["message"]["content"])
             except Exception as e:  # noqa: BLE001
                 print(f"  [llm] attempt {attempt + 1} failed: {str(e)[:200]}")
         return None
 
 
 # ------------------------------------------------------------------ evaluation on the cluster
-def evaluate_remote(designs, proxy_port, host, workers, n_signal):
-    cmd = ["ssh", "-J", f"127.0.0.1:{proxy_port}", host,
-           f"cd {REMOTE_VETO} && OMP_NUM_THREADS=1 {EXEC} evolve/evaluate_designs.py --workers {workers} --n-signal {n_signal}"]
+def evaluate_remote(designs, proxy_port, host, workers, n_signal, seed=1):
+    """Evaluate on `host` over our SSH proxy, or here (host "local": when this runs on the cluster)."""
+    run = (f"OMP_NUM_THREADS=1 {EXEC} evolve/evaluate_designs.py --workers {workers} "
+           f"--n-signal {n_signal} --seed {seed}")
+    if host == "local":
+        cmd = ["bash", "-c", f"cd {VETO} && {run}"]
+    else:
+        cmd = ["ssh", "-J", f"127.0.0.1:{proxy_port}", host, f"cd {REMOTE_VETO} && {run}"]
     proc = subprocess.run(cmd, input=json.dumps(designs), capture_output=True, text=True, timeout=3600)
     try:
         return json.loads(proc.stdout.strip().splitlines()[-1])
     except Exception:  # noqa: BLE001
         err = (proc.stderr or "")[-800:]
         return [dict(name=d.get("name"), error=f"cluster evaluation failed: {err}") for d in designs]
+
+
+def reward_err(report):
+    s = objective.evaluate(report)
+    return s["reward_err"] if s else 0.0
 
 
 def valid_locally(design):
@@ -229,30 +328,40 @@ def valid_locally(design):
 # ------------------------------------------------------------------ the loop
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--model", default="openai/gpt-4.1-mini")
+    ap.add_argument("--backend", choices=["claude", "openrouter"], default="claude")
+    ap.add_argument("--model", default="sonnet", help="claude: sonnet / opus / a model id; openrouter: its model id")
+    ap.add_argument("--effort", default=None, help="claude backend: reasoning effort (low .. max)")
+    ap.add_argument("--confirm-top", type=int, default=5, help="re-evaluate this many best designs at the end")
+    ap.add_argument("--confirm-seeds", type=int, nargs="*", default=[2, 3])
     ap.add_argument("--generations", type=int, default=10)
     ap.add_argument("--children", type=int, default=8, help="LLM proposals per generation")
     ap.add_argument("--population", type=int, default=10)
     ap.add_argument("--seeds", nargs="*", default=SEEDS, help="designs/*.json to start from")
+    ap.add_argument("--seed-runs", nargs="*", default=[], help="earlier runs (results/evolve/<run>) whose best designs join gen 0")
+    ap.add_argument("--seed-top", type=int, default=6, help="designs taken from each of --seed-runs")
+    ap.add_argument("--bkg-estimate", choices=["max", "factorised", "direct"], default="max",
+                    help="false vertices: max of the direct count and the factorised estimate (default), or one of them")
     ap.add_argument("--inspirations", type=int, default=3)
     ap.add_argument("--n-signal", type=int, default=40_000)
-    ap.add_argument("--temperature", type=float, default=0.9)
+    ap.add_argument("--temperature", type=float, default=0.9, help="openrouter only")
     ap.add_argument("--max-tokens", type=int, default=6000)
     ap.add_argument("--env-file", default=str(Path.home() / "workspace/uzh/supply2/.env"))
     ap.add_argument("--proxy-port", default=os.environ.get("PROXY_PORT", "2226"))
-    ap.add_argument("--host", default="farm-gpu3")
+    ap.add_argument("--host", default="farm-gpu3", help='cluster node, or "local" to evaluate on this machine')
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
     random.seed(args.seed)
+    objective.configure(bkg_estimate=args.bkg_estimate)
 
-    llm = LLM(args.model, args.env_file, args.temperature, args.max_tokens)
+    llm = (ClaudeCLI(args.model, args.effort) if args.backend == "claude"
+           else OpenRouter(args.model, args.env_file, args.temperature, args.max_tokens))
     run = paths.results_dir() / "evolve" / datetime.now().strftime("%Y%m%d_%H%M%S")
     run.mkdir(parents=True, exist_ok=True)
     (run / "config.json").write_text(json.dumps(vars(args), indent=2))
     system = system_prompt()
     (run / "system_prompt.txt").write_text(system)
     history = run / "history.jsonl"
-    print(f"run {run}\nmodel {args.model}, {args.generations} generations x {args.children} children\n")
+    print(f"run {run}\n{args.backend} {args.model}, {args.generations} generations x {args.children} children\n")
 
     def record(cand):
         with history.open("a") as fh:
@@ -260,12 +369,17 @@ def main():
 
     # generation 0: the seed designs
     seeds = [json.loads((dsg.DESIGN_DIR / f"{n}.json").read_text()) for n in args.seeds]
+    for prev in args.seed_runs:              # best designs of earlier runs, re-scored with today's objective
+        prev = Path(prev) if Path(prev).is_absolute() else paths.results_dir() / "evolve" / prev
+        hist = [json.loads(line) for line in (prev / "history.jsonl").open()]
+        ok = sorted((c for c in hist if c["score"] is not None and math.isfinite(c["score"])), key=lambda c: -c["score"])
+        seeds += [c["design"] for c in ok if c["design"]["name"] not in {d["name"] for d in seeds}][:args.seed_top]
     t0 = time.time()
     reports = evaluate_remote(seeds, args.proxy_port, args.host, len(seeds), args.n_signal)
     population = []
     for d, r in zip(seeds, reports):
         sc, _ = objective.score(r)
-        cand = dict(id=d["name"], gen=0, design=d, report=r, score=sc, rationale="seed design")
+        cand = dict(id=d["name"], gen=0, design=d, report=r, score=sc, score_err=reward_err(r), rationale="seed design")
         record(cand)
         population.append(cand)
     population.sort(key=lambda c: -c["score"])
@@ -287,7 +401,7 @@ def main():
                 "directive": DIRECTIVES[directive],
                 "parent": {"design": parent["design"], "evaluation": compact(parent["report"])},
                 "inspirations": [{"design": c["design"], "evaluation": compact(c["report"])} for c in others],
-                "population_scores": [{"name": c["id"], "score": round(c["score"], 3)} for c in population],
+                "population_rewards": [{"name": c["id"], "reward": round(c["score"], 3), "err": round(c.get("score_err", 0), 3)} for c in population],
                 "request": f"Propose one improved complete design. Name it g{gen}c{k}_<short words>.",
             })
             return k, parent, directive, llm.ask(system, user)
@@ -321,6 +435,7 @@ def main():
                                                     len(to_run), args.n_signal)):
                 c["report"] = r
                 c["score"], _ = objective.score(r)
+                c["score_err"] = reward_err(r)
         for c in children:
             record(c)
         population = sorted(population + children, key=lambda c: -c["score"])[:args.population]
@@ -332,10 +447,29 @@ def main():
               f"pop mean {np.mean([c['score'] for c in population if math.isfinite(c['score'])]):.3f}  "
               f"{time.time() - t0:.0f} s  llm ${llm.cost:.3f} ({llm.calls} calls)")
         for c in sorted(children, key=lambda c: -c["score"])[:3]:
-            print(f"    {c['score']:8.3f}  {c['id']}: {c['rationale'][:140]}")
+            print(f"    {c['score']:9.3f} +- {c.get('score_err', 0):.3f}  {c['id']}: {c['rationale'][:140]}")
 
-    print(f"\nbest: {best['id']} score {best['score']:.3f} -> {run / 'best.json'}")
-    print(json.dumps(compact(best["report"]), indent=1)[:2000])
+    # the best designs again with other seeds: the ranking at the top is within the statistical errors
+    hist = [json.loads(line) for line in history.open()]
+    top = sorted((c for c in hist if math.isfinite(c["score"])), key=lambda c: -c["score"])[:args.confirm_top]
+    if top and args.confirm_seeds:
+        scores = {c["id"]: [c["score"]] for c in top}
+        for seed in args.confirm_seeds:
+            for c, r in zip(top, evaluate_remote([c["design"] for c in top], args.proxy_port, args.host,
+                                                 len(top), args.n_signal, seed)):
+                scores[c["id"]].append(objective.score(r)[0])
+        rows = sorted(({"id": c["id"], "scores": scores[c["id"]], "mean": float(np.mean(scores[c["id"]])),
+                        "spread": float(np.std(scores[c["id"]])), "design": c["design"]} for c in top),
+                      key=lambda x: -x["mean"])
+        (run / "confirm.json").write_text(json.dumps(rows, indent=1, default=float))
+        print(f"\nre-evaluated with seeds {args.confirm_seeds}:")
+        for x in rows:
+            print(f"  {x['mean']:9.3f} (spread {x['spread']:.3f})  {x['id']}   {np.round(x['scores'], 3).tolist()}")
+        best = next(c for c in top if c["id"] == rows[0]["id"])
+        (run / "best.json").write_text(json.dumps(best["design"], indent=1))
+
+    print(f"\nbest: {best['id']} score {best['score']:.3f} -> {run / 'best.json'}   llm ${llm.cost:.2f} ({llm.calls} calls)")
+    print(json.dumps(compact(best["report"]), indent=1)[:3000])
 
 
 if __name__ == "__main__":

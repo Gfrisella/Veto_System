@@ -466,7 +466,7 @@ pres.slider("ev_index", label="event", min=0, max=9, value=0, step=1, decimals=0
 
 def stored_event(di, kind, k):
     """(design, parts) of the k-th stored event of a kind, parts None if the design has none."""
-    name = DESIGNS[int(di)]
+    name = di if isinstance(di, str) else DESIGNS[int(di)]
     d = dsg.load(name)
     evs = EVENTS.get(name, {}).get("events", {}).get(int(kind), [])
     return d, (evs[int(k) % len(evs)] if evs else None)
@@ -474,6 +474,10 @@ def stored_event(di, kind, k):
 
 @pres.output("ev3d", inputs=["ev_design", "ev_kind", "ev_index"])
 def ev3d(di, kind, k):
+    return ev3d_figure(di, kind, k)
+
+
+def ev3d_figure(di, kind, k):
     d, parts = stored_event(di, kind, k)
     traces = geometry() + plane_meshes(d, scale=False)
     sc = scene(z_range=(20, 90))
@@ -495,9 +499,13 @@ def ev3d(di, kind, k):
 
 @pres.output("ev_side", inputs=["ev_design", "ev_kind", "ev_index"])
 def ev_side(di, kind, k):
+    return ev_side_figure(di, kind, k)
+
+
+def ev_side_figure(di, kind, k, plot_width=0.7, text_size=6):
     d, parts = stored_event(di, kind, k)
     fig = make_subplots(rows=1, cols=1)
-    fig.update_xaxes(domain=[0, 0.7])
+    fig.update_xaxes(domain=[0, plot_width])
     zz = np.array([geo.Z_VESSEL_MIN, geo.Z_VESSEL_MAX])
     for sgn in (1, -1):
         fig.add_trace(go.Scatter(x=zz, y=sgn * np.array([geo.VESSEL_X_IN, geo.VESSEL_X_OUT]), mode="lines",
@@ -531,7 +539,7 @@ def ev_side(di, kind, k):
                                      marker=dict(size=9, color=col, symbol="x")), 1, 1)
         info = [KINDS[int(kind)], f"design {d.name}"] + parts["info"] + \
                [f"{len(parts['own'])} own hits, {len(parts['acc'])} random hits"]
-    text_block(fig, info, 0.72, y0=0.98, dy=0.09, size=6)
+    text_block(fig, info, plot_width + 0.02, y0=0.98, dy=0.09, size=text_size)
     fig.update_xaxes(title="z [m]", range=[28, 84], row=1, col=1)
     fig.update_yaxes(title="x [m]", range=[-7.5, 7.5], row=1, col=1)
     return layout(fig, margin=dict(l=32, r=4, t=6, b=26))
@@ -709,8 +717,12 @@ pres.slider("fom_design", label="design", min=0, max=len(DESIGNS) - 1, value=DES
 
 @pres.output("fom", inputs=["fom_design"])
 def fom(di):
+    return fom_figure(DESIGNS[int(di)])
+
+
+def fom_figure(name):
     """Confusion matrix of one design: background pairs (expected events in 15 years) and signal (fractions)."""
-    f = EVENTS[DESIGNS[int(di)]]["fom"]
+    f = EVENTS[name]["fom"]
     tp, fn, fn_err, fp, tn = f["tp"], f["fn"], f["fn_err"], f["fp"], f["tn"]
     n_surv, n_cand = f["n_surv"], f["n_cand"]
     fig = go.Figure()
@@ -718,10 +730,10 @@ def fom(di):
              (1, 1, "FN", f"{fn:.1e} ± {fn_err:.0e}" if fn > 0 else f"< {fn_err:.0e}", f"events · {n_surv} of {n_cand:,} pairs", RED),
              (0, 0, "FP", f"{100 * fp:.2f} %", "of the signal", ORA),
              (1, 0, "TN", f"{100 * tn:.2f} %", "of the signal", ACC)]
-    for cx, cy, name, big, small, col in cells:
+    for cx, cy, lab, big, small, col in cells:
         fig.add_shape(type="rect", x0=cx, x1=cx + 1, y0=cy, y1=cy + 1, line=dict(color="white", width=3),
                       fillcolor=col, opacity=0.18)
-        for dy, text, size in ((0.72, f"<b>{name}</b>", 9), (0.47, big, 8.5), (0.24, small, 6.5)):
+        for dy, text, size in ((0.72, f"<b>{lab}</b>", 9), (0.47, big, 8.5), (0.24, small, 6.5)):
             fig.add_annotation(x=cx + 0.5, y=cy + dy, text=text, showarrow=False, font=dict(size=size, color=INK))
     for x, text in ((0.5, "vetoed"), (1.5, "not vetoed")):
         fig.add_annotation(x=x, y=2.08, text=f"<b>{text}</b>", showarrow=False, font=dict(size=7, color=MUT))
@@ -729,7 +741,7 @@ def fom(di):
         fig.add_annotation(x=-0.06, y=y, text=f"<b>{text}</b>", showarrow=False, textangle=-90, font=dict(size=7, color=MUT))
     fig.update_xaxes(visible=False, range=[-0.15, 2.02]); fig.update_yaxes(visible=False, range=[-0.02, 2.18])
     punzi = tn / (1.5 + math.sqrt(fn))
-    return layout(fig, title=dict(text=f"{DESIGNS[int(di)]} · Punzi {punzi:.3f}",
+    return layout(fig, title=dict(text=f"{name} · Punzi {punzi:.3f}",
                                   font=dict(size=7.5), x=0.02), margin=dict(l=4, r=4, t=18, b=4))
 
 
@@ -738,8 +750,12 @@ pres.slider("n_sig15", label="signal", min=1, max=1000, value=100, decimals=0)
 
 @pres.output("fom15", inputs=["fom_design", "n_sig15"])
 def fom15(di, n_sig):
+    return fom15_figure(DESIGNS[int(di)], n_sig)
+
+
+def fom15_figure(name, n_sig):
     """The confusion matrix as counts over the 15-year run (6e20 POT, 1 s spills)."""
-    f = EVENTS[DESIGNS[int(di)]]["fom"]
+    f = EVENTS[name]["fom"]
     tp, fn, fn_err = f["tp"], f["fn"], f["fn_err"]
     fp, tn = n_sig * f["fp"], n_sig * f["tn"]
     p_fake = 1 - math.exp(-fn)
@@ -748,19 +764,207 @@ def fom15(di, n_sig):
              (1, 1, "FN", f"{fn:.1e}" if fn > 0 else f"< {fn_err:.0e}", "fake discoveries" + (f" (± {fn_err:.0e})" if fn > 0 else " (none survive: 90 % limit)"), RED),
              (0, 0, "FP", f"{fp:.1f}", "signal events lost", ORA),
              (1, 0, "TN", f"{tn:.1f}", "signal events kept", ACC)]
-    for cx, cy, name, big, small, col in cells:
+    for cx, cy, lab, big, small, col in cells:
         fig.add_shape(type="rect", x0=cx, x1=cx + 1, y0=cy, y1=cy + 1, line=dict(color="white", width=3),
                       fillcolor=col, opacity=0.18)
-        for dy, text, size in ((0.74, f"<b>{name}</b>", 9), (0.47, f"<b>{big}</b>", 11), (0.22, small, 6.5)):
+        for dy, text, size in ((0.74, f"<b>{lab}</b>", 9), (0.47, f"<b>{big}</b>", 11), (0.22, small, 6.5)):
             fig.add_annotation(x=cx + 0.5, y=cy + dy, text=text, showarrow=False, font=dict(size=size, color=INK))
     for x, text in ((0.5, "vetoed"), (1.5, "not vetoed")):
         fig.add_annotation(x=x, y=2.08, text=f"<b>{text}</b>", showarrow=False, font=dict(size=7, color=MUT))
     for y, text in ((1.5, f"pairs {tp + fn:.1f}"), (0.5, f"signal {n_sig:.0f}")):
         fig.add_annotation(x=-0.06, y=y, text=f"<b>{text}</b>", showarrow=False, textangle=-90, font=dict(size=7, color=MUT))
     fig.update_xaxes(visible=False, range=[-0.15, 2.02]); fig.update_yaxes(visible=False, range=[-0.02, 2.18])
-    title = f"{DESIGNS[int(di)]} · 15 years · P(≥ 1 fake discovery) = {100 * p_fake:.2g} %"
+    title = f"{name} · 15 years · P(≥ 1 fake discovery) = {100 * p_fake:.2g} %"
     return layout(fig, title=dict(text=title, font=dict(size=7.5), x=0.02), margin=dict(l=4, r=4, t=18, b=4))
 
+
+# ====================================================================== PART 6: LLM evolution of the design
+import textwrap  # noqa: E402
+
+from veto import objective as vobj  # noqa: E402
+from veto import technology as tech  # noqa: E402
+
+EVO_DIR = paths.results_dir() / "evolve"
+EVO_RUNS = [("run 1 · factorised background", "20261015_175718"), ("run 2 · honest background", "20261015_213509")]
+EVO_PICK = ["E1_llm_run1", "E2_llm_run2"]
+OBJ_STATS = vobj.sample_stats()
+OBJ_CFG = vobj.ObjectiveConfig(bkg_estimate="max")
+
+
+def evo_history(run):
+    rows = [json.loads(line) for line in (EVO_DIR / run / "history.jsonl").open()]
+    return [c for c in rows if c["score"] is not None and math.isfinite(c["score"]) and not c["report"].get("error")]
+
+
+def evo_lineage(hist):
+    """The best design so far, each time it changes: [(generation, candidate)]."""
+    out, best = [], -math.inf
+    for g in sorted({c["gen"] for c in hist}):
+        top = max((c for c in hist if c["gen"] == g), key=lambda c: c["score"])
+        if top["score"] > best:
+            best = top["score"]
+            out.append((g, top))
+    return out
+
+
+EVO = {run: evo_history(run) for _, run in EVO_RUNS} if EVO_DIR.exists() else {}
+LINEAGE = {run: evo_lineage(h) for run, h in EVO.items()}
+
+
+def honest(c):
+    """veto.objective with the max(direct, factorised) background, for every design alike."""
+    return vobj.score(c["report"]["result"], OBJ_STATS, OBJ_CFG)
+
+
+pres.slider("evo_run", label="run", min=0, max=len(EVO_RUNS) - 1, value=1, step=1, decimals=0)
+pres.slider("evo_step", label="step", min=0, max=max([len(v) for v in LINEAGE.values()] + [1]) - 1, value=0, step=1, decimals=0)
+
+
+@pres.output("evo_curve", inputs=["evo_run"])
+def evo_curve(ri):
+    """Every design the LLM proposed: penalty (-reward, log) per generation, the best so far as a line."""
+    label, run = EVO_RUNS[int(ri)]
+    hist, lin = EVO[run], LINEAGE[run]
+    rng = np.random.default_rng(0)
+    pen = np.array([-c["score"] for c in hist])
+    gen = np.array([c["gen"] for c in hist]) + rng.uniform(-0.25, 0.25, len(hist))
+    feas = pen < 999
+    fig = go.Figure()
+    for band, (lo, hi, txt, col) in enumerate(((999, 2e4, "infeasible: over a rate limit or the budget", "#f3e3e1"),
+                                                (5, 999, "background: false vertices ≳ 0.05 in 15 y", "#fbf1e4"),
+                                                (0.1, 5, "signal and cost", "#e7f1e9"))):
+        fig.add_shape(type="rect", xref="paper", x0=0, x1=1, y0=lo, y1=hi, fillcolor=col, line=dict(width=0), layer="below")
+        fig.add_annotation(xref="paper", x=0.995, y=math.log10(hi) - 0.05, text=txt, showarrow=False, xanchor="right",
+                           yanchor="top", font=dict(size=6, color=MUT))
+    fig.add_trace(go.Scatter(x=gen[~feas], y=pen[~feas], mode="markers", marker=dict(size=4, color=GREY, opacity=0.6),
+                             text=[c["id"] for c, f in zip(hist, feas) if not f], hoverinfo="text"))
+    fig.add_trace(go.Scatter(x=gen[feas], y=pen[feas], mode="markers", marker=dict(size=4.5, color=ACC, opacity=0.75),
+                             text=[c["id"] for c, f in zip(hist, feas) if f], hoverinfo="text"))
+    gl = [g for g, _ in lin] + [max(c["gen"] for c in hist)]
+    pl = [-c["score"] for _, c in lin] + [-lin[-1][1]["score"]]
+    fig.add_trace(go.Scatter(x=gl, y=pl, mode="lines+markers", line=dict(color=ORA, width=2, shape="hv"),
+                             marker=dict(size=5, color=ORA)))
+    best = lin[-1][1]
+    fig.update_xaxes(title="generation", range=[-0.6, max(c["gen"] for c in hist) + 0.6], dtick=5)
+    fig.update_yaxes(title="penalty = −reward", type="log", range=[-0.75, 4.2],
+                     tickvals=[0.3, 1, 3, 10, 100, 1000, 1e4], ticktext=["0.3", "1", "3", "10", "100", "1000", "10⁴"])
+    title = f"{label}: {len(hist)} designs · best {best['id']} = {best['score']:.3f}"
+    return layout(fig, title=dict(text=title, font=dict(size=7.5), x=0.02), margin=dict(l=40, r=8, t=18, b=28))
+
+
+def lineage_step(ri, step):
+    run = EVO_RUNS[int(ri)][1]
+    lin = LINEAGE[run]
+    g, c = lin[min(int(step), len(lin) - 1)]
+    return run, g, c, dsg.from_dict(c["design"]), len(lin)
+
+
+@pres.output("evo3d", inputs=["evo_run", "evo_step"])
+def evo3d(ri, step):
+    _, _, _, d, _ = lineage_step(ri, step)
+    traces = geometry(ubt=False) + plane_meshes(d, scale=False)
+    return layout(go.Figure(traces), scene=scene(z_range=(20, 90)), margin=dict(l=0, r=0, t=0, b=0))
+
+
+@pres.output("evo_top", inputs=["evo_run", "evo_step"])
+def evo_top(ri, step):
+    """Top view (x against z) of the best design at this step, fins coloured by peak rate / limit, and its numbers."""
+    run, g, c, d, n = lineage_step(ri, step)
+    sc = honest(c)
+    res = c["report"]["result"]
+    rates = {p["plane"]: p for p in res["planes"]}
+    fig = make_subplots(rows=1, cols=1)
+    fig.update_xaxes(domain=[0, 0.46])
+    zz = np.array([geo.Z_VESSEL_MIN, geo.Z_VESSEL_MAX])
+    for sgn in (1, -1):
+        fig.add_trace(go.Scatter(x=zz, y=sgn * np.array([geo.VESSEL_X_IN, geo.VESSEL_X_OUT]), mode="lines",
+                                 line=dict(color=INK, width=1.2)))
+    fig.add_trace(go.Scatter(x=[28, 84], y=[geo.CAVERN_X_WALL] * 2, mode="lines", line=dict(color="#8c564b", dash="dot", width=1)))
+    for plane in d.planes:
+        r = rates.get(plane.name, {})
+        t = tech.TECHNOLOGIES.get(plane.technology) if plane.technology else None
+        lim = t.get("max_channel_rate") if t else None
+        frac = (r.get("peak_channel_hz", 0) / lim) if lim else (r.get("peak_hz_cm2", 0) / r["max_rate_hz_cm2"]
+                                                                  if r.get("max_rate_hz_cm2") else 0)
+        col = RED if frac > 1 else ORA if frac > 0.5 else GRN
+        xs = [plane.to_global(0), plane.to_global(plane.u_max)]
+        fig.add_trace(go.Scatter(x=[plane.z, plane.z], y=xs, mode="lines", line=dict(color=col, width=5), opacity=0.8))
+        if plane.kind == "fin":
+            fig.add_annotation(x=plane.z, y=xs[1], text=f"{plane.u_max:.1f} m", showarrow=False, font=dict(size=5.5, color=MUT),
+                               xanchor="left", yanchor="bottom" if plane.sign > 0 else "top", xshift=2)
+    fig.update_xaxes(title="z [m]", range=[28, 84])
+    fig.update_yaxes(title="x [m]", range=[-5.2, 5.2])
+    bg, sg = sc["confusion"]["background"], sc["confusion"]["signal"]
+    techs = sorted({p.technology for p in d.planes[1:]}) or ["UBT only"]
+    over = len(sc["over_rate_limit"])
+    lines = [f"step {min(int(step), n - 1) + 1} of {n} · generation {g}", c["id"][:30],
+             f"reward {c['score']:.3f} (as optimised)", f"honest objective {sc['reward']:.3f}",
+             "feasible" if sc["feasible"] else f"INFEASIBLE: {over} rate limit{'s' * (over != 1)}" + (" + budget" if sc["over_budget"] else ""),
+             f"{sc['cost_kchf'] / 1000:.2f} MCHF · {', '.join(techs)}",
+             f"signal kept {100 * sg['efficiency']:.2f} %",
+             f"false vertices {bg['events_15y_after']:.1g} / 15 y",
+             f"{bg['n_survive_direct']} of 196 k pairs survive"]
+    why = textwrap.wrap(c.get("rationale", ""), 42)[:5]
+    text_block(fig, lines, 0.5, y0=0.99, dy=0.068, size=5.8)
+    text_block(fig, ["the LLM's reason:"] + why, 0.5, y0=0.36, dy=0.062, size=5.3)
+    return layout(fig, margin=dict(l=32, r=4, t=6, b=26))
+
+
+@pres.output("evo_map")
+def evo_map():
+    """All feasible designs of both runs, honest objective: signal lost against cost, coloured by false vertices."""
+    fig = go.Figure()
+    for (label, run), sym in zip(EVO_RUNS, ("circle", "diamond")):
+        pts = [(c, honest(c)) for c in EVO[run]]
+        pts = [(c, s) for c, s in pts if s["feasible"]]
+        n = np.array([s["bkg_events_15y"] for _, s in pts])
+        fig.add_trace(go.Scatter(
+            x=[s["cost_kchf"] / 1000 for _, s in pts], y=[100 * s["confusion"]["signal"]["FP"] for _, s in pts],
+            mode="markers", text=[f"{c['id']}: N = {s['bkg_events_15y']:.1g}" for c, s in pts], hoverinfo="text",
+            marker=dict(size=5, symbol=sym, color=np.log10(np.maximum(n, 1e-5)), cmin=-4, cmax=0, colorscale="RdYlGn_r",
+                        line=dict(width=0.3, color=INK), showscale=run == EVO_RUNS[-1][1],
+                        colorbar=dict(title=dict(text="log₁₀ false vertices / 15 y", side="right", font=dict(size=6)),
+                                      thickness=7, len=0.8, tickfont=dict(size=6)))))
+    for name, sym in zip(EVO_PICK, ("circle", "diamond")):
+        c = next((c for _, run in EVO_RUNS for c in EVO[run] if c["design"]["fins"] == json.loads(
+            (dsg.DESIGN_DIR / f"{name}.json").read_text())["fins"]), None)
+        if c:
+            s = honest(c)
+            fig.add_trace(go.Scatter(x=[s["cost_kchf"] / 1000], y=[100 * s["confusion"]["signal"]["FP"]], mode="markers+text",
+                                     text=[name.split("_")[0]], textposition="top right" if name.startswith("E1") else "bottom left",
+                                     textfont=dict(size=8, color=INK),
+                                     marker=dict(size=11, symbol=sym, color="rgba(0,0,0,0)", line=dict(width=1.6, color=INK))))
+    fig.update_xaxes(title="cost [MCHF]", type="log", range=[math.log10(0.25), math.log10(9)],
+                     tickvals=[0.3, 0.5, 1, 2, 4, 8], ticktext=["0.3", "0.5", "1", "2", "4", "8"])
+    fig.update_yaxes(title="signal lost [%]", type="log", range=[-1.6, 0.3], tickvals=[0.03, 0.1, 0.3, 1],
+                     ticktext=["0.03", "0.1", "0.3", "1"])
+    return layout(fig, title=dict(text="every feasible design the LLM proposed (● run 1, ◆ run 2)", font=dict(size=7.5), x=0.02),
+                  margin=dict(l=36, r=8, t=18, b=28))
+
+
+pres.slider("evo_pick", label="design", min=0, max=len(EVO_PICK) - 1, value=1, step=1, decimals=0)
+pres.slider("evo_kind", label="kind", min=0, max=3, value=1, step=1, decimals=0)
+pres.slider("evo_index", label="event", min=0, max=9, value=0, step=1, decimals=0)
+
+
+@pres.output("fom_evo", inputs=["evo_pick"])
+def fom_evo(pi):
+    return fom_figure(EVO_PICK[int(pi)])
+
+
+@pres.output("fom15_evo", inputs=["evo_pick", "n_sig15"])
+def fom15_evo(pi, n_sig):
+    return fom15_figure(EVO_PICK[int(pi)], n_sig)
+
+
+@pres.output("ev3d_evo", inputs=["evo_pick", "evo_kind", "evo_index"])
+def ev3d_evo(pi, kind, k):
+    return ev3d_figure(EVO_PICK[int(pi)], kind, k)
+
+
+@pres.output("ev_side_evo", inputs=["evo_pick", "evo_kind", "evo_index"])
+def ev_side_evo(pi, kind, k):
+    return ev_side_figure(EVO_PICK[int(pi)], kind, k, plot_width=0.58, text_size=5.6)
 
 
 if __name__ == "__main__":

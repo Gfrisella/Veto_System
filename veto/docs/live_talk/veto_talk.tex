@@ -48,8 +48,8 @@
         \node[box, below=of data, text width=3.7cm] (des) {\semibold a veto design\\\faint{UBT + fins, JSON}};
         \node[abox, below=of des, text width=3.7cm] (reco) {\semibold digitize + reconstruct\\\faint{algorithm A}};
         \node[box, below=of reco, text width=3.7cm] (score) {\semibold score\\\faint{TP · FN · FP · TN, rates}};
-        \node[box, below=of score, text width=3.7cm, draw=muted, dashed] (rl) {\semibold optimise\\\faint{next: RL loop}};
-        \draw[arr] (data) -- (des); \draw[arr] (des) -- (reco); \draw[aarr] (reco) -- (score); \draw[arr, dashed] (score) -- (rl);
+        \node[box, below=of score, text width=3.7cm] (rl) {\semibold optimise\\\faint{an LLM evolves the design}};
+        \draw[arr] (data) -- (des); \draw[arr] (des) -- (reco); \draw[aarr] (reco) -- (score); \draw[arr] (score) -- (rl);
       \end{tikzpicture}
     \end{column}
   \end{columns}
@@ -390,7 +390,7 @@
 \begin{frame}{Algorithm A on real events}
   \livewidget{ev3d}{\linewidth}{0.52\textheight}\\[1mm]
   \sld[0.32\linewidth]{ev_design}\hfill\sld[0.32\linewidth]{ev_kind}\hfill\sld[0.32\linewidth]{ev_index}\\[0.3mm]
-  \legendline{design: 0 D0 · 1 D1 · 2 D2 · 3 D3 · 4 D4 · 5 D5 coarse · 6 D5 fine · 7 fibre · 8 pixel · 9 straw · 10 tile · 11 tile2 (fins).\quad kind: 0 pair vetoed · 1 pair missed · 2 signal lost to a random hit · 3 bounced muon missed.}\\
+  \legendline{design: 0 D0 · 1 D1 · 2 D2 · 3 D3 · 4 D4 · 5 D5 coarse · 6 D5 fine · 7 fibre · 8 pixel · 9 straw · 10 tile · 11 tile2 (fins) · 12 E1 · 13 E2 (LLM).\quad kind: 0 pair vetoed · 1 pair missed · 2 signal lost to a random hit · 3 bounced muon missed.}\\
   \legendline{Solid: true path; dotted: backward prediction; white: own hits; diamond: the hit that explained the track; grey: random hits.}
 \end{frame}
 
@@ -446,7 +446,7 @@
   \livewidget{knobs}{\linewidth}{0.5\textheight}\\[1mm]
   \sld[0.32\linewidth]{k_design}\hfill\sld[0.32\linewidth]{k_eps}\hfill\sld[0.32\linewidth]{k_nsig}\\[0.4mm]
   \sld[0.32\linewidth]{k_sigt}\hfill\hspace*{0.32\linewidth}\hfill\hspace*{0.32\linewidth}\\[0.3mm]
-  \legendline{design: 0 D0 · 1 D1 · 2 D2 · 3 D3 · 4 D4 · 5 D5 coarse · 6 D5 fine · 7 fibre · 8 pixel · 9 straw · 10 tile · 11 tile2 (fins). The whole chain reruns: a quick answer on 15\,\% of the events, then all of them ($\approx$5--10\,s).}
+  \legendline{design: 0 D0 · 1 D1 · 2 D2 · 3 D3 · 4 D4 · 5 D5 coarse · 6 D5 fine · 7 fibre · 8 pixel · 9 straw · 10 tile · 11 tile2 (fins) · 12 E1 · 13 E2 (LLM). The whole chain reruns: a quick answer on 15\,\% of the events, then all of them ($\approx$5--10\,s).}
 \end{frame}
 
 \begin{frame}{Figure of merit}
@@ -583,6 +583,179 @@
       \takeaway[\footnotesize]{Detector technology near $|x|\approx2$\,m is a design question of its own.}
     \end{column}
   \end{columns}
+\end{frame}
+
+% ======================================================================== PART 5b
+\blurb{An LLM proposes complete designs, the cluster scores them, the best ones breed.}
+\section{Optimisation}
+
+\begin{frame}{The loop: an LLM proposes, the cluster scores}
+  \begin{columns}[c]
+    \begin{column}{0.44\textwidth}\centering
+      \begin{tikzpicture}[node distance=2.4mm, every node/.append style={font=\scriptsize}]
+        \node[abox, text width=4.3cm] (llm) {\semibold Claude (Sonnet), 8 in parallel\\\faint{writes a complete design JSON + two-sentence rationale}};
+        \node[box, below=of llm, text width=4.3cm] (eval) {\semibold farm-gpu3, 8 cores\\\faint{196\,k pairs, 40\,k signal decays, 200\,k muons:\\10 to 30\,s for all 8}};
+        \node[box, below=of eval, text width=4.3cm] (obj) {\semibold reward\\\faint{\texttt{veto/lib/veto/objective.py} (G.~Frisella)}};
+        \node[hbox, below=of obj, text width=4.3cm] (pop) {\semibold population of 12\\\faint{truncation selection}};
+        \draw[aarr] (llm) -- (eval); \draw[arr] (eval) -- (obj); \draw[arr] (obj) -- (pop);
+        \draw[arr] (pop.west) -- ++(-0.35,0) |- (llm.west);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.53\textwidth}\footnotesize
+      AlphaEvolve-style, with \key{designs instead of code}. Each call sees:
+      \begin{itemize}\scriptsize
+        \item \key{once}: geometry and limits, how the veto works, technologies, muon flux by side, $z$ and distance from the wall, the objective, the JSON schema
+        \item \key{per child}: a directive (refine / explore / combine), the parent and 3 inspirations with their reports, the population's rewards
+        \item \key{per design}: reward $\pm$ error, violations, tiers, false vertices, signal efficiency, cost; per plane: peak rate vs limit, cost, signal lost, pairs vetoed
+      \end{itemize}
+      At the end the top 5 are rerun with two more seeds: the best \key{mean} wins.\\[1mm]
+      \takeaway[\footnotesize]{25 + 15 generations, $\approx$340 LLM calls, 256 designs evaluated: an evening on one node.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The objective}
+  \begin{columns}[c]
+    \begin{column}{0.55\textwidth}\footnotesize
+      Reward $= -\sum$ tiers, lexicographic through the weights:\\[1.5mm]
+      \setlength{\tabcolsep}{3pt}\scriptsize
+      \begin{tabular}{@{}llr@{}}
+        \toprule
+        tier & term & weight\\
+        \midrule
+        rate limits & $1 + \log_{10}(\text{peak}/\text{limit})$ per plane over it & 1000\\
+        budget & $1 + $ overshoot / 8\,MCHF & 1000\\
+        background & $1 - e^{-N}$, $N$ = false vertices in 15\,y & 100\\
+        signal & signal lost / 10\,\% & 10\\
+        cost & $\log(\text{cost}/97\,\text{kCHF}) / \log 82$ & 1\\
+        \bottomrule
+      \end{tabular}\\[2mm]\footnotesize
+      Exchange rates: \key{0.01 false vertices} $=$ \key{1\,\% signal} $=$ a factor 82 in cost.\\[1.5mm]
+      Every term carries its statistical error: rewards closer than $\approx 2\sigma \approx 0.1$ are a tie.
+    \end{column}
+    \begin{column}{0.42\textwidth}\footnotesize
+      $N$ two ways:\\[1mm]
+      \key{direct}: weighted surviving pairs, 0--20 of 196\,k.\\[1mm]
+      \key{factorised}: $N_0 \sum_{kl} f_{kl}\,\varepsilon_k\varepsilon_l$, $\varepsilon_k$ how often a muon of type $k$ in a pair escapes the veto (measured on the pair muons, not the single-muon sample: bounced muons of pairs escape twice as often).\\[1.5mm]
+      The optimiser uses the \key{larger} of the two.\\[1.5mm]
+      \takeaway[\footnotesize]{Every hand-made design with fins was infeasible: the tile fins at 30.6\,m see 2--10\,MHz per channel (limit 1), the right straw fin $6\cdot10^5$\,Hz/cm$^2$ (limit $5\cdot10^5$), fibre costs 48\,MCHF.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Evolution}
+  \begin{columns}[c]
+    \begin{column}{0.62\textwidth}
+      \livewidget{evo_curve}{\linewidth}{0.57\textheight}\\[1mm]
+      \sld[0.6\linewidth]{evo_run}\\[0.3mm]
+      \legendline{each dot one design (grey: infeasible), orange: the best so far. Hover for names. run: 0 factorised background · 1 honest background.}
+    \end{column}
+    \begin{column}{0.36\textwidth}\footnotesize
+      \key{Run 1} starts from the hand-made designs: only the UBT alone is feasible ($-100$, $N = 27$).\\[1mm]
+      Generation 1: fibre at the hot entrance, tile2 behind ($-1.9$). Then it \key{shrinks the fins}, drops fibre in generation 6 ($-0.88$) and keeps trimming: $-0.49$.\\[1.5mm]
+      \key{Run 2} starts from run 1's best with the honest background ($-0.89$). Generation 2 moves the second pair from 41 to \key{36\,m}, after which the entrance fins can shrink to 0.6\,m: $-0.39$.\\[1.5mm]
+      \takeaway[\footnotesize]{Seed-to-seed spread of the top designs: 0.01--0.05. The top five of each run are one family.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Watch the design evolve}
+  \begin{columns}[c]
+    \begin{column}{0.44\textwidth}
+      \livewidget{evo3d}{\linewidth}{0.56\textheight}
+    \end{column}
+    \begin{column}{0.54\textwidth}
+      \livewidget{evo_top}{\linewidth}{0.56\textheight}
+    \end{column}
+  \end{columns}
+  \vspace{1mm}
+  \sld[0.32\linewidth]{evo_run}\hfill\sld[0.62\linewidth]{evo_step}\\[0.3mm]
+  \legendline{each step: a new best design. 3D: planes coloured by muon density. Top view: fins green / orange / red below 50\,\%, below 100\,\%, above their rate limit.}
+\end{frame}
+
+\begin{frame}{Where the evolved designs sit}
+  \begin{columns}[c]
+    \begin{column}{0.5\textwidth}
+      \livewidget{evo_map}{\linewidth}{0.62\textheight}
+    \end{column}
+    \begin{column}{0.48\textwidth}\scriptsize
+      \setlength{\tabcolsep}{3pt}
+      \begin{tabular}{@{}lrrrrr@{}}
+        \toprule
+        design & reward & feasible & MCHF & signal & $N$ / 15\,y\\
+        \midrule
+        D0 UBT only & $-100$ & yes & 0.10 & 100\,\% & 27\\
+        D6 straw & $-1109$ & no & 5.2 & 95.18\,\% & $1\cdot10^{-4}$\\
+        D6 tile2 & $-2670$ & no & 4.4 & 99.15\,\% & $1\cdot10^{-4}$\\
+        D1 wide UBT & $-3874$ & no & 1.7 & 99.13\,\% & $4\cdot10^{-4}$\\
+        D6 fibre & $-6060$ & no & 48 & 99.27\,\% & $4\cdot10^{-4}$\\
+        \midrule
+        \key{E1} (run 1) & $-0.89$ & yes & 0.43 & 99.89\,\% & $4.5\cdot10^{-3}$\\
+        \key{E2} (run 2) & $\mathbf{-0.39}$ & yes & \key{0.37} & \key{99.95\,\%} & $4\cdot10^{-4}$\\
+        \bottomrule
+      \end{tabular}\\[2mm]
+      \footnotesize
+      \key{E2}: tile2 fins 0.6\,m at 30.6\,m and 1.0\,m at 36\,m, $|y| < 1.3$ and 1.5\,m, plus the minimal UBT; 26\,400 channels, peak 0.11\,MHz per channel.\\[1.5mm]
+      \takeaway[\footnotesize]{Short fins near the wall veto the pairs: the muons that make fake vertices enter close to the vessel, not in the hot lobe 1.5--3\,m out.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The optimiser found a hole in the objective}
+  \begin{columns}[c]
+    \begin{column}{0.52\textwidth}\footnotesize
+      Run 1 used the \key{factorised} background only. Its best designs:\\[1.5mm]
+      \begin{tabular}{@{}lrr@{}}
+        \toprule
+        E1 & factorised & direct\\
+        \midrule
+        false vertices / 15\,y & $5\cdot10^{-4}$ & $\mathbf{4.5\cdot10^{-3}}$\\
+        surviving pairs & -- & 17 of 196\,736\\
+        reward & $-0.50$ & $-0.89$\\
+        \bottomrule
+      \end{tabular}\\[2mm]
+      Factorising assumes the two muons of a pair escape \key{independently}. With small fins they escape \key{together}: both enter through the same uncovered region. The optimiser trimmed into exactly that blind spot.
+    \end{column}
+    \begin{column}{0.45\textwidth}\footnotesize
+      Fix: the larger of the two estimates. Run 2 then pays for the 17 pairs and finds a design that lets only 5 through (1 in the talk's sample), at lower cost.\\[1.5mm]
+      Still in the model, not in the detector:
+      \begin{itemize}\scriptsize
+        \item no bounced muon of a pair is vetoed by E2; they are 0.7\,\% of the pairs
+        \item $N$ rests on a handful of pairs: check on the bigger dataset
+        \item fibre and pixel have no rate limit in \texttt{technology.py} (none in the documents)
+        \item helium and air scattering, tilted fins: not yet
+      \end{itemize}
+      \takeaway[\footnotesize]{An optimiser is an adversary of the objective: every shortcut in the estimate becomes a design.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The evolved designs: figure of merit}
+  \begin{columns}[c]
+    \begin{column}{0.48\textwidth}
+      \livewidget{fom_evo}{\linewidth}{0.55\textheight}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \livewidget{fom15_evo}{\linewidth}{0.55\textheight}
+    \end{column}
+  \end{columns}
+  \vspace{1mm}
+  \sld[0.4\linewidth]{evo_pick}\hfill\sld[0.4\linewidth]{n_sig15}\\[0.3mm]
+  \legendline{design: 0 E1 (run 1) · 1 E2 (run 2). Algorithm A on 196\,736 pairs and 60\,k signal decays, as for the hand-made designs (no multiple scattering here).}
+\end{frame}
+
+\begin{frame}{The evolved designs: events}
+  \begin{columns}[c]
+    \begin{column}{0.38\textwidth}
+      \livewidget{ev3d_evo}{\linewidth}{0.6\textheight}
+    \end{column}
+    \begin{column}{0.6\textwidth}
+      \livewidget{ev_side_evo}{\linewidth}{0.6\textheight}
+    \end{column}
+  \end{columns}
+  \vspace{1mm}
+  \sld[0.32\linewidth]{evo_pick}\hfill\sld[0.32\linewidth]{evo_kind}\hfill\sld[0.32\linewidth]{evo_index}\\[0.3mm]
+  \legendline{design: 0 E1 · 1 E2.\quad kind: 0 pair vetoed · 1 pair missed · 2 signal lost to a random hit · 3 bounced muon missed.}
 \end{frame}
 
 % ======================================================================== PART 6
