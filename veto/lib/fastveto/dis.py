@@ -201,12 +201,18 @@ def _pass2(job):
     out = {k: [] for k in INTER_KEYS}
     for gg, k in need.items():
         rows = np.nonzero(g == gg)[0]
-        cdf = np.cumsum(wP[rows])
-        pick = rows[np.searchsorted(cdf, rng.random(k) * cdf[-1], side="right").clip(0, len(rows) - 1)]
+        if k < 0:                                   # per crossing: -k draws on every crossing, weight w P / (-k)
+            rows = rows[wP[rows] > 0]
+            pick = np.repeat(rows, -k)
+            wgt = wP[pick] / -k
+        else:                                       # k draws, crossing chosen with probability w P / S, weight S / M
+            cdf = np.cumsum(wP[rows])
+            pick = rows[np.searchsorted(cdf, rng.random(k) * cdf[-1], side="right").clip(0, len(rows) - 1)]
+            wgt = np.full(k, w_draw[gg])
         vtx = tg.sample_vertex(cr, pick, rng)
         mu = cr["muon"][pick]
         for kk, v in (("muon", mu + s), ("code", cr["code"][pick]), ("x", vtx[:, 0]), ("y", vtx[:, 1]), ("z", vtx[:, 2]),
-                      ("E", cr["E"][pick]), ("weight", np.full(k, w_draw[gg])), ("pdg_mu", d["pdg"][mu]),
+                      ("E", cr["E"][pick]), ("weight", wgt), ("pdg_mu", d["pdg"][mu]),
                       ("ux", cr["u"][pick, 0]), ("uy", cr["u"][pick, 1]), ("uz", cr["u"][pick, 2]), ("p_int", P[pick]),
                       ("evt_n", d["evt_n"][mu]), ("type", d["type"][mu])):
             out[kk].append(v)
@@ -216,7 +222,8 @@ def _pass2(job):
 def run(columns, design, lib, draws, rng, chunk=2_000_000, include=("helium", "air", "pvc", "planes"), workers=1,
         verbose=True):
     """Forced interactions for a dataset (dict of column arrays, may be memory-mapped). draws: per group
-    {"helium": M, "air": M, "pvc": M, "planes": M (each plane)}. Two passes over chunks of rows (workers: forked
+    {"helium": M, "air": M, "pvc": M, "planes": M (each plane)}; M > 0: M draws, crossing picked with probability
+    w P / S, weight S / M each; M = -k: k draws on EVERY crossing, weight w P / k each (each track contributes). Two passes over chunks of rows (workers: forked
     processes). Returns (interactions, particles, totals = interactions per spill per group)."""
     import multiprocessing as mp
     import time
@@ -236,11 +243,12 @@ def run(columns, design, lib, draws, rng, chunk=2_000_000, include=("helium", "a
         if verbose:
             print(f"  pass 1: {nch} chunks, {sum(x[1] for x in r1):,} crossings, {time.time() - t0:.0f} s", flush=True)
         m_g = {g: int(draws.get("planes" if g >= tg.TARGET_PLANE0 else tg.target_name(g), 0)) for g in sums}
-        per_chunk = {g: rng.multinomial(m_g[g], sums[g] / sums[g].sum()) if sums[g].sum() > 0 and m_g[g] > 0
-                     else np.zeros(nch, int) for g in sums}
+        per_chunk = {g: (np.full(nch, m_g[g]) if m_g[g] < 0 else         # per crossing: every chunk, -k each
+                         rng.multinomial(m_g[g], sums[g] / sums[g].sum()) if sums[g].sum() > 0 and m_g[g] > 0
+                         else np.zeros(nch, int)) for g in sums}
         w_draw = {g: sums[g].sum() / max(m_g[g], 1) for g in sums}
         seeds = rng.integers(0, 2 ** 62, nch)
-        jobs = [(ci, {g: int(per_chunk[g][ci]) for g in sums if per_chunk[g][ci] > 0}, w_draw, int(seeds[ci])) for ci in range(nch)]
+        jobs = [(ci, {g: int(per_chunk[g][ci]) for g in sums if per_chunk[g][ci] != 0}, w_draw, int(seeds[ci])) for ci in range(nch)]
         r2 = [x for x in mapper(_pass2, jobs) if x is not None]
         if verbose:
             print(f"  pass 2: {sum(len(x['E']) for x in r2):,} interactions, {time.time() - t0:.0f} s", flush=True)

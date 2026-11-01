@@ -8,10 +8,10 @@ K_L, neutrons, muons stay stable (as Pythia's defaults).
 """
 import numpy as np
 
-MASS = {111: 0.134977, 211: 0.139570, 221: 0.547862, 22: 0.0, 2212: 0.938272, 2112: 0.939565, 310: 0.497611,
+MASS = {130: 0.497611, 111: 0.134977, 211: 0.139570, 221: 0.547862, 22: 0.0, 2212: 0.938272, 2112: 0.939565, 310: 0.497611,
         321: 0.493677, 3122: 1.115683, 3222: 1.18937, 3212: 1.192642, 3112: 1.197449, 3322: 1.31486, 3312: 1.32171,
         3334: 1.67245, 11: 0.000511, 13: 0.105658, 12: 0.0, 14: 0.0}
-CTAU = {111: 2.55e-8, 221: 1.5e-13, 310: 0.026844, 3122: 0.0789, 3222: 0.02404, 3212: 2.22e-11, 3112: 0.0443,
+CTAU = {130: 15.34, 111: 2.55e-8, 221: 1.5e-13, 310: 0.026844, 3122: 0.0789, 3222: 0.02404, 3212: 2.22e-11, 3112: 0.0443,
         3322: 0.0871, 3312: 0.0491, 3334: 0.0246}                                       # metres
 # channels (BR, products) for the particle; antiparticles: conjugated products
 CHANNELS = {
@@ -93,6 +93,45 @@ def _boost(p_rest, E_rest, P, M):
     return p, g * (E_rest + bp)
 
 
+def _decay_round(ev, pdg, p, v, rng, unstable, channels, at_v=False):
+    """Replace the particles flagged unstable by their decay products (channels of `channels`), decaying at a flight
+    distance drawn from c tau, or exactly at their point v if at_v."""
+    keep_ev, keep_pdg, keep_p, keep_v = [ev[~unstable]], [pdg[~unstable]], [p[~unstable]], [v[~unstable]]
+    idx = np.nonzero(unstable)[0]
+    for a in np.unique(np.abs(pdg[idx])):
+        sel = idx[np.abs(pdg[idx]) == a]
+        M = MASS[a]
+        P = p[sel, :3]
+        pm = np.linalg.norm(P, axis=1)
+        L = np.zeros(len(sel)) if at_v else rng.exponential(CTAU[a], len(sel)) * pm / M
+        dvtx = v[sel] + (P / np.maximum(pm, 1e-12)[:, None]) * L[:, None]
+        br = np.array([c[0] for c in channels[a]])
+        ch = np.searchsorted(np.cumsum(br / br.sum()), rng.random(len(sel)), side="right")
+        for ci, (_, prods) in enumerate(channels[a]):
+            m = ch == ci
+            if not m.any():
+                continue
+            s = sel[m]
+            sign = np.sign(pdg[s])
+            ms = [MASS[abs(q)] for q in prods]
+            k = len(s)
+            if len(prods) == 2:
+                q = _two_body(M, ms[0], ms[1], k, rng)
+                rest = [q, -q]
+            else:
+                r3 = _three_body(M, ms, k, rng)
+                rest = [r3[:, 0], r3[:, 1], r3[:, 2]]
+            for q_rest, code, mi in zip(rest, prods, ms):
+                e_rest = np.sqrt((q_rest ** 2).sum(1) + mi ** 2)
+                plab, elab = _boost(q_rest, e_rest, P[m], M)
+                codes = np.where(sign > 0, code, _conj(code))
+                keep_ev.append(ev[s]); keep_pdg.append(codes.astype(pdg.dtype))
+                keep_p.append(np.concatenate([plab, elab[:, None]], 1)); keep_v.append(dvtx[m])
+    ev, pdg, p, v = (np.concatenate(x) for x in (keep_ev, keep_pdg, keep_p, keep_v))
+    order = np.argsort(ev, kind="stable")
+    return ev[order], pdg[order], p[order], v[order]
+
+
 def decay_all(ev, pdg, p, v, rng, max_rounds=4):
     """Decay the unstable particles of flat particle lists (event id, pdg, p (n,4), production point v (n,3)).
     Returns new (ev, pdg, p, v, mother flag) with the decayed particles replaced by their products."""
@@ -101,38 +140,22 @@ def decay_all(ev, pdg, p, v, rng, max_rounds=4):
         unstable = np.isin(np.abs(pdg), list(CHANNELS)) & ~((pdg < 0) & np.isin(-pdg, [111, 221, 310]))
         if not unstable.any():
             break
-        keep_ev, keep_pdg, keep_p, keep_v = [ev[~unstable]], [pdg[~unstable]], [p[~unstable]], [v[~unstable]]
-        idx = np.nonzero(unstable)[0]
-        for a in np.unique(np.abs(pdg[idx])):
-            sel = idx[np.abs(pdg[idx]) == a]
-            M = MASS[a]
-            P = p[sel, :3]
-            pm = np.linalg.norm(P, axis=1)
-            L = rng.exponential(CTAU[a], len(sel)) * pm / M
-            dvtx = v[sel] + (P / np.maximum(pm, 1e-12)[:, None]) * L[:, None]
-            br = np.array([c[0] for c in CHANNELS[a]])
-            ch = np.searchsorted(np.cumsum(br / br.sum()), rng.random(len(sel)), side="right")
-            for ci, (_, prods) in enumerate(CHANNELS[a]):
-                m = ch == ci
-                if not m.any():
-                    continue
-                s = sel[m]
-                sign = np.sign(pdg[s])
-                ms = [MASS[abs(q)] for q in prods]
-                k = len(s)
-                if len(prods) == 2:
-                    q = _two_body(M, ms[0], ms[1], k, rng)
-                    rest = [q, -q]
-                else:
-                    r3 = _three_body(M, ms, k, rng)
-                    rest = [r3[:, 0], r3[:, 1], r3[:, 2]]
-                for q_rest, code, mi in zip(rest, prods, ms):
-                    e_rest = np.sqrt((q_rest ** 2).sum(1) + mi ** 2)
-                    plab, elab = _boost(q_rest, e_rest, P[m], M)
-                    codes = np.where(sign > 0, code, _conj(code))
-                    keep_ev.append(ev[s]); keep_pdg.append(codes.astype(pdg.dtype))
-                    keep_p.append(np.concatenate([plab, elab[:, None]], 1)); keep_v.append(dvtx[m])
-        ev, pdg, p, v = (np.concatenate(x) for x in (keep_ev, keep_pdg, keep_p, keep_v))
-        order = np.argsort(ev, kind="stable")
-        ev, pdg, p, v = ev[order], pdg[order], p[order], v[order]
+        ev, pdg, p, v = _decay_round(ev, pdg, p, v, rng, unstable, CHANNELS)
     return ev, pdg, p, v
+
+
+# K_L (stable in decay_all, as in Pythia's defaults): main channels, PDG 2024 (Ke3, Kmu3 split by charge)
+KL_CHANNELS = {130: [(0.2028, (211, 11, -12)), (0.2028, (-211, -11, 12)), (0.1352, (211, 13, -14)),
+                     (0.1352, (-211, -13, 14)), (0.1952, (111, 111, 111)), (0.1254, (211, -211, 111))]}
+
+
+def force_decay(ev, pdg, p, v, rng):
+    """Decay every particle of the lists exactly at its point v (K_L, K_S, Lambda, ... : the forced decays of
+    veto.shield_iron), then the short-lived products as decay_all."""
+    channels = {**CHANNELS, **KL_CHANNELS}
+    ok = np.isin(np.abs(pdg), list(channels))
+    if not ok.all():
+        raise ValueError(f"no decay channels for {np.unique(pdg[~ok])}")
+    ev, pdg, p, v = _decay_round(ev.copy(), pdg.copy(), p.copy(), v.copy(), rng, np.ones(len(pdg), bool), channels,
+                                 at_v=True)
+    return decay_all(ev, pdg, p, v, rng)

@@ -26,6 +26,7 @@ COMPOSITION = {
     "polystyrene": {1000060120: 8, 1000010010: 8},
     "pvt": {1000060120: 9, 1000010010: 10},
     "silicon": {1000140280: 1.0},
+    "iron": {1000260560: 1.0},                       # muon shield (veto.shield_iron)
 }
 
 

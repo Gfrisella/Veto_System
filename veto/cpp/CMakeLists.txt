@@ -14,3 +14,8 @@ find_package(Geant4 REQUIRED)
 pybind11_add_module(g4dis g4dis.cc)
 target_include_directories(g4dis PRIVATE ${Geant4_INCLUDE_DIRS})
 target_link_libraries(g4dis PRIVATE ${Geant4_LIBRARIES})
+
+# transport of shield-iron interaction final states to the shield exit (bin/shield_dis.py)
+pybind11_add_module(g4shield g4shield.cc)
+target_include_directories(g4shield PRIVATE ${Geant4_INCLUDE_DIRS})
+target_link_libraries(g4shield PRIVATE ${Geant4_LIBRARIES})
