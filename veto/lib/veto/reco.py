@@ -85,8 +85,8 @@ def own_hits(tr, event, design, rng, tracks_mask=None):
         if kicks is not None:                   # multiple scattering upstream of this plane
             dx, dy = scattering.offset_at(kicks, plane.z)
             crossed = np.isfinite(u) & np.isfinite(y)
-            if plane.kind == "ubt":
-                crossed &= tr["apz"] > 0
+            if plane.kind == "ubt":             # as true_crossing: only tracks starting upstream of the UBT cross it
+                crossed &= (tr["apz"] > 0) & (tr["az"] < geo.Z_UBT + mt.A_TOLERANCE)
             u, y = u + (dx if plane.kind == "ubt" else plane.sign * dx), y + dy
             ok = crossed & plane.inside(u, y)
         ok &= sel & (rng.random(len(ok)) < plane.efficiency)

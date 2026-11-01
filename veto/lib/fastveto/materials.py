@@ -46,6 +46,7 @@ MATERIALS = {
     "pvc": Material("pvc", 19.63 * 1.38, 1.38, 0.5120, 20.0),      # X0 19.63 cm as fastveto.vessel
     "helium": Material("helium", 94.32, 0.000166322, 0.4997, 4.0),
     "air": Material("air", 36.62, 0.001205, 0.4992, 14.6),
+    "iron": Material("iron", 13.84, 7.874, 26.0 / 55.845, 56.0),   # muon shield (veto.shield_iron)
 }
 
 TECH_MATERIAL = {"straw": "mylar", "fiber": "polystyrene", "pixel": "silicon", "tile": "pvt", "tile2": "pvt"}

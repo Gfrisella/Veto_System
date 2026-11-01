@@ -32,7 +32,8 @@ SPL = paths.interactions_data() / "genie/gxspl-fvs.xml"
 TUNE = "G18_02a_00_000"
 E_GRID = np.round(np.geomspace(1.0, 500.0, 36), 4)
 NUS = [14, -14, 12, -12]
-NUCLEI = [1000010010, 1000020040, 1000060120, 1000070140, 1000080160, 1000140280, 1000170350, 1000170370, 1000180400]
+NUCLEI = [1000010010, 1000020040, 1000060120, 1000070140, 1000080160, 1000140280, 1000170350, 1000170370, 1000180400,
+          1000260560]                                  # Fe56: the muon shield (veto.shield_iron)
 KEEP_NEUTRAL_EMIN = 0.01
 NEUTRAL = [22, 111, 130, 310, 2112, 3122, 12, 14, 16]
 
@@ -101,12 +102,15 @@ def main():
     ap.add_argument("--jobs", type=int, default=300)
     ap.add_argument("--n", type=int, default=2000, help="events per energy, neutrino and nucleus")
     ap.add_argument("--out", default=str(paths.interactions_data() / "genie/nu_library.npz"))
+    ap.add_argument("--nuclei", type=int, nargs="+", default=NUCLEI, help="PDG codes (default: all, e.g. 1000260560)")
+    ap.add_argument("--nus", type=int, nargs="+", default=NUS, help="neutrino flavours (default: 14 -14 12 -12)")
     a = ap.parse_args()
+    nuclei, nus = list(a.nuclei), list(a.nus)
     t0 = time.time()
     gdir = paths.interactions_data() / "genie/lib_gst"
     gdir.mkdir(parents=True, exist_ok=True)
     jobs = [(ie, float(E), nu, tgt, a.n, 100000 * ie + 1000 * NUS.index(nu) + NUCLEI.index(tgt), str(gdir))
-            for ie, E in enumerate(E_GRID) for nu in NUS for tgt in NUCLEI]
+            for ie, E in enumerate(E_GRID) for nu in nus for tgt in nuclei]
     with ProcessPoolExecutor(a.jobs, mp_context=mp.get_context("fork")) as ex:
         res = list(ex.map(run_point, jobs))
     failed = [j[:4] for j, g in res if g is None]
@@ -121,8 +125,8 @@ def main():
         d = read_point(g, nu, rng)
         n_ev = len(d["cc"])
         cnt = np.bincount(d["ev"], minlength=n_ev)
-        for k, v in (("ev_ie", np.full(n_ev, ie, np.int16)), ("ev_nu", np.full(n_ev, NUS.index(nu), np.int8)),
-                     ("ev_tgt", np.full(n_ev, NUCLEI.index(tgt), np.int8)), ("ev_cc", d["cc"]), ("ev_proc", d["proc"]),
+        for k, v in (("ev_ie", np.full(n_ev, ie, np.int16)), ("ev_nu", np.full(n_ev, nus.index(nu), np.int8)),
+                     ("ev_tgt", np.full(n_ev, nuclei.index(tgt), np.int8)), ("ev_cc", d["cc"]), ("ev_proc", d["proc"]),
                      ("ev_charm", d["charm"]), ("ev_W", d["W"].astype(np.float32)), ("ev_Q2", d["Q2"].astype(np.float32)),
                      ("ev_y", d["y"].astype(np.float32)), ("ev_start", n_part + np.cumsum(cnt) - cnt), ("ev_n", cnt.astype(np.int32)),
                      ("pdg", d["pdg"].astype(np.int32)), ("p", d["p"].astype(np.float32)), ("v", d["v"].astype(np.float32)),
@@ -131,13 +135,13 @@ def main():
         n_part += len(d["pdg"])
     lib = {k: np.concatenate(v) for k, v in cols.items()}
     xs = np.load(paths.interactions_data() / "genie/xsec_tot.npz")
-    sigma = np.zeros((len(NUS), len(NUCLEI), len(E_GRID)))
-    for i, nu in enumerate(NUS):
-        for j, tgt in enumerate(NUCLEI):
+    sigma = np.zeros((len(nus), len(nuclei), len(E_GRID)))
+    for i, nu in enumerate(nus):
+        for j, tgt in enumerate(nuclei):
             m = np.nonzero((xs["nu"] == nu) & (xs["tgt"] == tgt))[0]
             if len(m):
                 sigma[i, j] = np.interp(E_GRID, xs["E"], xs["sigma"][m[0]])
-    lib.update(E_grid=E_GRID, nus=np.array(NUS), nuclei=np.array(NUCLEI), sigma=sigma,
+    lib.update(E_grid=E_GRID, nus=np.array(nus), nuclei=np.array(nuclei), sigma=sigma,
                meta=np.array(json.dumps({"genie": "3.06.02 (own build, Pythia 6, charm + tau decays)", "tune": TUNE,
                                          "splines": "genie_xsec v3_06_00 G1802a00000-k250-e1000 (NUsmall)", "n": a.n,
                                          "units": "sigma cm^2 per nucleus; p GeV (px, py, pz, E), v m; neutrino along +z",

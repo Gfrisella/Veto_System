@@ -181,6 +181,8 @@ C5. Weights and statistics
     The repeated-evt_n weight correction is not applied in the design-optimisation dataset;
     veto_only and rock_bounced are from one run. Decide whether to apply the correction and how
     many extra runs are needed for the rare classes.
+    30 Oct 2026: muon DIS in helium (D6_straw draws): one input muon (evt_n) gives 6.8e4 of the
+    1e6 draws, n_eff ~ 60 over evt_n -> +-23 % on the mu DIS rate (errors summed per evt_n).
 
 C6. Detector technology numbers
     STATUS: DONE (15 Oct 2026, commit f6d13ec)
@@ -188,3 +190,18 @@ C6. Detector technology numbers
     Still to confirm: fibre timing (0.5 ns kept, can reach ~100 ps: ask Ettore); fibre plane
     efficiency 99.9 % ("basically 100 %"), per-SiPM efficiency not modelled; tile channel count
     on a 1 x 2.7 m plane depends on the tile combination (mixed sizes not modelled).
+
+C7. V0 from DIS outside the vessel decaying inside
+    STATUS: OPEN (30 Oct 2026, from the deck review)
+    A K_S / Lambda made by muon DIS in the cavern air, a fin or the UBT can decay inside the vessel
+    and give a two-track vertex with no upstream hit of its own. Air: simulated (decay in flight),
+    0 of 45 air pairs after DOCA have a vertex in the vessel, but one air draw = 7e6 interactions
+    per 15 y (draws spread over 1.4e12 air interactions, almost all far from the vessel): not
+    conclusive. Fins / UBT: planes not in the interaction caches. K_L kept stable (decays not
+    simulated). Needs draws restricted to air and fins near the vessel (artifacts_work/scripts/dis_cutflow.py).
+
+C8. DIS rates with the new selection
+    STATUS: OPEN (30 Oct 2026)
+    Without measured IP < 10 cm and <= 2 tracks in SST1, before the veto per 15 y: mu He
+    (6.0 +- 1.4)e4, mu PVC 7 400 +- 850, nu He 467 +- 2 (old selection: 1 800 and 0.82).
+    Decide whether to bring back a pointing / track-multiplicity cut (artifacts_work/scripts/dis_cutflow.py).

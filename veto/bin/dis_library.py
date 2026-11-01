@@ -50,7 +50,8 @@ NU_X_MIN = 2.0
 # Geant4 materials of fastveto.materials (name -> NIST name, density g/cm^3)
 G4_MATERIALS = {"helium": ("G4_He", 0.000166322), "pvc": ("G4_POLYVINYL_CHLORIDE", 1.30),
                 "mylar": ("G4_MYLAR", 1.40), "polystyrene": ("G4_POLYSTYRENE", 1.06), "silicon": ("G4_Si", 2.33),
-                "pvt": ("G4_PLASTIC_SC_VINYLTOLUENE", 1.032), "air": ("G4_AIR", 0.00120479)}
+                "pvt": ("G4_PLASTIC_SC_VINYLTOLUENE", 1.032), "air": ("G4_AIR", 0.00120479),
+                "iron": ("G4_Fe", 7.874)}
 CHUNK = 2500
 KEEP_NEUTRAL_EMIN = 0.01          # GeV kinetic, neutral particles below are dropped (charged all kept)
 NEUTRAL = [22, 111, 130, 310, 2112, 3122]
@@ -200,6 +201,35 @@ def crossover(E, nu, sig, n_gen):
     return float(edges[above[0]]) if len(above) else float(E)
 
 
+def add_g4_materials(a):
+    """--only-g4: Geant4 tables of new materials added to a copy of an existing library (same Pythia part, nu_x)."""
+    t0 = time.time()
+    base = np.load(a.base)
+    meta = json.loads(str(base["meta"]))
+    Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+    tmp = tempfile.mkdtemp(prefix="dislib_", dir=str(Path(a.out).parent))
+    procs = {m: subprocess.Popen([sys.executable, __file__, "--n-g4", str(a.n_g4), "--g4-worker", m, f"{tmp}/g4_{m}.npy"],
+                                 stdout=open(f"{tmp}/g4_{m}.log", "w"), stderr=subprocess.STDOUT) for m in a.only_g4}
+    lib = {k: base[k] for k in base.files if k != "meta"}
+    for m, p in procs.items():
+        if p.wait() != 0:
+            raise RuntimeError(f"Geant4 worker {m} failed, see {tmp}/g4_{m}.log")
+        r = np.load(f"{tmp}/g4_{m}.npy", allow_pickle=True).item()
+        for k, v in pack([(ie, 0, r[ie]) for ie in range(len(E_GRID))]).items():
+            lib[f"g4_{m}_{k}"] = v
+        lib[f"g4_{m}_sigma"] = np.array([r[i]["sigma"] for i in range(len(E_GRID))])
+        print(f"  {m}: {len(lib[f'g4_{m}_ev_nu']):,} events", flush=True)
+    meta["materials"] = list(dict.fromkeys(meta["materials"] + list(a.only_g4)))
+    meta[f"n_g4_{'_'.join(a.only_g4)}"] = a.n_g4
+    meta["base"] = str(a.base)
+    lib["meta"] = np.array(json.dumps(meta))
+    np.savez(a.out, **lib)
+    for f in Path(tmp).iterdir():
+        f.unlink()
+    Path(tmp).rmdir()
+    print(f"library {a.out}: {time.time() - t0:.0f} s")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--jobs", type=int, default=min(300, os.cpu_count()))
@@ -207,9 +237,16 @@ def main():
     ap.add_argument("--n-g4", type=int, default=20000, help="Geant4 events per energy and material")
     ap.add_argument("--out", default=str(paths.interactions_data() / "dis/mu_library.npz"))
     ap.add_argument("--g4-worker", nargs=2, metavar=("MATERIAL", "OUT"), help=argparse.SUPPRESS)
+    ap.add_argument("--only-g4", nargs="+", metavar="MATERIAL",
+                    help="build only the Geant4 part of these materials (e.g. iron) and take the Pythia part, nu_x and "
+                         "the other materials from --base")
+    ap.add_argument("--base", help="existing library for --only-g4")
     a = ap.parse_args()
     if a.g4_worker:
         g4_worker(a.g4_worker[0], a.n_g4, a.g4_worker[1])
+        return
+    if a.only_g4:
+        add_g4_materials(a)
         return
     t0 = time.time()
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
