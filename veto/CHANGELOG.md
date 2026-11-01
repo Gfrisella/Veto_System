@@ -4,7 +4,7 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
-## 2026-11-01 — branch `veto-shield-dis` (not committed yet)
+## 2026-11-01 — branch `veto-shield-dis` (commit 700eb10, with the 2026-10-30 entries)
 
 ### Bug fix: own UBT hits of tracks born downstream (`lib/veto/reco.py` `own_hits`)
 - With multiple scattering on, `own_hits` recomputed `ok = crossed & inside` and dropped `true_crossing`'s condition
