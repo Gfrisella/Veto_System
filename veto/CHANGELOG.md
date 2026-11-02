@@ -4,6 +4,16 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-02 (afternoon) — branch `veto-shield-dis` (uncommitted)
+
+### Vessel muon DIS parents: 20 001-run SST1 sample + zeta veto-only
+- `bin/build_dis_parent_store.py`: store `data/store/dis-parents-sst1-20k-vetoonly-zeta2000-2026-11-02` = types 0-2 from
+  gamma (= alpha, 20 001 runs, w / 20 001) + type 3 veto_only from zeta seeds < 2000 (w x 3, evt_n + 1e12); symlinks to the
+  shared stores in data/store. Totals 30 598 + 32 321 muons / spill (zeta all seeds: 32 415).
+- `bin/run_interactions.py --tag`: suffix of the saved interaction npz (no overwrite of the default file).
+- D6_straw, one interaction per crossing: 1.35e8 interactions; pie selection (DOCA < 1 cm, fiducial, IP < 2.5 m):
+  helium 5.91e4 ± 1.38e4 (was 5.90e4), PVC 7 676 ± 941 (was 7 680 ± 1 342).
+
 ## 2026-11-02 — branch `veto-shield-dis` (commit 822e1fe)
 
 ### K_S and Lambda tracked in the MS7 iron (`--stable-v0`)
