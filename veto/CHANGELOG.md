@@ -4,7 +4,7 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
-## 2026-11-02 — branch `veto-shield-dis` (uncommitted)
+## 2026-11-02 — branch `veto-shield-dis` (commit 822e1fe)
 
 ### K_S and Lambda tracked in the MS7 iron (`--stable-v0`)
 - `lib/fastveto/decay.py` `decay_all(..., stable=())`: codes left undecayed (default unchanged).
