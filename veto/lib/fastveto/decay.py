@@ -132,12 +132,14 @@ def _decay_round(ev, pdg, p, v, rng, unstable, channels, at_v=False):
     return ev[order], pdg[order], p[order], v[order]
 
 
-def decay_all(ev, pdg, p, v, rng, max_rounds=4):
+def decay_all(ev, pdg, p, v, rng, max_rounds=4, stable=()):
     """Decay the unstable particles of flat particle lists (event id, pdg, p (n,4), production point v (n,3)).
-    Returns new (ev, pdg, p, v, mother flag) with the decayed particles replaced by their products."""
+    Returns new (ev, pdg, p, v, mother flag) with the decayed particles replaced by their products.
+    stable: |pdg| codes kept undecayed (e.g. (310, 3122): K_S, Lambda left to the transport)."""
     ev, pdg, p, v = ev.copy(), pdg.copy(), p.copy(), v.copy()
     for _ in range(max_rounds):
-        unstable = np.isin(np.abs(pdg), list(CHANNELS)) & ~((pdg < 0) & np.isin(-pdg, [111, 221, 310]))
+        unstable = (np.isin(np.abs(pdg), list(CHANNELS)) & ~((pdg < 0) & np.isin(-pdg, [111, 221, 310]))
+                    & ~np.isin(np.abs(pdg), list(stable)))
         if not unstable.any():
             break
         ev, pdg, p, v = _decay_round(ev, pdg, p, v, rng, unstable, CHANNELS)

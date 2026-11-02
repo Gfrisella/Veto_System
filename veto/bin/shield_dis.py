@@ -105,12 +105,12 @@ def parents(kind):
 
 
 # ------------------------------------------------------------------ 2. forced interactions
-def draw(kind, par, n, rng, per_track=False):
+def draw(kind, par, n, rng, per_track=False, mu_lib=None):
     """N interactions among the parents, probability proportional to w P (each S / N); per_track: one interaction on
     every parent instead, weight w_i P_i (every track contributes once). Returns (inter, part, summary)."""
     from fastveto import dis, nudis
     if kind == "muon":
-        lib = dis.MuonLibrary(str(MU_LIB))
+        lib = dis.MuonLibrary(str(mu_lib or MU_LIB))
         E_mid = par["p"] - si.DEDX_MU * 0.5 * (par["s_in"] + par["s_out"])
         sig = np.where(E_mid > 0.5, lib.sigma("iron", np.maximum(E_mid, 0.5)), 0.0)        # microbarn per nucleon
         P = si.nucleons_per_m3() * sig * UB * par["L"]
@@ -278,7 +278,8 @@ def generate(a):
     par = parents(a.kind)
     print(f"{a.kind}: {len(par['p']):,} parents cross the iron ({par['weight'].sum():.4g} per spill), {time.time() - t0:.0f} s",
           flush=True)
-    inter, part, summ = draw(a.kind, par, a.n, rng, a.per_track)
+    inter, part, summ = draw(a.kind, par, a.n, rng, a.per_track, a.mu_lib)
+    summ["mu_library"] = str(a.mu_lib or MU_LIB)
     print(f"  {summ['interactions_per_spill']:.4g} interactions per spill ({summ['interactions_15y']:.4g} in 15 years); "
           f"{len(part['pdg']):,} final-state particles, {time.time() - t0:.0f} s", flush=True)
     g = transport(part, len(inter["weight"]), a.workers, a.chunk, a.seed)
@@ -315,6 +316,8 @@ def main():
     g.add_argument("--tag", default="")
     g.add_argument("--per-track", action="store_true", help="one interaction per parent track, weight w P (--n ignored)")
     g.add_argument("--v0-copies", type=int, default=1, help="forced vessel decays per V0 at the plane (weight / copies)")
+    g.add_argument("--mu-lib", help="muon DIS library (default data/interactions/dis/mu_library_iron.npz; "
+                   "mu_library_iron_v0stable.npz keeps K_S, Lambda for Geant4 to transport and decay)")
     a = ap.parse_args()
     prepare(a) if a.cmd == "prepare" else generate(a)
 
