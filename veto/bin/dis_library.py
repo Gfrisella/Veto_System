@@ -18,7 +18,8 @@ Cross section per nucleon of a part = generator's cross section x fraction of it
 Only mu- is generated: one-photon exchange gives the same hadronic final state for mu+, the beam muon's sign is flipped.
 Particles: final state in the frame of the incoming muon (along +z), from the interaction point; K_S, Lambda, Sigma,
 Xi, Omega, pi0, eta decayed (Pythia's own decays; Geant4 products decayed by fastveto.decay), products start at the
-decay point.
+decay point. --stable-v0: K_S and Lambda kept (for a transport that decays them in flight, e.g. the MS7 iron):
+    bin/g4.sh python3 bin/dis_library.py --stable-v0 --materials iron --out data/interactions/dis/mu_library_iron_v0stable.npz
 Pythia sometimes loops forever in PYEVNT (11 chunks of 5000 in 1.6 M events): every chunk runs with a time limit;
 a killed chunk keeps its complete events and the rest is generated again with another seed.
 """
@@ -42,6 +43,11 @@ from veto import paths
 from fastveto import decay, kokoulin
 
 P6 = str(paths.PROJECT_DIR / "cpp/tailgen/build/pythia6_dis")
+if not Path(P6).exists():                                   # this checkout has no Pythia build: sqasim's binary
+    P6 = "/disk/users/sqasim/workspace/uzh/Veto_System/veto/cpp/tailgen/build/pythia6_dis"
+P6_SETTINGS = []                    # extra PYGIVE settings (--stable-v0: K_S, Lambda not decayed by Pythia)
+G4_STABLE = ()                      # |pdg| not decayed after Geant4 (--stable-v0: 310, 3122)
+V0_STABLE = (310, 3122)
 N_A = 6.02214076e23
 M_N, M_MU = 0.9389, 0.10566
 E_GRID = np.round(np.geomspace(0.5, 500.0, 50), 4)        # Geant4 at all; Pythia from E_P6_MIN
@@ -83,7 +89,7 @@ def p6_chunk(job):
         k = n - done
         out = Path(tmp) / f"p6_{tgt}_{ie}_{seed}.bin"
         try:
-            subprocess.run([P6, "gamma/mu-", tgt, str(E), str(k), str(seed), str(out)], timeout=20 + 0.01 * k,
+            subprocess.run([P6, "gamma/mu-", tgt, str(E), str(k), str(seed), str(out), *P6_SETTINGS], timeout=20 + 0.01 * k,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             killed = False
         except subprocess.TimeoutExpired:
@@ -156,7 +162,7 @@ def g4_worker(material, n, out):
         k = int(ok.sum())
         pe, pq, pp, pv = decay.decay_all(new[pr["ev"][keep]], pr["pdg"][keep].astype(np.int32),
                                          np.stack([pr["px"][keep], pr["py"][keep], pr["pz"][keep], pr["E"][keep]], 1),
-                                         np.zeros((int(keep.sum()), 3)), rng)
+                                         np.zeros((int(keep.sum()), 3)), rng, stable=G4_STABLE)
         soft2 = np.isin(np.abs(pq), NEUTRAL) & (pp[:, 3] - _mass(pq) < KEEP_NEUTRAL_EMIN)
         pe, pq, pp, pv = pe[~soft2], pq[~soft2], pp[~soft2], pv[~soft2]
         pm = mu[ok]
@@ -208,7 +214,8 @@ def add_g4_materials(a):
     meta = json.loads(str(base["meta"]))
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     tmp = tempfile.mkdtemp(prefix="dislib_", dir=str(Path(a.out).parent))
-    procs = {m: subprocess.Popen([sys.executable, __file__, "--n-g4", str(a.n_g4), "--g4-worker", m, f"{tmp}/g4_{m}.npy"],
+    procs = {m: subprocess.Popen([sys.executable, __file__, "--n-g4", str(a.n_g4), *(["--stable-v0"] if a.stable_v0 else []),
+                                  "--g4-worker", m, f"{tmp}/g4_{m}.npy"],
                                  stdout=open(f"{tmp}/g4_{m}.log", "w"), stderr=subprocess.STDOUT) for m in a.only_g4}
     lib = {k: base[k] for k in base.files if k != "meta"}
     for m, p in procs.items():
@@ -241,7 +248,15 @@ def main():
                     help="build only the Geant4 part of these materials (e.g. iron) and take the Pythia part, nu_x and "
                          "the other materials from --base")
     ap.add_argument("--base", help="existing library for --only-g4")
+    ap.add_argument("--stable-v0", action="store_true",
+                    help="K_S and Lambda (and anti-Lambda) stay undecayed in both generators, for a transport that "
+                         "decays them in flight (the MS7 iron, veto bin/shield_dis.py)")
+    ap.add_argument("--materials", nargs="+", default=list(G4_MATERIALS), help="Geant4 materials to build")
     a = ap.parse_args()
+    global P6_SETTINGS, G4_STABLE
+    if a.stable_v0:
+        P6_SETTINGS = ["MDCY(C310,1)=0", "MDCY(C3122,1)=0"]
+        G4_STABLE = V0_STABLE
     if a.g4_worker:
         g4_worker(a.g4_worker[0], a.n_g4, a.g4_worker[1])
         return
@@ -251,8 +266,9 @@ def main():
     t0 = time.time()
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     tmp = tempfile.mkdtemp(prefix="dislib_", dir=str(Path(a.out).parent))
-    g4p = {m: subprocess.Popen([sys.executable, __file__, "--n-g4", str(a.n_g4), "--g4-worker", m, f"{tmp}/g4_{m}.npy"],
-                               stdout=open(f"{tmp}/g4_{m}.log", "w"), stderr=subprocess.STDOUT) for m in G4_MATERIALS}
+    g4p = {m: subprocess.Popen([sys.executable, __file__, "--n-g4", str(a.n_g4), *(["--stable-v0"] if a.stable_v0 else []),
+                                "--g4-worker", m, f"{tmp}/g4_{m}.npy"],
+                               stdout=open(f"{tmp}/g4_{m}.log", "w"), stderr=subprocess.STDOUT) for m in a.materials}
     jobs = []
     for ie, E in enumerate(E_GRID):
         if E < E_P6_MIN:
@@ -299,7 +315,8 @@ def main():
         print(f"  {m}: {len(lib[f'g4_{m}_ev_nu']):,} events", flush=True)
     lib["E_grid"] = E_GRID
     lib["meta"] = np.array(json.dumps({
-        "n_p6": a.n_p6, "n_g4": a.n_g4, "materials": list(G4_MATERIALS), "nu_x_min": NU_X_MIN,
+        "n_p6": a.n_p6, "n_g4": a.n_g4, "materials": list(a.materials), "nu_x_min": NU_X_MIN,
+        "stable": "K_S, Lambda, anti-Lambda not decayed (--stable-v0)" if a.stable_v0 else "default decays",
         "units": "sigma microbarn per nucleon; p GeV (px, py, pz, E), v m; incoming mu- along +z",
         "pythia": "6.4.28 gamma/mu- FIXT, PARP(2)=2, defaults otherwise", "geant4": "11.2.2 FTFP_BERT muonNuclear"}))
     np.savez(a.out, **lib)

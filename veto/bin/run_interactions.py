@@ -56,6 +56,7 @@ def main():
     ap.add_argument("--dataset", default=DATASET)
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--out", default=None)
+    ap.add_argument("--tag", default="", help="suffix of the saved interaction npz (results/interactions/<design>_muon_interactions<tag>.npz)")
     args = ap.parse_args()
     t0 = time.time()
     p = Path(args.design)
@@ -72,7 +73,7 @@ def main():
     else:
         raise SystemExit(f"no {npz}: run bin/nu_dis_apply.py --design {design.name}")
     if args.kind == "muon" and not args.interactions:
-        save = paths.results_dir() / "interactions" / f"{design.name}_muon_interactions.npz"
+        save = paths.results_dir() / "interactions" / f"{design.name}_muon_interactions{args.tag}.npz"
         save.parent.mkdir(parents=True, exist_ok=True)
         np.savez(save, **{f"int_{k}": v for k, v in inter.items()}, **{f"part_{k}": v for k, v in part.items()})
     print(f"{len(inter['weight']):,} interactions, {len(part['pdg']):,} particles ({source}), {time.time() - t0:.0f} s", flush=True)
