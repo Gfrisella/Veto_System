@@ -5,7 +5,9 @@ Input: the result dict of one design as produced by bin/run_reco.py `evaluate()`
 
 Priorities, in order (lexicographic, implemented as tiers with weights 1000 / 100 / 10 / 1):
   0. constraints      rate limits of every plane and the 8 MCHF budget: each violation costs
-                      at least 1000, more than all the tiers below together (max 111)
+                      at least 1000, more than all the tiers below together (max 111); a rate limit
+                      exceeded by a fraction f costs w_rate (1 + rate_slope f), i.e. steeply more
+                      (rate_slope = 10: 2 x the limit = 11 000 points, ISSUES A3)
   1. background       combinatorial pairs that survive the veto = false vertices accepted as
                       true (FN of the background confusion matrix), N events in 15 years
   2. signal           signal lost to accidental vetoes (FP of the signal confusion matrix)
@@ -76,7 +78,8 @@ class ObjectiveConfig:
     cost_budget_kchf: float = 8000.0  # above it: penalty w_budget * (1 + (cost - budget) / budget)
     straw_channel_kchf: float = 97.2 / 3600   # converts rel_cost when the area cost is nan (pixels)
     rate_margin: float = 1.0          # penalise above rate_margin * limit (e.g. 0.5 for a factor 2 safety margin)
-    w_rate: float = 1000.0            # per limit exceeded: w_rate * (1 + log10(peak / (margin * limit)))
+    w_rate: float = 1000.0            # per limit exceeded: w_rate * (1 + rate_slope * (peak / (margin * limit) - 1))
+    rate_slope: float = 10.0          # steepness above the limit (was log10 growth until 2026-11-04)
     w_budget: float = 1000.0
     w_bkg: float = 100.0
     w_sig: float = 10.0
@@ -152,9 +155,12 @@ def confusion_matrix(res, stats, cfg=ObjectiveConfig()):
 
 
 def rate_penalty(res, cfg=ObjectiveConfig()):
-    """Sum over planes and limits exceeded of 1 + log10(peak / (margin * limit)); 0 if all are respected.
+    """Sum over planes and limits exceeded of 1 + rate_slope * (peak / (margin * limit) - 1); 0 if all are respected.
 
-    The 1 makes any violation cost at least w_rate, more than all the other tiers together."""
+    The 1 makes any violation cost at least w_rate, more than all the other tiers together; the linear term makes
+    it steep above the limit (a design 2 x over its limit is not almost as good as one just over it).
+    peak = the plane's peak rate density / per-channel rate (reco.plane_rates: fine 2 x 2 cm^2 maps near the
+    flames when results/rate_maps/peak_maps.npz exists)."""
     p, over = 0.0, []
     for pl in res["planes"]:
         tech = TECHNOLOGIES.get(pl["technology"]) if pl["technology"] else None
@@ -162,7 +168,7 @@ def rate_penalty(res, cfg=ObjectiveConfig()):
                   (pl["peak_channel_hz"], tech and tech.get("max_channel_rate"), "Hz/channel")]
         for peak, limit, unit in checks:
             if limit and peak > cfg.rate_margin * limit:
-                p += 1 + math.log10(peak / (cfg.rate_margin * limit))
+                p += 1 + cfg.rate_slope * (peak / (cfg.rate_margin * limit) - 1)
                 over.append(f"{pl['plane']}: {peak:.3g} > {cfg.rate_margin:g} x {limit:.3g} {unit}")
     return p, over
 

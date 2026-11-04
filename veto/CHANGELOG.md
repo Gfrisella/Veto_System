@@ -4,6 +4,19 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-04 — rate limits: steep penalty + fine peak maps (ISSUES A3, branch `veto-shield-dis`)
+
+- `lib/veto/objective.py` `rate_penalty`: per limit exceeded `1 + rate_slope (peak / (margin limit) - 1)` (new
+  `ObjectiveConfig.rate_slope = 10`), was `1 + log10(peak / (margin limit))`; times `w_rate = 1000` as before.
+- `bin/make_peak_maps.py` (new): 2 x 2 cm^2 rate maps (sum w, sum w^2) from all 506 M muons of the full dataset, UBT x-y
+  at 30.6 m and fins at z = 30.6 - 40.6 m, u < 2 m -> `results/rate_maps/peak_maps.npz` (5 min, 32 processes).
+- `lib/veto/reco.py`: `peak_maps`, `fine_peak`; `plane_rates` uses the peak over a sliding window of the channel size
+  (pads) or 4 cm (strips) with >= 10 effective muons, max with the coarse peak; new keys `peak_hz_cm2_coarse`,
+  `peak_hz_cm2_fine`, `peak_hz_cm2_err`, `peak_source`, `density_over_limit`. Without the file: coarse only, unchanged.
+- `bin/run_reco.py`: `over_rate_limit` also lists density violations seen only in the fine maps.
+- `bin/check_peak_rates.py` (new): coarse vs fine peaks and old vs new penalty for designs/*.json. At z = 30.6 m the
+  peak is x 1.39 the coarse one (right fin 880 +- 5 vs 634 kHz/cm^2; 4 cm tile 14.1 MHz, 2 cm tile 3.6 MHz per channel).
+
 ## 2026-11-02 (afternoon) — branch `veto-shield-dis` (uncommitted)
 
 ### Vessel muon DIS parents: 20 001-run SST1 sample + zeta veto-only

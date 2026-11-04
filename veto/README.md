@@ -62,6 +62,8 @@ veto/
     make_crossrun_pairs.py    independent pair sample (muons of different runs)
     subsample_candidates.py   Poisson subsample of the pair candidates proportional to weight
     replace_rate_maps.py      patch corrected rate maps into a reco-inputs file
+    make_peak_maps.py         2 x 2 cm^2 peak-rate maps near the flames (results/rate_maps/peak_maps.npz, A3)
+    check_peak_rates.py       coarse vs fine peak rates and rate penalty per design
     neff_by_type.py, neff_vs_seeds.py, probe_statistics.py, make_probe_html.py, scan_shah_study.py
                               statistics checks: independent input muons per type, per-cell probe
     -- interactions and end to end (see "Interactions" below)
@@ -81,6 +83,8 @@ veto/
   evolve/    LLM evolution of designs (see below)
   docs/      SUMMARY_2026-10-20.md (state of the study), fast_veto_sim.md, fastveto_physics.md,
              geant4_neutrino_notes.md, live_talk/ (the talk: veto_talk.tex, run.sh)
+             issues_report/veto_issues.pdf (2026-11-04: every issue met so far + possible solution,
+             from ISSUES.txt A1-C9 and the other docs D1-D11; LaTeX source veto_issues.tex)
   designs/   veto designs (JSON): D0 minimal ... D4 dense, D5 cell-size variants,
              D6 technology variants (straw, fiber, pixel, tile, tile2 fins),
              E1–E5 evolved designs (E3_robust, E4_ubt2 / E4_entry2 with second stations, E5_evolved)
@@ -309,8 +313,11 @@ simplified vessel geometry.
 and a priority (A: before optimising, B: changes the results, C: second order). In short:
 
 - **A, blockers:** the pair background is saturated (2-3 survivors, use single-muon inefficiency
-  and factorisation); bounced muons are only 74-77 % vetoed; rate limits are not enforced; no
-  objective and two cost models; spill / PoT normalisation and spill structure.
+  and factorisation); bounced muons are only 74-77 % vetoed; rate limits enforced by a steep penalty with 2 cm peak maps (A3, done); no
+  objective and two cost models; spill / PoT normalisation and spill structure; the spectrometer field map is
+  not used (straight lines from SST1 to the timing detector, A6); planes have no predefined
+  module dimensions (straw 1x1 m, tile2 50x50 cm, tile 48x48 cm, fibre 0.5x2.5 m, pixel quad 4x4 cm;
+  modules tiled, stacked in z and mixed between technologies in one plane, A7).
 - **B, physics:** multiple scattering (air 29.89-30.6 m and 80.6-82 m, 0.3 mm PVC walls at the
   vessel entrance and exit, helium in the vessel, the veto planes; for bounced muons only after
   the bounce); EM debris from the last 20 cm of shield iron, estimated from the full dataset;
@@ -318,6 +325,9 @@ and a priority (A: before optimising, B: changes the results, C: second order). 
   (see "Interactions"); `ISSUES.txt` may still list them as deferred.
 - **C, detector:** response simplifications, dead material, validation against FairShip,
   weights and statistics of the single-run classes.
+- **D, from the other docs (added 2026-11-04):** MS7 K_L chain vs FairShip (D3) and its simplifications (D4),
+  enriched vs old muon source (D5), library approximations (D6), no cavern-concrete interactions (D7),
+  PVC-based results to redo with Mylar (D8), DIS x mu pairs not redone (D9); D10-D11 done (GENIE, fixed bugs).
 
 ### Interactions and end to end
 

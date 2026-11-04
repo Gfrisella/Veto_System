@@ -154,7 +154,7 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
     res["total_rate_per_spill"] = float(sum(r["rate"] for r in rates))
     res["over_rate_limit"] = [dict(plane=r["plane"], technology=r["technology"], peak_hz_cm2=r["peak_hz_cm2"],
                                    area_m2=r["area_over_limit"], peak_channel_hz=r["peak_channel"] / cfg.spill_s)
-                              for r in rates if r["area_over_limit"] > 0 or r["channel_over_limit"]]
+                              for r in rates if r["area_over_limit"] > 0 or r["channel_over_limit"] or r.get("density_over_limit")]
     return res
 
 
