@@ -46,6 +46,8 @@ class RecoConfig:
     ip_max: float = 0.10               # selection: measured IP < ip_max [m] at the target (vertex_selection.py):
                                        # 0.10 = fully reconstructed, 2.5 = partially reconstructed (IP_CUTS, C8)
     max_tracks: int = 2                # selection: at most this many tracks in SST1 (interaction events)
+    straw_cuts: str = None             # A6b: None = accept every track (as before); "fairship" = straw hits + GenFit fit
+                                       # (straws.py) on the vertex tracks: converged, ndf > 25, chi2/ndf < 5, fitted p > 1
     cone: float = 0.0                  # vertex cone [rad]: tracks of a vertex also search r0 + cone * (distance from
                                        # the vertex to the plane), for parents bent at the vertex (0 = off)
     multiple_scattering: bool = False  # scatter the muons after z = 30.6 m (scattering.py)

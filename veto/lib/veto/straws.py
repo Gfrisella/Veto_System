@@ -190,7 +190,7 @@ def reconstruct(pos, mom, q, rng, workdir, workers=8, states=None, lost=None, mi
         log = open(workdir / f"fit_{i}.log", "w")
         procs.append((c, op, subprocess.Popen([str(paths.PROJECT_DIR / "bin/shipenv.sh"), "python3",
                                                str(paths.PROJECT_DIR / "bin/genfit_straws.py"), str(hp), str(op)],
-                                              stdout=log, stderr=subprocess.STDOUT)))
+                                              stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)))
     out = None
     for c, op, pr in procs:
         if pr.wait() != 0:
@@ -205,3 +205,17 @@ def reconstruct(pos, mom, q, rng, workdir, workers=8, states=None, lost=None, mi
     out["p_true"] = np.linalg.norm(mom, axis=1)
     out["q_true"] = np.asarray(q, float)
     return out
+
+
+FAIRSHIP_CUTS = dict(ndf_min=25, chi2ndf_max=5.0, p_min=1.0)   # usual SHiP analysis track cuts (A6b, 2026-11-05)
+
+
+def track_quality(b, p, q, rng, workdir, cuts=FAIRSHIP_CUTS, workers=8):
+    """Straw reconstruction of tracks given by their state b (n, 3) at SST1 and momentum p (n, 3), charge q, and the
+    FairShip quality cuts. Starts the tracks 0.5 m upstream of SST1 (straight, no field there). Returns (mask, fit)."""
+    b, p = np.asarray(b, float), np.asarray(p, float)
+    start = b - p / p[:, 2:3] * 0.5
+    fit = reconstruct(start, p, q, rng, workdir, workers=workers)
+    ok = ((fit["converged"] == 1) & (fit["ndf"] > cuts["ndf_min"]) & (fit["chi2ndf"] >= 0)
+          & (fit["chi2ndf"] < cuts["chi2ndf_max"]) & (fit["p"] > cuts["p_min"]))
+    return ok, fit

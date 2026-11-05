@@ -29,6 +29,9 @@ from . import vessel as V
 
 TARGET_HELIUM, TARGET_AIR, TARGET_PVC, TARGET_PLANE0 = 0, 1, 2, 10
 AIR_MARGIN = 0.4                   # m, air kept around the vessel and the fins (None = all the air)
+Z_SHIELD_END = 29.89               # m, TRY6 shield end
+UPSTREAM_AIR = True                # D7 (2026-11-05): paths start at the shield end (straight back from A, no field there),
+                                   # so the 1.24 m of air before the vessel is a target (only air lies there)
 MIN_COS = 0.02                     # planes of constant z: grazing incidence capped (as veto.scattering)
 M_MU = 0.10566
 
@@ -66,10 +69,11 @@ def paths(d):
     b = np.stack([d["x_82"], d["y_82"], d["z_82"]], 1).astype(np.float64)
     k = np.stack([d["kx"], d["ky"], d["kz"]], 1).astype(np.float64)
     use = (a[:, 2] > mt.REACH_30) & (b[:, 2] > a[:, 2])
-    # A is stored up to 2 cm after z = 30.6: start A_TOLERANCE earlier so the window / UBT at 30.6 are crossed
+    # A is stored up to 2 cm after z = 30.6: start A_TOLERANCE earlier; with UPSTREAM_AIR (D7) start at the shield end
     first_end = np.where(np.isfinite(k[:, 2])[:, None], k, b)
+    back = (a[:, 2] - Z_SHIELD_END) if UPSTREAM_AIR else np.full(len(a), mt.A_TOLERANCE)
     with np.errstate(invalid="ignore", divide="ignore"):
-        a_ext = a - (first_end - a) * (mt.A_TOLERANCE / (first_end[:, 2] - a[:, 2]))[:, None]
+        a_ext = a - (first_end - a) * (back / (first_end[:, 2] - a[:, 2]))[:, None]
     a_ext = np.where(np.isfinite(a_ext), a_ext, a)
     idx = np.nonzero(use)[0]
     out = [(a_ext[idx], first_end[idx], idx)]
@@ -100,7 +104,11 @@ def _near_air_tests(design, margin):
         hx, hy = hx0 + sx * (z - z0), hy0 + sy * (z - z0)
         return (z > z0 - margin) & (z < z1 + margin) & (np.abs(x) < hx + margin) & (np.abs(y) < hy + margin)
 
-    tests = [near_vessel]
+    def upstream(pt):                      # D7: shield end -> vessel entrance, around the window grown by margin
+        return ((pt[:, 2] >= Z_SHIELD_END - 1e-9) & (pt[:, 2] <= z0) & (np.abs(pt[:, 0]) < hx0 + margin)
+                & (np.abs(pt[:, 1]) < hy0 + margin))
+
+    tests = [near_vessel] + ([upstream] if UPSTREAM_AIR else [])
     for plane in (design.planes if design is not None else []):
         if plane.kind != "fin":
             continue
@@ -124,7 +132,7 @@ def _near_air_pieces(p, q, design, margin):
     with np.errstate(invalid="ignore", divide="ignore"):
         def add_z(z):
             ts.append((z - p[:, 2]) / d[:, 2])
-        for zz in (z0 - margin, z1 + margin, z0, z1):
+        for zz in (z0 - margin, z1 + margin, z0, z1, Z_SHIELD_END):
             add_z(zz)
         # lateral faces of the grown and the outer frustum: x = +-(X(z) + m), y likewise, linear in t
         for m in (margin, 0.0):

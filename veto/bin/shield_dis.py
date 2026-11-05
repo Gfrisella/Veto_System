@@ -55,6 +55,7 @@ MASS = {130: 0.497611, 310: 0.497611, 3122: 1.115683, 3322: 1.31486}
 OUT = paths.results_dir() / "shield_dis"
 PREPARED = paths.PROJECT_DIR / "data" / "shield_dis" / "muons_iron.npz"
 NU_STORES = Path("/disk/users/sqasim/workspace/uzh/Veto_System/veto/data/interactions/neutrinos")
+MU_SPLIT = "pythia"                           # D3 (Guglielmo 2026-11-05): Pythia 6 part only of the iron library
 BEND_PARENT = True                            # D4: parent muon bent by the MS7 field (si.curved_points)
 NU_FLAVOURS = (14, -14, 12, -12)              # D4: nu_e added where a store and the iron library have it
 MU_LIB = paths.PROJECT_DIR / "data/interactions/dis/mu_library_iron.npz"
@@ -121,7 +122,7 @@ def draw(kind, par, n, rng, per_track=False, mu_lib=None):
     every parent instead, weight w_i P_i (every track contributes once). Returns (inter, part, summary)."""
     from fastveto import dis, nudis
     if kind == "muon":
-        lib = dis.MuonLibrary(str(mu_lib or MU_LIB))
+        lib = dis.MuonLibrary(str(mu_lib or MU_LIB), split=MU_SPLIT)
         E_mid = par["p"] - si.DEDX_MU * 0.5 * (par["s_in"] + par["s_out"])
         sig = np.where(E_mid > 0.5, lib.sigma("iron", np.maximum(E_mid, 0.5)), 0.0)        # microbarn per nucleon
         P = si.nucleons_per_m3() * sig * UB * par["L"]

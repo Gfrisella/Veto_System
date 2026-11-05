@@ -4,6 +4,18 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-05 (evening) — issue review: A3 limits, D3 Pythia-only, D7 upstream air, A6b straw cuts, nu-He weight (branch `veto-shield-dis`)
+
+- Decisions of the review recorded in ISSUES.txt (A1, A2, A4, A5, A7, B1, B2, B3, B4, C2, C5, D3, D6, D7, A6b; C1, C3,
+  C9, D5, D9 left open).
+- `objective`: only neutrino DIS in the helium is down-weighted, `w_src_nu_helium = 0.01` (split from per_target);
+  everything else weight 1. `end_to_end.py` passes the neutrino per-target rows.
+- `technology`: fibre max_channel_rate 1 MHz, pixel max_rate 3.5 MHz/mm^2 (placeholders, A3).
+- `fastveto.dis.MuonLibrary(split="pythia")`; `shield_dis.MU_SPLIT = "pythia"` (D3; DIS part only, sigma x 1/5 - 1/8).
+- `fastveto.targets.UPSTREAM_AIR`: muon paths start at the shield end (29.89 m) for the air target (D7).
+- `RecoConfig.straw_cuts` / `run_interactions.py --straw-cuts fairship`: GenFit quality cuts on the vertex tracks (A6b);
+  `straws.track_quality`; `bin/shipenv.sh` race-safe for parallel workers.
+
 ## 2026-11-05 — FairShip geometry, spectrometer field (A6), Geant4 vessel transport, C7, C8, D1/D2, D4, B4 import (branch `veto-shield-dis`, commit ffd5570)
 
 ### Geometry: FairShip layout, target-aligned (z_veto = z_FS - 2.14)

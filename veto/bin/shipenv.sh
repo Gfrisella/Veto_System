@@ -4,7 +4,7 @@
 # The host (openSUSE Leap 16) has no libcrypt.so.2: a link to libxcrypt's libcrypt.so.1 is put in a private directory.
 set -eo pipefail
 COMPAT="${TMPDIR:-/tmp}/shipenv-compat-$(id -u)"
-mkdir -p "$COMPAT"; [ -e "$COMPAT/libcrypt.so.2" ] || ln -sf /usr/lib64/libcrypt.so.1 "$COMPAT/libcrypt.so.2"
+mkdir -p "$COMPAT"; [ -e "$COMPAT/libcrypt.so.2" ] || ln -s /usr/lib64/libcrypt.so.1 "$COMPAT/libcrypt.so.2" 2>/dev/null || true   # race-safe (parallel workers)
 export WORK_DIR=/cvmfs/ship.cern.ch/25.09/sw
 source /cvmfs/ship.cern.ch/25.09/sw/slc9_x86-64/FairShip/latest/etc/profile.d/init.sh >/dev/null 2>&1
 export LD_LIBRARY_PATH="$COMPAT:$LD_LIBRARY_PATH"

@@ -47,7 +47,8 @@ def rotate_to(v, u, phi):
 
 class MuonLibrary:
     """split: "crossover" (Geant4 for nu < nu_x(E), Pythia above; default), "w2" (Geant4 W < 2 GeV, Pythia W > 2)
-    or "geant4" (Geant4 only: what a full Geant4 simulation does)."""
+    or "geant4" (Geant4 only: what a full Geant4 simulation does) or "pythia" (Pythia 6 only, ISSUES D3 choice
+    for the MS7 shield chain, 2026-11-05)."""
 
     def __init__(self, path, split="crossover"):
         z = np.load(path)
@@ -72,6 +73,8 @@ class MuonLibrary:
                 keep = t["ev_w"] >= 2.0 if name == "p6" else t["ev_w"] < 2.0
             elif split == "geant4":
                 keep = np.full(len(ie), name != "p6")
+            elif split == "pythia":
+                keep = np.full(len(ie), name == "p6")
             else:
                 raise ValueError(f"unknown split {split!r}")
             key = t["ev_tgt"].astype(np.int64) * 1000 + ie

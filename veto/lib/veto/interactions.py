@@ -103,6 +103,16 @@ def select(tr, n_inter, device="cpu", cfg=None, rng=None):
         g0, g1 = good[pairs[:, 0]], good[pairs[:, 1]]
         ip = vsel.measured_ip(tr["b"][g0], tr["p"][g0], tr["b"][g1], tr["p"][g1], cfg, rng or np.random.default_rng(779))
         pairs, vertex = pairs[ip < cfg.ip_max], vertex[ip < cfg.ip_max]
+    if cfg is not None and getattr(cfg, "straw_cuts", None) == "fairship" and len(pairs):
+        # A6b: both vertex tracks must pass the straw reconstruction quality cuts (GenFit in the SHiP CVMFS ROOT)
+        from . import paths, straws
+        g0, g1 = good[pairs[:, 0]], good[pairs[:, 1]]
+        rows = np.unique(np.concatenate([g0, g1]))
+        ok_rows, _ = straws.track_quality(tr["b"][rows], tr["p"][rows], tr["q"][rows].astype(float),
+                                          rng or np.random.default_rng(780), paths.results_dir() / "straws" / "interactions")
+        ok = np.zeros(len(tr["b"]), bool); ok[rows] = ok_rows
+        keep = ok[g0] & ok[g1]
+        pairs, vertex = pairs[keep], vertex[keep]
     if not len(pairs):
         return np.zeros(0, int), np.zeros((0, 2), int), np.zeros((0, 3))
     inter = ids[group[pairs[:, 0]]]

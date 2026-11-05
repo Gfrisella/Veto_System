@@ -58,6 +58,8 @@ def main():
     ap.add_argument("--out", default=None)
     ap.add_argument("--ip-cut", choices=("full", "partial"), default="full",
                     help="measured-IP selection: full (IP < 10 cm) | partial (IP < 2.5 m) (ISSUES C8)")
+    ap.add_argument("--straw-cuts", choices=("none", "fairship"), default="none",
+                    help="A6b: straw hits + GenFit fit on the vertex tracks with the SHiP cuts (none = accept all, as before)")
     ap.add_argument("--g4", default=None, help="Geant4 transport of the helium products (bin/g4_vessel_transport.py)")
     ap.add_argument("--air-margin", type=float, default=0.4,
                     help="air interactions only within this distance [m] of the vessel and the fins (ISSUES C7); < 0 = all the air")
@@ -91,7 +93,8 @@ def main():
         muons = cols
     _, maps = load_inputs()
     from veto import vertex_selection as vsel
-    cfg = reco.RecoConfig(seed=args.seed, multiple_scattering=True, ip_max=vsel.IP_CUTS[args.ip_cut])
+    cfg = reco.RecoConfig(seed=args.seed, multiple_scattering=True, ip_max=vsel.IP_CUTS[args.ip_cut],
+                          straw_cuts=None if args.straw_cuts == "none" else args.straw_cuts)
     g4 = dict(np.load(args.g4)) if args.g4 else None
     res = ix.evaluate(inter, part, design, maps, cfg, np.random.default_rng(args.seed), muons=muons, g4=g4)
     print(f"selection and veto: {time.time() - t0:.0f} s\n")

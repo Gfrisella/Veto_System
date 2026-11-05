@@ -54,11 +54,11 @@ TECHNOLOGIES = {
                   cost_m2_per_layer=6.0, cost_channel=1.0),
     "fiber": dict(name="Scintillating fibre (SCSF-78MJ mats)", readout="strip", views=(0.0, 90.0),
                   layers_per_view=1, pitch=250e-6, sigma_x=100e-6, sigma_t=0.5e-9, time_window=None,
-                  veto_window=None, efficiency=0.999, max_length=3.0, max_rate=None, max_channel_rate=None,
+                  veto_window=None, efficiency=0.999, max_length=3.0, max_rate=None, max_channel_rate=1e6,
                   x0_per_layer=0.003, cost_m2_per_layer=170.0, cost_channel=4.0),
     "pixel": dict(name="Silicon pixel (Timepix-class)", readout="pad", views=None, layers_per_view=1,
                   pitch=55e-6, sigma_x=16e-6, sigma_t=0.2e-9, time_window=None, veto_window=None,
-                  efficiency=0.999, max_length=None, max_rate=None, max_channel_rate=None,
+                  efficiency=0.999, max_length=None, max_rate=3.5e8, max_channel_rate=None,
                   x0_per_layer=0.005, cost_m2_per_layer=3800.0, cost_channel=20.0),   # cost: estimate, see above
     "tile": dict(name="Scintillating tile (4 x 4 cm, SiPM)", readout="pad", views=None, layers_per_view=1,
                  pitch=0.04, sigma_x=0.04, sigma_t=0.12e-9, time_window=None, veto_window=1.5e-9,
@@ -69,6 +69,8 @@ TECHNOLOGIES = {
                   efficiency=0.999, max_length=None, max_rate=None, max_channel_rate=1e6,
                   x0_per_layer=0.024, cost_m2_per_layer=30.0, cost_channel=5.0),
 }
+# Rate limits of fibre (1 MHz per SiPM channel) and pixel (3.5 MHz/mm^2, Timepix4-like): placeholders set 2026-11-05
+# (ISSUES A3), to be confirmed by the detector colleagues.
 ALIASES = {"A": "straw", "B": "fiber", "C": "pixel", "fibre": "fiber", "tiles": "tile", "tile4": "tile"}
 
 

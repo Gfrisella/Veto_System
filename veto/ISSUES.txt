@@ -71,6 +71,7 @@ A3. Rate limits are reported, not enforced
         the coarse maps, as before).
     5 Nov 2026, Guglielmo: placeholder rate limits for the leftovers: fibre 1 MHz per SiPM channel, pixel 3.5 MHz/mm^2
       (Timepix4-like), to be confirmed by the detector colleagues.
+      Implemented: technology.py fiber max_channel_rate = 1e6, pixel max_rate = 3.5e8 Hz/cm^2.
 
 A4. No objective, two inconsistent cost models
     STATUS: DECIDED (5 Nov 2026), to implement
@@ -147,6 +148,9 @@ A6b. Realistic tracking: straw hits and track fit (post-processing)
     several tracks sharing a straw. Not yet applied to the candidates (selection: n_hits / chi2 cuts to be chosen).
     5 Nov 2026, Guglielmo: candidate tracks get the usual SHiP quality cuts (converged, ndf > 25, chi2/ndf < 5) and the
       fitted p for the p > 1 GeV cut and the IP, with an option to accept every track as now (no straw cuts).
+      Implemented: RecoConfig.straw_cuts (None = accept all, default; "fairship" = converged, ndf > 25, chi2/ndf < 5,
+      fitted p > 1 GeV on both vertex tracks, straws.track_quality), bin/run_interactions.py --straw-cuts. Synthetic
+      mu+ mu- decays (3 - 20 GeV): 54 / 60 kept. Fitted p in the IP not yet (reco.measure still smears the truth).
 
 A7. Detector planes have no predefined module dimensions
     STATUS: DECIDED (5 Nov 2026), to implement
@@ -404,7 +408,10 @@ D3. MS7 shield DIS -> K_L: chain disagrees with FairShip
     vs Pythia 6 high-nu DIS here; the flux in the MS7 footprint already agrees); K_L-enriched draws; model
     a veto on any in-time hit (scattered muon in UBT / fins) and a pointing cut.
     5 Nov 2026, Guglielmo: leave D3 open, but use ONLY the Pythia 6 part of the iron muon-DIS library for the shield chain
-      (split "pythia" instead of the crossover Geant4 + Pythia 6 mix).
+      (split "pythia" instead of the crossover Geant4 + Pythia 6 mix). Implemented: fastveto.dis.MuonLibrary(split="pythia"),
+      shield_dis.MU_SPLIT. NOTE: Pythia 6 alone is the deep-inelastic part only: sigma(iron) 1.18 / 3.46 ub per nucleon
+      at 20 / 100 GeV vs 9.55 / 16.5 for the crossover mix (the soft photonuclear part, Geant4, is dropped), so the
+      shield interaction rate falls by x 5 - 8 while the K_L (90 % from the Pythia part) fall much less. To confirm.
 
 D4. MS7 shield DIS chain: simplifications
     STATUS: IN PROGRESS (5 Nov 2026: solution accepted, code done, runs pending)
@@ -464,6 +471,8 @@ D7. Interactions upstream of z = 30.6 m not simulated
     5 Nov 2026, Guglielmo: add the air between the shield end (29.89 m) and the vessel (31.13 m, 1.24 m since the FairShip
       layout) to the muon DIS targets: muon paths extended straight back from state A (30.6) to 29.89 (no field after the
       shield), kept region = the vessel entrance grown by AIR_MARGIN (C7); V0 decays in the vessel follow as for air.
+      Implemented: fastveto.targets.UPSTREAM_AIR / Z_SHIELD_END. On 3e4 muons: air upstream of the vessel 1.13e28 ->
+      2.47e28 weighted nucleons/m^2 (helium and wall unchanged).
 
 D8. Results computed with the old PVC vessel wall
     STATUS: OPEN (PRIORITY B)
