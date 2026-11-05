@@ -104,9 +104,37 @@ def technology_table():
         rows.append(f"  {key:<6} {t['name']}: pitch {t['pitch'] * 1e3:g} mm, timing {timing}, "
                     f"veto window {'+-%.1f ns' % (t['veto_window'] * 1e9) if t['veto_window'] else '+-3 sigma'}, "
                     f"efficiency {t['efficiency']}, x0 {tech.x0(t) * 100:.2f} % per plane, "
-                    f"cost {t['cost_m2_per_layer']} kCHF per layer-m^2 x {tech.n_layers(t)} layers, "
-                    f"rate limit {t['max_rate'] or '-'} Hz/cm^2, {t['max_channel_rate'] or '-'} Hz per channel")
+                    + ("" if GRID == "modules" else f"cost {t['cost_m2_per_layer']} kCHF per layer-m^2 x {tech.n_layers(t)} layers, ")
+                    + f"rate limit {t['max_rate'] or '-'} Hz/cm^2, {t['max_channel_rate'] or '-'} Hz per channel")
+        if GRID == "modules":
+            m = tech.MODULES[key]
+            rows.append(f"         module {m['size'][0]:g} x {m['size'][1]:g} m (u x y) = {int(round(m['size'][0] / tech.SLOT))} x "
+                        f"{int(round(m['size'][1] / tech.SLOT))} slots, dead frame {m['frame'] * 100:g} cm "
+                        f"({'readout end, y_hi' if m['frame_edges'] == 'y_hi' else 'every edge'}), "
+                        f"cost {100 * tech.module_cost(key) / tech.BUDGET_KCHF:.2f} % of the budget per module")
     return "\n".join(rows)
+
+
+CONTINUOUS_FORMAT = f"""DESIGN JSON (all lengths in metres):
+{{"name": "<short unique name>", "description": "<one line>",
+  "ubt": {{"y_lo": -1.35, "y_hi": 1.35}},
+  "fins": [{{"side": "right"|"left", "z": {geo.Z_UBT:.2f}, "length": 3.0, "y_lo": -3.0, "y_hi": 3.0, "tilt": 0,
+            "technology": "tile"}}, ...],
+  "detector": {{}}}}"""
+GRID = "modules"   # A7 (2026-11-05): designs on the 50 cm module grid ("continuous": the old free lengths)
+
+MODULE_FORMAT = f"""DESIGN JSON (module grid, ISSUES A7):
+{{"name": "<short unique name>", "description": "<one line>",
+  "ubt": {{"y0": -1.5, "modules": [{{"tech": "straw", "u": 0, "y": 0}}, {{"tech": "straw", "u": 0, "y": 2}},
+                                  {{"tech": "straw", "u": 0, "y": 4}}]}},
+  "fins": [{{"side": "right"|"left", "z": {geo.Z_UBT:.2f}, "tilt": 0, "y0": -3.0,
+            "modules": [{{"tech": "tile2", "u": 0, "y": 5, "stations": 1}}, ...]}}, ...],
+  "detector": {{}}}}
+Every plane is a grid of {tech.SLOT:g} x {tech.SLOT:g} m slots: u = slot index outward from the fin's inner edge on the vessel
+wall (UBT: from x = -0.5), y = slot index upward from y0 (fins -3.0, UBT -1.5). A module occupies its technology's
+footprint in slots (table above) starting at (u, y); modules must not overlap; technologies can be mixed slot by slot;
+"stations" (1-3) stacks identical modules in z at that place. Each module has a dead frame (no hits there). Right fins
+must stay inside the cavern wall (room = 4.56 - X(z) m), nothing below y = -3.2. Cost = sum of the modules."""
 
 
 def system_prompt():
@@ -115,12 +143,13 @@ each is simulated and reconstructed (muon-pair background candidates, muon and n
 and scored. Your goal: the highest score.
 
 GEOMETRY (metres; z along the beam; looking from the target, right = -x, left = +x):
-- Decay vessel: frustum z = 30.6 .. 80.6, half widths x 0.5 -> 2.0, y 1.35 -> 3.0. SST1 tracker at z = 82
-  (|x| < 2, |y| < 3), the spectrometer that measures the tracks. Cavern wall at x = -4.56, floor y = -3.36.
-- UBT: a straw plane at z = 30.6 on the vessel entrance, |x| < 0.5 (fixed), y from y_lo to y_hi; it must cover
+- Decay vessel (FairShip layout): frustum z = {geo.Z_VESSEL_MIN:.2f} .. {geo.Z_VESSEL_MAX:.2f}, half widths x 0.5 -> 2.0,
+  y 1.35 -> 3.0. SST1 tracker at z = {geo.Z_SST1:.2f} (|x| < 2, |y| < 3), the spectrometer (field map) and the timing
+  detector at z = {geo.Z_TIMING:.2f}. Cavern wall at x = -4.56, floor y = -3.36.
+- UBT: a straw plane at z = {geo.Z_UBT:.2f} on the vessel entrance, |x| < 0.5 (fixed); it must cover
   at least y = -1.35 .. 1.35 and stays above y = -3.2. Always straws (technology fixed).
-- Fins: thin vertical x-y planes at a fixed z (30.6 .. 82) on the right or left side. A fin touches the vessel
-  side wall with its inner edge (|x| = X(z) = 0.5 + 0.03 (z - 30.6)) and reaches OUT in x by `length`; it covers
+- Fins: thin vertical x-y planes at a fixed z ({geo.Z_UBT:.2f} .. {geo.Z_SST1:.2f}) on the right or left side. A fin touches the
+  vessel side wall with its inner edge (|x| = X(z) = 0.5 + 0.03 (z - {geo.Z_VESSEL_MIN:.2f})) and reaches OUT in x by `length`; it covers
   y from y_lo (>= -3.2) to y_hi. Right fins are cut at the cavern wall x = -4.56 (the loader does it and notes it).
   Each fin has a technology (straw, fiber, pixel, tile, tile2); tilt must be 0.
 - No detector on top of or below the vessel.
@@ -148,12 +177,7 @@ each plane's peak rate next to its limit.
 OBJECTIVE (the reward; higher is better):
 {objective.__doc__}
 
-DESIGN JSON (all lengths in metres):
-{{"name": "<short unique name>", "description": "<one line>",
-  "ubt": {{"y_lo": -1.35, "y_hi": 1.35}},
-  "fins": [{{"side": "right"|"left", "z": 30.6, "length": 3.0, "y_lo": -3.0, "y_hi": 3.0, "tilt": 0,
-            "technology": "tile"}}, ...],
-  "detector": {{}}}}
+{MODULE_FORMAT if GRID == "modules" else CONTINUOUS_FORMAT}
 "detector": {{"cone_mrad": 0 .. 50}} sets the vertex cone of the veto (default 0): the tracks of a vertex also search
 r0 + cone x (distance from the vertex to the plane) on every plane upstream, which catches the parents of muon
 interactions (bent by a few mrad at the vertex) but picks up random hits, so it costs signal on busy planes:
@@ -378,6 +402,8 @@ def reward_err(report):
 
 
 def valid_locally(design):
+    if GRID == "modules" and ("modules" not in design.get("ubt", {}) or any("modules" not in f for f in design.get("fins", []))):
+        return "ValueError: use the module format (every plane as a list of modules on the 50 cm grid)"
     try:
         dsg.from_dict(design)
         return None
@@ -398,6 +424,8 @@ def main():
     ap.add_argument("--children", type=int, default=8, help="LLM proposals per generation")
     ap.add_argument("--population", type=int, default=10)
     ap.add_argument("--seeds", nargs="*", default=SEEDS, help="designs/*.json to start from")
+    ap.add_argument("--grid", choices=["modules", "continuous"], default="modules",
+                    help="design format: the 50 cm module grid (A7, default; seeds from designs/modules) or the old free lengths")
     ap.add_argument("--seed-runs", nargs="*", default=[], help="earlier runs (results/evolve/<run>) whose best designs join gen 0")
     ap.add_argument("--seed-top", type=int, default=6, help="designs taken from each of --seed-runs")
     ap.add_argument("--bkg-estimate", choices=["max", "factorised", "direct"], default="max",
@@ -414,6 +442,8 @@ def main():
                                                          "needed here too, for the pair statistics of the objective")
     ap.add_argument("--prep-tag", default="", help="interaction caches prepared_<kind><tag>.npz (_delta: enriched)")
     args = ap.parse_args()
+    global GRID
+    GRID = args.grid
     EVAL_DATA.update(inputs=args.inputs, prep_tag=args.prep_tag)
     objective.INPUTS = args.inputs
     random.seed(args.seed)
@@ -438,7 +468,13 @@ def main():
             fh.write(json.dumps(cand, default=float) + "\n")
 
     # generation 0: the seed designs
-    seeds = [json.loads((dsg.DESIGN_DIR / f"{n}.json").read_text()) for n in args.seeds]
+    def seed(n):
+        raw = json.loads((dsg.DESIGN_DIR / f"{n}.json").read_text())
+        if GRID != "modules":
+            return raw
+        snapped = dsg.DESIGN_DIR / "modules" / f"{n}_mod.json"
+        return json.loads(snapped.read_text()) if snapped.exists() else dsg.snap_to_modules(raw)
+    seeds = [seed(n) for n in args.seeds]
     for prev in args.seed_runs:              # best designs of earlier runs, re-scored with today's objective
         prev = Path(prev) if Path(prev).is_absolute() else paths.results_dir() / "evolve" / prev
         hist = [json.loads(line) for line in (prev / "history.jsonl").open()]

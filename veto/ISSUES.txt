@@ -90,6 +90,7 @@ A4. No objective, two inconsistent cost models
       0.10 x P-369 area cost (mechanics, placeholder); pixel electronics = ITk-based area cost; objective
       "cost_pct_budget". Per m^2: straw 58, tile 81, tile2 341, fibre 1071, pixel 3882 kCHF (P-369: 36 / 30 / 30 / 340 /
       3800): the per-channel model makes fine segmentation much dearer -> numbers to be checked with the colleagues.
+      Guglielmo (5 Nov): keep the per-channel model, FLAGGED for the detector colleagues.
 
 A5. Spill and PoT normalisation
     STATUS: DECIDED (5 Nov 2026): keep the flat 1 s spill
@@ -193,6 +194,8 @@ A7. Detector planes have no predefined module dimensions
       reco rate maps shifted by u_off; design.snap_to_modules + bin/snap_designs.py -> designs/modules/*_mod.json.
       D6_straw: 141 modules, 88 % active, veto on 3000 muons 76.4 % -> 69.5 % (frames + area). Still to do: the
       evolution's free parameters (evolve/evolve_designs.py) on the slot grid.
+      Done (5 Nov): evolve_designs.py --grid modules (default): the LLM gets the module format, module sizes, frames
+      and cost per module (% of budget); continuous proposals are rejected locally; seeds from designs/modules.
 
 ----------------------------------------------------------------------------------------------
 B. PHYSICS MISSING: changes the results

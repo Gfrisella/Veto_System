@@ -66,7 +66,8 @@ def report(raw):
     except Exception as e:  # noqa: BLE001  (an invalid design is a normal outcome here)
         return dict(name=name, error=f"{type(e).__name__}: {e}")
     planes = [dict(name=p.name, kind=p.kind, side={-1: "right", 1: "left", 0: "-"}[p.sign], z=p.z,
-                   reach_m=round(p.u_max, 3), y_lo=p.y_lo, y_hi=p.y_hi, technology=p.technology,
+                   reach_m=round(p.u_off + p.u_max, 3), u_from=round(p.u_off, 3), y_lo=p.y_lo, y_hi=p.y_hi,
+                   technology=p.technology, n_modules=p.n_modules, active=round(p.active_fraction, 3),
                    area_m2=round(p.area, 2)) for p in design.planes]
     r.pop("window_containment", None)
     r["background"].pop("timing", None)

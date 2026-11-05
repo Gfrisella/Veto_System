@@ -14,6 +14,9 @@ what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20)
   `GRID_Y0`. Continuous designs still load (old format).
 - `reco`: rate maps / fine peaks shifted by the block's u_off. `objective`: `cost_pct_budget`.
 - New `bin/snap_designs.py` -> `designs/modules/*_mod.json` (all 18 designs).
+- `evolve/evolve_designs.py --grid modules` (default): module format in the prompt (module sizes, frames, cost per
+  module in % of budget, FairShip geometry numbers), continuous proposals rejected, seeds from designs/modules;
+  `evaluate_designs.py` reports u_from / n_modules / active per plane block.
 
 ## 2026-11-05 (evening) — issue review: A3 limits, D3 Pythia-only, D7 upstream air, A6b straw cuts, nu-He weight (branch `veto-shield-dis`)
 
