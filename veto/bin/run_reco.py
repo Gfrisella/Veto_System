@@ -103,11 +103,32 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
                          for k in range(3) if (ty == k).any()}
 
     # hypothetical signal
-    if signal_model == "target":
+    if signal_model == "eventcalc":                          # B4: EventCalc benchmark set, full selection per benchmark
+        from veto import signal_eventcalc as se
+        per, fp_sum, w_sum, n_tot = {}, 0.0, 0.0, 0
+        t0 = time.perf_counter()
+        by_plane = np.zeros(len(design.planes), np.int64)
+        for name, wb in se.BENCHMARK_SET.items():
+            sig, z_v, ev, w_ev, acc_b = se.selected_signal(name, cfg, np.random.default_rng(779), n_max=n_signal)
+            if not len(w_ev):
+                per[name] = dict(acc_b, FP_frac=None)
+                continue
+            s = reco.run_events(sig, ev, z_v, design, inp, cfg, rng, with_own_hits=False)
+            fp = float((w_ev * s["vetoed"]).sum() / w_ev.sum())
+            per[name] = dict(acc_b, FP_frac=fp, n=len(w_ev))
+            fp_sum, w_sum, n_tot = fp_sum + wb * fp, w_sum + wb, n_tot + len(w_ev)
+            by_plane += s["by_plane"]
+        fp = fp_sum / w_sum if w_sum else 0.0
+        t_sig = time.perf_counter() - t0
+        res["signal"] = dict(n=n_tot, FP_frac=fp, TN_frac=1 - fp,
+                             FP_by_plane={design.planes[i].name: int(c) for i, c in enumerate(by_plane) if c},
+                             us_per_event=1e6 * t_sig / max(n_tot, 1), model=signal_model, per_benchmark=per,
+                             acceptance={k: v["selected_weight_frac"] for k, v in per.items()})
+    elif signal_model == "target":
         sig, z_v, ev, acceptance = reco.signal_from_target(n_signal, rng)
     else:
         (sig, z_v, ev), acceptance = reco.signal_tracks(n_signal, rng), {}
-    if cfg.ip_max is not None:                               # the same pointing cut (signal: rows i and i + n pair up)
+    if signal_model != "eventcalc" and cfg.ip_max is not None:   # the same pointing cut (rows i and i + n pair up)
         n2 = len(ev) // 2
         st = lambda i: (np.stack([sig["bx"][i], sig["by"][i], sig["bz"][i]], 1), np.stack([sig["bpx"][i], sig["bpy"][i], sig["bpz"][i]], 1))
         ok = vsel.measured_ip(*st(np.arange(n2)), *st(np.arange(n2, 2 * n2)), cfg, np.random.default_rng(778)) < cfg.ip_max
@@ -116,14 +137,15 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
         rows_ok = ok[ev]
         sig = {k: v[rows_ok] for k, v in sig.items()}
         z_v, ev = z_v[rows_ok], new_id[ev[rows_ok]]
-    t0 = time.perf_counter()
-    s = reco.run_events(sig, ev, z_v, design, inp, cfg, rng, with_own_hits=False)
-    t_sig = time.perf_counter() - t0
-    n_ev = len(s["vetoed"])
-    res["signal"] = dict(n=n_ev, FP_frac=float(s["vetoed"].mean()), TN_frac=float(1 - s["vetoed"].mean()),
-                         FP_by_plane={design.planes[i].name: int(c) for i, c in enumerate(s["by_plane"]) if c},
-                         hits_per_event=s["n_hits"] / n_ev, us_per_event=1e6 * t_sig / n_ev,
-                         model=signal_model, acceptance=acceptance)
+    if signal_model != "eventcalc":
+        t0 = time.perf_counter()
+        s = reco.run_events(sig, ev, z_v, design, inp, cfg, rng, with_own_hits=False)
+        t_sig = time.perf_counter() - t0
+        n_ev = len(s["vetoed"])
+        res["signal"] = dict(n=n_ev, FP_frac=float(s["vetoed"].mean()), TN_frac=float(1 - s["vetoed"].mean()),
+                             FP_by_plane={design.planes[i].name: int(c) for i, c in enumerate(s["by_plane"]) if c},
+                             hits_per_event=s["n_hits"] / n_ev, us_per_event=1e6 * t_sig / n_ev,
+                             model=signal_model, acceptance=acceptance)
 
     # figure of merit. Positive = vetoed. Background rates are weighted (expected events), signal
     # rates are fractions of selected signal decays.
@@ -206,8 +228,9 @@ def main():
     parser.add_argument("--spill", type=float, default=1.0, help="spill length [s]")
     parser.add_argument("--n-signal", type=int, default=100_000)
     parser.add_argument("--seed", type=int, default=1)
-    parser.add_argument("--signal", choices=("target", "old"), default="target",
-                        help="target: neutral from the target, decays in the vessel (default); old: tracks aimed at random")
+    parser.add_argument("--signal", choices=("target", "old", "eventcalc"), default="target",
+                        help="target: neutral from the target, decays in the vessel (default); old: tracks aimed at random; "
+                             "eventcalc: the EventCalc benchmark set (signal_eventcalc.BENCHMARK_SET, B4), --n-signal per benchmark")
     parser.add_argument("--time-window", type=float, default=None,
                         help="fixed full width of the veto time window [ns] (default: +-3 sigma per plane)")
     parser.add_argument("--multiple-scattering", action="store_true",

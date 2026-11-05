@@ -320,6 +320,12 @@ B4. Signal model
     5 Nov 2026, Guglielmo: replace the toy signal by a fixed benchmark set, weighted (e.g. HNL-mu 1 GeV, dark photon
       0.9 GeV, scalar 2 GeV, ALP 1 GeV at c tau 100 m), each through the full selection (field, both IP categories) and the
       veto; toy kept for comparison. Numbers only with the regenerated samples (production point at the target).
+      Implemented (6 Nov): signal_eventcalc.BENCHMARK_SET (HNL-mu 1 GeV, dark photon 0.9 GeV, scalar 2 GeV, ALP 1 GeV,
+      c tau 100 m, weight 1 each), selected_signal (tracks straight to SST1, TD through the field, pairs as
+      interactions.select, measured IP cut, <= max_tracks), run_reco.py --signal eventcalc (signal loss = weighted
+      average over the set, per_benchmark in the result). Selected fraction (IP < 10 cm / 2.5 m): HNL-mu 10.5 / 37 %,
+      dark photon 62 / 63 %, scalar 15 / 37 %, ALP 11 / 39 %. Signal lost: D6_straw toy 6.38 % vs set 6.29 % (HNL-mu
+      8.5, DP 4.5, scalar 5.2, ALP 7.0 %); E3_robust 0.20 vs 0.19 %. Production point still at z = -0.87 (old samples).
 
 ----------------------------------------------------------------------------------------------
 C. DETECTOR AND BOOKKEEPING: second order

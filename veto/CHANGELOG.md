@@ -4,6 +4,11 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-06 — B4 EventCalc signal in run_reco (branch `veto-shield-dis`)
+
+- `signal_eventcalc.BENCHMARK_SET`, `selected_signal()`: EventCalc decays through the common selection (field, both IP
+  categories, max_tracks); `run_reco.py --signal eventcalc`: weighted average signal loss + per-benchmark results.
+
 ## 2026-11-06 — A2 bounce-aware search, A1 closure check, C5 weights (branch `veto-shield-dis`)
 
 - `reco`: `bounce_points`, second (mirrored) search window from the cavern wall / floor point for planes upstream of
