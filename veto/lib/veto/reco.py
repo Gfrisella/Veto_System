@@ -110,14 +110,22 @@ def own_hits(tr, event, design, rng, tracks_mask=None):
 
 def plane_rate_map(plane, maps):
     """Rate map of a plane: bin edges in u, y and muons per spill per bin, clipped to the plane."""
+    em = "em_ubt_e" in maps                                       # B2: EM debris maps loaded (run_reco --em-debris)
+    if em:
+        from .em_debris import detection_probability
+        p_e, p_g = detection_probability(plane)
     if plane.kind == "ubt":
         yb = maps["ubt_y_bins"]
         ub = np.array([0.0, plane.u_max])
         h = maps["ubt_hist"][None, :]
+        if em:
+            h = h + (p_e * maps["em_ubt_e"] + p_g * maps["em_ubt_g"])[None, :]
     else:
         side = 0 if plane.sign > 0 else 1
         iz = int(np.clip(np.round(plane.z - maps["z_slices"][0]), 0, len(maps["z_slices"]) - 1))
         h = maps["fin_maps"][side, iz]
+        if em:
+            h = h + p_e * maps["em_fin_e"][side, iz] + p_g * maps["em_fin_g"][side, iz]
         ub, yb = maps["u_bins"] - plane.u_off, maps["y_bins"]          # module blocks start at u_off on the fin
     uc, yc = 0.5 * (ub[1:] + ub[:-1]), 0.5 * (yb[1:] + yb[:-1])
     keep = ((uc >= 0) & (uc <= plane.u_max))[:, None] & ((yc >= plane.y_lo) & (yc <= plane.y_hi))[None, :]

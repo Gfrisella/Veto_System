@@ -253,7 +253,7 @@ B1. Multiple scattering (at least this interaction must be modelled)
       entering through the sides see more material there (scattering, wall DIS) than in our model.
 
 B2. EM debris rate (electrons / photons from the end of the shield)
-    STATUS: DECIDED (5 Nov 2026), to implement
+    STATUS: IN PROGRESS (6 Nov 2026: Geant4 chain implemented, production with the re-runs)
     Only muons are simulated: no delta rays, bremsstrahlung or pair-production debris leaking from
     the shield. These add hits (occupancy, rate limits) and accidental vetoes (signal loss).
     Plan (estimate from data we have):
@@ -273,6 +273,13 @@ B2. EM debris rate (electrons / photons from the end of the shield)
       UpstreamTagger, vetoPoint): e / gamma rate maps at the UBT and fin positions, per muon, scaled to our muon flux. COPY
       the needed part of the sample into the local folder (data/fairship_em/) so it can be reused. Needs lxplus access
       (ControlMaster socket ~/.ssh/cm-lxplus, opened by Guglielmo).
+      6 Nov 2026, Guglielmo: use our own Geant4 instead (the FairShip sample was produced SST-only: lower bound).
+      Implemented: lib/veto/em_debris.py + bin/em_debris.py (g4shield MS7 last 50 cm with field -> e / gamma > 1 MeV at
+      29.90 m -> g4vessel to the UBT and fin planes 31.13 .. 41.13 m), maps in the muon-map binning
+      (results/em_debris/em_maps.npz), detection P_e = efficiency, P_gamma = conversion in the plane material;
+      reco.plane_rate_map adds them when loaded (run_reco.py --em-debris). Both Geant4 modules built on the host
+      (bin/g4ship.sh build). Smoke test 300 muons: ~2.9 e / gamma per muon crossing the iron, 1.4e9 / spill; fin
+      planes ~1.3e8 e and 9e8 gamma / spill. Production (--n >= 2e4) with the re-runs. STATUS -> IN PROGRESS.
 
 B3. Neutrino and muon deep inelastic scattering
     STATUS: DONE (5 Nov 2026): modelled, follow-up in C7, C8, D2 - D9

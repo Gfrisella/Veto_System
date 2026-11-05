@@ -239,11 +239,17 @@ def main():
                         help="measured-IP selection: full (fully reconstructed, IP < 10 cm) | partial (IP < 2.5 m) (ISSUES C8)")
     parser.add_argument("--out", default=None, help="output file name in results/reco (default: results[_tw..][_oldsignal].json)")
     parser.add_argument("--inputs", default="inputs.npz", help="results/reco file from make_reco_inputs.py")
+    parser.add_argument("--em-debris", action="store_true",
+                        help="B2: add the EM debris maps (results/em_debris/em_maps.npz, bin/em_debris.py) to the accidentals")
     args = parser.parse_args()
     names = args.designs or sorted(p.stem for p in dsg.DESIGN_DIR.glob("*.json"))
     cfg = reco.RecoConfig(spill_s=args.spill, seed=args.seed, time_window_ns=args.time_window,
                           multiple_scattering=args.multiple_scattering, ip_max=vsel.IP_CUTS[args.ip_cut])
     tr, inp = load_inputs(args.inputs)
+    if args.em_debris:                                   # B2: e / gamma from the shield end in the rate maps
+        from veto import em_debris
+        e = np.load(paths.results_dir() / "em_debris" / em_debris.EM_FILE)
+        inp = dict(inp, **{k: e[k] for k in e.files if k.startswith("em_")})
     dt_pair = DEFAULT_CONFIG["time_window"] * 1e9 * 1e-9    # two-track coincidence window [s]
     results = []
     for name in names:

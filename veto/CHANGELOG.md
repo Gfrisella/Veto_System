@@ -4,6 +4,12 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-06 — B2 EM debris with the host Geant4 (branch `veto-shield-dis`)
+
+- New `lib/veto/em_debris.py`, `bin/em_debris.py`: g4shield (MS7 iron + field) -> e / gamma at 29.90 m -> g4vessel
+  to the UBT / fin planes; maps in the muon-map binning; `reco.plane_rate_map` adds P_e e + P_gamma gamma when the
+  maps carry em_*; `run_reco.py --em-debris`. `bin/g4ship.sh build` also builds g4shield; shield_iron finds it.
+
 ## 2026-11-06 — B4 EventCalc signal in run_reco (branch `veto-shield-dis`)
 
 - `signal_eventcalc.BENCHMARK_SET`, `selected_signal()`: EventCalc decays through the common selection (field, both IP
