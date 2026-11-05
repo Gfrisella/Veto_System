@@ -160,7 +160,8 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
 
 def tag(cfg):
     """Output-name suffix: '' for the default window, '_tw100' for a fixed 100 ns one."""
-    return f"_tw{cfg.time_window_ns:g}" if cfg.time_window_ns else ""
+    t = f"_tw{cfg.time_window_ns:g}" if cfg.time_window_ns else ""
+    return t + ("_partialreco" if cfg.ip_max is not None and cfg.ip_max > 0.5 else "")
 
 
 def report(r, cfg):
@@ -211,12 +212,14 @@ def main():
                         help="fixed full width of the veto time window [ns] (default: +-3 sigma per plane)")
     parser.add_argument("--multiple-scattering", action="store_true",
                         help="scatter the muons after z = 30.6 m: walls, helium, air, UBT and fins (scattering.py)")
+    parser.add_argument("--ip-cut", choices=("full", "partial"), default="full",
+                        help="measured-IP selection: full (fully reconstructed, IP < 10 cm) | partial (IP < 2.5 m) (ISSUES C8)")
     parser.add_argument("--out", default=None, help="output file name in results/reco (default: results[_tw..][_oldsignal].json)")
     parser.add_argument("--inputs", default="inputs.npz", help="results/reco file from make_reco_inputs.py")
     args = parser.parse_args()
     names = args.designs or sorted(p.stem for p in dsg.DESIGN_DIR.glob("*.json"))
     cfg = reco.RecoConfig(spill_s=args.spill, seed=args.seed, time_window_ns=args.time_window,
-                          multiple_scattering=args.multiple_scattering)
+                          multiple_scattering=args.multiple_scattering, ip_max=vsel.IP_CUTS[args.ip_cut])
     tr, inp = load_inputs(args.inputs)
     dt_pair = DEFAULT_CONFIG["time_window"] * 1e9 * 1e-9    # two-track coincidence window [s]
     results = []

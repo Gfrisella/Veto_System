@@ -13,19 +13,36 @@ import numpy as np
 
 Z_TARGET = -2.14            # pointing (IP) plane used for the vertex IP cut
 Z_START = -0.0045           # muons start here (full_sample_after_target.h5); output planes[0] has no z
-Z_UBT = 30.6                # Upstream Background Tagger = output planes[1]
-Z_SST1 = 82.0               # first straw station = output planes[2]
-Z_TIMING = 94.850 - 2.14    # timing detector
 
-SST1_HALF_X, SST1_HALF_Y = 2.0, 3.0
-TIMING_HALF_X, TIMING_HALF_Y = 2.0, 3.0
+# FairShip frame (geometry_config.py, layout 2026-0.1) -> this frame: z = z_FS - FS_OFFSET (targets aligned).
+# Since 2026-11-05 the vessel, UBT, straw stations and timing detector sit at their FairShip positions.
+# Before: vessel / UBT 30.6 - 80.6, SST1 82.0, timing 92.71 (4 x 6 m), i.e. the "deck" layout (OLD_* below).
+FS_OFFSET = 2.14
+
+# Planes where the simulated muons were STORED (MuonsAndMatter output planes[1], planes[2]). They are not
+# detectors: every detector crossing is computed from these states (straight lines in air, field map after SST1).
+Z_STATE_A = 30.6            # state A (stored z 30.600 .. 30.620)
+Z_STATE_B = 82.0            # state B
+
+Z_VESSEL_MIN = 33.27 - FS_OFFSET     # 31.13, decay-vessel entrance window
+Z_VESSEL_MAX = 83.27 - FS_OFFSET     # 81.13, exit window
+Z_UBT = Z_VESSEL_MIN                 # Upstream Background Tagger, on the entrance window
+Z_SST = tuple(z - FS_OFFSET for z in (84.22, 86.22, 93.22, 95.22))   # straw stations 1-4: 82.08 84.08 91.08 93.08
+Z_SST1 = Z_SST[0]                    # first straw station: acceptance, measured track state, veto reference
+Z_TIMING = 96.15 - FS_OFFSET         # 94.01, timing detector (TimeDetPoint), behind the spectrometer magnet
+
+SST1_HALF_X, SST1_HALF_Y = 2.0, 3.0          # straw station aperture (FairShip SSTScoringPoint plane 4 x 6 m)
+TIMING_HALF_X, TIMING_HALF_Y = 2.75, 3.25    # FairShip timing detector 5.5 x 6.5 m
+
+OLD_Z_VESSEL = (30.6, 80.6)          # deck layout, kept for designs written in that frame (design.py)
+OLD_Z_SST1, OLD_Z_TIMING = 82.0, 94.850 - 2.14
+OLD_TIMING_HALF = (2.0, 3.0)
+VESSEL_SHIFT = Z_VESSEL_MIN - OLD_Z_VESSEL[0]   # +0.53 m: fins of old-frame designs move with the vessel
 
 # ------------------------------------------------------------
-# Decay vessel: rectangular frustum whose lateral walls carry the SBT
+# Decay vessel: rectangular frustum whose lateral walls carry the SBT (same size in FairShip)
 # ------------------------------------------------------------
 
-Z_VESSEL_MIN = 30.6
-Z_VESSEL_MAX = 80.6
 VESSEL_X_IN, VESSEL_X_OUT = 0.5, 2.0     # half widths at entrance / exit
 VESSEL_Y_IN, VESSEL_Y_OUT = 1.35, 3.0
 
@@ -40,13 +57,17 @@ CAVERN_X_WALL = -4.56
 CAVERN_Y_FLOOR = -3.36
 
 # ------------------------------------------------------------
-# Spectrometer magnet: region where |B| > 10 % of max in MainSpectrometerField.h5
+# Spectrometer magnet
 # ------------------------------------------------------------
 
-SPECTROMETER_Z = (84.36, 89.56)
+# FairShip places the map (local z -9.9 .. +9.9 m, data/MainSpectrometerField.root) at the magnet centre Bfield.z = c.z,
+# 89.72 m in the TRY2026 layout (stations c.z -5.5 / -3.5 / +3.5 / +5.5 m = 84.22 .. 95.22). The .h5 copy has it centred
+# at 86.96 (an older c.z = 89.10): spectrometer.field_map() re-centres it at Z_MAGNET (+0.62 m, fixed 2026-11-05).
+Z_MAGNET = 89.72 - FS_OFFSET          # 87.58
+SPECTROMETER_Z = (84.98, 90.18)       # |B| > 10 % of max, after re-centring (was 84.36 - 89.56 in the .h5 frame)
 SPECTROMETER_HALF_X = 2.7
 SPECTROMETER_HALF_Y = 3.8
-FIELD_MAP_Z = (77.06, 96.86)
+FIELD_MAP_Z = (Z_MAGNET - 9.90, Z_MAGNET + 9.90)
 
 # ------------------------------------------------------------
 # Muon shield TRY6 (cm, MuonsAndMatter column order):

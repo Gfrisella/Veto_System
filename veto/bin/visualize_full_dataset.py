@@ -60,7 +60,7 @@ except ImportError:
     go = None
 
 STATE = ("x", "y", "z", "px", "py", "pz")
-REACH_A, REACH_B = geo.Z_UBT - 0.01, geo.Z_SST1 - 0.01
+REACH_A, REACH_B = geo.Z_STATE_A - 0.01, geo.Z_STATE_B - 0.01
 BOUNCE_CUT = 0.5
 
 # name, colour, draw all (None) or a sample
@@ -83,13 +83,19 @@ def classify(d):
     n = len(d["x0"])
     reach_a, reach_b = d["z0"] > REACH_A, d["z1"] > REACH_B
     p1 = np.sqrt(d["px1"] ** 2 + d["py1"] ** 2 + d["pz1"] ** 2)
-    dz = geo.Z_TIMING - d["z1"]
     with np.errstate(divide="ignore", invalid="ignore"):
-        x_t = d["x1"] + d["px1"] / d["pz1"] * dz
-        y_t = d["y1"] + d["py1"] / d["pz1"] * dz
         t = (d["z1"] - d["z0"]) / d["pz0"]
-    acc = reach_b & (np.abs(d["x1"]) < geo.SST1_HALF_X) & (np.abs(d["y1"]) < geo.SST1_HALF_Y)
-    good = acc & (p1 > 1) & (d["pz1"] > 0) & (np.abs(x_t) < geo.TIMING_HALF_X) & (np.abs(y_t) < geo.TIMING_HALF_Y)
+        fwd = d["pz1"] > 0                 # B (z = 82.0) straight to SST1 (geometry.Z_SST1)
+        x_s = np.where(fwd, d["x1"] + d["px1"] / d["pz1"] * (geo.Z_SST1 - d["z1"]), d["x1"])
+        y_s = np.where(fwd, d["y1"] + d["py1"] / d["pz1"] * (geo.Z_SST1 - d["z1"]), d["y1"])
+    acc = reach_b & (np.abs(x_s) < geo.SST1_HALF_X) & (np.abs(y_s) < geo.SST1_HALF_Y)
+    good = acc & (p1 > 1) & fwd
+    g = np.nonzero(good)[0]                # timing detector through the spectrometer field (ISSUES A6)
+    if "pdg" in d and len(g):
+        good[g] = mt.timing_ok(np.stack([d["x1"][g], d["y1"][g], d["z1"][g]], 1),
+                               np.stack([d["px1"][g], d["py1"][g], d["pz1"][g]], 1), -np.sign(d["pdg"][g]))
+    elif len(g):
+        raise KeyError("visualize_full_dataset.classify: needs 'pdg' for the spectrometer field (ISSUES A6)")
     off = np.hypot(d["x0"] + d["px0"] * t - d["x1"], d["y0"] + d["py0"] * t - d["y1"])
     off = np.where(reach_b & (d["pz0"] > 0), off, np.inf)
 

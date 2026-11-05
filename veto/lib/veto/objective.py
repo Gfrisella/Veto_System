@@ -49,6 +49,12 @@ perfect detector excludes over the smallest this design excludes. Reward:
     - w_sens (1 - sensitivity) - cost points - constraints
 cost points: cost_slope per MCHF up to cost_knee, cost_slope_high per MCHF above; budget cost_budget_kchf.
 
+D1 / D2 (2026-11-05, default): split_sensitivity = True gives the veto's two jobs separate weights,
+    - w_bkg_tag (1 - S90(0) / S90(N_w)) - w_sig_veto (signal lost) - cost points - constraints,
+with N_w = w_src_muon N_muon-induced + w_src_nu N_neutrino-induced (w_src_nu = 0.1: neutrino DIS counts less, an
+upstream veto cannot tag it). For small losses this matches the product form when w_bkg_tag = w_sig_veto = w_sens.
+"sensitivity" and "bkg_events_15y" stay the physical (unweighted) values.
+
     python -m veto.objective                      # score results/reco/results.json
 """
 
@@ -90,6 +96,16 @@ class ObjectiveConfig:
     cost_slope: float = 2.0           # sensitivity: points per MCHF up to cost_knee_kchf
     cost_slope_high: float = 4.0      # sensitivity: points per MCHF above it
     cost_knee_kchf: float = 5000.0
+    # D1 / D2 (2026-11-05): separate weights for the two jobs of the veto, and neutrinos counted less than muons.
+    #   background sources enter N weighted by origin: muon-induced (combinatorial pairs, muon DIS) w_src_muon,
+    #   neutrino-induced w_src_nu (< 1: an upstream veto cannot tag them, D2; they are vetoed only by random hits).
+    #   split_sensitivity: the sensitivity form becomes two terms, w_bkg_tag (1 - S90(0) / S90(N_w)) for background
+    #   left untagged and w_sig_veto * (signal lost) for signal vetoed, instead of one product term.
+    w_src_muon: float = 1.0
+    w_src_nu: float = 0.1
+    split_sensitivity: bool = True
+    w_bkg_tag: float = 100.0
+    w_sig_veto: float = 100.0
 
 
 def wilson_sigma(p, n):
@@ -251,8 +267,10 @@ def score(res, stats, cfg=ObjectiveConfig()):
     sources = {"combinatorial": (bg["events_15y_after"], bg["events_15y_after_err"])}
     for kind, r in (res.get("interactions") or {}).items():
         sources[f"{kind}_interactions"] = (r["total"], r["total_err"])
-    n_bkg = sum(v for v, _ in sources.values())
-    n_bkg_err = math.sqrt(sum(e * e for _, e in sources.values()))
+    src_w = {k: (cfg.w_src_nu if k.startswith("nu") else cfg.w_src_muon) for k in sources}
+    n_bkg_raw = sum(v for v, _ in sources.values())                      # physical events / 15 y
+    n_bkg = sum(src_w[k] * v for k, (v, _) in sources.items())           # weighted by origin (D1 / D2): the reward's N
+    n_bkg_err = math.sqrt(sum((src_w[k] * e) ** 2 for k, (_, e) in sources.items()))
     t_bkg, dt_dn = background_term(n_bkg, bg["events_15y_before"] + n_bkg, cfg)
     t_bkg_err = dt_dn * n_bkg_err
     clipped = sg["FP"] > cfg.sig_loss_max
@@ -268,8 +286,17 @@ def score(res, stats, cfg=ObjectiveConfig()):
         dn = max(1e-3, 1e-2 * n_bkg)
         ds_dn = (sensitivity(1 - sg["FP"], n_bkg + dn, cfg.cl) - sens) / dn
         sens_err = math.hypot(ds_dn * n_bkg_err, sens / max(1 - sg["FP"], 1e-9) * sg["FP_err"])
-        terms = {"rate": (cfg.w_rate * p_rate, 0.0), "budget": (cfg.w_budget * p_budget, 0.0),
-                 "sensitivity": (cfg.w_sens * (1 - sens), cfg.w_sens * sens_err), "cost": (cost_points(cost, cfg), 0.0)}
+        if cfg.split_sensitivity:
+            # background left untagged and signal vetoed, each with its own weight (D1)
+            r_bkg = expected_limit(0.0, cfg.cl) / expected_limit(n_bkg, cfg.cl)
+            dr_dn = (expected_limit(0.0, cfg.cl) / expected_limit(n_bkg + dn, cfg.cl) - r_bkg) / dn
+            terms = {"rate": (cfg.w_rate * p_rate, 0.0), "budget": (cfg.w_budget * p_budget, 0.0),
+                     "background_untagged": (cfg.w_bkg_tag * (1 - r_bkg), cfg.w_bkg_tag * abs(dr_dn) * n_bkg_err),
+                     "signal_vetoed": (cfg.w_sig_veto * sg["FP"], cfg.w_sig_veto * sg["FP_err"]),
+                     "cost": (cost_points(cost, cfg), 0.0)}
+        else:
+            terms = {"rate": (cfg.w_rate * p_rate, 0.0), "budget": (cfg.w_budget * p_budget, 0.0),
+                     "sensitivity": (cfg.w_sens * (1 - sens), cfg.w_sens * sens_err), "cost": (cost_points(cost, cfg), 0.0)}
     else:
         terms = {"rate": (cfg.w_rate * p_rate, 0.0), "budget": (cfg.w_budget * p_budget, 0.0), "background": (cfg.w_bkg * t_bkg, cfg.w_bkg * t_bkg_err),
                  "signal": (cfg.w_sig * t_sig, cfg.w_sig * t_sig_err), "cost": (cfg.w_cost * t_cost, 0.0)}
@@ -278,8 +305,9 @@ def score(res, stats, cfg=ObjectiveConfig()):
             "reward_err": math.sqrt(sum(e * e for _, e in terms.values())),
             "terms": terms, "feasible": not over and not p_budget, "over_rate_limit": over,
             "over_budget": bool(p_budget), "cost_kchf": cost, "sensitivity": sens,
-            "bkg_events_15y": n_bkg, "bkg_events_15y_err": n_bkg_err, "bkg_by_source": sources,
-            "p_at_least_one_false_vertex": 1 - math.exp(-n_bkg),
+            "bkg_events_15y": n_bkg_raw, "bkg_events_15y_weighted": n_bkg, "bkg_events_15y_err": n_bkg_err,
+            "bkg_by_source": sources, "bkg_source_weight": src_w,
+            "p_at_least_one_false_vertex": 1 - math.exp(-n_bkg_raw),
             "confusion": cm, "config": asdict(cfg)}
 
 

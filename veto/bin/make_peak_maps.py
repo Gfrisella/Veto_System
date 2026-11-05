@@ -32,7 +32,7 @@ from veto import io, paths
 from veto import muon_types as mt
 
 BIN = 0.02
-FIN_Z = np.arange(geo.Z_UBT, geo.Z_UBT + 10.01, 1.0)          # 30.6 .. 40.6 m
+FIN_Z = np.arange(geo.Z_UBT, geo.Z_UBT + 10.01, 1.0)          # 31.13 .. 41.13 m (30.6 .. 40.6 before 2026-11-05)
 FIN_U_BINS = np.arange(0, 2.0 + 1e-9, BIN)
 Y_BINS = np.arange(-4.0, 4.0 + 1e-9, BIN)
 UBT_X_BINS = np.arange(-geo.UBT_HALF_X, geo.UBT_HALF_X + 1e-9, BIN)
@@ -69,8 +69,9 @@ def chunk(job):
     pk = np.stack([c[k][reach] for k in ("kx", "ky", "kz")], 1).astype(np.float64)
     pz = d["pz_30"][reach]
 
-    on = (np.abs(pa[:, 0]) < geo.UBT_HALF_X) & (pz > 0) & (pa[:, 2] > geo.Z_UBT - 0.05)
-    ubt = _hist2(pa[on, 0], pa[on, 1], UBT_X_BINS, Y_BINS, w[on])
+    xu, yu, at_u = mt.path_at_z(pa, pk, pb, geo.Z_UBT)       # UBT at 31.13 m, on the path from A (30.6 m)
+    on = at_u & (np.abs(xu) < geo.UBT_HALF_X) & (pz > 0) & (pa[:, 2] > geo.Z_STATE_A - 0.05)
+    ubt = _hist2(xu[on], yu[on], UBT_X_BINS, Y_BINS, w[on])
 
     nu, ny = len(FIN_U_BINS) - 1, len(Y_BINS) - 1
     fin_w, fin_w2 = np.zeros((2, len(FIN_Z), nu, ny)), np.zeros((2, len(FIN_Z), nu, ny))

@@ -9,8 +9,9 @@ Geant4 out of the shield, as interactions for the selection and veto (bin/run_in
         --out results/shield_dis/D6_straw_shield_muon.json
 
 1. Parents (veto.shield_iron). Muons: Muons_2950_50cm_before_end_MS.pkl, one full run of the old 506 M input, true
-   plane z = 29.20 m; straight lines from there (no field, mean dE/dx 1.6 GeV/m to the vertex). Neutrinos: the
-   nu_mu / anti-nu_mu stores of fastveto (2018 FairShip flux, p > 10 GeV, straight lines from the target).
+   plane z = 29.20 m; bent by the MS7 field to the vertex (shield_iron.curved_points, since 2026-11-05, D4; mean
+   dE/dx 1.6 GeV/m). Neutrinos: the nu_mu / anti-nu_mu (and nu_e / anti-nu_e where a store and the iron library
+   have them, NU_FLAVOURS) stores of fastveto (2018 FairShip flux, p > 10 GeV, straight lines from the target).
    Target: the iron box |x| < 1.71, |y| < 1.27 m, z = 29.39 - 29.89 m (chord length L of each line).
 2. Forced interactions: P_i = n sigma(E_i) L_i, rate per spill S = sum w_i P_i. N interactions are drawn among the
    parents with probability proportional to w_i P_i (each then carries S / N), the vertex uniform along the chord.
@@ -19,9 +20,12 @@ Geant4 out of the shield, as interactions for the selection and veto (bin/run_in
 3. Geant4 (cpp/g4shield: FTFP_BERT, the MS7 field map) carries every final-state particle through the iron to
    z = 29.90 m; everything above 0.5 GeV kinetic that gets there is kept (neutrinos dropped).
 4. Forced decays in the vessel: every K_L, K_S, Lambda, Xi0 at the plane gets --v0-copies copies of its interaction
-   (weight / copies each) in which it decays inside the vessel (z = 30.6 - 80.6 m, point from the truncated exponential), weight x P(decay there);
+   (weight / copies each) in which it decays inside the vessel (z = geometry.Z_VESSEL_MIN .. MAX, 31.13 - 81.13 m since 2026-11-05, point from the truncated exponential), weight x P(decay there);
    the rest of the event (the scattered muon, charged debris) comes along. The original interaction (no forced
-   decay) is kept with its weight. Charged particles are straight lines from the plane.
+   decay) is kept with its weight. Charged particles are straight lines from the plane, OR (D4, 2026-11-05) the
+   whole output goes through Geant4 from the plane / decay points (decays in flight, K_L / n interactions in air and
+   helium, spectrometer field): bin/g4_vessel_transport.py --codes 3 4 --drop-v0-codes 3, then
+   bin/run_interactions.py --g4 <file>.
 
 Output (results/shield_dis/shield_<kind>.npz) in the fastveto format: int_* (code 3 = shield iron, code 4 = a copy
 with a forced V0 decay: its weights sum to the V0 decays in the vessel, not to interactions; v0 = pdg of the decayed
@@ -51,6 +55,8 @@ MASS = {130: 0.497611, 310: 0.497611, 3122: 1.115683, 3322: 1.31486}
 OUT = paths.results_dir() / "shield_dis"
 PREPARED = paths.PROJECT_DIR / "data" / "shield_dis" / "muons_iron.npz"
 NU_STORES = Path("/disk/users/sqasim/workspace/uzh/Veto_System/veto/data/interactions/neutrinos")
+BEND_PARENT = True                            # D4: parent muon bent by the MS7 field (si.curved_points)
+NU_FLAVOURS = (14, -14, 12, -12)              # D4: nu_e added where a store and the iron library have it
 MU_LIB = paths.PROJECT_DIR / "data/interactions/dis/mu_library_iron.npz"
 NU_LIB = paths.PROJECT_DIR / "data/interactions/genie/nu_library_iron.npz"
 
@@ -89,8 +95,13 @@ def parents(kind):
         return dict(x=f["x"], y=f["y"], z=f["z"], u=pv / p[:, None], p=p, L=f["L"], s_in=f["s_in"], s_out=f["s_out"],
                     weight=f["weight"], evt_n=f["evt_n"], pdg=-13 * f["q"].astype(np.int64))
     out = []
-    for fl in (14, -14):
+    have = set(np.load(NU_LIB)["nus"].tolist()) if Path(NU_LIB).exists() else {14, -14}
+    for fl in NU_FLAVOURS:
         st = NU_STORES / f"store_nu{fl}"
+        if fl not in have or not st.exists():
+            print(f"  nu {fl}: {'no library entry' if fl not in have else 'no flux store'} ({st}), skipped "
+                  "(nu_e: rebuild the iron library with bin/nu_library.py --nuclei 1000260560 --nus 14 -14 12 -12)")
+            continue
         c = {k: np.load(st / f"{k}.npy") for k in ("x_30", "y_30", "z_30", "px_30", "py_30", "pz_30", "weight", "evt_n")}
         pv = np.stack([c["px_30"], c["py_30"], c["pz_30"]], 1).astype(np.float64)
         p = np.linalg.norm(pv, axis=1)
@@ -116,7 +127,7 @@ def draw(kind, par, n, rng, per_track=False, mu_lib=None):
         P = si.nucleons_per_m3() * sig * UB * par["L"]
         libs = {None: lib}                     # one library for mu+ and mu- (sign from the parent)
     else:
-        libs = {fl: nudis.NuLibrary(str(NU_LIB), flavour=fl) for fl in (14, -14)}
+        libs = {fl: nudis.NuLibrary(str(NU_LIB), flavour=fl) for fl in np.unique(par["pdg"]).tolist()}
         P = np.zeros(len(par["p"]))
         for fl, lb in libs.items():
             m = par["pdg"] == fl
@@ -133,7 +144,13 @@ def draw(kind, par, n, rng, per_track=False, mu_lib=None):
         w_int = np.full(n, S / n)
     s = rng.uniform(par["s_in"][idx], par["s_out"][idx])
     u = par["u"][idx]
-    vtx = np.stack([par["x"][idx], par["y"][idx], par["z"][idx]], 1) + u * s[:, None]
+    start = np.stack([par["x"][idx], par["y"][idx], par["z"][idx]], 1)
+    if kind == "muon" and BEND_PARENT:
+        # D4 (2026-11-05): the muon bends in the MS7 field on its way to the vertex (chord / path length still from the
+        # straight line: ~1 cm at 20 GeV, a negligible change of L)
+        vtx, u, _ = si.curved_points(start, u, par["p"][idx], -np.sign(par["pdg"][idx]), s)
+    else:
+        vtx = start + u * s[:, None]
     E = par["p"][idx] - (si.DEDX_MU * s if kind == "muon" else 0.0)
     ok = E > 0.5
     inter = dict(parent_row=idx, evt_n=par["evt_n"][idx], pdg_parent=par["pdg"][idx], code=np.full(n, CODE_SHIELD, np.int8),

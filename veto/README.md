@@ -6,6 +6,12 @@ A cleaned-up version of the analysis in the repository root (`analysis.ipynb`,
 or script became a command-line program in `bin/`. The original files in the
 root are left as they were.
 
+**Geometry (since 2026-11-05): FairShip layout 2026-0.1, z = z_FairShip − 2.14 m.** Decay vessel 31.13–81.13 m,
+UBT on its entrance window, straw stations 82.08 / 84.08 / 91.08 / 93.08 m, timing detector 94.01 m (5.5 × 6.5 m),
+spectrometer magnet 84.36–89.56 m (field map, RK4 in `spectrometer.py`). The simulated muons are stored at
+z = 30.6 and 82.0 m (`Z_STATE_A/B`); every detector crossing is computed from those states. Results before
+2026-11-05 used the deck layout (vessel 30.6–80.6, SST1 82.0, straight lines to a 4 × 6 m timing plane at 92.71).
+
 ```
 veto/
   lib/veto/
@@ -20,6 +26,10 @@ veto/
     design.py      veto designs (UBT + fins) from designs/*.json, physical limits, stations per plane
     technology.py  detector technologies (straw, fibre, pixel, tile, tile2): layers, timing, rates, material, cost
     reco.py        digitization, accidental hits from rate maps, spectrometer, veto algorithm A, vertex cone
+    spectrometer.py  RK4 through the spectrometer field map (timing-detector acceptance, yoke losses), ISSUES A6
+    g4vessel.py    Geant4 transport (cpp/g4vessel.cc) of interaction products through vessel, air and field
+    straws.py      FairShip straw stations (32 layers), digitisation, GenFit fit driver (bin/genfit_straws.py, bin/straw_reco.py)
+    signal_eventcalc.py  EventCalc LLP signal samples (data/signal/eventcalc, ISSUES B4)
     scattering.py  multiple scattering: planes, exact vessel-wall chords (350 um Mylar), helium / air slices, single-scattering tails
     vertex_selection.py  the signal selection shared by every sample (measured IP < 0.1 m, <= 2 SST1 tracks)
     interactions.py  forced muon / neutrino interactions through the same selection and veto

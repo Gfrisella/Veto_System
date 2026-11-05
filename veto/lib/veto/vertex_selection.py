@@ -1,7 +1,7 @@
 """The signal selection shared by every sample (signal decays, combinatorial pairs, interaction products).
 
 Candidates (bin/benchmark_designs.candidates, on true states): two opposite-charge tracks with p > 1 GeV in the
-SST1 and timing acceptance, DOCA < 2 cm, vertex in the vessel, IP < 2.5 m. On top (Selection):
+SST1 and timing acceptance, DOCA < 2 cm, vertex in the vessel, true IP < IP_PRECUT = 3 m. On top (Selection):
   ip_max      pointing: the IP of the two MEASURED tracks (reco.measure: position, slope and the
               momentum-dependent scattering smearing at z = 82 m) at the target plane z = -2.14 m. A decay
               of a particle from the target points back within the resolution; muons swept by the shield
@@ -17,6 +17,15 @@ import numpy as np
 
 from . import geometry as geo
 from . import reco
+
+
+# Two signal selections (ISSUES C8, 2026-11-05), both on the MEASURED IP at the target plane:
+#   full      fully reconstructed decays (every product seen, e.g. HNL -> mu pi): IP < 10 cm
+#   partial   partially reconstructed decays (an invisible product, e.g. HNL -> mu mu nu): IP < 2.5 m
+# Backgrounds are quoted for each selection separately. Candidates are built with a loose TRUE-IP pre-cut
+# (IP_PRECUT, > 2.5 m by more than the resolution) so that the measured cut decides in both cases.
+IP_CUTS = {"full": 0.10, "partial": 2.5}
+IP_PRECUT = 3.0
 
 
 @dataclass

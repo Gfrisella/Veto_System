@@ -26,6 +26,7 @@ from benchmark_designs import candidates
 from make_reco_inputs import COLS, DATASET
 from veto import geometry as geo
 from veto import io, paths
+from veto import muon_types as mt
 
 
 def main():
@@ -41,9 +42,10 @@ def main():
     sst1 = np.where(types <= 2)[0]
     d = {k: np.asarray(store[c][sst1]) for k, c in COLS.items()}
     p = np.sqrt(d["bpx"] ** 2 + d["bpy"] ** 2 + d["bpz"] ** 2)
-    dz = geo.Z_TIMING - d["bz"]
-    good = ((p > 1) & (d["bpz"] > 0) & (np.abs(d["bx"] + d["bpx"] / d["bpz"] * dz) < geo.TIMING_HALF_X)
-            & (np.abs(d["by"] + d["bpy"] / d["bpz"] * dz) < geo.TIMING_HALF_Y))
+    good = (p > 1) & (d["bpz"] > 0)
+    gg = np.nonzero(good)[0]              # timing detector through the spectrometer field (ISSUES A6)
+    good[gg] = mt.timing_ok(np.stack([d["bx"][gg], d["by"][gg], d["bz"][gg]], 1),
+                            np.stack([d["bpx"][gg], d["bpy"][gg], d["bpz"][gg]], 1), -np.sign(d["pdg"][gg]))
     g = np.where(good)[0]
     run_ids, run = np.unique(d["run"][g], return_inverse=True)       # 0 .. N-1
     n = len(run_ids)

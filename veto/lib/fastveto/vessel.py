@@ -9,16 +9,16 @@ Copied from Veto_System, branch veto-muon-production, commit a8dcc3c:
 All lengths in metres, z along the beam (target at z ~ -2.14 m, see Veto_System geometry.py).
 
 The vessel is a rectangular frustum: half widths grow linearly in z from (0.5, 1.35) m at the
-entrance (z = 30.6 m, = UBT aperture) to (2.0, 3.0) m at the exit (z = 80.6 m). It is filled with
+entrance (z = 31.13 m, = UBT aperture) to (2.0, 3.0) m at the exit (z = 81.13 m; FairShip 33.27 - 83.27 m). It is filled with
 helium; the entrance and exit windows and the lateral walls are 350 um Mylar (was 0.3 mm PVC until
 2026-11-04). Outside it (and
-between the exit and SST1 at z = 82 m) is air.
+between the exit and SST1 at z = 82.08 m) is air.
 """
 
 import numpy as np
 
-Z_VESSEL_MIN = 30.6
-Z_VESSEL_MAX = 80.6
+Z_VESSEL_MIN = 33.27 - 2.14   # FairShip position (veto.geometry, since 2026-11-05; was 30.6 - 80.6)
+Z_VESSEL_MAX = 83.27 - 2.14
 VESSEL_X_IN, VESSEL_X_OUT = 0.5, 2.0     # half widths at entrance / exit
 VESSEL_Y_IN, VESSEL_Y_OUT = 1.35, 3.0
 LENGTH = Z_VESSEL_MAX - Z_VESSEL_MIN

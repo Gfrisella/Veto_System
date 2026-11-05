@@ -50,12 +50,20 @@ def print_flow(title, flow):
 # ============================================================
 
 def single_muon_masks(data, config):
-    """Ordered dict of cut name -> mask (momentum, timing-detector acceptance)."""
-    x_timing, y_timing = extrapolate(data, config["z_timing"])
+    """Ordered dict of cut name -> mask (momentum, timing-detector acceptance through the spectrometer field)."""
+    from . import spectrometer
+    p = momentum(data)
+    pos = np.stack([data["x"], data["y"], data["z"]], 1)
+    mom = np.stack([data["px"], data["py"], data["pz"]], 1)
+    if "pdg" not in data:
+        raise KeyError("selection: a 'pdg' column is needed for the spectrometer field (ISSUES A6)")
+    timing = np.zeros(len(p), bool)
+    g = np.nonzero((p > config["p_min"]) & (mom[:, 2] > 0))[0]      # only where it matters (speed)
+    p_t, _, lost = spectrometer.to_z(pos[g], mom[g], -np.sign(np.asarray(data["pdg"])[g]), config["z_timing"])
+    timing[g] = (~lost & (np.abs(p_t[:, 0]) < config["timing_x_max"]) & (np.abs(p_t[:, 1]) < config["timing_y_max"]))
     return {
-        "Momentum": momentum(data) > config["p_min"],
-        "Timing detector": (np.abs(x_timing) < config["timing_x_max"])
-                           & (np.abs(y_timing) < config["timing_y_max"]),
+        "Momentum": p > config["p_min"],
+        "Timing detector": timing,
     }
 
 

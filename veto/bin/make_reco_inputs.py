@@ -61,9 +61,10 @@ def main():
     print(f"{len(sst1):,} SST1-acceptance muons loaded, {time.time() - start:.0f} s")
 
     p = np.sqrt(d["bpx"] ** 2 + d["bpy"] ** 2 + d["bpz"] ** 2)
-    dz = geo.Z_TIMING - d["bz"]
-    good = ((p > 1) & (d["bpz"] > 0) & (np.abs(d["bx"] + d["bpx"] / d["bpz"] * dz) < geo.TIMING_HALF_X)
-            & (np.abs(d["by"] + d["bpy"] / d["bpz"] * dz) < geo.TIMING_HALF_Y))
+    good = (p > 1) & (d["bpz"] > 0)
+    gg = np.nonzero(good)[0]              # timing detector through the spectrometer field (ISSUES A6)
+    good[gg] = mt.timing_ok(np.stack([d["bx"][gg], d["by"][gg], d["bz"][gg]], 1),
+                            np.stack([d["bpx"][gg], d["bpy"][gg], d["bpz"][gg]], 1), -np.sign(d["pdg"][gg]))
     g = np.where(good)[0]
     dev = args.device if torch.cuda.is_available() else "cpu"
     t = {k: torch.as_tensor(d[c][g].astype(np.float64), device=dev)

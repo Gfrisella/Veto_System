@@ -56,8 +56,15 @@ def main():
     ap.add_argument("--dataset", default=DATASET)
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--out", default=None)
+    ap.add_argument("--ip-cut", choices=("full", "partial"), default="full",
+                    help="measured-IP selection: full (IP < 10 cm) | partial (IP < 2.5 m) (ISSUES C8)")
+    ap.add_argument("--g4", default=None, help="Geant4 transport of the helium products (bin/g4_vessel_transport.py)")
+    ap.add_argument("--air-margin", type=float, default=0.4,
+                    help="air interactions only within this distance [m] of the vessel and the fins (ISSUES C7); < 0 = all the air")
     ap.add_argument("--tag", default="", help="suffix of the saved interaction npz (results/interactions/<design>_muon_interactions<tag>.npz)")
     args = ap.parse_args()
+    from fastveto import targets as _tg
+    _tg.AIR_MARGIN = None if args.air_margin < 0 else args.air_margin
     t0 = time.time()
     p = Path(args.design)
     design = dsg.load(p if p.exists() else args.design)
@@ -83,8 +90,10 @@ def main():
         cols, _ = io.open_store(store)
         muons = cols
     _, maps = load_inputs()
-    cfg = reco.RecoConfig(seed=args.seed, multiple_scattering=True)
-    res = ix.evaluate(inter, part, design, maps, cfg, np.random.default_rng(args.seed), muons=muons)
+    from veto import vertex_selection as vsel
+    cfg = reco.RecoConfig(seed=args.seed, multiple_scattering=True, ip_max=vsel.IP_CUTS[args.ip_cut])
+    g4 = dict(np.load(args.g4)) if args.g4 else None
+    res = ix.evaluate(inter, part, design, maps, cfg, np.random.default_rng(args.seed), muons=muons, g4=g4)
     print(f"selection and veto: {time.time() - t0:.0f} s\n")
     print(f"{'target':<20}{'interactions/15y':>17}{'selected':>12}{'after veto a':>14}{'b':>11}{'c (truth)':>11}   (per 15 years)")
     tot = {k: 0.0 for k in ("selected", "survive_a", "survive_b", "survive_c")}
@@ -94,7 +103,7 @@ def main():
         for k in tot:
             tot[k] += r.get(k, 0.0)
     print(f"{'total':<20}{'':>17}{tot['selected']:>12.3g}{tot['survive_a']:>14.3g}{tot['survive_b']:>11.3g}{tot['survive_c']:>11.3g}")
-    out = Path(args.out) if args.out else paths.results_dir() / "interactions" / f"{design.name}_{args.kind}.json"
+    out = Path(args.out) if args.out else paths.results_dir() / "interactions" / f"{design.name}_{args.kind}{'_partialreco' if args.ip_cut == 'partial' else ''}{'_g4' if args.g4 else ''}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     json.dump(dict(design=design.name, kind=args.kind, source=source, split=args.split, dataset=args.dataset,
                    per_target=res, total=tot, seconds=round(time.time() - t0, 1)), open(out, "w"), indent=1)

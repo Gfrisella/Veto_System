@@ -1,5 +1,9 @@
 """Muon types from two stored states: A at z = 30.6 m and B at z = 82 m (or where the muon stopped).
 
+The states are where the muons were STORED (geometry.Z_STATE_A / Z_STATE_B), not detectors: since 2026-11-05
+the UBT / vessel entrance is at 31.13 m, SST1 at 82.08 m and the timing detector at 94.01 m (FairShip layout),
+reached from the states by straight lines (air) and, after SST1, through the spectrometer field (spectrometer.py).
+
 Used by the design-optimisation dataset and the full-dataset visualisation, so both agree.
 
 A muon's path is the chord A -> B, or A -> K -> B when it bounced (K = estimated bounce
@@ -11,14 +15,14 @@ import numpy as np
 from . import geometry as geo
 from .tracks import vessel_crossings
 
-REACH_30 = geo.Z_UBT - 0.01     # A really is at z = 30.6 (stored z is 30.600 .. 30.620)
-REACH_82 = geo.Z_SST1 - 0.01    # B really is at z = 82
+REACH_30 = geo.Z_STATE_A - 0.01   # A really is at z = 30.6 (stored z is 30.600 .. 30.620)
+REACH_82 = geo.Z_STATE_B - 0.01   # B really is at z = 82
 A_TOLERANCE = 0.05            # [m] the z = 30.6 state is stored up to 2 cm after the plane
 BOUNCE_CUT = 0.5                # B more than this [m] off the straight line from A = bounced / scattered
 
 TYPES = {
     0: "sst1_bounced",       # in SST1 acceptance, > 50 cm off its straight line (bounced off the cavern)
-    1: "sst1_selected",      # in SST1 acceptance, p > 1 GeV, inside the timing-detector acceptance
+    1: "sst1_selected",      # in SST1 acceptance, p > 1 GeV, reaches the timing detector (field map) inside it
     2: "sst1_other",         # in SST1 acceptance, rest
     3: "veto_only",          # crosses an SBT wall or the UBT window, misses the SST1 acceptance
     4: "rock_bounced",       # reaches z = 82 outside the acceptance, > 50 cm off its straight line
@@ -72,6 +76,20 @@ def segment_walls(p, q):
     return bits
 
 
+def muon_charge(d, idx=slice(None)):
+    """Charge of the muons (rows idx) from the pdg column (13 = mu-, -13 = mu+)."""
+    if "pdg" not in d:
+        raise KeyError("muon_types: a 'pdg' column is needed for the charge (spectrometer field, ISSUES A6)")
+    return -np.sign(np.asarray(d["pdg"])[idx]).astype(np.float64)
+
+
+def timing_ok(b, pb, q):
+    """Tracks from their state b, pb (n, 3) at z ~ 82 m reach the timing detector inside its aperture (RK4 in the
+    spectrometer field map, lost in the magnet iron)."""
+    from . import spectrometer
+    return spectrometer.timing_acceptance(b, pb, q)[0]
+
+
 def classify(d):
     """Type, wall bitmask, bounce point and straight-line miss distance per muon.
 
@@ -88,16 +106,19 @@ def classify(d):
     reach_a, reach_b = a[:, 2] > REACH_30, b[:, 2] > REACH_82
 
     p_b = np.linalg.norm(pb, axis=1)
-    dz = geo.Z_TIMING - b[:, 2]
     with np.errstate(divide="ignore", invalid="ignore"):
-        x_t = b[:, 0] + pb[:, 0] / pb[:, 2] * dz
-        y_t = b[:, 1] + pb[:, 1] / pb[:, 2] * dz
         t = (b[:, 2] - a[:, 2]) / pa[:, 2]
         off = np.hypot(a[:, 0] + pa[:, 0] * t - b[:, 0], a[:, 1] + pa[:, 1] * t - b[:, 1])
+        # B (z = 82.0) straight to SST1 (82.08 m; fringe field there ~0.03 T over 8 cm: negligible)
+        fwd = pb[:, 2] > 0
+        x_s = np.where(fwd, b[:, 0] + pb[:, 0] / pb[:, 2] * (geo.Z_SST1 - b[:, 2]), b[:, 0])
+        y_s = np.where(fwd, b[:, 1] + pb[:, 1] / pb[:, 2] * (geo.Z_SST1 - b[:, 2]), b[:, 1])
     off = np.where(reach_b & (pa[:, 2] > 0) & np.isfinite(off), off, np.inf)
-    acc = reach_b & (np.abs(b[:, 0]) < geo.SST1_HALF_X) & (np.abs(b[:, 1]) < geo.SST1_HALF_Y)
-    good = (acc & (p_b > 1) & (pb[:, 2] > 0)
-            & (np.abs(x_t) < geo.TIMING_HALF_X) & (np.abs(y_t) < geo.TIMING_HALF_Y))
+    acc = reach_b & (np.abs(x_s) < geo.SST1_HALF_X) & (np.abs(y_s) < geo.SST1_HALF_Y)
+    good = acc & (p_b > 1) & fwd
+    if good.any():                                   # timing detector through the spectrometer field (A6)
+        g = np.nonzero(good)[0]
+        good[g] = timing_ok(b[g], pb[g], muon_charge(d, g))
 
     # path A -> B or A -> K -> B, only for muons that got to z = 30.6 and moved on
     k = np.full((n, 3), np.nan)
@@ -111,7 +132,9 @@ def classify(d):
         walls[m] = segment_walls(a[m], mid)
         if ok.any():
             walls[m[ok]] |= segment_walls(km[ok], b[m[ok]])
-    window = reach_a & (pa[:, 2] > 0) & (np.abs(a[:, 0]) < geo.UBT_HALF_X) & (np.abs(a[:, 1]) < geo.UBT_HALF_Y)
+    # UBT window at z = Z_UBT (31.13 m), on the path from A
+    xu, yu, at_ubt = path_at_z(a, k, b, geo.Z_UBT)
+    window = reach_a & (pa[:, 2] > 0) & at_ubt & (np.abs(xu) < geo.UBT_HALF_X) & (np.abs(yu) < geo.UBT_HALF_Y)
     walls |= np.where(window, WALL_BITS["ubt_window"], 0).astype(np.uint8)
 
     kind = np.full(n, 7, dtype=np.int8)

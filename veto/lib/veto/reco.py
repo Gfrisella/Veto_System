@@ -43,7 +43,8 @@ class RecoConfig:
     r_slope: float = 5e-4
     r_ms: float = 6e-3
     min_planes: int = 1                # a track is explained by hits on at least this many planes
-    ip_max: float = 0.10               # selection: measured IP < ip_max [m] at the target (vertex_selection.py)
+    ip_max: float = 0.10               # selection: measured IP < ip_max [m] at the target (vertex_selection.py):
+                                       # 0.10 = fully reconstructed, 2.5 = partially reconstructed (IP_CUTS, C8)
     max_tracks: int = 2                # selection: at most this many tracks in SST1 (interaction events)
     cone: float = 0.0                  # vertex cone [rad]: tracks of a vertex also search r0 + cone * (distance from
                                        # the vertex to the plane), for parents bent at the vertex (0 = off)
@@ -61,13 +62,11 @@ def true_crossing(tr, plane):
     a = np.stack([tr["ax"], tr["ay"], tr["az"]], 1)
     k = np.stack([tr["kx"], tr["ky"], tr["kz"]], 1)
     b = np.stack([tr["bx"], tr["by"], tr["bz"]], 1)
+    # every plane (the UBT too, at 31.13 m since the FairShip layout, downstream of the stored state A at 30.6 m)
+    x, y, ok = mt.path_at_z(a, k, b, plane.z)
     if plane.kind == "ubt":
-        x, y = a[:, 0], a[:, 1]
-        ok = (tr["apz"] > 0) & (a[:, 2] < geo.Z_UBT + mt.A_TOLERANCE)   # tracks starting further in never cross it
-        p = a
-    else:
-        x, y, ok = mt.path_at_z(a, k, b, plane.z)
-        p = np.stack([x, y, np.full(len(x), plane.z)], 1)
+        ok &= (tr["apz"] > 0) & (a[:, 2] < geo.Z_UBT + mt.A_TOLERANCE)  # tracks starting further in never cross it
+    p = np.stack([x, y, np.full(len(x), plane.z)], 1)
     u = plane.to_local(x)
     ok = ok & plane.inside(u, y)
     bounced = np.isfinite(k[:, 2])
@@ -428,7 +427,7 @@ def signal_from_target(n, rng, mass=1.0, m_daughter=0.106, p_range=(10.0, 100.0)
     transverse momentum drawn from an exponential of mean pt_mean, so it flies nearly along the
     beam (angle ~ pt / p). It decays uniformly in z inside the vessel, isotropically in its rest
     frame into two particles of mass m_daughter. Both must reach the SST1 acceptance with
-    p > 1 GeV, point into the timing detector, and the pair must point back to the target
+    p > 1 GeV, reach the timing detector (through the spectrometer field), and the pair must point back to the target
     (IP < 2.5 m at z = -2.14 m); the vertex is inside the vessel by construction.
     Returns (tracks with the B state at z = 82 and the vertex, vertex z per track, event id per
     track, acceptance counts). Tracks are ordered all first daughters, then all second daughters.
@@ -458,21 +457,26 @@ def signal_from_target(n, rng, mass=1.0, m_daughter=0.106, p_range=(10.0, 100.0)
         d1 = _boost(u * p_star, np.full(m, e_star), beta)
         d2 = _boost(-u * p_star, np.full(m, e_star), beta)
         states = []
-        for d in (d1, d2):
+        from . import spectrometer
+        for d, charge in ((d1, 1.0), (d2, -1.0)):      # daughter 1 positive, daughter 2 negative
             with np.errstate(divide="ignore", invalid="ignore"):
                 x82 = x_v + d[:, 0] / d[:, 2] * (geo.Z_SST1 - z_v)
                 y82 = y_v + d[:, 1] / d[:, 2] * (geo.Z_SST1 - z_v)
-                xt = x_v + d[:, 0] / d[:, 2] * (geo.Z_TIMING - z_v)
-                yt = y_v + d[:, 1] / d[:, 2] * (geo.Z_TIMING - z_v)
             acc = (d[:, 2] > 0) & (np.abs(x82) < geo.SST1_HALF_X) & (np.abs(y82) < geo.SST1_HALF_Y)
-            sel = acc & (np.linalg.norm(d, axis=1) > 1) & (np.abs(xt) < geo.TIMING_HALF_X) & (np.abs(yt) < geo.TIMING_HALF_Y)
+            sel = acc & (np.linalg.norm(d, axis=1) > 1)
+            g = np.nonzero(sel & ok)[0]                # timing detector through the field (A6)
+            if len(g):
+                b82 = np.stack([x82[g], y82[g], np.full(len(g), geo.Z_SST1)], 1)
+                sel[g] = spectrometer.timing_acceptance(b82, d[g], np.full(len(g), charge))[0]
+            sel &= ok
             states.append((x82, y82, d, acc, sel))
         acc2 = ok & states[0][3] & states[1][3]
         sel2 = acc2 & states[0][4] & states[1][4]
         tot = d1 + d2
         dz = geo.Z_TARGET - z_v
         ip = np.hypot(x_v + tot[:, 0] / tot[:, 2] * dz, y_v + tot[:, 1] / tot[:, 2] * dz)
-        good = sel2 & (ip < 2.5)
+        from .vertex_selection import IP_PRECUT
+        good = sel2 & (ip < IP_PRECUT)        # loose true-IP pre-cut; the measured IP cut decides (C8)
         stats["in_sst1"] += int(acc2.sum()); stats["p_and_timing"] += int(sel2.sum()); stats["ip"] += int(good.sum())
         idx = np.where(good)[0][:n - have]
         keep_rows.append((idx, x_v, y_v, z_v, states))

@@ -123,7 +123,7 @@ def _segments(tr):
     a = np.stack([tr["ax"], tr["ay"], tr["az"]], 1).astype(float)
     k = np.stack([tr["kx"], tr["ky"], tr["kz"]], 1).astype(float)
     bounced = np.isfinite(k[:, 2])
-    # A is stored up to 2 cm after z = 30.6: start 5 cm earlier so planes at 30.6 are crossed
+    # A is stored up to 2 cm after z = 30.6: start 5 cm earlier (the UBT is now at 31.13 m, downstream of A)
     with np.errstate(invalid="ignore", divide="ignore"):
         a_ext = a - (b - a) * (mt.A_TOLERANCE / (b[:, 2] - a[:, 2]))[:, None]
     a_ext = np.where(np.isfinite(a_ext), a_ext, a)
@@ -154,10 +154,11 @@ def scatterers(tr, design, media=None):
     cos_z = 1 / path_per_dz                                    # incidence on planes of constant z
     zs, xs = [], []
 
-    # UBT and the vessel entrance window, at z = 30.6 m (start of the unbounced muons)
+    # UBT and the vessel entrance window at z = Z_UBT (31.13 m since the FairShip layout; muons start at the
+    # stored state A, 30.6 m, upstream of it)
     ubt = design.planes[0]
-    pa = p
-    near_a = np.abs(p[:, 2] - geo.Z_UBT) < 2 * mt.A_TOLERANCE
+    pa = _at_z(p, q, np.full(n, geo.Z_UBT))
+    near_a = np.isfinite(pa[:, 2])
     in_ubt = near_a & (np.abs(pa[:, 0]) < geo.UBT_HALF_X) & (pa[:, 1] >= ubt.y_lo) & (pa[:, 1] <= ubt.y_hi)
     x_ubt = tech.x0(tech.TECHNOLOGIES[ubt.technology]) if ubt.technology else 0.0
     zs.append(np.where(in_ubt, geo.Z_UBT, np.nan)); xs.append(np.where(in_ubt, x_ubt / cos_z, 0.0))
@@ -199,12 +200,12 @@ def scatterers(tr, design, media=None):
 
 
     # air / helium, sliced in z (MEDIA)
-    slices = np.arange(geo.Z_UBT + DZ_SLICE / 2, geo.Z_SST1, DZ_SLICE) if (MEDIA if media is None else media) else []
+    slices = np.arange(geo.Z_STATE_A + DZ_SLICE / 2, geo.Z_SST1, DZ_SLICE) if (MEDIA if media is None else media) else []
     for zc in slices:
         pt = _at_z(p, q, np.full(n, zc))
         ok = np.isfinite(pt[:, 2])
         hx, hy = geo.vessel_half_widths(np.full(n, zc))
-        inside = ok & (zc < geo.Z_VESSEL_MAX) & (np.abs(pt[:, 0]) < hx) & (np.abs(pt[:, 1]) < hy)
+        inside = ok & (zc > geo.Z_VESSEL_MIN) & (zc < geo.Z_VESSEL_MAX) & (np.abs(pt[:, 0]) < hx) & (np.abs(pt[:, 1]) < hy)
         x0 = np.where(inside, X0_HELIUM, X0_AIR)
         zs.append(np.where(ok, zc, np.nan)); xs.append(np.where(ok, DZ_SLICE * path_per_dz / x0, 0.0))
     return np.stack(zs, 1), np.stack(xs, 1)

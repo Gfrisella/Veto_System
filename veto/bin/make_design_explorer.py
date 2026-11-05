@@ -75,9 +75,11 @@ def collect(args):
         reach = np.asarray(store["type"][a:a + args.chunk]) != 7
         d = {c: np.asarray(store[c][a:a + args.chunk])[reach] for c in cols}
         w = d["weight"].astype(np.float64)
-        on_ubt = (np.abs(d["x_30"]) < geo.UBT_HALF_X) & (d["pz_30"] > 0) & (d["z_30"] > geo.Z_UBT - 0.05)
-        ubt_hist += np.histogram(d["y_30"][on_ubt], UBT_Y_BINS, weights=w[on_ubt])[0]
         pa, pk, pb = stack(d, "{}_30"), np.stack([d["kx"], d["ky"], d["kz"]], 1), stack(d, "{}_82")
+        # UBT at geometry.Z_UBT (31.13 m), on the path from the stored state A (30.6 m)
+        xu, yu, at_u = mt.path_at_z(pa, pk, pb, geo.Z_UBT)
+        on_ubt = at_u & (np.abs(xu) < geo.UBT_HALF_X) & (d["pz_30"] > 0) & (d["z_30"] > geo.Z_STATE_A - 0.05)
+        ubt_hist += np.histogram(yu[on_ubt], UBT_Y_BINS, weights=w[on_ubt])[0]
         for iz, z in enumerate(Z_SLICES):
             x, y, ok = mt.path_at_z(pa, pk, pb, z)
             u = np.abs(x) - mt.side_plane_x(z)

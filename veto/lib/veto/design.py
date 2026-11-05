@@ -149,10 +149,19 @@ class Design:
         return self.planes[0].x0
 
 
+FRAME = "fairship-2026"   # designs with "frame": FRAME give fin z in the FairShip layout (geometry.py); others are old
+
+
 def validate(raw):
     """Apply the physical limits: UBT of straw tubes covering at least the vessel entrance, nothing below y = -3.2 m,
     right fins stop at the cavern wall. Returns a list of what was changed."""
     notes = []
+    if raw.get("frame") != FRAME:
+        # written in the deck layout (vessel 30.6 - 80.6 m): fins sit on the vessel, so they move with it (+0.53 m)
+        for f in raw["fins"]:
+            f["z"] = round(f["z"] + geo.VESSEL_SHIFT, 6)
+        notes.append(f"old-frame design: fins moved by {geo.VESSEL_SHIFT:+.2f} m with the vessel (FairShip layout)")
+        raw["frame"] = FRAME
     u = raw["ubt"]
     if u["y_lo"] > -geo.UBT_HALF_Y or u["y_hi"] < geo.UBT_HALF_Y:
         notes.append("UBT extended to cover the vessel entrance")
@@ -171,8 +180,8 @@ def validate(raw):
         if f["y_lo"] < mt.FIN_Y_MIN:
             notes.append(f"fin {i}: bottom raised to y = -3.2 m")
             f["y_lo"] = mt.FIN_Y_MIN
-        if not geo.Z_UBT <= f["z"] <= geo.Z_SST1:
-            raise ValueError(f"fin {i}: z = {f['z']} outside 30.6 .. 82 m")
+        if not geo.Z_UBT - 1e-6 <= f["z"] <= geo.Z_SST1 + 1e-6:
+            raise ValueError(f"fin {i}: z = {f['z']} outside {geo.Z_UBT:.2f} .. {geo.Z_SST1:.2f} m")
         if f["side"] == "right":
             room = -mt.CAVERN_X_WALL - mt.side_plane_x(f["z"])
             if f["length"] > room:
