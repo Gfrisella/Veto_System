@@ -17,7 +17,7 @@ what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20)
 - `bin/check_peak_rates.py` (new): coarse vs fine peaks and old vs new penalty for designs/*.json. At z = 30.6 m the
   peak is x 1.39 the coarse one (right fin 880 +- 5 vs 634 kHz/cm^2; 4 cm tile 14.1 MHz, 2 cm tile 3.6 MHz per channel).
 
-## 2026-11-04 — vessel wall: 0.3 mm PVC -> 350 um Mylar (branch `veto-shield-dis`, uncommitted)
+## 2026-11-04 — vessel wall: 0.3 mm PVC -> 350 um Mylar (branch `veto-shield-dis`, commit a1ffeed)
 
 - One switch: `fastveto.vessel.WALL_MATERIAL = "mylar"`, `WALL_THICKNESS = 350e-6` (+ `WALL_COMPOSITION` C 0.625, H 0.042,
   O 0.333); `veto.scattering.X0_WALL = 0.2854 m`, `WALL_THICKNESS = 350e-6`. Shell `OUTER_BOX` (exact chords) follows.
