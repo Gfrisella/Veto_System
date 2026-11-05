@@ -1,0 +1,13 @@
+digraph G { rankdir=TB;
+#include
+  T [label="Charged tracks of one interaction"];
+  S1 [label="Pair: opposite charge, p > 1 GeV, SST1 + timing acceptance"];
+  S2 [label="DOCA < 2 cm, vertex in the vessel (fiducial)"];
+  S3 [label="IP < 2.5 m at the target"];
+  S4 [label="Reco with multiple scattering (tails, He, air): measured IP < 10 cm"];
+  S5 [label="<= 2 tracks in the SST1 acceptance in the event"];
+  VA [label="Level a\nalgorithm A on the 2 vertex tracks\n(planes upstream of the vertex)", fillcolor="#e3f3f1", color="#1f7f78"];
+  VB [label="Level b\nalgorithm A on every reco track;\nscattered mu followed back to parent hits", fillcolor="#e3f3f1", color="#1f7f78"];
+  VC [label="Level c (truth bound)\nparent crossed a plane\nupstream of the vertex", fillcolor="#e3f3f1", color="#1f7f78"];
+  T -> S1 -> S2 -> S3 -> S4 -> S5; S5 -> VA; S5 -> VB; S5 -> VC;
+}

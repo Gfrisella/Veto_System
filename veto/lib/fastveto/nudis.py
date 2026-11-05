@@ -5,8 +5,8 @@ so that fastveto.dis.run does the per-design forced interactions for neutrinos t
     lib.sigma("helium", E)        # microbarn per nucleon (composition of the material, GENIE splines)
     inter, part, totals = dis.run(neutrino_columns, design, lib, draws, rng)
 
-Materials as nuclei (fastveto.materials names): helium He4; air N 75.53 %, O 23.18 %, Ar 1.28 % by mass; PVC C2H3Cl;
-Mylar C10H8O4; polystyrene C8H8; PVT C9H10; silicon Si28; Cl 75.8 % Cl35, 24.2 % Cl37. The interacting nucleus is
+Materials as nuclei (fastveto.materials names): helium He4; air N 75.53 %, O 23.18 %, Ar 1.28 % by mass; PVC C2H3Cl (old vessel wall);
+Mylar C10H8O4 (straws, vessel wall); polystyrene C8H8; PVT C9H10; silicon Si28; Cl 75.8 % Cl35, 24.2 % Cl37. The interacting nucleus is
 drawn with probability n_i sigma_i(E); the event from the neighbouring grid energies (random, linear in log E),
 rotated to the neutrino direction with a random azimuth.
 """

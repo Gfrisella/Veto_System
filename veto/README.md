@@ -20,7 +20,7 @@ veto/
     design.py      veto designs (UBT + fins) from designs/*.json, physical limits, stations per plane
     technology.py  detector technologies (straw, fibre, pixel, tile, tile2): layers, timing, rates, material, cost
     reco.py        digitization, accidental hits from rate maps, spectrometer, veto algorithm A, vertex cone
-    scattering.py  multiple scattering: planes, exact PVC chords, helium / air slices, single-scattering tails
+    scattering.py  multiple scattering: planes, exact vessel-wall chords (350 um Mylar), helium / air slices, single-scattering tails
     vertex_selection.py  the signal selection shared by every sample (measured IP < 0.1 m, <= 2 SST1 tracks)
     interactions.py  forced muon / neutrino interactions through the same selection and veto
     objective.py   reward of a design: "tiers" or "sensitivity" (expected 90 % CL limit), all background sources
@@ -297,7 +297,7 @@ the generic detector of D0–D5 (no cost, no material).
   × its area. `run_reco.py` prints `OVER RATE LIMIT` for a plane above its density limit
   (area in m²) or its per-channel limit. Rates assume a 1 s spill (`--spill`); the fin maps have
   20 × 20 cm bins, so a narrower peak is averaged down.
-- **Material:** multiple scattering in the planes, the PVC walls (exact chords) and helium / air
+- **Material:** multiple scattering in the planes, the vessel walls (350 um Mylar, 0.3 mm PVC before 2026-11-04; exact chords) and helium / air
   (`lib/veto/scattering.py`, with single-scattering tails tuned to Geant4); muon and neutrino
   interactions in the planes, walls, air and helium (see "Interactions").
 - **Not modelled yet:** σ_x (the 5 cm search window is far larger); ghost hits from combining
@@ -318,7 +318,7 @@ and a priority (A: before optimising, B: changes the results, C: second order). 
   not used (straight lines from SST1 to the timing detector, A6); planes have no predefined
   module dimensions (straw 1x1 m, tile2 50x50 cm, tile 48x48 cm, fibre 0.5x2.5 m, pixel quad 4x4 cm;
   modules tiled, stacked in z and mixed between technologies in one plane, A7).
-- **B, physics:** multiple scattering (air 29.89-30.6 m and 80.6-82 m, 0.3 mm PVC walls at the
+- **B, physics:** multiple scattering (air 29.89-30.6 m and 80.6-82 m, 350 um Mylar walls (was 0.3 mm PVC) at the
   vessel entrance and exit, helium in the vessel, the veto planes; for bounced muons only after
   the bounce); EM debris from the last 20 cm of shield iron, estimated from the full dataset;
   a literature-based HNL / dark-photon signal model. Neutrino and muon DIS are now modelled
@@ -333,7 +333,7 @@ and a priority (A: before optimising, B: changes the results, C: second order). 
 
 Ported from fast-veto-sim into `lib/fastveto` (nothing reads the old repository any more): forced
 muon DIS (Geant4 library, `cpp/g4dis.cc`) and neutrino interactions (GENIE 3.06.02) in every target:
-helium, air, PVC walls and every plane of the design. `lib/veto/interactions.py` puts them through
+helium, air, vessel walls (350 um Mylar, target key "pvc") and every plane of the design. `lib/veto/interactions.py` puts them through
 the same selection and veto; the scattered muon's path starts from its parent's 30.6 m state and
 kinks at the vertex, so the parent's real upstream hits are digitised. Veto levels: (a) the two
 vertex tracks, (b) every reconstructed track, (c) a truth bound.

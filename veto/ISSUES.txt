@@ -74,6 +74,8 @@ A5. Spill and PoT normalisation
     and 6e20 PoT in 15 years. Check that rates match the 5e13 PoT/s convention, and model the real
     spill structure (50 Hz ripple, duty factor): accidentals scale with the instantaneous rate,
     and the straw signal loss (5.3 % with a +-25 ns window) scales with them.
+
+
 A6. Spectrometer field map not used: products propagated in straight lines
     STATUS: OPEN (added 4 Nov 2026)
     Downstream of SST1 (z = 82 m) every track (muons, DIS products, V0 daughters, signal daughters) is
@@ -133,14 +135,14 @@ B1. Multiple scattering (at least this interaction must be modelled)
     z = 82 m are joined by straight lines and the transport did not include the air / vessel.
     Material along a muon's path (now fully defined, so MS can be computed for every muon):
         z = 29.89 - 30.6 m   air, 0.71 m        (shield end, TRY6, to the UBT)    x/X0 = 0.0023
-        z = 30.6 m           PVC wall, 0.3 mm   (decay-vessel entrance)           x/X0 = 0.0015
+        z = 30.6 m           Mylar wall, 350 um (decay-vessel entrance)           x/X0 = 0.0012
         z = 30.6 - 80.6 m    helium, 50 m       (decay volume, SR-370 balloon)    x/X0 = 0.0088
-        z = 80.6 m           PVC wall, 0.3 mm   (decay-vessel exit)               x/X0 = 0.0015
+        z = 80.6 m           Mylar wall, 350 um (decay-vessel exit)               x/X0 = 0.0012
         z = 80.6 - 82 m      air, 1.4 m         (to SST1)                         x/X0 = 0.0046
         + every veto plane crossed (technology.x0: straw 0.12 %, fibre 0.6 %, pixel 0.5 %,
           tile 2.4 % X0 per plane)
-        X0 used: air 303.9 m, helium 5671 m, PVC 19.63 cm (PDG).
-    Total for a straight muon through the vessel: x/X0 = 0.0188 without the UBT, 0.020 with a
+        X0 used: air 303.9 m, helium 5671 m, Mylar 28.54 cm (PDG; walls were 0.3 mm PVC, X0 19.63 cm, until 2026-11-04).
+    Total for a straight muon through the vessel: x/X0 = 0.0182 without the UBT, 0.019 with a
     straw UBT, 0.043 with a tile UBT. Highland, theta0 = 13.6 MeV / p * sqrt(x/X0) *
     (1 + 0.038 ln(x/X0)): 1.6 mrad / p[GeV] (straw UBT), 2.5 mrad / p[GeV] (tile UBT).
     Displacement at SST1 (z = 82 m) from one scatterer at p = 1 GeV: PVC entrance ~2 cm,
@@ -269,6 +271,15 @@ C8. DIS rates with the new selection
     Without measured IP < 10 cm and <= 2 tracks in SST1, before the veto per 15 y: mu He
     (6.0 +- 1.4)e4, mu PVC 7 400 +- 850, nu He 467 +- 2 (old selection: 1 800 and 0.82).
     Decide whether to bring back a pointing / track-multiplicity cut (artifacts_work/scripts/dis_cutflow.py).
+
+C9. shah_study categories: bounce flag not reliable
+    STATUS: OPEN (4 Nov 2026)
+    MuonsAndMatter cuda_muons_ship.categorize_muons: every muon of `bounced_back` checked in seed 0 is a perfect
+    straight line from the z = 30.6 m state to z = 82 m (offset 0.000 m), and `straight_past_vessel` (z = 82, outside the
+    vessel acceptance) excludes muons that go straight through the vessel and contains 0.6 % bounced ones. For
+    "straight / bounced" use the veto definition (offset from the 30.6 m line < BOUNCE_CUT = 0.5 m, muon_types.py).
+    Found making results/ubt_xy_rate (straight & selected 8.13 kHz instead of 6.24 kHz with the category).
+    Also: the vessel wall is now 350 um Mylar (CHANGELOG 2026-11-04); C8 "mu PVC" numbers are for the old 0.3 mm PVC.
 
 
 ----------------------------------------------------------------------------------------------

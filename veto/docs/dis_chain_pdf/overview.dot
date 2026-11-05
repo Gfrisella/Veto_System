@@ -1,0 +1,22 @@
+digraph G { rankdir=TB;
+#include
+  V [label="Vessel parents: cuda-muons store\nstates A (30.6 m), K (bounce), B (82 m)\nSST1 types (gamma, 20 001 runs) + veto-only (zeta, 2000 seeds)", fillcolor="#e3f3f1", color="#1f7f78"];
+  S [label="Shield parents: Muons_2950_50cm_before_end_MS.pkl\n149 M muons, true z = 29.20 m\n26 M cross the iron box", fillcolor="#f8e9e2", color="#9a4a2a"];
+  CV [label="Crossings per target: helium, air,\nPVC (exact chords), each design plane\nE interpolated A -> B", fillcolor="#e3f3f1", color="#1f7f78"];
+  CS [label="Straight line into the iron slab\n|x| < 1.71 m, |y| < 1.27 m\nchord L, mean dE/dx 1.6 GeV/m", fillcolor="#f8e9e2", color="#9a4a2a"];
+  LIB [label="Muon-nucleon library\nGeant4 muonNuclear + Pythia 6\ncrossover split in nu", shape=cylinder, fillcolor="#fff6e0", color="#a86a00"];
+  P [label="P = n_nucleon * sigma(E) * L   (P << 1)"];
+  D [label="Forced draws: crossing chosen prop. to w*P\nvertex uniform along the chord"];
+  FS [label="Final state from the library: neighbour grid energy,\nrotated to the muon direction, random azimuth, mu sign copied"];
+  TR [label="Charged products = straight tracks\nscattered mu: parent path A -> vertex, kink, -> 82 m", fillcolor="#e3f3f1", color="#1f7f78"];
+  G4 [label="Geant4 transport (g4shield, FTFP_BERT,\nMS7 field map) to z = 29.90 m\nkeep KE > 0.5 GeV, drop neutrinos", fillcolor="#f8e9e2", color="#9a4a2a"];
+  V0 [label="Forced V0 decays: each K_L, K_S, Lambda, Xi0\n-> copies decaying in 30.6-80.6 m, weight x P(decay)", fillcolor="#f8e9e2", color="#9a4a2a"];
+  TR2 [label="Straight tracks from the plane\n(no parent hits)", fillcolor="#f8e9e2", color="#9a4a2a"];
+  SEL [label="Selection (deck cut flow)"];
+  VETO [label="Veto: reco.run_events, algorithm A, levels a / b / c"];
+  OUT [label="Rates per target per 15 years\nerrors: bootstrap over input muons (evt_n)", fillcolor="#2f5d9e", fontcolor="white"];
+  V -> CV; S -> CS; CV -> P; CS -> P; LIB -> P [style=dashed, label=" sigma(E)"];
+  P -> D -> FS; LIB -> FS [style=dashed, label=" final state"];
+  FS -> TR [label=" vessel"]; FS -> G4 [label=" shield"]; G4 -> V0 -> TR2;
+  TR -> SEL; TR2 -> SEL; SEL -> VETO -> OUT;
+}

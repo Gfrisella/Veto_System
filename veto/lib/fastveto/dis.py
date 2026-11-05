@@ -263,7 +263,7 @@ def run(columns, design, lib, draws, rng, chunk=2_000_000, include=("helium", "a
         if code >= tg.TARGET_PLANE0:
             mname, _ = tg.plane_material(design.planes[code - tg.TARGET_PLANE0])
         else:
-            mname = tg.target_name(code)
+            mname = tg.target_material(code)
         material[inter["code"] == code] = tg.MATERIAL_NAMES.index(mname)
     inter["material"] = material
     parts, comp, elib, extra = [], np.zeros(len(material), np.int8), np.zeros(len(material)), {}

@@ -5,7 +5,8 @@ A -> K -> B when it bounced (veto.muon_types: A at z = 30.6, B at z = 82 m or wh
 
     helium          inside the vessel (Liang-Barsky chord, veto.tracks.vessel_crossings)
     air             the rest of the path (cavern air, 30.6 .. 82 m)
-    pvc             entrance window, lateral walls, exit wall (0.3 mm): exact chords (fastveto.vessel.piece_intervals)
+    pvc             vessel wall (historical key): entrance window, lateral walls, exit wall, 350 um Mylar
+                    (fastveto.vessel.WALL_MATERIAL / WALL_THICKNESS): exact chords (fastveto.vessel.piece_intervals)
     plane i         every plane of the design (UBT and fins) where crossed, material of its technology
                     (fastveto.materials.tech_slab; thickness / |cos incidence| for planes of constant z)
 
@@ -37,6 +38,13 @@ def target_name(code, design=None):
         return "pvc"
     i = code - TARGET_PLANE0
     return design.planes[i].name if design is not None else f"plane {i}"
+
+
+def target_material(code):
+    """fastveto.materials name of a design-free target (helium, air, vessel wall)."""
+    if code == TARGET_PVC:
+        return V.WALL_MATERIAL
+    return target_name(code)
 
 
 def plane_material(plane):
@@ -94,10 +102,10 @@ def crossings(d, design, include=("helium", "air", "pvc", "planes")):
         rows["z"].append(0.5 * (p0[:, 2] + p1[:, 2]))
         rows["u"].append(cur["dn"][m])
 
-    he, air, pvc = mat.MATERIALS["helium"], mat.MATERIALS["air"], mat.MATERIALS["pvc"]
+    he, air, wall = mat.MATERIALS["helium"], mat.MATERIALS["air"], mat.MATERIALS[V.WALL_MATERIAL]
     n_he = he.nucleons_per_m2(1.0)                      # per metre of path
     n_air = air.nucleons_per_m2(1.0)
-    n_pvc = pvc.nucleons_per_m2(1.0)                    # per metre of path
+    n_wall = wall.nucleons_per_m2(1.0)                  # per metre of path
     planes = [(i, p) + plane_material(p) for i, p in enumerate(design.planes)] if design is not None else []
 
     for p, q, idx in paths(d):
@@ -125,14 +133,14 @@ def crossings(d, design, include=("helium", "air", "pvc", "planes")):
             m3 = inside & (z_hi < q[:, 2] - 1e-6)
             add(idx[m3], TARGET_AIR, "air", at(z_hi)[m3], q[m3], (n_air * (q[:, 2] - z_hi) / cos_z)[m3], m3)
         if "pvc" in include:
-            # exact chords through the 0.3 mm shell (outer chord minus helium chord, fastveto.vessel): entrance window,
+            # exact chords through the wall shell (outer chord minus helium chord, fastveto.vessel): entrance window,
             # lateral walls (also grazing: a line nearly parallel to an inclined wall can stay in it for metres) and exit
             iv = V.piece_intervals(p, q)
             for part in ("pvc_in", "pvc_out"):
                 a0, b0 = iv[part]
                 L = b0 - a0
                 m = L > 0
-                add(idx[m], TARGET_PVC, "pvc", (p + dn * a0[:, None])[m], (p + dn * b0[:, None])[m], (n_pvc * L)[m], m)
+                add(idx[m], TARGET_PVC, V.WALL_MATERIAL, (p + dn * a0[:, None])[m], (p + dn * b0[:, None])[m], (n_wall * L)[m], m)
         if "planes" in include:
             for i, plane, mname, n_area in planes:
                 if mname is None:

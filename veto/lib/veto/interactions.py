@@ -1,7 +1,7 @@
 """Backgrounds from particle interactions after the muon shield (lib/fastveto) through our selection and veto.
 
 fastveto (fastveto.dis for muons, fastveto.nudis for neutrinos) forces interactions in the vessel helium, the
-air (z = 30.6 - 82 m), the PVC walls and every plane of a design, with a weight (interactions per spill) and the
+air (z = 30.6 - 82 m), the vessel walls (350 um Mylar; target key 'pvc' kept) and every plane of a design, with a weight (interactions per spill) and the
 final-state particles (pdg, momentum, production point, beam = the scattered muon / outgoing lepton). Here:
 
   tracks     charged particles are straight lines from their production point (no field before the
@@ -19,7 +19,7 @@ final-state particles (pdg, momentum, production point, beam = the scattered muo
                   muon, if it is not a vertex track, is followed back past the vertex to its parent's hits
                c  truth bound: the parent muon crossed a plane upstream of the interaction (no efficiency,
                   no reconstruction): the best any algorithm can do. Neutrinos have no parent.
-Results per target (helium, air, PVC, each plane): interactions, selected, surviving a / b / c, per 15 years,
+Results per target (helium, air, wall ('pvc'), each plane): interactions, selected, surviving a / b / c, per 15 years,
 with errors from a bootstrap over input muons (evt_n: rows of one input muon are not independent).
 """
 
@@ -218,7 +218,7 @@ def evaluate(inter, part, design, maps, cfg, rng, muons=None, levels=("a", "b"),
 
 
 # ---------------------------------------------------------------- cached, for the objective
-DESIGN_FREE_CODES = (0, 1, 2)   # helium, air, PVC: drawn from the muon dataset alone, the same for every design
+DESIGN_FREE_CODES = (0, 1, 2)   # helium, air, wall (Mylar): drawn from the muon dataset alone, the same for every design
 
 
 def prepare(inter, part, cfg, muons=None, codes=DESIGN_FREE_CODES):

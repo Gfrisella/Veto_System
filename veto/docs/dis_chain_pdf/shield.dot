@@ -1,0 +1,12 @@
+digraph G { rankdir=LR;
+#include
+  node [fillcolor="#f8e9e2", color="#9a4a2a"];
+  A [label="26 M mu rows\n4.87e8 mu/spill\nthrough the iron"];
+  B [label="forced DIS\n1.04e6 int./spill\nP ~ 2.1e-3"];
+  C [label="library final state\nK_L 0.019 / int.\npi+- 0.44, p 0.20, n 0.21"];
+  D [label="Geant4: iron + field\nK_L lambda_eff 16-18 cm\ncascade makes new K_L"];
+  E [label="at z = 29.90 m\nK_L 1.04e4 /spill\nK_S 1.6e3, Lambda 760"];
+  F [label="forced decay 30.6-80.6 m\nP(decay) ~ 0.43 for K_L\n~ 4.4e3 K_L decays/spill"];
+  G [label="selection\n+ veto", fillcolor="#eef2f8", color="#2f5d9e"];
+  A -> B -> C -> D -> E -> F -> G;
+}

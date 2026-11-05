@@ -1,0 +1,321 @@
+<title>Muon DIS Chain</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<style>
+/* Layout: one reading column with full-width diagram panels; a beamline strip opens the page. */
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --fg: #1b2230; --muted: #5b6577; --line: #d9dee7;
+  --accent: #2f5d9e; --iron: #9a4a2a; --helium: #1f7f78; --air: #7a6aa8; --warn: #a86a00;
+  --serif: "IBM Plex Serif", Georgia, serif; --sans: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161d; --panel: #1a2029; --fg: #e3e8f0; --muted: #9aa5b6; --line: #2d3644;
+  --accent: #7fa8e6; --iron: #e08a62; --helium: #5cc7bd; --air: #b3a5e0; --warn: #e2a640; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12161d; --panel: #1a2029; --fg: #e3e8f0; --muted: #9aa5b6; --line: #2d3644;
+  --accent: #7fa8e6; --iron: #e08a62; --helium: #5cc7bd; --air: #b3a5e0; --warn: #e2a640; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 15px/1.6 var(--sans); }
+.wrap { max-width: 980px; margin: 0 auto; padding-block: 32px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 28px; }
+h1, h2 { font-family: var(--serif); text-wrap: balance; margin: 0; line-height: 1.25; }
+h1 { font-size: 2rem; } h2 { font-size: 1.35rem; }
+h3 { font-size: 1rem; margin: 0; font-weight: 600; }
+p { margin: 0; max-width: 68ch; }
+.eyebrow { font: 500 .75rem var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+section { display: flex; flex-direction: column; gap: 12px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 16px; overflow-x: auto; }
+code, .mono { font-family: var(--mono); font-size: .88em; }
+.math { font-family: var(--mono); background: var(--panel); border-left: 3px solid var(--accent); padding: 10px 14px; white-space: pre-wrap; font-size: .9rem; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.two > * { min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.card.vessel { border-top: 3px solid var(--helium); } .card.shield { border-top: 3px solid var(--iron); }
+ul { margin: 0; padding-left: 1.2em; } li { margin: 2px 0; }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 600; color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }
+td.n { text-align: right; font-family: var(--mono); white-space: nowrap; }
+.note { color: var(--muted); font-size: .88rem; }
+.flag { color: var(--warn); font-weight: 600; }
+svg text { font-family: var(--mono); }
+pre.mermaid { margin: 0; background: transparent; display: flex; justify-content: center; }
+</style>
+
+<div class="wrap">
+
+<header style="display:flex;flex-direction:column;gap:8px">
+  <div class="eyebrow">SHiP veto · fastveto + shield_dis · branch veto-shield-dis</div>
+  <h1>How the muon DIS chain works</h1>
+  <p>There are two chains that share one engine. The <b style="color:var(--helium)">vessel chain</b> forces μ-nucleus interactions in the helium, air, PVC walls and veto planes (z = 30.6–82 m). The <b style="color:var(--iron)">shield chain</b> forces them in the last 50 cm of MS7 iron and adds a Geant4 transport out of the iron. Both chains then go through the same selection and veto code.</p>
+</header>
+
+<!-- ============ GEOMETRY ============ -->
+<section>
+  <div class="eyebrow">1 · Where the interactions happen</div>
+  <div class="panel">
+    <svg viewBox="0 0 940 230" width="100%" style="min-width:680px" role="img" aria-label="z-axis schematic from MS7 to z = 82 m">
+      <!-- axis -->
+      <line x1="20" y1="170" x2="920" y2="170" stroke="var(--muted)" stroke-width="1.2"/>
+      <!-- MS7 -->
+      <rect x="40" y="70" width="190" height="80" fill="var(--iron)" fill-opacity=".15" stroke="var(--iron)"/>
+      <text x="135" y="62" text-anchor="middle" font-size="12" fill="var(--iron)">MS7 iron (25.89–29.89 m)</text>
+      <!-- last 50 cm -->
+      <rect x="196" y="70" width="34" height="80" fill="var(--iron)" fill-opacity=".55" stroke="var(--iron)"/>
+      <text x="213" y="195" text-anchor="middle" font-size="11" fill="var(--iron)">29.39–29.89</text>
+      <text x="213" y="210" text-anchor="middle" font-size="11" fill="var(--iron)">forced DIS (50 cm)</text>
+      <!-- input plane -->
+      <line x1="172" y1="55" x2="172" y2="160" stroke="var(--accent)" stroke-dasharray="4 3" stroke-width="1.5"/>
+      <text x="168" y="40" text-anchor="end" font-size="11" fill="var(--accent)">μ input plane z = 29.20</text>
+      <text x="168" y="27" text-anchor="end" font-size="10" fill="var(--muted)">(stored 29.50, −30 cm)</text>
+      <!-- G4 out plane -->
+      <line x1="232" y1="55" x2="232" y2="160" stroke="var(--fg)" stroke-width="1.5"/>
+      <text x="238" y="52" font-size="11" fill="var(--fg)">Geant4 exit 29.90</text>
+      <!-- air gap -->
+      <rect x="232" y="100" width="48" height="30" fill="var(--air)" fill-opacity=".15"/>
+      <text x="256" y="145" text-anchor="middle" font-size="10" fill="var(--air)">air 0.7 m</text>
+      <!-- muon dataset plane A -->
+      <line x1="280" y1="55" x2="280" y2="160" stroke="var(--accent)" stroke-dasharray="4 3" stroke-width="1.5"/>
+      <text x="284" y="40" font-size="11" fill="var(--accent)">state A z = 30.6 (vessel μ dataset)</text>
+      <!-- vessel -->
+      <path d="M280 85 L820 70 L820 160 L280 145 Z" fill="var(--helium)" fill-opacity=".12" stroke="var(--helium)" stroke-width="1.5"/>
+      <text x="550" y="118" text-anchor="middle" font-size="13" fill="var(--helium)">decay vessel, helium (30.6–80.6 m)</text>
+      <text x="550" y="136" text-anchor="middle" font-size="11" fill="var(--muted)">PVC walls 0.3 mm · UBT + fins = design planes</text>
+      <!-- veto planes -->
+      <rect x="284" y="78" width="6" height="74" fill="var(--accent)" fill-opacity=".6"/>
+      <rect x="320" y="62" width="4" height="24" fill="var(--accent)" fill-opacity=".6"/>
+      <rect x="320" y="146" width="4" height="22" fill="var(--accent)" fill-opacity=".6"/>
+      <text x="300" y="186" font-size="10" fill="var(--accent)">UBT / fins</text>
+      <!-- SST / B -->
+      <rect x="838" y="72" width="8" height="86" fill="var(--fg)" fill-opacity=".5"/>
+      <text x="842" y="62" text-anchor="middle" font-size="11" fill="var(--fg)">SST1</text>
+      <line x1="900" y1="55" x2="900" y2="160" stroke="var(--accent)" stroke-dasharray="4 3" stroke-width="1.5"/>
+      <text x="900" y="40" text-anchor="middle" font-size="11" fill="var(--accent)">state B 82 m</text>
+      <!-- muon track -->
+      <path d="M40 112 L205 110" stroke="var(--fg)" stroke-width="1.6" fill="none"/>
+      <circle cx="205" cy="110" r="4" fill="var(--iron)"/>
+      <path d="M205 110 L900 95" stroke="var(--fg)" stroke-width="1.2" fill="none" stroke-dasharray="2 2"/>
+      <path d="M205 110 L520 122" stroke="var(--iron)" stroke-width="1.2" fill="none" stroke-dasharray="6 3"/>
+      <text x="520" y="160" font-size="10" fill="var(--iron)" text-anchor="middle">K_L flies on, decays in the vessel</text>
+      <path d="M520 122 L840 90 M520 122 L840 140" stroke="var(--iron)" stroke-width="1.2"/>
+      <circle cx="600" cy="104" r="4" fill="var(--helium)"/>
+      <path d="M600 104 L840 84 M600 104 L840 120" stroke="var(--helium)" stroke-width="1.2"/>
+      <text x="600" y="96" font-size="10" fill="var(--helium)" text-anchor="middle">μ DIS in He</text>
+      <text x="20" y="225" font-size="10" fill="var(--muted)">schematic, not to scale · z in metres</text>
+    </svg>
+  </div>
+</section>
+
+<!-- ============ OVERVIEW ============ -->
+<section>
+  <div class="eyebrow">2 · The whole chain at a glance</div>
+  <h2>One engine, two entry points</h2>
+  <div class="panel">
+<pre class="mermaid">
+flowchart TD
+  subgraph IN["Parent muons (weight w = muons per spill)"]
+    V["Vessel parents: cuda-muons store, states A (30.6 m), K (bounce), B (82 m)<br/>SST1 types from the 20 001-run gamma store + veto-only from zeta (2000 seeds)"]
+    S["Shield parents: Muons_2950_50cm_before_end_MS.pkl<br/>149 M muons, true z = 29.20 m → 26 M cross the iron box"]
+  end
+  V --> CV["Crossings per target: helium, air, PVC (exact chords), each design plane<br/>energy at each crossing interpolated A→B"]
+  S --> CS["Straight line to the iron slab |x| #60; 1.71, |y| #60; 1.27 m<br/>chord L, mean dE/dx 1.6 GeV/m"]
+  CV --> P["Interaction probability P = n_nucleon · σ(E) · L   (P ≪ 1)"]
+  CS --> P
+  LIB[("Muon-nucleon library<br/>Geant4 muonNuclear + Pythia 6<br/>crossover split in ν")] -. "σ(E)" .-> P
+  P --> D["Forced draws: crossing chosen ∝ w·P,<br/>vertex uniform along the chord"]
+  LIB -. "final state" .-> FS["Final state from the library: neighbour grid energy,<br/>rotated to the muon direction, random azimuth, μ sign copied"]
+  D --> FS
+  FS -->|vessel| TR["Charged products = straight tracks from the vertex<br/>scattered μ: parent path A→vertex, kink, → 82 m"]
+  FS -->|shield| G4["Geant4 transport (g4shield, FTFP_BERT, MS7 field map)<br/>to z = 29.90 m, keep KE > 0.5 GeV, drop ν"]
+  G4 --> V0["Forced V0 decays: each K_L, K_S, Λ, Ξ0 at the plane<br/>→ copies decaying in 30.6–80.6 m, weight × P(decay)"]
+  V0 --> TR2["Straight tracks from the plane (no parent hits)"]
+  TR --> SEL["Selection (deck cut flow)"]
+  TR2 --> SEL
+  SEL --> VETO["Veto: reco.run_events, algorithm A, levels a / b / c"]
+  VETO --> OUT["Rates per target per 15 years<br/>errors: bootstrap over input muons (evt_n)"]
+</pre>
+  </div>
+</section>
+
+<!-- ============ WEIGHTS ============ -->
+<section>
+  <div class="eyebrow">3 · Forced interactions and weights</div>
+  <h2>Why every MC event carries a rate</h2>
+  <p>DIS is rare (P ≈ 10⁻³ for 50 cm of iron, far less in helium), so each interaction is forced and the probability goes into the weight. Draws are importance-sampled per target group (helium, air, PVC, each plane, shield iron).</p>
+  <div class="math">P_i = n_area · σ(E_i) · 1e-34 m²/μb        n_area = nucleons per m² along the chord
+S_g = Σ_(i in group g) w_i · P_i               interactions per spill in group g
+
+mode "M draws"   : pick crossing i with prob w_i P_i / S_g    → weight S_g / M  each
+mode "per track" : k draws on EVERY crossing (draws = −k)     → weight w_i P_i / k each
+
+per 15 years = weight × 6e20 / 5e13 spills</div>
+  <div class="two">
+    <div class="card">
+      <h3>M draws ∝ w·P (default)</h3>
+      <p class="note">Spends the MC where the rate is. A few high-weight input muons can dominate (the 768.75 class is about 40 % of the shield DIS rate).</p>
+    </div>
+    <div class="card">
+      <h3>One per crossing / track (--v0-copies, draws = −1)</h3>
+      <p class="note">Every parent contributes once. Same central values; the μ errors stay because they come from the few independent input muons (evt_n), not from the number of draws.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LIBRARY ============ -->
+<section>
+  <div class="eyebrow">4 · The interaction library (bin/dis_library.py)</div>
+  <h2>Two generators, matched in energy transfer ν</h2>
+  <div class="panel">
+<pre class="mermaid">
+flowchart LR
+  E["Energy grid<br/>50 points, 0.5–500 GeV (log)"] --> G4L["Geant4 11.2.2 muonNuclear<br/>Kokoulin XS + MuonVDNuclearModel, FTFP_BERT<br/>per material: He, PVC, Mylar, PS, Si, PVT, air, Fe<br/>20 000 events per energy"]
+  E --> P6["Pythia 6.4.28 γ*/μ on p and n<br/>W > 2 GeV, from 2.2 GeV<br/>VMD / direct / anomalous / DIS"]
+  G4L --> X{"split at ν_x(E)<br/>where Pythia dσ/dν reaches Geant4"}
+  P6 --> X
+  X -->|"ν #60; ν_x"| LO["Geant4 part<br/>(soft, quasi-real photon, nuclear break-up)"]
+  X -->|"ν ≥ ν_x"| HI["Pythia part<br/>(hard DIS, Q² growth Geant4 lacks)<br/>p/n mixed by Z/A of the material"]
+  LO --> L[("mu_library.npz<br/>mu_library_iron.npz<br/>mu_library_iron_v0stable.npz")]
+  HI --> L
+</pre>
+  </div>
+  <ul class="note">
+    <li>σ per nucleon of each part = generator σ × the fraction of its events on that side of ν_x. Iron is 0.82 × helium per nucleon (Kokoulin shadowing). The Pythia share is 1.5 % at 10 GeV and 13 % at 100 GeV.</li>
+    <li>Only μ⁻ is generated. With one-photon exchange the hadronic final state is the same for μ⁺, so only the beam-muon sign is flipped.</li>
+    <li>By default K_S, Λ, Σ, Ξ, Ω, π⁰ and η are decayed at generation. That is right in helium but wrong in iron, so the <code>--stable-v0</code> library keeps K_S and Λ for Geant4 to absorb or decay in flight.</li>
+    <li>Neutrino version: GENIE 3.06.02 G18_02a on Fe56 (shield) or the vessel materials, using the same draw logic (<code>fastveto.nudis</code>).</li>
+  </ul>
+</section>
+
+<!-- ============ SIDE BY SIDE ============ -->
+<section>
+  <div class="eyebrow">5 · What differs between the two chains</div>
+  <div class="two">
+    <div class="card vessel">
+      <h3 style="color:var(--helium)">Vessel chain · <span class="mono">fastveto.dis.run</span></h3>
+      <ul>
+        <li>Targets: helium (code 0), air (1), PVC (2), plane i (10 + i)</li>
+        <li>Muon path A → (K) → B from the cuda-muons store; E interpolated in z</li>
+        <li>Planes: slab of the plane's technology material, thickness / |cos θ| (capped at 0.02)</li>
+        <li>Products are straight lines (no field before the spectrometer)</li>
+        <li>The scattered μ keeps its parent's upstream hits, so the veto can see the parent</li>
+        <li>Entry: <code>bin/run_interactions.py --design D</code> or <code>bin/muon_dis_apply.py</code></li>
+      </ul>
+    </div>
+    <div class="card shield">
+      <h3 style="color:var(--iron)">Shield chain · <span class="mono">bin/shield_dis.py</span></h3>
+      <ul>
+        <li>Target: iron box, codes 3 (interaction) and 4 (V0-decay copy)</li>
+        <li>Straight parents from 29.20 m; parents that stop in the slab are not removed (mean loss only)</li>
+        <li>Geant4 transport of every product through iron and field: absorption and the cascade are included, so no extra e^(−d/λ) weight</li>
+        <li>V0 copies, decaying on a straight line between 30.6 and 80.6 m</li>
+        <li><code>beam = False</code>: no parent hits upstream</li>
+        <li><code>prepare</code> → <code>bin/g4.sh … generate --kind muon|nu</code> → <code>run_interactions.py --interactions …</code></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SHIELD DETAIL ============ -->
+<section>
+  <div class="eyebrow">6 · Shield chain step by step</div>
+  <div class="panel">
+<pre class="mermaid">
+flowchart LR
+  A["26 M μ rows<br/>4.87e8 μ/spill<br/>through the iron"] --> B["forced DIS<br/>1.04e6 int./spill<br/>P ≈ 2.1e-3"]
+  B --> C["library final state<br/>K_L 0.019 per int.<br/>π± 0.44, p 0.20, n 0.21"]
+  C --> D["Geant4 through iron + field<br/>K_L λ_eff 16–18 cm<br/>cascade makes new K_L"]
+  D --> E["at z = 29.90<br/>K_L 1.04e4/spill<br/>K_S 1.6e3, Λ 760"]
+  E --> F["forced decay in 30.6–80.6 m<br/>× P(decay) ≈ 0.43 for K_L<br/>≈ 4.4e3 K_L decays/spill"]
+  F --> G["selection + veto"]
+</pre>
+  </div>
+  <p class="note">Numbers are per spill (= Hz at 5×10¹³ PoT/s), with p &gt; 1 GeV, from <code>results/shield_dis/chain_probs.json</code>.</p>
+  <div class="card shield">
+    <h3 style="color:var(--iron)">Forced V0 decays (<span class="mono">force_v0</span>)</h3>
+    <p>Geant4 stops at z = 29.90 m. A K_L, K_S, Λ or Ξ⁰ that gets out is a neutral particle at that plane; in the original interaction (code 3) it stays undecayed and makes no track. Because a few-GeV K_L has cβγτ of tens of metres, its decay point is not sampled naturally. Instead, with λ = (p/m)cτ and d₁, d₂ the distances along its line to z = 30.6 and 80.6 m:</p>
+    <div class="math">P_dec = exp(−d₁/λ) − exp(−d₂/λ)      (includes survival from the plane to 30.6 m)</div>
+    <ul>
+      <li>A copy of the whole interaction (code 4) is made, with the V0 decayed at a point drawn from the exponential truncated to [d₁, d₂], in a random channel.</li>
+      <li>The rest of the event (scattered μ, charged debris) comes along unchanged.</li>
+      <li>Weight of the copy = weight of the interaction × P_dec / N_copies (<code>--v0-copies N</code> only adds statistics).</li>
+      <li>The code-4 weights sum to V0 decays in that z range per spill, not to interactions. The range is a z interval on a straight line; the fiducial cut checks the vessel volume later.</li>
+    </ul>
+    <h3>The full weight of a V0-decay copy</h3>
+    <p>For interaction j of muon i, leaving V0 v at the iron exit (<code>force_v0</code>, <code>bin/shield_dis.py:253</code>), in muons per spill:</p>
+    <div class="math">one draw per track (draws = −k, used for the MS7 numbers):
+  W(j,v) = w_i  ·  P_int,i  ·  P_dec,v  /  (k · N_copies)
+
+M draws ∝ w·P (default), S = Σ_i w_i P_int,i (= 1.04e6 /spill):
+  W(j,v) = (S / M)  ·  P_dec,v  /  N_copies
+  muon i is picked with probability w_i P_int,i / S, so
+  ⟨picks of i⟩ · S/M = M · (w_i P_int,i / S) · (S/M) = w_i · P_int,i   (S/M replaces w_i P_int,i)
+
+  w_i       muon weight from the pkl (muons per spill, max 768.75)
+  P_int,i   = n_Fe · σ(E_i) · L_i
+              n_Fe   nucleons per m³ of iron (7.874 g/cm³ × N_A ≈ 4.7e30 m⁻³)
+              σ(E_i) library σ per nucleon in iron (Geant4 + Pythia parts) at the vertex energy
+              L_i    straight-line length of the muon inside the 50 cm iron box
+  P_dec,v   = exp(−d₁/λ_v) − exp(−d₂/λ_v),  λ_v = (p_v/m_v)·cτ_v
+              d₁, d₂ = distance from z = 29.90 m to z = 30.6 / 80.6 m along the V0 (Δz / u_z)
+  k         forced interactions per muon (k = 1 in the per-track run)
+  N_copies  decay copies per V0 (--v0-copies)
+
+per 15 years = W × 6e20 / 5e13 = W × 1.2e7</div>
+    <p class="note">Not weight factors (the Monte Carlo decides them, 0 or 1 per event): whether a V0 exists at the plane at all (library multiplicity, then Geant4 absorption and cascade in the iron, so no extra exp(−d/λ_abs) factor), the decay channel, and the selection. The vessel chain uses the same weight without P_dec: w_i · n_area σ(E_i) / k, with n_area = nucleons per m² along the crossing.</p>
+  </div>
+</section>
+
+<!-- ============ SELECTION & VETO ============ -->
+<section>
+  <div class="eyebrow">7 · Selection and veto (lib/veto/interactions.py)</div>
+  <div class="panel">
+<pre class="mermaid">
+flowchart TD
+  T["Charged tracks of one interaction"] --> S1["Pair: opposite charge, p > 1 GeV,<br/>SST1 + timing acceptance"]
+  S1 --> S2["DOCA #60; 2 cm, vertex in the vessel (fiducial)"]
+  S2 --> S3["IP #60; 2.5 m at the target"]
+  S3 --> S4["Reco with multiple scattering (tails, He, air):<br/>measured IP #60; 10 cm"]
+  S4 --> S5["≤ 2 tracks in SST1 acceptance in the event"]
+  S5 --> VA["Level a: algorithm A on the 2 vertex tracks<br/>(planes upstream of the vertex)"]
+  S5 --> VB["Level b: algorithm A on every reconstructed track<br/>scattered μ followed back to the parent's hits"]
+  S5 --> VC["Level c (truth bound): the parent crossed a plane<br/>upstream of the vertex"]
+</pre>
+  </div>
+  <p class="note">There is no time-coincidence factor because the products of one interaction are in time with each other. Errors come from a 200-sample bootstrap grouped by input muon (<code>evt_n</code>), because rows from the same input muon are not independent. Optional extra cut: daughter asymmetry |A_p|, |A_IP| &lt; a on the same pair (deck chapter 7).</p>
+</section>
+
+<!-- ============ NUMBERS ============ -->
+<section>
+  <div class="eyebrow">8 · Where the numbers stand (per 15 years)</div>
+  <div class="panel">
+    <table>
+      <thead><tr><th>Sample</th><th>Step</th><th style="text-align:right">Rate / 15 y</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>MS7 μ DIS</td><td>interactions in 50 cm</td><td class="n">1.25×10¹³</td><td></td></tr>
+        <tr><td>MS7 μ DIS</td><td>DOCA, fiducial, IP &lt; 2.5 m (v0stable)</td><td class="n">(6.73 ± 0.59)×10⁷</td><td>K_S, Λ tracked</td></tr>
+        <tr><td>MS7 μ DIS</td><td>+ IP &lt; 10 cm, ≤ 2 tracks</td><td class="n">3.8×10⁴</td><td class="flag">5 MC events</td></tr>
+        <tr><td>MS7 μ DIS</td><td>after veto (algorithm A)</td><td class="n">≈ unchanged</td><td>K_L decay tracks have nothing upstream</td></tr>
+        <tr><td>Vessel μ He</td><td>IP &lt; 2.5 m</td><td class="n">(5.9 ± 1.4)×10⁴</td><td>error = input-muon statistics</td></tr>
+        <tr><td>Vessel μ He</td><td>old selection</td><td class="n">1 806 ± 681</td><td></td></tr>
+        <tr><td>MS7 ν DIS</td><td>old selection → veto</td><td class="n">1.68 → 0.83</td><td>after the own_hits fix</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ CAVEATS ============ -->
+<section>
+  <div class="eyebrow">9 · Known limits and open points</div>
+  <ul>
+    <li><b>MS7 K_L is about 2× plain Geant4.</b> Unforced Geant4 gives 0.52 ± 0.15 of the forced chain, and the excess comes from the Pythia (high-ν) component: 9.5 % of interactions but 90 % of the K_L. FairShip uses Geant4 only.</li>
+    <li><b>FairShip shows a ~17× deficit</b> of shield-made π at SST1 compared with this chain. The muon flux and iron geometry agree, so the cause is still open.</li>
+    <li>Statistics: the MS7 μ number after the full selection rests on a handful of MC events. The next step is K_L-enriched draws.</li>
+    <li>Approximations: straight parents before the shield vertex, no field or scattering in the 0.7 m of air, π/K decays in flight ignored, and n / K_L interactions in the vessel not simulated.</li>
+    <li>Not yet redone with the v0stable library: the DIS×μ combinatorial pairs (<code>dis_comb_*</code>).</li>
+  </ul>
+</section>
+
+<footer class="note">Sources: <code>lib/fastveto/dis.py</code>, <code>lib/fastveto/targets.py</code>, <code>bin/dis_library.py</code>, <code>bin/shield_dis.py</code>, <code>lib/veto/interactions.py</code>, <code>docs/shield_iron_dis.md</code> (Study_on_Veto_System/Optimization_Veto_System/veto).</footer>
+</div>

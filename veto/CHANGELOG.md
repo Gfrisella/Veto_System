@@ -17,6 +17,29 @@ what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20)
 - `bin/check_peak_rates.py` (new): coarse vs fine peaks and old vs new penalty for designs/*.json. At z = 30.6 m the
   peak is x 1.39 the coarse one (right fin 880 +- 5 vs 634 kHz/cm^2; 4 cm tile 14.1 MHz, 2 cm tile 3.6 MHz per channel).
 
+## 2026-11-04 — vessel wall: 0.3 mm PVC -> 350 um Mylar (branch `veto-shield-dis`, uncommitted)
+
+- One switch: `fastveto.vessel.WALL_MATERIAL = "mylar"`, `WALL_THICKNESS = 350e-6` (+ `WALL_COMPOSITION` C 0.625, H 0.042,
+  O 0.333); `veto.scattering.X0_WALL = 0.2854 m`, `WALL_THICKNESS = 350e-6`. Shell `OUTER_BOX` (exact chords) follows.
+- `fastveto.targets`: wall crossings use the Mylar nucleon density and material; new `target_material(code)`, used by
+  `fastveto.dis.run`, so wall DIS final states / cross sections come from the Mylar entries of the muon (Geant4 + Pythia 6)
+  and GENIE libraries (already built for the straws). `materials.vessel_wall()` (alias `pvc_wall`).
+- Kept for compatibility: target-group key `"pvc"` (code 2, `--pvc` / `draws["pvc"]`, `CODE_NAMES`, saved npz), and the
+  old names `PVC_THICKNESS`, `X0_PVC` (now = wall values). `end_to_end.py` prints "wall".
+- Wall per normal crossing: x/X0 1.53e-3 -> 1.23e-3, 0.0414 -> 0.0490 g/cm^2 (+18 % nucleons, no Cl). Results computed
+  before this (results/interactions, apply / reco-input files with "pvc" rows, scattering-dependent reco) are PVC-based.
+
+## 2026-11-04 — UBT-plane muon rate maps (results only, no library change)
+
+- `results/ubt_xy_rate/` (copy of the plots in `work_dir/UBT_muon_rate_maps/`): x-y rate maps at z = 30.6 m, |x|,|y| < 3 m,
+  2x2 cm^2 bins, kHz per bin. All muons (UBT_data_TRY6.pkl) 3.48 GHz; shah_study `straight_past_vessel` 2.74 GHz; straight AND
+  single-track cuts before the coincidence (SST1 acc., p > 1 GeV, timing-detector acc.) 6.24 kHz of 8.50 kHz selected.
+  Plus the two straight maps with full-sample iso-rate contours (`make_ubt_xy_contours.py`).
+- Correction: "straight" = reaches z = 82 within 0.5 m of the line from the 30.6 m state (BOUNCE_CUT), not the
+  simulation category `straight_past_vessel` (excluded straight muons through the vessel, kept some bounced). Straight
+  2.73 GHz; straight & selected 8.13 kHz (was 6.24) of 8.50 kHz. shah_study category `bounced_back` holds straight muons
+  (bounce flag of cuda_muons_ship.categorize_muons not reliable).
+
 ## 2026-11-02 (afternoon) — branch `veto-shield-dis` (uncommitted)
 
 ### Vessel muon DIS parents: 20 001-run SST1 sample + zeta veto-only

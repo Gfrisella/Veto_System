@@ -3,14 +3,15 @@
 Copied from Veto_System, branch veto-muon-production, commit a8dcc3c:
     veto/lib/veto/geometry.py    Z_VESSEL_*, VESSEL_*_IN/OUT, vessel_half_widths, inside_vessel
     veto/lib/veto/tracks.py      vessel_crossings (Liang-Barsky clipping of a line)
-    veto/lib/veto/scattering.py  PVC wall thickness, X0 of helium / air / PVC
+    veto/lib/veto/scattering.py  wall thickness, X0 of helium / air / wall
     veto/ISSUES.txt B1           material budget (SR-370 balloon)
 
 All lengths in metres, z along the beam (target at z ~ -2.14 m, see Veto_System geometry.py).
 
 The vessel is a rectangular frustum: half widths grow linearly in z from (0.5, 1.35) m at the
 entrance (z = 30.6 m, = UBT aperture) to (2.0, 3.0) m at the exit (z = 80.6 m). It is filled with
-helium; the entrance and exit windows and the lateral walls are 0.3 mm PVC. Outside it (and
+helium; the entrance and exit windows and the lateral walls are 350 um Mylar (was 0.3 mm PVC until
+2026-11-04). Outside it (and
 between the exit and SST1 at z = 82 m) is air.
 """
 
@@ -38,11 +39,16 @@ MEDIA = {
     #           X0 [m]   density [kg/m^3]   Z, A (mean, for nucleon counting)
     "helium": {"X0": 5671.0, "density": 0.1664, "Z": 2.0, "A": 4.0026},
     "air":    {"X0": 303.9,  "density": 1.205,  "Z": 7.31, "A": 14.61},   # ~ N2/O2/Ar mix
-    "pvc":    {"X0": 0.1963, "density": 1380.0, "Z": None, "A": None},    # C2H3Cl, see pvc_composition
+    "pvc":    {"X0": 0.1963, "density": 1380.0, "Z": None, "A": None},    # C2H3Cl (old wall, kept for reference)
+    "mylar":  {"X0": 0.2854, "density": 1400.0, "Z": None, "A": None},    # C10H8O4, X0 39.95 g/cm^2 (PDG)
 }
-PVC_THICKNESS = 0.3e-3     # m, entrance / exit windows and lateral walls
-# PVC (C2H3Cl)_n by mass fraction, for target-nucleus composition
-PVC_COMPOSITION = {"C": 0.3844, "H": 0.0484, "Cl": 0.5672}
+# Vessel wall (entrance / exit windows and lateral walls). Was 0.3 mm PVC until 2026-11-04.
+# The target group keeps its historical key "pvc" (draws, include, CODE_NAMES, saved files); its material is WALL_MATERIAL.
+WALL_MATERIAL = "mylar"   # fastveto.materials name
+WALL_THICKNESS = 350e-6    # m
+PVC_THICKNESS = WALL_THICKNESS   # old name, kept so older scripts still import
+# Mylar (C10H8O4)_n by mass fraction, for target-nucleus composition (old PVC C2H3Cl: C 0.3844, H 0.0484, Cl 0.5672)
+WALL_COMPOSITION = {"C": 0.6250, "H": 0.0420, "O": 0.3330}
 
 
 def half_widths(z):
@@ -81,9 +87,9 @@ def wall_area():
 
 
 HELIUM_BOX = (Z_VESSEL_MIN, Z_VESSEL_MAX, VESSEL_X_IN, VESSEL_X_OUT, VESSEL_Y_IN, VESSEL_Y_OUT)
-# outer surface of the PVC shell, as in cpp/nuvessel.cc (G4Trd with every half size + thickness)
-OUTER_BOX = (Z_VESSEL_MIN - PVC_THICKNESS, Z_VESSEL_MAX + PVC_THICKNESS, VESSEL_X_IN + PVC_THICKNESS,
-             VESSEL_X_OUT + PVC_THICKNESS, VESSEL_Y_IN + PVC_THICKNESS, VESSEL_Y_OUT + PVC_THICKNESS)
+# outer surface of the wall shell, as in cpp/nuvessel.cc (G4Trd with every half size + thickness)
+OUTER_BOX = (Z_VESSEL_MIN - WALL_THICKNESS, Z_VESSEL_MAX + WALL_THICKNESS, VESSEL_X_IN + WALL_THICKNESS,
+             VESSEL_X_OUT + WALL_THICKNESS, VESSEL_Y_IN + WALL_THICKNESS, VESSEL_Y_OUT + WALL_THICKNESS)
 
 
 def crossings(x, y, z, px, py, pz, box=HELIUM_BOX):
