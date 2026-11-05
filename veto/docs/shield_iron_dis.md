@@ -116,6 +116,8 @@ D0_minimal 6.73e7, U1_ubt4x6_tile 5.28e7 (level b).
 | `bin/shield_dis_smoke.py` | field and transport checks |
 | `bin/shield_kl_check.py` | K_L made by μ DIS vs K_L at the plane (iron attenuation check) |
 | `results/shield_dis/` | `shield_{muon,nu}.npz/.json`, per-design veto results, logs |
+| `docs/dis_chain_diagrams.html` | flow-chart explainer of the vessel + shield μ DIS chains (2026-11-03), https://claude.ai/artifact/XsCHB2iJyWDsNXgsTJTcEz |
+| `docs/dis_chain_pdf/` | PDF version (`dis_chain.pdf`, LaTeX + Graphviz sources), incl. the forced-V0-decay explanation (2026-11-03) |
 
 ## Results (2026-10-30; 2 M μ draws, 100 decays per V0; 10⁶ ν draws, 20 decays per V0)
 

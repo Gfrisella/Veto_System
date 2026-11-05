@@ -19,3 +19,8 @@ target_link_libraries(g4dis PRIVATE ${Geant4_LIBRARIES})
 pybind11_add_module(g4shield g4shield.cc)
 target_include_directories(g4shield PRIVATE ${Geant4_INCLUDE_DIRS})
 target_link_libraries(g4shield PRIVATE ${Geant4_LIBRARIES})
+
+# transport of vessel / helium interaction final states to the straw stations and the timing detector (bin/g4_vessel_transport.py)
+pybind11_add_module(g4vessel g4vessel.cc)
+target_include_directories(g4vessel PRIVATE ${Geant4_INCLUDE_DIRS})
+target_link_libraries(g4vessel PRIVATE ${Geant4_LIBRARIES})

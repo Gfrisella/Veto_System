@@ -116,3 +116,46 @@ def init_g4shield(seed, e_cut=0.5, field=True):
                         z_plane=Z_PLANE, e_cut=e_cut, field=fm["field"], x0=fm["x0"], dx=fm["dx"], y0=fm["y0"],
                         dy=fm["dy"], z0=fm["z0"], dz=fm["dz"], z_shift=fm["z_shift"])
     return g4shield
+
+
+def curved_points(start, u, p, q, s, fm=None, step=0.01):
+    """Points and directions of muons bent by the MS7 field (ISSUES D4: was a straight line), at path lengths s.
+
+    start (n, 3) [m], u (n, 3) unit directions, p (n,) [GeV] at start, q (n,) charge, s (n,) path length from start
+    to the wanted point [m]. RK4 in path length, du/ds = (q k / p) u x B (k = 0.2998 GeV / (T m)), p(s) = p - DEDX_MU s
+    (mean loss; the muon is assumed to get there). Field: field_at (mirrored quadrant map). Returns (x (n, 3),
+    u (n, 3), p (n,)) at s."""
+    fm = fm or load_field()
+    start, u = np.asarray(start, np.float64), np.asarray(u, np.float64)
+    p, q, s = np.asarray(p, np.float64), np.asarray(q, np.float64), np.asarray(s, np.float64)
+    k = 0.299792458
+    x, d = start.copy(), u.copy()
+    out_x, out_u = start.copy(), u.copy()
+    done = s <= 0
+    s_now = 0.0
+    s_max = float(s.max()) if len(s) else 0.0
+
+    def du(xx, dd, pp):
+        B = field_at(fm, xx[:, 0], xx[:, 1], xx[:, 2])
+        return (q * k / np.maximum(pp, 0.05))[:, None] * np.cross(dd, B)
+
+    while s_now < s_max - 1e-12:
+        h = min(step, s_max - s_now)
+        pp = p - DEDX_MU * s_now
+        k1u = du(x, d, pp); k1x = d
+        k2u = du(x + h / 2 * k1x, d + h / 2 * k1u, pp - DEDX_MU * h / 2); k2x = d + h / 2 * k1u
+        k3u = du(x + h / 2 * k2x, d + h / 2 * k2u, pp - DEDX_MU * h / 2); k3x = d + h / 2 * k2u
+        k4u = du(x + h * k3x, d + h * k3u, pp - DEDX_MU * h); k4x = d + h * k3u
+        x_new = x + h / 6 * (k1x + 2 * k2x + 2 * k3x + k4x)
+        d_new = d + h / 6 * (k1u + 2 * k2u + 2 * k3u + k4u)
+        d_new /= np.linalg.norm(d_new, axis=1, keepdims=True)
+        hit = ~done & (s <= s_now + h)
+        if hit.any():                                  # linear between the two steps
+            f = ((s[hit] - s_now) / h)[:, None]
+            out_x[hit] = x[hit] + f * (x_new[hit] - x[hit])
+            v = d[hit] + f * (d_new[hit] - d[hit])
+            out_u[hit] = v / np.linalg.norm(v, axis=1, keepdims=True)
+            done |= hit
+        x, d = x_new, d_new
+        s_now += h
+    return out_x, out_u, p - DEDX_MU * s

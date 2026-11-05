@@ -59,6 +59,17 @@ class Plane:
     technology: str = None      # key of tech.TECHNOLOGIES, None = generic detector
     time_window: float = None   # [s] drift-limited technologies: hit time uniform in this full width
     stations: int = 1           # identical layers behind each other (OR): efficiency 1 - (1 - e)^n, n x channels and cost
+    # module block (ISSUES A7 / C2, 2026-11-05): a rectangle of identical modules (n_mod_u x n_mod_y) of mod_u x mod_y
+    # starting at u_off on the plane's grid; dead borders per module (dead_u / dead_y: (low, high) [m]) and, for pixels,
+    # quads of sub x sub with sub_dead borders. None / 0: the continuous plane of before.
+    u_off: float = 0.0
+    mod_u: float = None
+    mod_y: float = None
+    dead_u: tuple = (0.0, 0.0)
+    dead_y: tuple = (0.0, 0.0)
+    sub: float = None
+    sub_dead: float = 0.0
+    n_modules: int = 0
 
     @property
     def area(self):
@@ -73,9 +84,11 @@ class Plane:
 
     @property
     def cost(self):
-        """kCHF; nan for the generic detector or a technology without a cost."""
+        """kCHF (one model, A4: module electronics + mechanics); nan for the generic detector."""
         if self.technology is None:
             return float("nan")
+        if self.n_modules:
+            return self.stations * self.n_modules * tech.module_cost(self.technology)
         return self.stations * tech.cost(tech.TECHNOLOGIES[self.technology], self.area)
 
     @property
@@ -98,16 +111,39 @@ class Plane:
 
     def to_local(self, x):
         if self.kind == "ubt":
-            return x + geo.UBT_HALF_X
-        return self.sign * x - mt.side_plane_x(self.z)
+            return x + geo.UBT_HALF_X - self.u_off
+        return self.sign * x - mt.side_plane_x(self.z) - self.u_off
 
     def to_global(self, u):
         if self.kind == "ubt":
-            return u - geo.UBT_HALF_X
-        return self.sign * (u + mt.side_plane_x(self.z))
+            return u + self.u_off - geo.UBT_HALF_X
+        return self.sign * (u + self.u_off + mt.side_plane_x(self.z))
 
     def inside(self, u, y):
-        return (u >= 0) & (u <= self.u_max) & (y >= self.y_lo) & (y <= self.y_hi)
+        """In the plane and not in a dead module border (C2) or pixel-quad border."""
+        ok = (u >= 0) & (u <= self.u_max) & (y >= self.y_lo) & (y <= self.y_hi)
+        if self.mod_u:
+            fu = np.mod(u, self.mod_u)
+            fy = np.mod(y - self.y_lo, self.mod_y)
+            ok &= (fu >= self.dead_u[0]) & (fu <= self.mod_u - self.dead_u[1])
+            ok &= (fy >= self.dead_y[0]) & (fy <= self.mod_y - self.dead_y[1])
+            if self.sub:
+                su, sy = np.mod(fu - self.dead_u[0], self.sub), np.mod(fy - self.dead_y[0], self.sub)
+                ok &= (su >= self.sub_dead) & (su <= self.sub - self.sub_dead)
+                ok &= (sy >= self.sub_dead) & (sy <= self.sub - self.sub_dead)
+        return ok
+
+    @property
+    def active_fraction(self):
+        """Sensitive fraction of the plane area (1 for a continuous plane)."""
+        if not self.mod_u:
+            return 1.0
+        fu = (self.mod_u - sum(self.dead_u)) / self.mod_u
+        fy = (self.mod_y - sum(self.dead_y)) / self.mod_y
+        if self.sub:
+            fu *= (self.sub - 2 * self.sub_dead) / self.sub
+            fy *= (self.sub - 2 * self.sub_dead) / self.sub
+        return fu * fy
 
     def cell_centre(self, u, y):
         """Digitize: the centre of the cell (u, y) falls in."""
@@ -149,11 +185,44 @@ class Design:
         return self.planes[0].x0
 
 
+FRAME = "fairship-2026"   # designs with "frame": FRAME give fin z in the FairShip layout (geometry.py); others are old
+
+
+def validate_modules(raw):
+    """Limits for module designs: straw UBT covering the window, fins inside the cavern (right: up to the wall) and
+    above FIN_Y_MIN. Raises on violations (a module design is explicit: nothing is cut silently)."""
+    u = raw["ubt"]
+    if any(tech.get(m["tech"])[0] != "straw" for m in u["modules"]):
+        raise ValueError("UBT modules must be straw")
+    for f in raw["fins"]:
+        if f.get("tilt", 0) != 0:
+            raise NotImplementedError("tilted fins are not in the reconstruction yet")
+        if not geo.Z_UBT - 1e-6 <= f["z"] <= geo.Z_SST1 + 1e-6:
+            raise ValueError(f"fin z = {f['z']} outside {geo.Z_UBT:.2f} .. {geo.Z_SST1:.2f} m")
+        y0 = f.get("y0", GRID_Y0["fin"])
+        room = -mt.CAVERN_X_WALL - mt.side_plane_x(f["z"])
+        for b in module_blocks(f["modules"]):
+            mu, my = tech.MODULES[b["tech"]]["size"]
+            if y0 + b["iy"] * tech.SLOT < mt.FIN_Y_MIN - 1e-9:
+                raise ValueError(f"fin z={f['z']}: module below y = {mt.FIN_Y_MIN} m")
+            if f["side"] == "right" and b["iu"] * tech.SLOT + mu > room + 1e-9:
+                raise ValueError(f"right fin z={f['z']}: module beyond the cavern wall (room {room:.2f} m)")
+    return []
+
+
 def validate(raw):
     """Apply the physical limits: UBT of straw tubes covering at least the vessel entrance, nothing below y = -3.2 m,
     right fins stop at the cavern wall. Returns a list of what was changed."""
     notes = []
+    if raw.get("frame") != FRAME:
+        # written in the deck layout (vessel 30.6 - 80.6 m): fins sit on the vessel, so they move with it (+0.53 m)
+        for f in raw["fins"]:
+            f["z"] = round(f["z"] + geo.VESSEL_SHIFT, 6)
+        notes.append(f"old-frame design: fins moved by {geo.VESSEL_SHIFT:+.2f} m with the vessel (FairShip layout)")
+        raw["frame"] = FRAME
     u = raw["ubt"]
+    if "modules" in u:                                   # module design (A7): straw UBT, checked in validate_modules
+        return notes + validate_modules(raw)
     if u["y_lo"] > -geo.UBT_HALF_Y or u["y_hi"] < geo.UBT_HALF_Y:
         notes.append("UBT extended to cover the vessel entrance")
         u["y_lo"], u["y_hi"] = min(u["y_lo"], -geo.UBT_HALF_Y), max(u["y_hi"], geo.UBT_HALF_Y)
@@ -171,14 +240,75 @@ def validate(raw):
         if f["y_lo"] < mt.FIN_Y_MIN:
             notes.append(f"fin {i}: bottom raised to y = -3.2 m")
             f["y_lo"] = mt.FIN_Y_MIN
-        if not geo.Z_UBT <= f["z"] <= geo.Z_SST1:
-            raise ValueError(f"fin {i}: z = {f['z']} outside 30.6 .. 82 m")
+        if not geo.Z_UBT - 1e-6 <= f["z"] <= geo.Z_SST1 + 1e-6:
+            raise ValueError(f"fin {i}: z = {f['z']} outside {geo.Z_UBT:.2f} .. {geo.Z_SST1:.2f} m")
         if f["side"] == "right":
             room = -mt.CAVERN_X_WALL - mt.side_plane_x(f["z"])
             if f["length"] > room:
                 notes.append(f"fin {i}: cut at the cavern wall ({f['length']:.2f} -> {room:.2f} m)")
                 f["length"] = room
     return notes
+
+
+GRID_Y0 = {"ubt": -1.5, "fin": -3.0}   # y of slot row 0 (A7: 50 cm grid; UBT 3 x 1 m straw modules cover +-1.35)
+
+
+def module_blocks(modules):
+    """Modules {"tech", "u", "y" (slot indices), "stations"} -> blocks of identical modules stacked in y (same
+    technology, stations, u slot, contiguous): dict(tech, stations, iu, iy, n). Overlapping slots are an error."""
+    used, mods = {}, []
+    for m in modules:
+        key, _ = tech.get(m["tech"])
+        nu, ny = (int(round(v / tech.SLOT)) for v in tech.MODULES[key]["size"])
+        for a in range(nu):
+            for b in range(ny):
+                cell = (int(m["u"]) + a, int(m["y"]) + b)
+                if cell in used:
+                    raise ValueError(f"module {m} overlaps slot {cell} of {used[cell]}")
+                used[cell] = m
+        mods.append((key, int(m.get("stations", 1)), int(m["u"]), int(m["y"])))
+    blocks = []
+    for key, st, iu, iy in sorted(mods):
+        ny = int(round(tech.MODULES[key]["size"][1] / tech.SLOT))
+        b = blocks[-1] if blocks else None
+        if b and (b["tech"], b["stations"], b["iu"]) == (key, st, iu) and b["iy"] + b["n"] * ny == iy:
+            b["n"] += 1
+        else:
+            blocks.append(dict(tech=key, stations=st, iu=iu, iy=iy, n=1))
+    return blocks
+
+
+def snap_to_modules(raw, fin_tech=None):
+    """A continuous design -> the same design on the 50 cm module grid (A7): each fin / the UBT covered by modules of
+    its technology (fin_tech or the design's), its u / y extent rounded OUT to whole modules (right fins: IN at the
+    cavern wall), y on the grid from GRID_Y0. Returns a new raw dict ("frame" FRAME, name + "_mod")."""
+    raw = json.loads(json.dumps(raw))
+    validate(raw)                                         # frame shift, cavern-wall cut, y limits first
+    det = raw.get("detector", {}).get("technology")
+    out = dict(name=raw["name"] + "_mod", description=raw.get("description", "") + " (on the 50 cm module grid)",
+               frame=FRAME, detector=raw.get("detector", {}), fins=[])
+
+    def cover(u_len, y_lo, y_hi, key, y0, room=None):
+        mu, my = tech.MODULES[key]["size"]
+        nu = max(int(np.ceil(u_len / mu - 1e-6)), 1)
+        if room is not None and nu * mu > room + 1e-9:
+            nu = max(int(np.floor(room / mu + 1e-9)), 1)
+        iy0 = max(int(np.floor((y_lo - y0) / tech.SLOT + 1e-9)), 0)
+        ny = max(int(np.ceil((y_hi - (y0 + iy0 * tech.SLOT)) / my - 1e-6)), 1)
+        step_u, step_y = int(round(mu / tech.SLOT)), int(round(my / tech.SLOT))
+        return [dict(tech=key, u=a * step_u, y=iy0 + b * step_y) for a in range(nu) for b in range(ny)]
+
+    u = raw["ubt"]
+    out["ubt"] = dict(y0=GRID_Y0["ubt"], modules=cover(2 * geo.UBT_HALF_X, u["y_lo"], u["y_hi"], "straw", GRID_Y0["ubt"]))
+    for f in raw["fins"]:
+        key = tech.get(fin_tech or f.get("technology") or det or "straw")[0]
+        room = -mt.CAVERN_X_WALL - mt.side_plane_x(f["z"]) if f["side"] == "right" else None
+        mods = cover(f["length"], max(f["y_lo"], GRID_Y0["fin"]), f["y_hi"], key, GRID_Y0["fin"], room)
+        st = int(f.get("stations", 1))
+        for m in mods:
+            m["stations"] = st
+        out["fins"].append(dict(side=f["side"], z=f["z"], tilt=f.get("tilt", 0), y0=GRID_Y0["fin"], modules=mods))
+    return out
 
 
 def detector_settings(spec, default):
@@ -221,10 +351,36 @@ def from_dict(raw):
         return Plane(index, name, kind, z, sign, u_max, spec["y_lo"], spec["y_hi"], cu, cy,
                      1 - (1 - s["efficiency"]) ** n, s["sigma_t"], s["technology"], s["time_window"], n)
 
-    planes = [plane(0, "UBT", "ubt", geo.Z_UBT, 0, 2 * geo.UBT_HALF_X, raw["ubt"], "cell_x")]
+    def module_planes(name, kind, z, sign, spec):
+        out = []
+        y0 = spec.get("y0", GRID_Y0[kind])
+        for b in module_blocks(spec["modules"]):
+            t, M = tech.TECHNOLOGIES[b["tech"]], tech.MODULES[b["tech"]]
+            (mu, my), (au, ay), fr = M["size"], M["active"], M["frame"]
+            gu, gy = (mu - au) / 2, (my - ay) / 2
+            dead_u = (gu + fr, gu + fr)
+            dead_y = (gy + fr, gy + fr) if M["frame_edges"] == "all" else (gy, gy + fr)
+            s_ = detector_settings({"technology": b["tech"]}, base)
+            cu, cy = tech.cells(t, au, ay)
+            y_lo = y0 + b["iy"] * tech.SLOT
+            out.append(Plane(len(planes) + len(out), f"{name} [{b['tech']} u{b['iu']} y{b['iy']}x{b['n']}]", kind, z,
+                             sign, mu, y_lo, y_lo + b["n"] * my, cu, cy, 1 - (1 - s_["efficiency"]) ** b["stations"],
+                             s_["sigma_t"], b["tech"], s_["time_window"], b["stations"], u_off=b["iu"] * tech.SLOT,
+                             mod_u=mu, mod_y=my, dead_u=dead_u, dead_y=dead_y, sub=M.get("sub"),
+                             sub_dead=M.get("sub_frame", 0.0), n_modules=b["n"]))
+        return out
+
+    planes = []
+    if "modules" in raw["ubt"]:
+        planes += module_planes("UBT", "ubt", geo.Z_UBT, 0, raw["ubt"])
+    else:
+        planes.append(plane(0, "UBT", "ubt", geo.Z_UBT, 0, 2 * geo.UBT_HALF_X, raw["ubt"], "cell_x"))
     for f in sorted(raw["fins"], key=lambda f: (f["z"], f["side"])):
-        planes.append(plane(len(planes), f"{f['side']} fin z={f['z']:.1f}", "fin", f["z"], SIDES[f["side"]],
-                            f["length"], f, "cell_u"))
+        name = f"{f['side']} fin z={f['z']:.1f}"
+        if "modules" in f:
+            planes += module_planes(name, "fin", f["z"], SIDES[f["side"]], f)
+        else:
+            planes.append(plane(len(planes), name, "fin", f["z"], SIDES[f["side"]], f["length"], f, "cell_u"))
     d = Design(raw["name"], planes, base["efficiency"], base["sigma_t"], raw)
     d.notes = notes
     return d

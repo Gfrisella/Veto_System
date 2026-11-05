@@ -5,7 +5,9 @@ Input: the result dict of one design as produced by bin/run_reco.py `evaluate()`
 
 Priorities, in order (lexicographic, implemented as tiers with weights 1000 / 100 / 10 / 1):
   0. constraints      rate limits of every plane and the 8 MCHF budget: each violation costs
-                      at least 1000, more than all the tiers below together (max 111)
+                      at least 1000, more than all the tiers below together (max 111); a rate limit
+                      exceeded by a fraction f costs w_rate (1 + rate_slope f), i.e. steeply more
+                      (rate_slope = 10: 2 x the limit = 11 000 points, ISSUES A3)
   1. background       combinatorial pairs that survive the veto = false vertices accepted as
                       true (FN of the background confusion matrix), N events in 15 years
   2. signal           signal lost to accidental vetoes (FP of the signal confusion matrix)
@@ -47,6 +49,12 @@ perfect detector excludes over the smallest this design excludes. Reward:
     - w_sens (1 - sensitivity) - cost points - constraints
 cost points: cost_slope per MCHF up to cost_knee, cost_slope_high per MCHF above; budget cost_budget_kchf.
 
+D1 / D2 (2026-11-05, default): split_sensitivity = True gives the veto's two jobs separate weights,
+    - w_bkg_tag (1 - S90(0) / S90(N_w)) - w_sig_veto (signal lost) - cost points - constraints,
+with N_w = w_src_nu_helium N(nu DIS in helium) + w_src_muon N(everything else), w_src_nu_helium = 0.01 (Guglielmo,
+2026-11-05: an upstream veto cannot tag neutrino DIS in the helium; nu DIS elsewhere counts like the muons). For small losses this matches the product form when w_bkg_tag = w_sig_veto = w_sens.
+"sensitivity" and "bkg_events_15y" stay the physical (unweighted) values.
+
     python -m veto.objective                      # score results/reco/results.json
 """
 
@@ -76,7 +84,8 @@ class ObjectiveConfig:
     cost_budget_kchf: float = 8000.0  # above it: penalty w_budget * (1 + (cost - budget) / budget)
     straw_channel_kchf: float = 97.2 / 3600   # converts rel_cost when the area cost is nan (pixels)
     rate_margin: float = 1.0          # penalise above rate_margin * limit (e.g. 0.5 for a factor 2 safety margin)
-    w_rate: float = 1000.0            # per limit exceeded: w_rate * (1 + log10(peak / (margin * limit)))
+    w_rate: float = 1000.0            # per limit exceeded: w_rate * (1 + rate_slope * (peak / (margin * limit) - 1))
+    rate_slope: float = 10.0          # steepness above the limit (was log10 growth until 2026-11-04)
     w_budget: float = 1000.0
     w_bkg: float = 100.0
     w_sig: float = 10.0
@@ -87,6 +96,17 @@ class ObjectiveConfig:
     cost_slope: float = 2.0           # sensitivity: points per MCHF up to cost_knee_kchf
     cost_slope_high: float = 4.0      # sensitivity: points per MCHF above it
     cost_knee_kchf: float = 5000.0
+    # D1 / D2 (2026-11-05): separate weights for the two jobs of the veto, and neutrino DIS IN THE HELIUM counted less.
+    #   background sources enter N weighted: neutrino DIS in the helium w_src_nu_helium (Guglielmo: 0.01; nothing comes
+    #   in, an upstream veto cannot tag it, D2); every other source (combinatorial pairs, muon DIS anywhere, neutrino DIS
+    #   in air / walls / planes / shield) w_src_muon = 1.
+    #   split_sensitivity: the sensitivity form becomes two terms, w_bkg_tag (1 - S90(0) / S90(N_w)) for background
+    #   left untagged and w_sig_veto * (signal lost) for signal vetoed, instead of one product term.
+    w_src_muon: float = 1.0
+    w_src_nu_helium: float = 0.01
+    split_sensitivity: bool = True
+    w_bkg_tag: float = 100.0
+    w_sig_veto: float = 100.0
 
 
 def wilson_sigma(p, n):
@@ -152,9 +172,12 @@ def confusion_matrix(res, stats, cfg=ObjectiveConfig()):
 
 
 def rate_penalty(res, cfg=ObjectiveConfig()):
-    """Sum over planes and limits exceeded of 1 + log10(peak / (margin * limit)); 0 if all are respected.
+    """Sum over planes and limits exceeded of 1 + rate_slope * (peak / (margin * limit) - 1); 0 if all are respected.
 
-    The 1 makes any violation cost at least w_rate, more than all the other tiers together."""
+    The 1 makes any violation cost at least w_rate, more than all the other tiers together; the linear term makes
+    it steep above the limit (a design 2 x over its limit is not almost as good as one just over it).
+    peak = the plane's peak rate density / per-channel rate (reco.plane_rates: fine 2 x 2 cm^2 maps near the
+    flames when results/rate_maps/peak_maps.npz exists)."""
     p, over = 0.0, []
     for pl in res["planes"]:
         tech = TECHNOLOGIES.get(pl["technology"]) if pl["technology"] else None
@@ -162,7 +185,7 @@ def rate_penalty(res, cfg=ObjectiveConfig()):
                   (pl["peak_channel_hz"], tech and tech.get("max_channel_rate"), "Hz/channel")]
         for peak, limit, unit in checks:
             if limit and peak > cfg.rate_margin * limit:
-                p += 1 + math.log10(peak / (cfg.rate_margin * limit))
+                p += 1 + cfg.rate_slope * (peak / (cfg.rate_margin * limit) - 1)
                 over.append(f"{pl['plane']}: {peak:.3g} > {cfg.rate_margin:g} x {limit:.3g} {unit}")
     return p, over
 
@@ -244,9 +267,19 @@ def score(res, stats, cfg=ObjectiveConfig()):
     # has them (run_reco / evaluate_designs "interactions": lib/veto/interactions.veto)
     sources = {"combinatorial": (bg["events_15y_after"], bg["events_15y_after_err"])}
     for kind, r in (res.get("interactions") or {}).items():
-        sources[f"{kind}_interactions"] = (r["total"], r["total_err"])
-    n_bkg = sum(v for v, _ in sources.values())
-    n_bkg_err = math.sqrt(sum(e * e for _, e in sources.values()))
+        he = (r.get("per_target") or {}).get("helium")
+        if kind.startswith("nu") and he is not None:          # helium split off: the only down-weighted source (D2)
+            he_v, he_e = he.get("survive", he.get("after", 0.0)), he.get("survive_err", he.get("after_err", 0.0))
+            sources["nu_helium_interactions"] = (he_v, he_e)
+            sources[f"{kind}_other_interactions"] = (r["total"] - he_v, math.sqrt(max(r["total_err"] ** 2 - he_e ** 2, 0.0)))
+        elif kind.startswith("nu"):
+            raise ValueError(f"interactions '{kind}': per_target['helium'] is needed to weight neutrino DIS in helium")
+        else:
+            sources[f"{kind}_interactions"] = (r["total"], r["total_err"])
+    src_w = {k: (cfg.w_src_nu_helium if k == "nu_helium_interactions" else cfg.w_src_muon) for k in sources}
+    n_bkg_raw = sum(v for v, _ in sources.values())                      # physical events / 15 y
+    n_bkg = sum(src_w[k] * v for k, (v, _) in sources.items())           # weighted by origin (D1 / D2): the reward's N
+    n_bkg_err = math.sqrt(sum((src_w[k] * e) ** 2 for k, (_, e) in sources.items()))
     t_bkg, dt_dn = background_term(n_bkg, bg["events_15y_before"] + n_bkg, cfg)
     t_bkg_err = dt_dn * n_bkg_err
     clipped = sg["FP"] > cfg.sig_loss_max
@@ -262,8 +295,17 @@ def score(res, stats, cfg=ObjectiveConfig()):
         dn = max(1e-3, 1e-2 * n_bkg)
         ds_dn = (sensitivity(1 - sg["FP"], n_bkg + dn, cfg.cl) - sens) / dn
         sens_err = math.hypot(ds_dn * n_bkg_err, sens / max(1 - sg["FP"], 1e-9) * sg["FP_err"])
-        terms = {"rate": (cfg.w_rate * p_rate, 0.0), "budget": (cfg.w_budget * p_budget, 0.0),
-                 "sensitivity": (cfg.w_sens * (1 - sens), cfg.w_sens * sens_err), "cost": (cost_points(cost, cfg), 0.0)}
+        if cfg.split_sensitivity:
+            # background left untagged and signal vetoed, each with its own weight (D1)
+            r_bkg = expected_limit(0.0, cfg.cl) / expected_limit(n_bkg, cfg.cl)
+            dr_dn = (expected_limit(0.0, cfg.cl) / expected_limit(n_bkg + dn, cfg.cl) - r_bkg) / dn
+            terms = {"rate": (cfg.w_rate * p_rate, 0.0), "budget": (cfg.w_budget * p_budget, 0.0),
+                     "background_untagged": (cfg.w_bkg_tag * (1 - r_bkg), cfg.w_bkg_tag * abs(dr_dn) * n_bkg_err),
+                     "signal_vetoed": (cfg.w_sig_veto * sg["FP"], cfg.w_sig_veto * sg["FP_err"]),
+                     "cost": (cost_points(cost, cfg), 0.0)}
+        else:
+            terms = {"rate": (cfg.w_rate * p_rate, 0.0), "budget": (cfg.w_budget * p_budget, 0.0),
+                     "sensitivity": (cfg.w_sens * (1 - sens), cfg.w_sens * sens_err), "cost": (cost_points(cost, cfg), 0.0)}
     else:
         terms = {"rate": (cfg.w_rate * p_rate, 0.0), "budget": (cfg.w_budget * p_budget, 0.0), "background": (cfg.w_bkg * t_bkg, cfg.w_bkg * t_bkg_err),
                  "signal": (cfg.w_sig * t_sig, cfg.w_sig * t_sig_err), "cost": (cfg.w_cost * t_cost, 0.0)}
@@ -271,9 +313,11 @@ def score(res, stats, cfg=ObjectiveConfig()):
             "reward": -sum(v for v, _ in terms.values()),
             "reward_err": math.sqrt(sum(e * e for _, e in terms.values())),
             "terms": terms, "feasible": not over and not p_budget, "over_rate_limit": over,
-            "over_budget": bool(p_budget), "cost_kchf": cost, "sensitivity": sens,
-            "bkg_events_15y": n_bkg, "bkg_events_15y_err": n_bkg_err, "bkg_by_source": sources,
-            "p_at_least_one_false_vertex": 1 - math.exp(-n_bkg),
+            "over_budget": bool(p_budget), "cost_kchf": cost, "cost_pct_budget": 100 * cost / cfg.cost_budget_kchf,
+            "sensitivity": sens,
+            "bkg_events_15y": n_bkg_raw, "bkg_events_15y_weighted": n_bkg, "bkg_events_15y_err": n_bkg_err,
+            "bkg_by_source": sources, "bkg_source_weight": src_w,
+            "p_at_least_one_false_vertex": 1 - math.exp(-n_bkg_raw),
             "confusion": cm, "config": asdict(cfg)}
 
 

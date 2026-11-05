@@ -83,6 +83,7 @@ def bounce_points(a, pa, b, pb, max_gap=0.5, min_angle=0.02):
 
 def _classify_chunk(d, device):
     f = lambda k: torch.as_tensor(np.ascontiguousarray(d[k]), device=device).to(torch.float64)
+    # positions: stored states A (30.6) / B (82.0); detectors at their FairShip places (see muon_types.py)
     a = torch.stack([f(f"{k}_30") for k in "xyz"], 1)
     pa = torch.stack([f(f"p{k}_30") for k in "xyz"], 1)
     b = torch.stack([f(f"{k}_82") for k in "xyz"], 1)
@@ -90,14 +91,22 @@ def _classify_chunk(d, device):
     n = len(a)
     reach_a, reach_b = a[:, 2] > mt.REACH_30, b[:, 2] > mt.REACH_82
     p_b = _norm(pb)
-    dz = geo.Z_TIMING - b[:, 2]
-    x_t = b[:, 0] + pb[:, 0] / pb[:, 2] * dz
-    y_t = b[:, 1] + pb[:, 1] / pb[:, 2] * dz
     t = (b[:, 2] - a[:, 2]) / pa[:, 2]
     off = torch.hypot(a[:, 0] + pa[:, 0] * t - b[:, 0], a[:, 1] + pa[:, 1] * t - b[:, 1])
     off = torch.where(reach_b & (pa[:, 2] > 0) & torch.isfinite(off), off, torch.full_like(off, float("inf")))
-    acc = reach_b & (b[:, 0].abs() < geo.SST1_HALF_X) & (b[:, 1].abs() < geo.SST1_HALF_Y)
-    good = (acc & (p_b > 1) & (pb[:, 2] > 0) & (x_t.abs() < geo.TIMING_HALF_X) & (y_t.abs() < geo.TIMING_HALF_Y))
+    fwd = pb[:, 2] > 0
+    x_s = torch.where(fwd, b[:, 0] + pb[:, 0] / pb[:, 2] * (geo.Z_SST1 - b[:, 2]), b[:, 0])   # B -> SST1 (82.08)
+    y_s = torch.where(fwd, b[:, 1] + pb[:, 1] / pb[:, 2] * (geo.Z_SST1 - b[:, 2]), b[:, 1])
+    acc = reach_b & (x_s.abs() < geo.SST1_HALF_X) & (y_s.abs() < geo.SST1_HALF_Y)
+    good = acc & (p_b > 1) & fwd
+    g = torch.nonzero(good).squeeze(1)
+    if len(g):                                      # timing detector through the spectrometer field (A6)
+        q = -np.sign(np.asarray(d["pdg"])[g.cpu().numpy()]).astype(np.float64) if "pdg" in d else None
+        if q is None:
+            raise KeyError("muon_types_torch: a 'pdg' column is needed for the charge (ISSUES A6)")
+        from . import spectrometer
+        ok_t = spectrometer.timing_acceptance(b[g].cpu().numpy(), pb[g].cpu().numpy(), q, device=device)[0]
+        good[g] = torch.as_tensor(ok_t, device=device)
 
     k = torch.full((n, 3), float("nan"), dtype=torch.float64, device=device)
     walls = torch.zeros(n, dtype=torch.uint8, device=device)
@@ -110,7 +119,19 @@ def _classify_chunk(d, device):
         walls[m] = segment_walls(a[m], mid)
         if ok.any():
             walls[m[ok]] |= segment_walls(km[ok], b[m[ok]])
-    window = reach_a & (pa[:, 2] > 0) & (a[:, 0].abs() < geo.UBT_HALF_X) & (a[:, 1].abs() < geo.UBT_HALF_Y)
+    # UBT window at z = Z_UBT (31.13 m) on the path A -> (K) -> B (muon_types.path_at_z)
+    bounced = torch.isfinite(k[:, 2])
+    end = torch.where(bounced[:, None], k, b)
+    xu = torch.full((n,), float("nan"), dtype=torch.float64, device=device)
+    yu = xu.clone()
+    for p0, p1, use in ((a, end, torch.ones(n, dtype=torch.bool, device=device)), (k, b, bounced)):
+        dzz = p1[:, 2] - p0[:, 2]
+        tt = (geo.Z_UBT - p0[:, 2]) / dzz
+        mm = use & (dzz > 0) & (tt >= 0) & (tt <= 1) & torch.isnan(xu)
+        xu = torch.where(mm, p0[:, 0] + tt * (p1[:, 0] - p0[:, 0]), xu)
+        yu = torch.where(mm, p0[:, 1] + tt * (p1[:, 1] - p0[:, 1]), yu)
+    window = (reach_a & (pa[:, 2] > 0) & torch.isfinite(xu) & (xu.abs() < geo.UBT_HALF_X)
+              & (yu.abs() < geo.UBT_HALF_Y))
     walls |= window.to(torch.uint8) * mt.WALL_BITS["ubt_window"]
 
     kind = torch.full((n,), 7, dtype=torch.int8, device=device)

@@ -13,17 +13,27 @@ Numbers quoted below are from run_reco.py on D6_tile / D6_straw (15 Oct 2026), u
 A. BLOCKERS: fix before optimising
 ----------------------------------------------------------------------------------------------
 
+GEOMETRY (5 Nov 2026): FairShip layout (geometry_config.py 2026-0.1), target-aligned z_veto = z_FS - 2.14 (Guglielmo):
+    vessel 31.13 - 81.13 m (was 30.6 - 80.6), UBT on the entrance window 31.13, straw stations 82.08 / 84.08 / 91.08 /
+    93.08 (SST1 was 82.0), timing detector 94.01 m, 5.5 x 6.5 m (was 92.71, 4 x 6), magnet 84.36 - 89.56 (field map,
+    unchanged). The stored muon states stay at 30.6 / 82.0 m (geometry.Z_STATE_A / B): every detector crossing is
+    computed from them. Designs without "frame": "fairship-2026" have their fins moved +0.53 m with the vessel at load.
+    EVERY result before this date (types in the stores, rate maps, reco inputs, interactions) uses the old layout.
+
 A1. Background figure of merit is saturated
-    STATUS: OPEN
+    STATUS: DECIDED (5 Nov 2026), to implement
     The pair background is 2-3 surviving pairs out of 196,736 candidates (-> ~1e-5 events in
     15 years). Every reasonable design gives ~0, so differences between designs are Poisson
     noise.
     Plan: score designs on the single-muon veto inefficiency per muon type (large statistics),
     build the pair background by factorisation, rate_pairs x eps_1 x eps_2 (check that this holds
     on the pairs we do have), and quote an upper limit when there are zero survivors.
+    5 Nov 2026, Guglielmo: factorised estimate stays the default (objective bkg_estimate = "factorised"), plus a closure
+      check against the direct count on a high-statistics sample (cross-run pairs, bin/make_crossrun_pairs.py) and a 90 %
+      CL upper limit quoted when the direct count is 0. A1 DONE once the closure check is in.
 
 A2. Bounced muons: the veto barely sees them
-    STATUS: OPEN
+    STATUS: DECIDED (5 Nov 2026), to implement
     Only 74-77 % of bounced SST1 muons are vetoed. The search window contains the true crossing
     for only 30 % of them: a straight line extrapolated back from the spectrometer cannot follow
     the bounce off the cavern wall / floor. This term will probably decide the fin layout.
@@ -31,17 +41,40 @@ A2. Bounced muons: the veto barely sees them
     point), consider planes downstream of the bounce point or a search aimed at the wall.
     Statistics: rock_bounced and veto_only come from ONE simulation run (overfitting risk).
     The energy loss in the cavern rock is well modelled in the stored muons (see C4).
+    5 Nov 2026, Guglielmo: bounce-aware search. Study the class alone; a second search window aimed at the cavern wall /
+      floor (kink allowed at the wall); the optimiser may use fins downstream of the bounce point; more bounced statistics
+      from extra seeds (rock_bounced / veto_only come from one run now).
 
 A3. Rate limits are reported, not enforced
-    STATUS: OPEN
+    STATUS: DONE (4 Nov 2026: steep penalty in the objective + fine peak maps near the flames)
     The 4 cm tiles on the z = 30.6 m fins reach 10 MHz per channel (limit 1 MHz; consistent with
     SR-370's "up to 10 MHz in the flames", a good sanity check). The straw fin at z = 30.6 m is
     above 0.5 MHz/cm^2. A design over its limit still gets a normal score.
     Plan: rate limits as hard constraints or penalties. The fin rate maps have 20 x 20 cm bins,
     which averages the peak down for smaller cells: use finer maps near the flames.
+    4 Nov 2026, done (Guglielmo: steep penalty in the objective):
+      - objective.rate_penalty: every limit exceeded costs w_rate * (1 + rate_slope * (peak / limit - 1)),
+        w_rate = 1000 (> all other terms together), rate_slope = 10 (ObjectiveConfig). Was 1 + log10(peak / limit)
+        since 15 Oct (so a penalty existed, but grew only logarithmically above the limit). 2 x over = 11 000 points.
+      - fine peak maps: bin/make_peak_maps.py -> results/rate_maps/peak_maps.npz, 2 x 2 cm^2 maps (sum w, sum w^2)
+        from all 506 M muons of Full_dataset_z_3060_8200.pkl: UBT x-y at 30.6 m and fins at z = 30.6 - 40.6 m,
+        u < 2 m. reco.plane_rates takes the peak over a sliding window of the channel size (pads) or 4 cm (strips),
+        only windows with >= 10 effective muons, and keeps max(fine, coarse). Same normalisation as the coarse maps
+        (totals and 20 cm peaks agree to 0.1 %).
+      - effect at z = 30.6 m (bin/check_peak_rates.py, results/rate_maps/check_peak_rates.json): peak density
+        634 -> 880 +- 5 kHz/cm^2 (right fin), 459 -> 642 (left), x 1.39; 4 cm tile 10.1 -> 14.1 MHz per channel,
+        2 cm tile 2.5 -> 3.6 MHz (still over 1 MHz). Penalties: D6_straw 1 103 -> 12 435, D6_tile2 2 668 -> 43 554,
+        D6_tile 7 578 -> 253 426; E3_robust / E4 designs stay feasible (0).
+      - remaining (not A3): fibre and pixel have no rate limit in technology.py, so are never penalised; fins
+        beyond z = 40.6 m and u > 2 m still use the coarse peak (rates there are >= 3 x lower). The evolution runs on
+        the cluster: copy results/rate_maps/peak_maps.npz into its results/ (without it plane_rates falls back to
+        the coarse maps, as before).
+    5 Nov 2026, Guglielmo: placeholder rate limits for the leftovers: fibre 1 MHz per SiPM channel, pixel 3.5 MHz/mm^2
+      (Timepix4-like), to be confirmed by the detector colleagues.
+      Implemented: technology.py fiber max_channel_rate = 1e6, pixel max_rate = 3.5e8 Hz/cm^2.
 
 A4. No objective, two inconsistent cost models
-    STATUS: OPEN
+    STATUS: DECIDED (5 Nov 2026), to implement
     optimize_sbt.py is a stub. To decide:
       - objective: e.g. minimise cost subject to background < X and signal loss < Y;
       - one cost model: kCHF per layer-m^2 (P-369 table 11) and relative cost per channel
@@ -50,33 +83,138 @@ A4. No objective, two inconsistent cost models
       - free parameters and fixed limits (cavern wall x = -4.56 m, 1 m straw length,
         nothing below y = -3.2 m);
       - Monte Carlo noise: fixed seed / same events for every design (common random numbers).
+    5 Nov 2026, Guglielmo: ONE cost model = per module: channels x cost per channel of the technology + area-based
+      mechanics; pixel gets a per-channel number (no nan). Reported as % of the 8 MCHF budget (never money in talks).
+      Goes with A7 (cost per module).
+      Implemented (5 Nov): technology.module_cost = channels x cost_channel x 97.2/3600 kCHF (straw channel) +
+      0.10 x P-369 area cost (mechanics, placeholder); pixel electronics = ITk-based area cost; objective
+      "cost_pct_budget". Per m^2: straw 58, tile 81, tile2 341, fibre 1071, pixel 3882 kCHF (P-369: 36 / 30 / 30 / 340 /
+      3800): the per-channel model makes fine segmentation much dearer -> numbers to be checked with the colleagues.
+      Guglielmo (5 Nov): keep the per-channel model, FLAGGED for the detector colleagues.
 
 A5. Spill and PoT normalisation
-    STATUS: OPEN
+    STATUS: DECIDED (5 Nov 2026): keep the flat 1 s spill
     Accidental hits use flat times inside a 1 s spill (--spill). config.py has 5e13 PoT per spill
     and 6e20 PoT in 15 years. Check that rates match the 5e13 PoT/s convention, and model the real
     spill structure (50 Hz ripple, duty factor): accidentals scale with the instantaneous rate,
     and the straw signal loss (5.3 % with a +-25 ns window) scales with them.
+    5 Nov 2026, Guglielmo: keep the flat 1 s spill at 5e13 PoT/s (rates in kHz at 5e13 PoT/s), stated as an assumption;
+      no duty factor / 50 Hz ripple for now.
 
+A6. Spectrometer field map not used: products propagated in straight lines
+    STATUS: DONE (5 Nov 2026: RK4 in the field map; helium products in Geant4, to be built and run)
+    Downstream of SST1 (z = 82 m) every track (muons, DIS products, V0 daughters, signal daughters) is
+    extrapolated in a STRAIGHT line to the timing detector (z = 92.71 m, muon_types.py:91, reco.py:383),
+    through the spectrometer magnet (z = 84.36-89.56 m, |x| < 2.7, |y| < 3.8 m, geometry.SPECTROMETER_Z).
+    The field map MainSpectrometerField.h5 (z = 77.06-96.86 m, io.load_field_map) is only used for drawing
+    (bin/visualize_detector.py). So the timing-detector acceptance, the "single track" / <= 2 tracks in
+    the acceptance cuts and every rate after the timing-detector cut ignore the bending: soft tracks
+    (1 - few GeV) that the field sweeps out of (or into) the 2 x 3 m timing plane are counted wrongly, and
+    opposite-charge pairs separate in x. The p > 1 GeV cut uses the true momentum, not a measurement.
+    Plan:
+      - propagate EVERY charged product from its state at z = 82 m to the timing plane through the field map
+        (RK4 in B from MainSpectrometerField.h5, charge from the pdg code), vectorised (numpy / torch) since
+        it runs on all candidates; neutral particles stay straight;
+      - use the propagated position for the timing-detector acceptance and for the track-multiplicity cuts;
+      - optionally measure p from the bending (SST1/2 before, SST3/4 after the magnet) with a resolution model,
+        and apply the p > 1 GeV cut on the measured p;
+      - redo the SST1 / TD / p > 1 GeV rates (now 30.6 / 15.3 / 8.5 kHz) and compare with FairShip
+        (48.5 / 14.6 / 7.1 kHz, which has the field).
+    5 Nov 2026, done:
+      - lib/veto/spectrometer.py: vectorised RK4 in z (torch, CPU threads / GPU) through MainSpectrometerField.h5,
+        trilinear, 10 cm steps (< 0.01 mm vs 2 cm steps, < 1 mm vs an independent 5 mm stepper); tracks meeting
+        |B| > 0.5 T are lost in the yoke. CORRECTION (same day): FairShip places the map (local z +-9.9 m) at the magnet
+        centre c.z = 89.72 m (TRY2026; stations c.z -5.5/-3.5/+3.5/+5.5): 87.58 in our frame. The .h5 copy was centred
+        at 86.96 (older c.z = 89.10), i.e. 0.62 m upstream; field_map() re-centres it (geometry.Z_MAGNET). Check: on-axis
+        |B| is now symmetric, 0.061 T at stations 2 and 3, 0.023 T at stations 1 and 4. Numbers below are before it. Field ~ -0.15 T Bx on axis, integral SST1 -> TD -0.97 T m: tracks bend in y,
+        a 1 GeV track lands 2.04 m off at the TD (kick/p 0.29), 5 GeV 0.40 m, charge-symmetric. 1e6 tracks: 17 s (CPU).
+      - used in every timing-detector cut: muon_types.classify (+ torch version, identical on 2e5 muons), interactions.
+        charged_tracks, reco.signal_from_target (daughters +/-), selection.single_muon_masks, make_reco_inputs,
+        make_crossrun_pairs, visualize_full_dataset. Charge from pdg (muons: 13 = mu-).
+      - the geometry moved to FairShip at the same time (see the GEOMETRY note at the top of section A).
+      - helium products in Geant4 (Guglielmo): cpp/g4vessel.cc + lib/veto/g4vessel.py + bin/g4_vessel_transport.py:
+        helium G4Trd in a Mylar G4Trd, air, the field map, FTFP_BERT with decays; states at SST1 and the TD; a decay
+        product keeps its ancestor's identity (pi -> mu). interactions.charged_tracks(part, g4) uses them for the
+        transported interactions (bin/run_interactions.py --g4). BUILT 5 Nov with bin/g4ship.sh (SHiP CVMFS Geant4 10.7.3, host g++),
+        validated vs RK4 from SST1 to the TD (median <= 1 mm, spread = air scattering). (bin/g4.sh container: not from the sandbox.)
+      - not done: measured p (bending between SST1/2 and SST3/4) for the p > 1 GeV cut; straw stations, magnet iron
+        and SBT are not in the Geant4 geometry (yoke = field cut).
+      - effect (sample of 2e5 muons of the dis-parents store, old -> new types, weighted): selected -> other 0.65 %,
+        other -> selected 4.8 % of the sample (larger 5.5 x 6.5 m TD, bending). Rates need the re-runs below.
+
+A6b. Realistic tracking: straw hits and track fit (post-processing)
+    STATUS: DONE (5 Nov 2026); selection decided, to implement
+    lib/veto/straws.py (FairShip strawtubes geometry and digitisation), bin/genfit_straws.py (GenFit DAF exactly as
+    shipDigiReco.findTracks, SHiP CVMFS via bin/shipenv.sh), bin/straw_reco.py. Per track: n_hits, n_stations, fitted
+    (>= 25 hits, >= 3 stations), converged, chi2 / ndf, fitted p and charge, state at SST1, good (chi2/ndf < 50).
+    Toy muons with Geant4 trajectories: 98.5 % fitted, chi2/ndf median 0.96, sigma_p/p 0.9 - 1.6 %.
+    Not modelled: straw / frame material in the trajectories (Geant4 world has no straws), noise and inefficiency,
+    t0 / drift-time smearing, pattern recognition (hits are assigned to tracks by truth, as FairShip's ideal PR),
+    several tracks sharing a straw. Not yet applied to the candidates (selection: n_hits / chi2 cuts to be chosen).
+    5 Nov 2026, Guglielmo: candidate tracks get the usual SHiP quality cuts (converged, ndf > 25, chi2/ndf < 5) and the
+      fitted p for the p > 1 GeV cut and the IP, with an option to accept every track as now (no straw cuts).
+      Implemented: RecoConfig.straw_cuts (None = accept all, default; "fairship" = converged, ndf > 25, chi2/ndf < 5,
+      fitted p > 1 GeV on both vertex tracks, straws.track_quality), bin/run_interactions.py --straw-cuts. Synthetic
+      mu+ mu- decays (3 - 20 GeV): 54 / 60 kept. Fitted p in the IP not yet (reco.measure still smears the truth).
+
+A7. Detector planes have no predefined module dimensions
+    STATUS: DECIDED (5 Nov 2026), to implement
+    Plane sizes are free and continuous (fin "length", "y_lo" / "y_hi", UBT extent in design.py); channels and
+    cost are computed for exactly that area (technology.n_channels rounds cells, not modules). Only the straw
+    length (max_length 1 m) and the fibre mat length (3 m) are quantised. A real plane is assembled from
+    fixed modules, so the optimiser can propose sizes that cannot be built, and module borders are ignored.
+    Modules to use (one module carries all the layers of the technology):
+        straw   1 x 1 m^2, all 6 layers (3 views 0, +-15 deg, 2 staggered layers each), 5 mm pitch
+        tile2   50 x 50 cm^2 of 2 x 2 cm tiles (25 x 25 = 625 SiPMs)
+        tile    48 x 48 cm^2 of 4 x 4 cm tiles (12 x 12 = 144 SiPMs)
+        fiber   0.5 x 2.5 m^2 mat (SCSF-78MJ, 250 um), two crossed mats (x, y) per module
+                (max_length 3 m -> 2.5 m)
+        pixel   quad ~4 x 4 cm^2 (2 x 2 Timepix4-like chips)
+    Modules of EVERY technology are assembled the same way: side by side (an n_u x n_y grid in the plane, e.g.
+    4 straw modules = 2 x 2 m) and stacked in z at the same (x, y) (redundant stations, cf. E4_ubt2 / E4_entry2).
+    Technologies can be MIXED in one plane: e.g. 1 m in x = two 50 x 50 cm tile2 modules, or one tile2 module
+    + one 0.5 m wide fibre mat, and so on (fine timing / granularity only where the rate needs it).
+    Note: module sizes are not all on the same grid (tile 48 cm vs 50 cm, fibre 2.5 m vs straw 1 m in y):
+    decide the common grid (e.g. 50 cm, tile modules padded to 50 cm) or allow mismatched borders as dead area.
+    Each module has a DEAD FRAME (frame, SiPMs / readout, manifolds): the border is inefficient (links C2).
+    Plan:
+      - technology.py: module size (u, y), cells per module, dead-frame width per technology (widths to be fixed
+        with the detector colleagues), channels and cost PER MODULE;
+      - design.py: a plane = a grid of module slots, each slot = (technology, number of stacked layers in z);
+        the optimiser's free parameters become these integers / choices (continuous length / y range removed);
+      - reco.py: zero efficiency in the dead frames (and in the gaps between modules), material of the frames
+        in the MS / DIS budget;
+      - rate limits (A3) per module channel; redo the existing designs (D6_*, E3/E4) on the module grid.
+    5 Nov 2026, Guglielmo: common 50 x 50 cm slot grid. Straw module = 2 x 2 slots, fibre mat = 1 x 5 slots (0.5 x 2.5 m),
+      tile2 = 1 slot, tile (48 cm) = 1 slot with the 2 cm as dead area, pixel quads tiled inside a slot. Each slot =
+      (technology, stations stacked in z). Technologies can be mixed slot by slot. Dead frame widths: to be given.
+      Implemented (5 Nov): technology.MODULES / SLOT; design JSON "modules": [{"tech", "u", "y", "stations"}] per plane
+      (+ "y0": grid origin, -1.5 UBT / -3.0 fins); design.module_blocks merges same-technology modules stacked in y
+      into one Plane block (u_off, mod_u / mod_y, dead borders, pixel quads); Plane.inside rejects the dead borders;
+      reco rate maps shifted by u_off; design.snap_to_modules + bin/snap_designs.py -> designs/modules/*_mod.json.
+      D6_straw: 141 modules, 88 % active, veto on 3000 muons 76.4 % -> 69.5 % (frames + area). Still to do: the
+      evolution's free parameters (evolve/evolve_designs.py) on the slot grid.
+      Done (5 Nov): evolve_designs.py --grid modules (default): the LLM gets the module format, module sizes, frames
+      and cost per module (% of budget); continuous proposals are rejected locally; seeds from designs/modules.
 
 ----------------------------------------------------------------------------------------------
 B. PHYSICS MISSING: changes the results
 ----------------------------------------------------------------------------------------------
 
 B1. Multiple scattering (at least this interaction must be modelled)
-    STATUS: OPEN (material budget defined 15 Oct 2026, ready to implement)
+    STATUS: IN PROGRESS (side-wall material: decided 5 Nov 2026, mild issue)
     The stored muons have NO multiple scattering after the shield: the states at z = 30.6 m and
     z = 82 m are joined by straight lines and the transport did not include the air / vessel.
     Material along a muon's path (now fully defined, so MS can be computed for every muon):
         z = 29.89 - 30.6 m   air, 0.71 m        (shield end, TRY6, to the UBT)    x/X0 = 0.0023
-        z = 30.6 m           PVC wall, 0.3 mm   (decay-vessel entrance)           x/X0 = 0.0015
+        z = 30.6 m           Mylar wall, 350 um (decay-vessel entrance)           x/X0 = 0.0012
         z = 30.6 - 80.6 m    helium, 50 m       (decay volume, SR-370 balloon)    x/X0 = 0.0088
-        z = 80.6 m           PVC wall, 0.3 mm   (decay-vessel exit)               x/X0 = 0.0015
+        z = 80.6 m           Mylar wall, 350 um (decay-vessel exit)               x/X0 = 0.0012
         z = 80.6 - 82 m      air, 1.4 m         (to SST1)                         x/X0 = 0.0046
         + every veto plane crossed (technology.x0: straw 0.12 %, fibre 0.6 %, pixel 0.5 %,
           tile 2.4 % X0 per plane)
-        X0 used: air 303.9 m, helium 5671 m, PVC 19.63 cm (PDG).
-    Total for a straight muon through the vessel: x/X0 = 0.0188 without the UBT, 0.020 with a
+        X0 used: air 303.9 m, helium 5671 m, Mylar 28.54 cm (PDG; walls were 0.3 mm PVC, X0 19.63 cm, until 2026-11-04).
+    Total for a straight muon through the vessel: x/X0 = 0.0182 without the UBT, 0.019 with a
     straw UBT, 0.043 with a tile UBT. Highland, theta0 = 13.6 MeV / p * sqrt(x/X0) *
     (1 + 0.038 ln(x/X0)): 1.6 mrad / p[GeV] (straw UBT), 2.5 mrad / p[GeV] (tile UBT).
     Displacement at SST1 (z = 82 m) from one scatterer at p = 1 GeV: PVC entrance ~2 cm,
@@ -97,9 +235,12 @@ B1. Multiple scattering (at least this interaction must be modelled)
         defined yet;
       - check that reco.RecoConfig.ms_slope / r_ms (search window growth with 1/p) still cover
         the true scatter, otherwise the window loses veto efficiency or grows the accidentals.
+    5 Nov 2026, Guglielmo: vessel side walls stay 350 um Mylar like the windows (our design has no SBT, the fins replace
+      it). Left as a MILD issue (priority C): FairShip's lateral walls carry the SBT (Al + liquid scintillator), so muons
+      entering through the sides see more material there (scattering, wall DIS) than in our model.
 
 B2. EM debris rate (electrons / photons from the end of the shield)
-    STATUS: OPEN
+    STATUS: DECIDED (5 Nov 2026), to implement
     Only muons are simulated: no delta rays, bremsstrahlung or pair-production debris leaking from
     the shield. These add hits (occupancy, rate limits) and accidental vetoes (signal loss).
     Plan (estimate from data we have):
@@ -115,15 +256,21 @@ B2. EM debris rate (electrons / photons from the end of the shield)
         apply a per-technology detection probability (photons convert rarely in thin straws, more
         in 1 cm tiles) and add them to the accidental hits.
     Cross-check later against a Geant4 run of a muon beam on 20 cm of iron.
+    5 Nov 2026, Guglielmo: estimate it from the full-physics FairShip TRY2026 EM production (lxplus; SSTScoringPoint,
+      UpstreamTagger, vetoPoint): e / gamma rate maps at the UBT and fin positions, per muon, scaled to our muon flux. COPY
+      the needed part of the sample into the local folder (data/fairship_em/) so it can be reused. Needs lxplus access
+      (ControlMaster socket ~/.ssh/cm-lxplus, opened by Guglielmo).
 
 B3. Neutrino and muon deep inelastic scattering
-    STATUS: DEFERRED (to be evaluated later)
+    STATUS: DONE (5 Nov 2026): modelled, follow-up in C7, C8, D2 - D9
     Not taken into account: DIS in the veto planes (tiles 2.4 % X0 vs straws 0.12 % X0), in the
     vessel walls and in the cavern. Until then the optimiser will favour thick fast planes for
     free; keep the material reported (x0 per plane) so it can be added as a constraint.
+    5 Nov 2026: closed. Muon and neutrino DIS are modelled (fastveto forced interactions in helium / air / walls /
+      planes, MS7 shield chain, Geant4 transport of the products); open points are tracked in C7, C8 and D2 - D9.
 
 B4. Signal model
-    STATUS: OPEN
+    STATUS: IN PROGRESS (5 Nov 2026: EventCalc samples imported)
     Now: neutral particle decaying uniformly in the vessel volume, two daughters uniform over the
     SST1 acceptance, p uniform 1-50 GeV. Signal is lost only through accidental hits.
     Plan: use an HNL (and dark photon) model from the literature:
@@ -148,7 +295,18 @@ B4. Signal model
       [5] SPSC-P-369 (CERN-SPSC-2023-033), BDF/SHiP ECN3 proposal: signal selection, IP and veto
           requirements (summarised in conversation.txt).
       (Check volume / page numbers against INSPIRE before citing in a talk.)
-
+    5 Nov 2026: the 43 EventCalc benchmarks (HNL e/mu 0.5-4 GeV, dark photon, scalar, ALP; c tau 1 and 100 m) are in
+      data/signal/eventcalc/ (column store, 375 MB, README.md there): bin/import_eventcalc.py, loader
+      lib/veto/signal_eventcalc.py (benchmarks, load, charged_tracks, production_point). Frame z_veto = z_EC - 0.87
+      (vessel entrances aligned, translate_for_fairship.py --vessel-z0-eventcalc 32.0); counts and weights identical
+      to ~/work_dir/EventCalc_signal_rejection. weight = expected decays in the EventCalc volume for 6e20 PoT.
+      Open: (1) the LLP starts at z_veto = -0.87 (EventCalc origin), not at Z_TARGET = -2.14: +theta x 1.27 m on the IP
+      (median 2 cm, max 6 cm) -> fixed by the regenerated samples (EventCalc dcdcfc1, re-import with
+      --vessel-z0-eventcalc 32.4768); (2) dark photon 4 GeV c tau 100 m missing (N_ev < 0.1); (3) the daughter-asymmetry
+      cut is a BONUS, not part of the basic selection (Guglielmo); (4) not yet used by run_reco / the objective.
+    5 Nov 2026, Guglielmo: replace the toy signal by a fixed benchmark set, weighted (e.g. HNL-mu 1 GeV, dark photon
+      0.9 GeV, scalar 2 GeV, ALP 1 GeV at c tau 100 m), each through the full selection (field, both IP categories) and the
+      veto; toy kept for comparison. Numbers only with the regenerated samples (production point at the target).
 
 ----------------------------------------------------------------------------------------------
 C. DETECTOR AND BOOKKEEPING: second order
@@ -161,28 +319,36 @@ C1. Detector response simplifications
       - straw time = uniform smearing in the 50 ns drift window; with a tile t0 the drift radius
         could be used (better time and position);
       - no cluster size, no tile cross-talk, plane efficiency independent per plane.
+    5 Nov 2026 (issue review with Guglielmo): left OPEN, no decision yet.
 
 C2. Dead material and dead regions
-    STATUS: OPEN
+    STATUS: DECIDED (5 Nov 2026, placeholder numbers), with A7
     No frames, manifolds, overlaps between 1 m straw rows, module gaps, SiPMs or cables. For the
     UBT this matters most: the tensioned-straw frame sits in the acceptance (SR-370 open question).
+    5 Nov 2026, Guglielmo: dead border per module edge, per technology (guesses, to be confirmed by the detector
+      colleagues): straw 3 cm (frame + manifolds), tile / tile2 1 cm (SiPM side), fibre 2 cm (readout end), pixel 1 mm.
+      Implemented with A7 (technology.MODULES frame / frame_edges / sub_frame). Dead material of the frames (scattering,
+      DIS) not added.
 
 C3. Validation against full simulation
     STATUS: OPEN
     Run one baseline design through FairShip and compare rates and veto inefficiency before
     trusting an optimum.
+    5 Nov 2026 (issue review with Guglielmo): left OPEN, no decision yet.
 
 C4. Energy loss of bounced muons in the cavern
     STATUS: OK
     Well modelled in the stored muons (from the transport); nothing to do.
 
 C5. Weights and statistics
-    STATUS: OPEN
+    STATUS: DECIDED (5 Nov 2026), to implement
     The repeated-evt_n weight correction is not applied in the design-optimisation dataset;
     veto_only and rock_bounced are from one run. Decide whether to apply the correction and how
     many extra runs are needed for the rare classes.
     30 Oct 2026: muon DIS in helium (D6_straw draws): one input muon (evt_n) gives 6.8e4 of the
     1e6 draws, n_eff ~ 60 over evt_n -> +-23 % on the mu DIS rate (errors summed per evt_n).
+    5 Nov 2026, Guglielmo: apply the repeated-evt_n weight correction in the dataset and add seeds for the rare classes
+      (with A2) until n_eff per class > ~1000; errors from the bootstrap over evt_n as now.
 
 C6. Detector technology numbers
     STATUS: DONE (15 Oct 2026, commit f6d13ec)
@@ -192,16 +358,165 @@ C6. Detector technology numbers
     on a 1 x 2.7 m plane depends on the tile combination (mixed sizes not modelled).
 
 C7. V0 from DIS outside the vessel decaying inside
-    STATUS: OPEN (30 Oct 2026, from the deck review)
+    STATUS: IN PROGRESS (5 Nov 2026: air draws restricted near the vessel and the fins)
     A K_S / Lambda made by muon DIS in the cavern air, a fin or the UBT can decay inside the vessel
     and give a two-track vertex with no upstream hit of its own. Air: simulated (decay in flight),
     0 of 45 air pairs after DOCA have a vertex in the vessel, but one air draw = 7e6 interactions
     per 15 y (draws spread over 1.4e12 air interactions, almost all far from the vessel): not
     conclusive. Fins / UBT: planes not in the interaction caches. K_L kept stable (decays not
     simulated). Needs draws restricted to air and fins near the vessel (artifacts_work/scripts/dis_cutflow.py).
+    5 Nov 2026 (Guglielmo: restrict the air to 40 cm around the vessel and the fins): fastveto.targets.AIR_MARGIN = 0.4:
+      air crossings only within 0.4 m of the vessel's outer surface or of a fin (slab |z - z_fin| < 0.4 m, fin extent
+      + 0.4 m), exact pieces (checked against a brute-force line integral: 3 mm on 300 muons); bin/run_interactions.py
+      --air-margin (< 0 = all the air). Weights are the true chord lengths, so the rate per 15 y is absolute for that
+      region; the far air is no longer sampled. On 5e4 muons the kept air is 38 % of the air nucleon column (muons run
+      along the vessel walls and through the 3 x 6 m fin slabs). To do: re-run the muon interactions (approval).
 
 C8. DIS rates with the new selection
-    STATUS: OPEN (30 Oct 2026)
+    STATUS: IN PROGRESS (5 Nov 2026: two selections on the measured IP)
     Without measured IP < 10 cm and <= 2 tracks in SST1, before the veto per 15 y: mu He
     (6.0 +- 1.4)e4, mu PVC 7 400 +- 850, nu He 467 +- 2 (old selection: 1 800 and 0.82).
     Decide whether to bring back a pointing / track-multiplicity cut (artifacts_work/scripts/dis_cutflow.py).
+    5 Nov 2026 (Guglielmo): the 2.5 m IP cut is for NOT fully reconstructed events and must be measured; the 10 cm cut
+      is for fully reconstructed ones. vertex_selection.IP_CUTS = {full: 0.10, partial: 2.5} (measured IP), the candidate
+      pre-cut on the TRUE IP is loosened to IP_PRECUT = 3 m (benchmark_designs._pair_cut, reco.signal_from_target).
+      bin/run_reco.py / run_interactions.py --ip-cut full|partial (outputs *_partialreco.json). Backgrounds are quoted
+      per selection. To do: regenerate results/reco/inputs.npz (pre-cut 3 m) and re-run both selections (approval).
+
+C9. shah_study categories: bounce flag not reliable
+    STATUS: OPEN (4 Nov 2026)
+    MuonsAndMatter cuda_muons_ship.categorize_muons: every muon of `bounced_back` checked in seed 0 is a perfect
+    straight line from the z = 30.6 m state to z = 82 m (offset 0.000 m), and `straight_past_vessel` (z = 82, outside the
+    vessel acceptance) excludes muons that go straight through the vessel and contains 0.6 % bounced ones. For
+    "straight / bounced" use the veto definition (offset from the 30.6 m line < BOUNCE_CUT = 0.5 m, muon_types.py).
+    Found making results/ubt_xy_rate (straight & selected 8.13 kHz instead of 6.24 kHz with the category).
+    Also: the vessel wall is now 350 um Mylar (CHANGELOG 2026-11-04); C8 "mu PVC" numbers are for the old 0.3 mm PVC.
+    5 Nov 2026 (issue review with Guglielmo): left OPEN, no decision yet.
+
+----------------------------------------------------------------------------------------------
+D. FROM THE OTHER DOCS (added 4 Nov 2026, from docs/issues_report/veto_issues.pdf)
+----------------------------------------------------------------------------------------------
+
+D1. Objective exploitable: signal term saturates
+    STATUS: DONE (5 Nov 2026, with D2)
+    (docs/issues_report D1) Guglielmo: give signal vetoing and background tagging two different weights in the reward,
+    and count neutrinos less than muons. objective.ObjectiveConfig: split_sensitivity = True (default) ->
+    reward = - w_bkg_tag (1 - S90(0) / S90(N_w)) - w_sig_veto (signal lost) - cost - constraints, uncapped signal term,
+    w_bkg_tag = w_sig_veto = 100 (= w_sens: the product form for small losses). N_w = w_src_nu_helium N(nu DIS in helium) +
+    w_src_muon N(everything else); Guglielmo (5 Nov): w_src_nu_helium = 0.01, ONLY neutrino DIS in the helium is down-weighted,
+    nu DIS in air / walls / planes / shield counts like the muons (w_src_muon = 1). "bkg_events_15y" and "sensitivity" stay physical.
+
+D2. Neutrino DIS in helium: irreducible for an upstream veto
+    STATUS: IN PROGRESS (5 Nov 2026: nu DIS in helium weighted 0.01 in the reward; vertex-activity veto not done)
+
+D3. MS7 shield DIS -> K_L: chain disagrees with FairShip
+    STATUS: OPEN (PRIORITY A, major) - 5 Nov 2026: Pythia 6 only (DIS part) confirmed, issue kept open as major
+    Forced chain in the last 50 cm of MS7: K_L decays in the vessel ~4.9 kHz, (6.73 +- 0.59)e7 per 15 y
+    after DOCA < 1 cm, fiducial, IP < 2.5 m (docs/shield_iron_dis.md).
+      - plain Geant4 (bin/shield_natural_check.py) gives 0.52 +- 0.15 of the chain's K_L; the excess is the
+        Pythia 6 component of mu_library_iron (9.5 % of interactions, 90 % of the K_L);
+      - FairShip full physics (TRY_2026_EM_SST1_origin) sees ZERO K_L / K_S from the shield reaching the SST,
+        and shield-made pi ~17x below the chain (not explained by the Pythia excess);
+      - after the full selection the mu number rests on 3-7 MC events (+-40-60 %);
+      - algorithm A cannot veto it (decay tracks have no upstream hits); asymmetry cuts at 0.9 keep 100 %.
+    Plan: find the FairShip discrepancy (MS7 flux / field TRY6 vs TRY2026, Kokoulin muon-nuclear in FairShip
+    vs Pythia 6 high-nu DIS here; the flux in the MS7 footprint already agrees); K_L-enriched draws; model
+    a veto on any in-time hit (scattered muon in UBT / fins) and a pointing cut.
+    5 Nov 2026, Guglielmo: leave D3 open, but use ONLY the Pythia 6 part of the iron muon-DIS library for the shield chain
+      (split "pythia" instead of the crossover Geant4 + Pythia 6 mix). Implemented: fastveto.dis.MuonLibrary(split="pythia"),
+      shield_dis.MU_SPLIT. NOTE: Pythia 6 alone is the deep-inelastic part only: sigma(iron) 1.18 / 3.46 ub per nucleon
+      at 20 / 100 GeV vs 9.55 / 16.5 for the crossover mix (the soft photonuclear part, Geant4, is dropped), so the
+      shield interaction rate falls by x 5 - 8 while the K_L (90 % from the Pythia part) fall much less. Confirmed by
+      Guglielmo (5 Nov): keep the DIS part only, D3 stays a MAJOR open issue.
+
+D4. MS7 shield DIS chain: simplifications
+    STATUS: IN PROGRESS (5 Nov 2026: solution accepted, code done, runs pending)
+    Straight parent lines from z = 29.20 m (no bending in 2 T, ~1.4 cm at 20 GeV); muons stopping in the
+    slab not removed (mean loss only); Pythia part on free nucleons; after the plane straight lines, no
+    field / scattering in the 0.7 m of air; pi / K decays in flight ignored; neutron and K_L interactions
+    in the vessel / air not simulated; neutrino flux p > 10 GeV only, no nu_e.
+    Plan: propagate the parent with the field map (lib/veto/shield_iron.py has it); decay pi / K in flight;
+    transport neutrons / K_L in helium and air; extend the nu flux below 10 GeV and add nu_e.
+    5 Nov 2026 (Guglielmo accepted the plan):
+      - parent muon bent by the MS7 field to the vertex: shield_iron.curved_points (RK4 in path length, mean dE/dx),
+        used by shield_dis.draw (BEND_PARENT); 20 GeV: 5 mm over 0.6 m, 5 GeV: 2.2 cm.
+      - after the plane: bin/g4_vessel_transport.py --codes 3 4 --drop-v0-codes 3 transports the shield output with
+        Geant4 (pi / K decays in flight, K_L / neutron interactions in air and helium, field); the V0s of the original
+        interactions are dropped there because the forced-decay copies (code 4) carry their decays.
+      - nu_e: shield_dis takes every flavour of NU_FLAVOURS (14, -14, 12, -12) that has a flux store AND an entry in
+        the iron GENIE library; the library has only 14 / -14 now -> rebuild with bin/nu_library.py --nuclei
+        1000260560 --nus 14 -14 12 -12 (cluster), and check that store_nu12 / store_nu-12 exist.
+      - nu flux below 10 GeV: NOT possible with the 2018 production (p > 10 GeV cut at production); needs a dedicated
+        neutrino flux file (e.g. the FairShip neutrino production): open.
+      - still straight: the chord L in the iron (path length change ~1e-4); muons stopping in the slab not removed.
+
+D5. Muon source: enriched input disagrees with the old sample
+    STATUS: OPEN (PRIORITY B)
+    The SST1-selected rate is 1.55x higher with the enriched input (1.9x above 100 GeV), at the same flux
+    above 150 GeV: larger than any statistical error (docs/fast_veto_sim.md section 5). Also: the
+    regeneration differs by 10-20 % from the old file, the > 200 GeV tail has a ~x2 model dependence
+    (Pythia version / diffraction), and 50-150 GeV still has the old statistics.
+    Plan: compare angle and momentum shapes of the two inputs above 150 GeV; extend the enrichment down to
+    50 GeV; quote the source model as a systematic on the muon backgrounds.
+    5 Nov 2026 (issue review with Guglielmo): left OPEN, no decision yet.
+
+D6. Interaction-library approximations
+    STATUS: OPEN (PRIORITY C)
+    Final states not rescaled to the exact muon energy (15 % grid); no nuclear effects (Fermi motion,
+    shadowing, re-interactions) in the Pythia part; no tau library (~1 % nu_tau in the flux)
+    (docs/fastveto_physics.md "Open").
+    Plan: rescale final states to the true energy (or a finer grid); compare with a nuclear model on a
+    subset; build a nu_tau library.
+    5 Nov 2026 (issue review): left OPEN. POSSIBLE SOLUTION (not implemented; to be done on a separate branch, e.g.
+      veto-d6-energy-rescale, so it can be compared with the current library before merging):
+      - energy rescaling: the libraries store final states at grid energies 15 % apart; a muon / neutrino of energy E
+        takes the event of the nearest grid point E_lib. Rescale every final-state momentum by E / E_lib (or interpolate
+        between the two neighbouring grid points by weight), keeping the angles; check that the hadronic multiplicity and
+        the V0 yield vs E do not change by more than the statistics;
+      - nuclear effects in the Pythia 6 part: compare 1e5 events with Geant4 / GENIE nuclear models (Fermi motion,
+        shadowing, intranuclear re-interactions) on the same targets and take the difference as a systematic;
+      - nu_tau: build a nu_tau library with bin/nu_library.py (GENIE, --nus 16 -16), ~1 % of the flux.
+
+D7. Interactions upstream of z = 30.6 m not simulated
+    STATUS: DECIDED (5 Nov 2026), to implement
+    Apart from the last 50 cm of MS7, interactions in the shield, cavern walls and rock are not simulated.
+    The FairShip origin breakdown (/disk/users/gfrise/fairship_sst1_origin) shows pi / p at SST1 come
+    mostly from the cavern concrete and the vessel walls / SBT.
+    Plan: add the cavern concrete (and the rest of the shield) as forced-DIS targets on the bounced-muon
+    paths; use the FairShip origin breakdown as the reference.
+    5 Nov 2026, Guglielmo: add the air between the shield end (29.89 m) and the vessel (31.13 m, 1.24 m since the FairShip
+      layout) to the muon DIS targets: muon paths extended straight back from state A (30.6) to 29.89 (no field after the
+      shield), kept region = the vessel entrance grown by AIR_MARGIN (C7); V0 decays in the vessel follow as for air.
+      Implemented: fastveto.targets.UPSTREAM_AIR / Z_SHIELD_END. On 3e4 muons: air upstream of the vessel 1.13e28 ->
+      2.47e28 weighted nucleons/m^2 (helium and wall unchanged).
+
+D8. Results computed with the old PVC vessel wall
+    STATUS: OPEN (PRIORITY B)
+    Wall is now 350 um Mylar (CHANGELOG 2026-11-04; x/X0 1.53e-3 -> 1.23e-3, +18 % nucleons, no Cl).
+    results/interactions, apply / reco-input files with "pvc" rows, scattering-dependent reco and the C8
+    wall numbers are still PVC-based.
+    Plan: rerun wall DIS and reco with Mylar; rename the target key "pvc" -> "wall" once all saved files
+    are regenerated.
+
+D9. DIS x mu pairs not redone with the V0-stable library
+    STATUS: OPEN (PRIORITY C)
+    With K_S / Lambda tracked in the MS7 iron (data/interactions/dis/mu_library_iron_v0stable.npz,
+    2026-11-02) the dis_comb_* DIS x mu combinatorial pairs were not redone.
+    Plan: rerun artifacts_work/scripts/dis_comb_pairs_asym.py on the V0-stable sample.
+    5 Nov 2026 (issue review with Guglielmo): left OPEN, no decision yet.
+
+D10. Geant4 built-in neutrino physics unusable
+    STATUS: DONE
+    Geant4 11.2.2: all nu-nucleus models share one set of x/Q2 tables (CC sampled from NC kinematics,
+    <y> = 0.13-0.34 instead of ~0.48), NC 2.6x too large and drops all hadrons, no Lund fragmentation,
+    fWeight bug gives CC secondaries weight 1 (docs/geant4_neutrino_notes.md).
+    Decision: GENIE 3.06.02 (tune G18_02a_00_000) built and used for all neutrino interactions.
+
+D11. Bugs found and fixed (record)
+    STATUS: DONE
+      - reco.own_hits: with MS on, tracks born downstream got a UBT hit at their start (9.5 % fake vetoes
+        for nu DIS in helium); start-upstream condition restored (2026-11-01, CHANGELOG).
+      - make_design_explorer.py: type 7 (muons stopping in the shield) counted on the UBT (5.3e9 instead of
+        1.05e7 / spill); excluded (docs/SUMMARY_2026-10-20.md).
+      - shield_dis: muon final states sampled twice per interaction; fixed (docs/shield_iron_dis.md).
+      - shah_study "straight" category replaced by the BOUNCE_CUT definition (C9).

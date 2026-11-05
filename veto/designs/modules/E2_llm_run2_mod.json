@@ -1,0 +1,348 @@
+{
+ "name": "E2_llm_run2_mod",
+ "description": "LLM evolution, run 2 (honest background): tile2 fins 0.6 m at z = 30.6, 1 m at z = 36 (20261015_213509/g9c0_z30_len06) (on the 50 cm module grid)",
+ "frame": "fairship-2026",
+ "detector": {},
+ "fins": [
+  {
+   "side": "right",
+   "z": 31.13,
+   "tilt": 0,
+   "y0": -3.0,
+   "modules": [
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 8,
+     "stations": 1
+    }
+   ]
+  },
+  {
+   "side": "left",
+   "z": 31.13,
+   "tilt": 0,
+   "y0": -3.0,
+   "modules": [
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 8,
+     "stations": 1
+    }
+   ]
+  },
+  {
+   "side": "right",
+   "z": 36.53,
+   "tilt": 0,
+   "y0": -3.0,
+   "modules": [
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 8,
+     "stations": 1
+    }
+   ]
+  },
+  {
+   "side": "left",
+   "z": 36.53,
+   "tilt": 0,
+   "y0": -3.0,
+   "modules": [
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 8,
+     "stations": 1
+    }
+   ]
+  }
+ ],
+ "ubt": {
+  "y0": -1.5,
+  "modules": [
+   {
+    "tech": "straw",
+    "u": 0,
+    "y": 0
+   },
+   {
+    "tech": "straw",
+    "u": 0,
+    "y": 2
+   },
+   {
+    "tech": "straw",
+    "u": 0,
+    "y": 4
+   }
+  ]
+ }
+}

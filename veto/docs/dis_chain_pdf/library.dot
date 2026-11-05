@@ -1,0 +1,11 @@
+digraph G { rankdir=LR;
+#include
+  E [label="Energy grid\n50 points\n0.5-500 GeV (log)"];
+  G [label="Geant4 11.2.2 muonNuclear\nKokoulin XS + MuonVDNuclearModel\nper material: He, PVC, Mylar, PS,\nSi, PVT, air, Fe\n20 000 events / energy"];
+  P6 [label="Pythia 6.4.28\ngamma*/mu on p and n\nW > 2 GeV, from 2.2 GeV\nVMD / direct / anomalous / DIS"];
+  X [label="split at nu_x(E):\nwhere Pythia dsigma/dnu\nreaches Geant4", shape=diamond, fillcolor="#fff6e0", color="#a86a00"];
+  LO [label="Geant4 part (nu < nu_x)\nsoft, quasi-real photon,\nnuclear break-up"];
+  HI [label="Pythia part (nu >= nu_x)\nhard DIS (Q^2 growth)\np/n mixed by Z/A"];
+  L [label="mu_library.npz\nmu_library_iron.npz\nmu_library_iron_v0stable.npz", shape=cylinder, fillcolor="#fff6e0", color="#a86a00"];
+  E -> G; E -> P6; G -> X; P6 -> X; X -> LO; X -> HI; LO -> L; HI -> L;
+}

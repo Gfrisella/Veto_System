@@ -1,7 +1,7 @@
 """Backgrounds from particle interactions after the muon shield (lib/fastveto) through our selection and veto.
 
 fastveto (fastveto.dis for muons, fastveto.nudis for neutrinos) forces interactions in the vessel helium, the
-air (z = 30.6 - 82 m), the PVC walls and every plane of a design, with a weight (interactions per spill) and the
+air (z = 30.6 - 82 m), the vessel walls (350 um Mylar; target key 'pvc' kept) and every plane of a design, with a weight (interactions per spill) and the
 final-state particles (pdg, momentum, production point, beam = the scattered muon / outgoing lepton). Here:
 
   tracks     charged particles are straight lines from their production point (no field before the
@@ -19,7 +19,7 @@ final-state particles (pdg, momentum, production point, beam = the scattered muo
                   muon, if it is not a vertex track, is followed back past the vertex to its parent's hits
                c  truth bound: the parent muon crossed a plane upstream of the interaction (no efficiency,
                   no reconstruction): the best any algorithm can do. Neutrinos have no parent.
-Results per target (helium, air, PVC, each plane): interactions, selected, surviving a / b / c, per 15 years,
+Results per target (helium, air, wall ('pvc'), each plane): interactions, selected, surviving a / b / c, per 15 years,
 with errors from a bootstrap over input muons (evt_n: rows of one input muon are not independent).
 """
 
@@ -50,20 +50,33 @@ def target_name(code, design):
     return CODE_NAMES[code] if code < 10 else design.planes[code - 10].name
 
 
-def charged_tracks(part):
-    """Charged final-state particles moving downstream, as straight lines to z = 82 m (state B), with
-    the SST1 / timing acceptance of the vertex tracks. Returns a dict of arrays (one row per particle)."""
+def charged_tracks(part, g4=None):
+    """Charged final-state particles moving downstream, as straight lines to SST1 (state B, z = geometry.Z_SST1), with
+    the SST1 / timing acceptance of the vertex tracks (timing detector through the spectrometer field map). Returns a dict of arrays (one row per particle)."""
     q = charge(part["pdg"])
     p, v = part["p"][:, :3], part["v"]
     keep = np.nonzero((q != 0) & (p[:, 2] > 0) & (v[:, 2] < geo.Z_SST1))[0]
     p, v = p[keep], v[keep]
     b = v + p / p[:, 2:3] * (geo.Z_SST1 - v[:, 2:3])
     pt = np.linalg.norm(p, axis=1)
-    dz = geo.Z_TIMING - b[:, 2]
-    xt, yt = b[:, 0] + p[:, 0] / p[:, 2] * dz, b[:, 1] + p[:, 1] / p[:, 2] * dz
     acc = (np.abs(b[:, 0]) < geo.SST1_HALF_X) & (np.abs(b[:, 1]) < geo.SST1_HALF_Y)
-    good = acc & (pt > 1) & (np.abs(xt) < geo.TIMING_HALF_X) & (np.abs(yt) < geo.TIMING_HALF_Y)
-    return dict(row=keep, inter=part["int"][keep], q=q[keep], beam=part["beam"][keep], v=v, p=p, b=b, acc=acc, good=good)
+    good = acc & (pt > 1)
+    if good.any():                      # timing detector through the spectrometer field (ISSUES A6)
+        from . import spectrometer
+        g = np.nonzero(good)[0]
+        good[g] = spectrometer.timing_acceptance(b[g], p[g], q[keep][g])[0]
+    out = dict(row=keep, inter=part["int"][keep], q=q[keep], beam=part["beam"][keep], v=v, p=p, b=b, acc=acc, good=good)
+    if g4 is None:
+        return out
+    # interactions transported with Geant4 (bin/g4_vessel_transport.py, the helium ones): their straight-line tracks
+    # are replaced by the Geant4 tracks at SST1 (decays in flight, interactions in the gas, field, yoke losses)
+    from . import g4vessel
+    done = np.asarray(g4["transported"])
+    drop = np.isin(out["inter"], done)
+    gt = g4vessel.tracks_from_g4(g4, part, charge)
+    merged = {k: np.concatenate([out[k][~drop], gt[k]]) for k in out}
+    order = np.argsort(merged["inter"], kind="stable")
+    return {k: v[order] for k, v in merged.items()}
 
 
 def select(tr, n_inter, device="cpu", cfg=None, rng=None):
@@ -90,6 +103,16 @@ def select(tr, n_inter, device="cpu", cfg=None, rng=None):
         g0, g1 = good[pairs[:, 0]], good[pairs[:, 1]]
         ip = vsel.measured_ip(tr["b"][g0], tr["p"][g0], tr["b"][g1], tr["p"][g1], cfg, rng or np.random.default_rng(779))
         pairs, vertex = pairs[ip < cfg.ip_max], vertex[ip < cfg.ip_max]
+    if cfg is not None and getattr(cfg, "straw_cuts", None) == "fairship" and len(pairs):
+        # A6b: both vertex tracks must pass the straw reconstruction quality cuts (GenFit in the SHiP CVMFS ROOT)
+        from . import paths, straws
+        g0, g1 = good[pairs[:, 0]], good[pairs[:, 1]]
+        rows = np.unique(np.concatenate([g0, g1]))
+        ok_rows, _ = straws.track_quality(tr["b"][rows], tr["p"][rows], tr["q"][rows].astype(float),
+                                          rng or np.random.default_rng(780), paths.results_dir() / "straws" / "interactions")
+        ok = np.zeros(len(tr["b"]), bool); ok[rows] = ok_rows
+        keep = ok[g0] & ok[g1]
+        pairs, vertex = pairs[keep], vertex[keep]
     if not len(pairs):
         return np.zeros(0, int), np.zeros((0, 2), int), np.zeros((0, 3))
     inter = ids[group[pairs[:, 0]]]
@@ -152,12 +175,13 @@ def bootstrap(w, groups, n_boot=200, rng=None):
     return float(max(np.std(sums), w.sum() / np.sqrt(len(wg))))
 
 
-def evaluate(inter, part, design, maps, cfg, rng, muons=None, levels=("a", "b"), max_tracks="cfg"):
+def evaluate(inter, part, design, maps, cfg, rng, muons=None, levels=("a", "b"), max_tracks="cfg", g4=None):
     """Selection and veto of one design's interactions. inter / part: the int_* / part_* arrays of fastveto
-    (muons: the muon dataset the interactions were drawn from, for the parents; None for neutrinos).
+    (muons: the muon dataset the interactions were drawn from, for the parents; None for neutrinos; g4: the Geant4
+    transport of some interactions, bin/g4_vessel_transport.py, used for their tracks instead of straight lines).
     Returns per target: interactions, selected and surviving (a, b, c) per 15 years, errors, counts."""
     n_inter = len(inter["weight"])
-    tr = charged_tracks(part)
+    tr = charged_tracks(part, g4)
     sel, pair, vertex = select(tr, n_inter, cfg=cfg)
     max_tracks = cfg.max_tracks if max_tracks == "cfg" else max_tracks
     if max_tracks is not None and len(sel):        # selection: at most max_tracks reconstructed tracks in the event
@@ -218,10 +242,10 @@ def evaluate(inter, part, design, maps, cfg, rng, muons=None, levels=("a", "b"),
 
 
 # ---------------------------------------------------------------- cached, for the objective
-DESIGN_FREE_CODES = (0, 1, 2)   # helium, air, PVC: drawn from the muon dataset alone, the same for every design
+DESIGN_FREE_CODES = (0, 1, 2)   # helium, air, wall (Mylar): drawn from the muon dataset alone, the same for every design
 
 
-def prepare(inter, part, cfg, muons=None, codes=DESIGN_FREE_CODES):
+def prepare(inter, part, cfg, muons=None, codes=DESIGN_FREE_CODES, g4=None):
     """Everything before the veto, for the design-independent targets: the selected events (cfg.ip_max,
     cfg.max_tracks) with their tracks in reco's format. The planes' own interactions are left out: in every
     design studied they are either never selected (fins, outside the vessel) or always vetoed by the parent's
@@ -234,7 +258,14 @@ def prepare(inter, part, cfg, muons=None, codes=DESIGN_FREE_CODES):
     part = {k: v[pmask] for k, v in part.items()}
     part["int"] = remap[part["int"]]
     n_inter = len(idx)
-    tr = charged_tracks(part)
+    if g4 is not None:                                   # renumber the Geant4 crossings to the kept interactions
+        keep_g = np.isin(g4["inter"], idx)
+        rowmap = np.full(len(pmask), -1); rowmap[np.nonzero(pmask)[0]] = np.arange(pmask.sum())
+        g4 = {k: (v[keep_g] if k != "transported" else v) for k, v in g4.items()}
+        g4["inter"] = remap[g4["inter"]]
+        g4["row"] = np.where(g4["row"] >= 0, rowmap[np.maximum(g4["row"], 0)], -1)
+        tt = np.asarray(g4["transported"]); g4["transported"] = remap[tt[np.isin(tt, idx)]]
+    tr = charged_tracks(part, g4)
     sel, pair, vertex = select(tr, n_inter, cfg=cfg)
     if cfg.max_tracks is not None and len(sel):
         n_acc = np.bincount(tr["inter"][tr["acc"]], minlength=n_inter)[sel]

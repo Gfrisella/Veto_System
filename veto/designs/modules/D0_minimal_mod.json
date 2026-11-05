@@ -1,0 +1,27 @@
+{
+ "name": "D0_minimal_mod",
+ "description": "UBT on the 1 x 2.7 m vessel entrance only, no fins (lower bound) (on the 50 cm module grid)",
+ "frame": "fairship-2026",
+ "detector": {},
+ "fins": [],
+ "ubt": {
+  "y0": -1.5,
+  "modules": [
+   {
+    "tech": "straw",
+    "u": 0,
+    "y": 0
+   },
+   {
+    "tech": "straw",
+    "u": 0,
+    "y": 2
+   },
+   {
+    "tech": "straw",
+    "u": 0,
+    "y": 4
+   }
+  ]
+ }
+}

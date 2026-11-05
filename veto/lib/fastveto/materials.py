@@ -9,7 +9,7 @@ plane) and the X0 of its dominant material:
     fiber   polystyrene (SCSF-78MJ fibre core, C8H8)
     pixel   silicon
     tile    PVT plastic scintillator (C9H10)
-    PVC     vessel walls, C2H3Cl, 0.3 mm (fastveto.vessel)
+    wall    vessel walls: Mylar 350 um (fastveto.vessel.WALL_*; 0.3 mm PVC C2H3Cl until 2026-11-04)
     helium  vessel volume (G4_He density, as the Geant4 runs)
 
 X0 [g/cm^2] and densities: PDG atomic and nuclear properties tables. Nucleons per gram ~ N_A (A / molar mass ~ 1).
@@ -43,7 +43,7 @@ MATERIALS = {
     "polystyrene": Material("polystyrene", 43.79, 1.06, 0.5377, 12.0),
     "silicon": Material("silicon", 21.82, 2.329, 0.4985, 28.0),
     "pvt": Material("pvt", 43.83, 1.032, 0.5413, 12.0),
-    "pvc": Material("pvc", 19.63 * 1.38, 1.38, 0.5120, 20.0),      # X0 19.63 cm as fastveto.vessel
+    "pvc": Material("pvc", 19.63 * 1.38, 1.38, 0.5120, 20.0),      # X0 19.63 cm; old vessel wall
     "helium": Material("helium", 94.32, 0.000166322, 0.4997, 4.0),
     "air": Material("air", 36.62, 0.001205, 0.4992, 14.6),
     "iron": Material("iron", 13.84, 7.874, 26.0 / 55.845, 56.0),   # muon shield (veto.shield_iron)
@@ -73,8 +73,13 @@ def tech_slab(tech_name, x0_plane):
     return Slab(m, x0_plane * m.x0_m)
 
 
-def pvc_wall(thickness_m=0.3e-3):
-    return Slab(MATERIALS["pvc"], thickness_m)
+def vessel_wall(thickness_m=None):
+    """The vessel wall slab (fastveto.vessel.WALL_MATERIAL, WALL_THICKNESS)."""
+    from . import vessel as V
+    return Slab(MATERIALS[V.WALL_MATERIAL], V.WALL_THICKNESS if thickness_m is None else thickness_m)
+
+
+pvc_wall = vessel_wall   # old name
 
 
 def summary():
@@ -85,8 +90,8 @@ def summary():
         s = tech_slab(name, tech.x0(tech.TECHNOLOGIES[name]))
         rows.append((name, s.material.name, s.x_over_x0, s.thickness_m * 1e3, s.material.density * s.thickness_m * 100,
                      s.nucleons_per_m2 * 1e-4))
-    w = pvc_wall()
-    rows.append(("vessel wall", "pvc", w.x_over_x0, w.thickness_m * 1e3, w.material.density * w.thickness_m * 100,
+    w = vessel_wall()
+    rows.append(("vessel wall", w.material.name, w.x_over_x0, w.thickness_m * 1e3, w.material.density * w.thickness_m * 100,
                  w.nucleons_per_m2 * 1e-4))
     he = Slab(MATERIALS["helium"], 50.0)
     rows.append(("helium 50 m", "helium", he.x_over_x0, he.thickness_m * 1e3, he.material.density * 5000, he.nucleons_per_m2 * 1e-4))

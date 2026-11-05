@@ -1,0 +1,278 @@
+{
+ "name": "E5_evolved_mod",
+ "description": "Codex run 20261020_003353 (sensitivity objective), best design g9c2_lean_merge: Compact double-station tile2 fins combine narrow entrance coverage with asymmetric early downstream coverage and a 16 mrad vertex cone. (on the 50 cm module grid)",
+ "frame": "fairship-2026",
+ "detector": {
+  "cone_mrad": 16
+ },
+ "fins": [
+  {
+   "side": "right",
+   "z": 31.13,
+   "tilt": 0,
+   "y0": -3.0,
+   "modules": [
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 3,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 4,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 5,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 6,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 7,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 8,
+     "stations": 2
+    }
+   ]
+  },
+  {
+   "side": "left",
+   "z": 31.13,
+   "tilt": 0,
+   "y0": -3.0,
+   "modules": [
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 3,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 4,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 5,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 6,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 7,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 8,
+     "stations": 2
+    }
+   ]
+  },
+  {
+   "side": "right",
+   "z": 39.13,
+   "tilt": 0,
+   "y0": -3.0,
+   "modules": [
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 2,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 3,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 4,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 5,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 6,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 7,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 8,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 9,
+     "stations": 2
+    }
+   ]
+  },
+  {
+   "side": "left",
+   "z": 39.13,
+   "tilt": 0,
+   "y0": -3.0,
+   "modules": [
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 2,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 3,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 4,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 5,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 6,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 7,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 8,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 0,
+     "y": 9,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 2,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 3,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 4,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 5,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 6,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 7,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 8,
+     "stations": 2
+    },
+    {
+     "tech": "tile2",
+     "u": 1,
+     "y": 9,
+     "stations": 2
+    }
+   ]
+  }
+ ],
+ "ubt": {
+  "y0": -1.5,
+  "modules": [
+   {
+    "tech": "straw",
+    "u": 0,
+    "y": 0
+   },
+   {
+    "tech": "straw",
+    "u": 0,
+    "y": 2
+   },
+   {
+    "tech": "straw",
+    "u": 0,
+    "y": 4
+   }
+  ]
+ }
+}

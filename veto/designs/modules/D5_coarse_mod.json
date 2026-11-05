@@ -1,0 +1,3478 @@
+{
+ "name": "D5_coarse_mod",
+ "description": "D2 geometry with 50 cm cells; 4 x 4 cm tile fins read out in 50 cm cells (on the 50 cm module grid)",
+ "frame": "fairship-2026",
+ "detector": {
+  "technology": "tile"
+ },
+ "fins": [
+  {
+   "side": "right",
+   "z": 31.13,
+   "tilt": 0,
+   "y0": -3.0,
+   "modules": [
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 11,
+     "stations": 1
+    }
+   ]
+  },
+  {
+   "side": "right",
+   "z": 46.13,
+   "tilt": 0,
+   "y0": -3.0,
+   "modules": [
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 11,
+     "stations": 1
+    }
+   ]
+  },
+  {
+   "side": "right",
+   "z": 61.13,
+   "tilt": 0,
+   "y0": -3.0,
+   "modules": [
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 11,
+     "stations": 1
+    }
+   ]
+  },
+  {
+   "side": "right",
+   "z": 76.13,
+   "tilt": 0,
+   "y0": -3.0,
+   "modules": [
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 11,
+     "stations": 1
+    }
+   ]
+  },
+  {
+   "side": "left",
+   "z": 31.13,
+   "tilt": 0,
+   "y0": -3.0,
+   "modules": [
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 11,
+     "stations": 1
+    }
+   ]
+  },
+  {
+   "side": "left",
+   "z": 46.13,
+   "tilt": 0,
+   "y0": -3.0,
+   "modules": [
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 11,
+     "stations": 1
+    }
+   ]
+  },
+  {
+   "side": "left",
+   "z": 61.13,
+   "tilt": 0,
+   "y0": -3.0,
+   "modules": [
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 11,
+     "stations": 1
+    }
+   ]
+  },
+  {
+   "side": "left",
+   "z": 76.13,
+   "tilt": 0,
+   "y0": -3.0,
+   "modules": [
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 0,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 1,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 2,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 3,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 4,
+     "y": 11,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 0,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 1,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 2,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 3,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 4,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 5,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 6,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 7,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 8,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 9,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 10,
+     "stations": 1
+    },
+    {
+     "tech": "tile",
+     "u": 5,
+     "y": 11,
+     "stations": 1
+    }
+   ]
+  }
+ ],
+ "ubt": {
+  "y0": -1.5,
+  "modules": [
+   {
+    "tech": "straw",
+    "u": 0,
+    "y": 0
+   },
+   {
+    "tech": "straw",
+    "u": 0,
+    "y": 2
+   },
+   {
+    "tech": "straw",
+    "u": 0,
+    "y": 4
+   }
+  ]
+ }
+}

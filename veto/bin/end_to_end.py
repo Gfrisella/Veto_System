@@ -90,7 +90,8 @@ def job(arg):
     nu = ix.evaluate(*load_npz(nu_file), d, _S["inp"], cfg, np.random.default_rng(2)) if nu_file.exists() else {}
     mu_g, nu_g = group(mu, d), group(nu, d)
     tot = lambda g: (sum(v["after"] for v in g.values()), math.sqrt(sum(v["after_err"] ** 2 for v in g.values())))
-    r["interactions"] = {"muon": dict(zip(("total", "total_err"), tot(mu_g))), "nu": dict(zip(("total", "total_err"), tot(nu_g)))}
+    r["interactions"] = {"muon": dict(zip(("total", "total_err"), tot(mu_g))),
+                         "nu": dict(zip(("total", "total_err"), tot(nu_g)), per_target=nu_g)}   # helium split in the objective
     s = objective.score(r, _S["stats"], objective.ObjectiveConfig(bkg_estimate="max", form="sensitivity", cost_budget_kchf=10000.0))
     cb = comb["confusion"]["background"]
     return dict(design=d.name, cone_mrad=cone, cost_kchf=s["cost_kchf"], n_channels=r["n_channels"],
@@ -127,8 +128,8 @@ def main():
     with Pool(min(args.workers, len(jobs)), initializer=_init, initargs=(args,)) as pool:
         rows = pool.map(job, jobs)
     f = lambda v, e=None: f"{v:.3g}" + (f" ± {e:.2g}" if e is not None else "")
-    print(f"\n{'design':<12}{'cone':>5}{'signal lost':>13}{'comb.':>10}{'μ He':>9}{'μ air':>9}{'μ PVC':>9}{'μ planes':>9}"
-          f"{'ν He':>8}{'ν air':>8}{'ν PVC':>8}{'ν planes':>9}{'total':>17}{'sens':>7}{'reward':>10}   (per 15 years, after the veto)")
+    print(f"\n{'design':<12}{'cone':>5}{'signal lost':>13}{'comb.':>10}{'μ He':>9}{'μ air':>9}{'μ wall':>9}{'μ planes':>9}"
+          f"{'ν He':>8}{'ν air':>8}{'ν wall':>8}{'ν planes':>9}{'total':>17}{'sens':>7}{'reward':>10}   (per 15 years, after the veto)")
     for r in rows:
         g = lambda kind, t: r[kind].get(t, {}).get("after", 0.0)
         print(f"{r['design']:<12}{r['cone_mrad']:>5g}{100 * r['signal_lost']:>11.2f} %{r['combinatorial']['after']:>10.2g}"

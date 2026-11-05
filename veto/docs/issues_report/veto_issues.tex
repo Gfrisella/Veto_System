@@ -1,0 +1,513 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[a4paper,margin=2.1cm,top=2.4cm,bottom=2.3cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{booktabs,tabularx,longtable}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}\tcbuselibrary{breakable}
+\usepackage[colorlinks=true,linkcolor=cernblue,urlcolor=cernblue]{hyperref}
+
+\definecolor{cernblue}{HTML}{0053A1}
+\definecolor{shorange}{HTML}{D55E00}
+\definecolor{okgreen}{HTML}{1B7F3B}
+\definecolor{greytxt}{HTML}{555555}
+\definecolor{lightblue}{HTML}{EAF1F9}
+
+\setlist{itemsep=1pt,topsep=2pt,leftmargin=1.4em}
+\titleformat{\section}{\Large\bfseries\color{cernblue}}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\large\bfseries\color{cernblue}}{\thesubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{14pt}{6pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[L]{\color{greytxt}\footnotesize SHiP veto optimisation --- issues and possible solutions}
+\fancyfoot[R]{\color{greytxt}\footnotesize \thepage}
+
+% status tags
+\newcommand{\st}[1]{\textbf{#1}}
+\newcommand{\stOPEN}{\textcolor{shorange}{\st{OPEN}}}
+\newcommand{\stDONE}{\textcolor{okgreen}{\st{DONE}}}
+\newcommand{\stOK}{\textcolor{okgreen}{\st{OK}}}
+\newcommand{\stDEF}{\textcolor{greytxt}{\st{DEFERRED}}}
+\newcommand{\stPART}{\textcolor{cernblue}{\st{PARTLY DONE}}}
+\newcommand{\stSOLVED}{\textcolor{okgreen}{\st{SOLVED}}}
+
+% one issue: #1 id, #2 title, #3 priority, #4 status, #5 source
+\newenvironment{issue}[5]{%
+  \begin{tcolorbox}[breakable,colback=white,colframe=cernblue,boxrule=0.6pt,arc=1.5mm,
+    left=6pt,right=6pt,top=4pt,bottom=4pt,
+    title={\textbf{#1}\quad #2\hfill{\normalfont\small priority #3\quad\colorbox{white}{#4}}},
+    coltitle=white,colbacktitle=cernblue,fonttitle=\normalsize]
+  {\color{greytxt}\footnotesize Source: #5}\par\smallskip}{\end{tcolorbox}\vspace{2pt}}
+\newcommand{\prob}{\par\noindent\textbf{\color{cernblue}Issue.}\ }
+\newcommand{\sol}{\par\smallskip\noindent\textbf{\color{shorange}Possible solution.}\ }
+
+\begin{document}
+\sloppy
+
+% ---------------- title band ----------------
+\thispagestyle{fancy}
+\begin{tcolorbox}[colback=cernblue,colframe=cernblue,arc=0mm,left=10pt,right=10pt,top=8pt,bottom=8pt]
+\color{white}
+\begin{minipage}[c]{0.74\linewidth}
+{\LARGE\bfseries Veto system optimisation}\\[3pt]
+{\Large Issues encountered and possible solutions}\\[6pt]
+{\normalsize \underline{G.~Frisella}$^{1,2}$ \quad 4 November 2026}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.24\linewidth}\raggedleft
+\includegraphics[height=1.25cm]{ship-logo-white.png}\\[4pt]
+\includegraphics[height=0.75cm]{uzh-logo-white.png}
+\end{minipage}
+\end{tcolorbox}
+{\footnotesize\color{greytxt}$^1$ University of Zurich, $^2$ European Organization for Nuclear Research (CERN)}
+
+\medskip
+\noindent This note collects the problems met so far in the fast veto simulation and optimisation
+(\texttt{Study\_on\_Veto\_System/Optimization\_Veto\_System/veto}) and, for each, a possible way forward.
+The primary source is the open-problem tracker \texttt{ISSUES.txt} (items A1--C9, kept with their IDs, plus A6--A7 added on 4 Nov 2026);
+further issues were collected from \texttt{README.md}, \texttt{CHANGELOG.md},
+\texttt{docs/SUMMARY\_2026-10-20.md}, \texttt{docs/shield\_iron\_dis.md}, \texttt{docs/fast\_veto\_sim.md},
+\texttt{docs/fastveto\_physics.md}, \texttt{docs/geant4\_neutrino\_notes.md} and the FairShip
+full-simulation cross-check (items D1--D11). Rates are per spill of $5\times10^{13}$\,PoT
+(= kHz at $5\times10^{13}$\,PoT/s); background yields are per 15 years ($6\times10^{20}$\,PoT).
+
+\smallskip
+\noindent\textbf{Priority:} A = must be fixed before optimising, B = changes the results, C = second order.
+\textbf{Status:} \stOPEN, \stPART, \stDEF, \stSOLVED{} / \stDONE{} / \stOK{} (kept as a record of what was decided).
+
+% ---------------- summary table ----------------
+\section*{Overview}
+\renewcommand{\arraystretch}{1.12}
+\small
+\begin{longtable}{@{}l p{0.60\linewidth} c l@{}}
+\toprule
+ID & Issue & Prio & Status\\\midrule
+\endhead
+A1 & Pair (combinatorial) background figure of merit saturated & A & \stOPEN\\
+A2 & Bounced muons only 74--77\,\% vetoed & A & \stOPEN\\
+A3 & Rate limits reported, not enforced & A & \stSOLVED\\
+A4 & No objective; two inconsistent cost models & A & \stOPEN\\
+A5 & Spill structure and PoT normalisation & A & \stOPEN\\
+A6 & Spectrometer field map not used: straight lines from SST1 to the timing detector & A & \stOPEN\\
+A7 & No predefined module dimensions; mixed-technology planes & A & \stOPEN\\
+B1 & Multiple scattering after the shield & B & \stPART\\
+B2 & EM debris (e$^\pm$, $\gamma$) from the shield end not simulated & B & \stOPEN\\
+B3 & Neutrino and muon DIS & B & \stPART\\
+B4 & Signal model not physical & B & \stOPEN\\
+C1 & Detector response simplifications & C & \stOPEN\\
+C2 & Dead material and dead regions & C & \stOPEN\\
+C3 & No validation against full simulation & C & \stPART\\
+C4 & Energy loss of bounced muons in the cavern & C & \stOK\\
+C5 & Weights and statistics of rare classes & C & \stOPEN\\
+C6 & Detector technology numbers & C & \stDONE\\
+C7 & V$^0$ from DIS outside the vessel decaying inside & C & \stOPEN\\
+C8 & DIS rates with the new selection & C & \stOPEN\\
+C9 & Unreliable bounce flag in the shah\_study categories & C & \stOPEN\\\midrule
+D1 & Objective exploitable: signal term saturates at 10\,\% loss & A & \stOPEN\\
+D2 & Neutrino DIS in helium: irreducible for an upstream veto & B & \stOPEN\\
+D3 & MS7 shield DIS $\to K_L$: chain vs FairShip disagreement & B & \stOPEN\\
+D4 & MS7 shield DIS chain: simplifications & C & \stOPEN\\
+D5 & Muon source: enriched input gives 1.55$\times$ SST1 rate & B & \stOPEN\\
+D6 & Interaction-library approximations & C & \stOPEN\\
+D7 & Interactions upstream of 30.6\,m (cavern concrete) not simulated & B & \stOPEN\\
+D8 & Results computed with the old PVC vessel wall & B & \stOPEN\\
+D9 & DIS$\times\mu$ pairs not redone with the V$^0$-stable library & C & \stOPEN\\
+D10 & Geant4 built-in neutrino physics unusable & --- & \stDONE\\
+D11 & Bugs found and fixed (record) & --- & \stDONE\\
+\bottomrule
+\end{longtable}
+\normalsize
+
+% =================================================================
+\section*{A. Blockers: fix before optimising}
+
+\begin{issue}{A1}{Background figure of merit is saturated}{A}{\stOPEN}{ISSUES.txt A1}
+\prob The combinatorial pair background is 2--3 surviving pairs out of 196\,736 candidates
+($\sim10^{-5}$ events in 15 years). Every reasonable design gives $\approx0$, so the differences between designs
+are Poisson noise and cannot drive an optimiser.
+\sol
+\begin{itemize}
+\item Score designs on the single-muon veto inefficiency per muon type, which has large statistics.
+\item Build the pair background by factorisation, $N_{\rm pairs}\approx R_{\rm pairs}\,\varepsilon_1\,\varepsilon_2$, and check
+      that it holds on the pairs that do survive.
+\item Quote a 90\,\% CL upper limit when there are zero survivors instead of a zero.
+\end{itemize}
+\end{issue}
+
+\begin{issue}{A2}{Bounced muons: the veto barely sees them}{A}{\stOPEN}{ISSUES.txt A2}
+\prob Only 74--77\,\% of the bounced SST1 muons are vetoed. The search window contains the true crossing for only
+30\,\% of them: a straight line extrapolated back from the spectrometer cannot follow a bounce off the cavern wall
+or floor. This term will probably decide the fin layout. In addition, \texttt{rock\_bounced} and \texttt{veto\_only}
+come from a single simulation run (over-fitting risk).
+\sol
+\begin{itemize}
+\item Study this class on its own: where it crosses the planes, before / after the bounce point
+      (\texttt{muon\_types.bounce\_points}).
+\item Add planes downstream of the bounce point, or a search window aimed at the wall rather than along the
+      back-extrapolated line.
+\item Produce more independent runs for the bounced classes before optimising on them (see C5).
+\end{itemize}
+\end{issue}
+
+\begin{issue}{A3}{Rate limits are reported, not enforced}{A}{\stSOLVED}{ISSUES.txt A3; solved 4 Nov 2026 (objective.py, reco.py, bin/make\_peak\_maps.py)}
+\prob The 4\,cm tiles on the $z=30.6$\,m fins reach 10\,MHz per channel (limit 1\,MHz; consistent with SR-370's
+``up to 10\,MHz in the flames''). The straw fin at 30.6\,m is above 0.5\,MHz/cm$^2$. A penalty $1+\log_{10}(\text{peak}/\text{limit})$
+existed, but grew only logarithmically above the limit, and the fin rate maps have $20\times20$\,cm$^2$ bins, which
+average the peak down for smaller cells.
+\sol \textbf{Done.}
+\begin{itemize}
+\item Steep penalty in the objective: each limit exceeded costs $w_{\rm rate}\,[1+k\,(\text{peak}/\text{limit}-1)]$,
+      $w_{\rm rate}=1000$ (more than all other terms together), $k=10$: a design $2\times$ over its limit costs 11\,000 points.
+\item Fine peak maps: $2\times2$\,cm$^2$ maps from all 506\,M muons of the full dataset (UBT at 30.6\,m, fins at
+      $z=30.6$--$40.6$\,m, $u<2$\,m); peak over a sliding window of the channel size (pads) or 4\,cm (strips), only windows
+      with $\ge10$ effective muons; same normalisation as the coarse maps (0.1\,\%).
+\item Effect at 30.6\,m: peak $\times1.39$ (right fin $880\pm5$ vs 634\,kHz/cm$^2$); 4\,cm tiles 14.1\,MHz, 2\,cm tiles
+      3.6\,MHz per channel. Penalties: D6\_straw 1\,103 $\to$ 12\,435, D6\_tile 7\,578 $\to$ 253\,426; E3 / E4 stay feasible.
+\item Left over (not A3): fibre and pixel have no rate limit yet; fins beyond 40.6\,m use the coarse peak.
+\end{itemize}
+\end{issue}
+
+\begin{issue}{A4}{No objective, two inconsistent cost models}{A}{\stOPEN}{ISSUES.txt A4}
+\prob \texttt{optimize\_sbt.py} is a stub. The cost per layer-m$^2$ (P-369 table 11) and the relative cost per
+channel (straw = 1) disagree: fibres are expensive per area, straws cheapest per channel. The pixel cost is
+\texttt{nan} in the area model and would break an optimiser. Free parameters and fixed limits are not
+written down, and Monte Carlo noise between designs is not controlled.
+\sol
+\begin{itemize}
+\item Fix the objective, e.g.\ minimise cost (as \% of the budget) subject to background $<X$ and signal loss $<Y$
+      (see also D1).
+\item Keep one cost model (area + channels combined), with a finite pixel cost.
+\item Write the geometric limits as constraints: cavern wall $x=-4.56$\,m, 1\,m straw length, nothing below
+      $y=-3.2$\,m.
+\item Common random numbers: fixed seed and the same events for every design.
+\end{itemize}
+\end{issue}
+
+\begin{issue}{A5}{Spill and PoT normalisation}{A}{\stOPEN}{ISSUES.txt A5}
+\prob Accidental hits use flat times inside a 1\,s spill (\texttt{--spill}); \texttt{config.py} has
+$5\times10^{13}$\,PoT per spill and $6\times10^{20}$\,PoT in 15 years. The real spill has a 50\,Hz ripple and a
+duty factor $<1$; accidentals scale with the instantaneous rate, and so does the straw signal loss
+(5.3\,\% with a $\pm25$\,ns window).
+\sol
+\begin{itemize}
+\item Check that all rates follow the $5\times10^{13}$\,PoT/s convention.
+\item Sample hit times from the measured spill profile (ripple + duty factor) and quote the signal loss at the
+      peak instantaneous rate.
+\end{itemize}
+\end{issue}
+
+\begin{issue}{A6}{Spectrometer field map not used}{A}{\stOPEN}{code (muon\_types.py, reco.py, geometry.py), added 4 Nov 2026}
+\prob Downstream of SST1 ($z=82$\,m) every track --- muons, DIS products, V$^0$ and signal daughters --- is
+extrapolated in a \emph{straight line} to the timing detector ($z=92.71$\,m), through the spectrometer magnet
+($z=84.36$--$89.56$\,m). The field map \texttt{MainSpectrometerField.h5} ($z=77$--$97$\,m) is only used for
+drawing. The timing-detector acceptance, the $\le2$-tracks cut and every rate after the timing cut therefore
+ignore the bending: soft tracks swept out of (or into) the $2\times3$\,m timing plane are counted wrongly, and
+opposite-charge pairs do not separate. The $p>1$\,GeV cut uses the true momentum.
+\sol
+\begin{itemize}
+\item Propagate every charged product from its state at $z=82$\,m to the timing plane through the field map
+      (vectorised RK4, charge from the PDG code); neutrals stay straight.
+\item Use the propagated position for the timing acceptance and the track-multiplicity cuts.
+\item Optionally measure $p$ from the bending (stations before / after the magnet, resolution model) and cut on it.
+\item Redo the SST1 / TD / $p>1$\,GeV rates (30.6 / 15.3 / 8.5\,kHz) and compare with FairShip
+      (48.5 / 14.6 / 7.1\,kHz, field included).
+\end{itemize}
+\end{issue}
+
+\begin{issue}{A7}{Detector planes have no predefined module dimensions}{A}{\stOPEN}{design.py, technology.py; module sizes from G.~Frisella, 4 Nov 2026}
+\prob Plane sizes are free and continuous (fin length, $y$ range, UBT extent); channels and cost are computed for
+exactly that area. Only the straw (1\,m) and fibre (3\,m) lengths are quantised. A real plane is assembled from fixed
+modules, so the optimiser can propose sizes that cannot be built, and module borders are ignored.
+Modules to use (each carries all layers of its technology):
+
+\smallskip
+\begin{tabular}{@{}lll@{}}
+\toprule
+technology & module & content\\\midrule
+straw & $1\times1$\,m$^2$ & 6 layers (3 views $0,\pm15^\circ$), 5\,mm pitch\\
+tile2 & $50\times50$\,cm$^2$ & $25\times25=625$ tiles of $2\times2$\,cm$^2$\\
+tile & $48\times48$\,cm$^2$ & $12\times12=144$ tiles of $4\times4$\,cm$^2$\\
+fibre & $0.5\times2.5$\,m$^2$ & two crossed SCSF-78MJ mats (x, y), 250\,$\mu$m\\
+pixel & $\sim4\times4$\,cm$^2$ & quad of $2\times2$ Timepix4-like chips\\
+\bottomrule
+\end{tabular}
+\smallskip
+
+\noindent Modules of every technology are assembled the same way: side by side (an $n_u\times n_y$ grid, e.g.\ 4 straw
+modules $=2\times2$\,m$^2$) and stacked in $z$ at the same $(x,y)$ (redundant stations). Technologies can be
+\emph{mixed} in one plane: e.g.\ 1\,m in $x$ = two $50\times50$\,cm$^2$ tile2 modules, or one tile2 module + one
+0.5\,m fibre mat, so fine timing / granularity goes only where the rate needs it. Each module has a dead frame
+(frame, SiPMs, readout). The module sizes are not all on one grid (tile 48 vs 50\,cm, fibre 2.5\,m vs straw 1\,m in
+$y$): a common grid (e.g.\ 50\,cm, tile modules padded) or mismatched borders as dead area must be decided.
+\sol
+\begin{itemize}
+\item \texttt{technology.py}: module size, cells per module, dead-frame width (to be fixed with the detector
+      colleagues), channels and cost per module.
+\item \texttt{design.py}: a plane = a grid of module slots, each slot = (technology, number of stacked layers);
+      these integers / choices become the optimiser's free parameters.
+\item \texttt{reco.py}: zero efficiency in the dead frames and gaps; frame material in the MS / DIS budget (C2).
+\item Rate limits (A3) per module channel; redo the existing designs on the module grid.
+\end{itemize}
+\end{issue}
+
+% =================================================================
+\section*{B. Physics missing: changes the results}
+
+\begin{issue}{B1}{Multiple scattering after the shield}{B}{\stPART}{ISSUES.txt B1, docs/fastveto\_physics.md, CHANGELOG 2026-11-04}
+\prob The stored muons have no multiple scattering after the shield: the states at $z=30.6$\,m and $z=82$\,m are
+joined by straight lines. The material budget is now defined (air, 350\,$\mu$m Mylar entrance / exit walls, 50\,m
+helium, the veto planes): $x/X_0=0.0182$ without the UBT, 0.019 with a straw UBT, 0.043 with a tile UBT, i.e.\
+$\theta_0\approx1.6$--$2.5$\,mrad$/p$[GeV]. Relevant for the soft muons (1--few GeV) that dominate the fin rates.
+A Highland + tails model (\texttt{scattering.py}, \texttt{fastveto.msc}) is implemented and validated against Geant4
+on the vessel path; still open:
+\begin{itemize}
+\item the dense planes (tile, 2.4\,\% $X_0$) are not checked against Geant4;
+\item the material of the vessel \emph{side} walls (muons entering through the SBT) is not defined;
+\item for bounced muons MS must start only after the bounce point.
+\end{itemize}
+\sol
+\begin{itemize}
+\item Run \texttt{bin/msc\_validate.py} with a tile plane in the path.
+\item Define the side-wall material and add it to the per-segment walk (A$\to$K$\to$B).
+\item Check that \texttt{RecoConfig.ms\_slope} / \texttt{r\_ms} (window growth with $1/p$) still cover the true
+      scatter; otherwise the window loses efficiency or gains accidentals.
+\end{itemize}
+\end{issue}
+
+\begin{issue}{B2}{EM debris from the end of the shield}{B}{\stOPEN}{ISSUES.txt B2}
+\prob Only muons are simulated: no $\delta$ rays, bremsstrahlung or pair-production debris leaking from the last
+iron of the shield. These add hits (occupancy, rate limits) and accidental vetoes (signal loss). The FairShip
+full-physics cross-check shows how large this can be: all charged particles at SST1 are $\sim3.6$\,MHz vs 48.5\,kHz
+of muons, dominated by e$^\pm$.
+\sol
+\begin{itemize}
+\item From the full dataset (506\,M rows at $z=30.6$\,m), compute per muon the probability to produce an
+      escaping e$^\pm$ / $\gamma$ in the last 20\,cm of iron ($z=29.69$--$29.89$\,m, 11.4\,$X_0$, equilibrium layer):
+      $\delta$ rays ($dN/dT\simeq0.56$\,MeV\,cm$^{-1}/T^2$), bremsstrahlung, direct pair production.
+\item Turn it into e/$\gamma$ rate maps on the UBT and fins, apply a per-technology detection probability
+      (photons rarely convert in thin straws, more in 1\,cm tiles), add to the accidentals.
+\item Cross-check with Geant4 (muon beam on 20\,cm iron) and with the FairShip EM sample.
+\end{itemize}
+\end{issue}
+
+\begin{issue}{B3}{Neutrino and muon DIS}{B}{\stPART}{ISSUES.txt B3, README, docs/fast\_veto\_sim.md}
+\prob Originally deferred. Since then forced muon DIS (Geant4 + Pythia 6 library) and neutrino interactions
+(GENIE 3.06.02) are modelled in helium, air, vessel walls, every plane and the last 50\,cm of MS7. Still missing:
+DIS in the cavern (see D7) and the material term in the optimiser --- without it the optimiser favours thick, fast
+planes for free (tiles 2.4\,\% $X_0$ vs straws 0.12\,\%).
+\sol
+\begin{itemize}
+\item Keep the per-plane interaction source in the objective (already in \texttt{objective.score}) so plane
+      material is penalised through its own DIS.
+\item Update the status in \texttt{ISSUES.txt} (still says DEFERRED).
+\end{itemize}
+\end{issue}
+
+\begin{issue}{B4}{Signal model}{B}{\stOPEN}{ISSUES.txt B4}
+\prob The signal is a neutral particle decaying uniformly in the vessel, two daughters uniform over the SST1
+acceptance, $p$ uniform 1--50\,GeV. Signal is lost only through accidental hits. Opening angles, momenta and the
+vertex distribution are not realistic.
+\sol
+\begin{itemize}
+\item Use HNL and dark-photon models from the literature: decay probability
+      $P=e^{-L_1/\lambda}-e^{-L_2/\lambda}$, $\lambda=\beta\gamma c\tau$; production from charm/beauty at 400\,GeV;
+      channels $\mu\pi$, $e\pi$, $\mu\mu\nu$; 2/3-body kinematics. Take them from the FairShip generator or
+      [1--5], not invented.
+\item A truth-level path exists: the collaboration LLP generator EventCalc (per-channel cut efficiencies already
+      studied in \texttt{EventCalc\_signal\_rejection}); feed its decays through the veto.
+\end{itemize}
+{\footnotesize\color{greytxt}[1] SHiP, JHEP 04 (2019) 077; [2] Bondarenko et al., JHEP 11 (2018) 032;
+[3] SHiP, EPJC 81 (2021) 451; [4] Alekhin et al., Rep.\ Prog.\ Phys.\ 79 (2016) 124201; [5] CERN-SPSC-2023-033.}
+\end{issue}
+
+% =================================================================
+\section*{C. Detector and bookkeeping: second order}
+
+\begin{issue}{C1}{Detector response simplifications}{C}{\stOPEN}{ISSUES.txt C1}
+\prob $\sigma_x$ is not used (the 5\,cm search window dominates); no ghost hits from combining views when several
+muons share a time window; straw time = uniform smearing over the 50\,ns drift window; no cluster size, no tile
+cross-talk; plane efficiencies independent.
+\sol Add ghost-hit combinatorics per time window (they matter at the fin rates); with a tile $t_0$ use the
+drift radius for the straw time and position; correlated inefficiencies (module-level) as a systematic.
+\end{issue}
+
+\begin{issue}{C2}{Dead material and dead regions}{C}{\stOPEN}{ISSUES.txt C2}
+\prob No frames, manifolds, overlaps between 1\,m straw rows, module gaps, SiPMs or cables. For the UBT this
+matters most: the tensioned-straw frame sits in the acceptance (SR-370 open question).
+\sol Add the UBT frame and module gaps as passive material (MS + DIS target) and as dead regions (zero efficiency);
+measure the inefficiency of the gaps with the single-muon figure of merit (A1).
+\end{issue}
+
+\begin{issue}{C3}{Validation against full simulation}{C}{\stPART}{ISSUES.txt C3, FairShip EM SST1 cross-check}
+\prob The fast simulation was never run end-to-end against FairShip for one design. A first full-physics check
+(FairShip \texttt{TRY\_2026\_EM\_SST1\_origin}, 411.6\,M muons) gives muons at SST1 / TD / $p>1$\,GeV of
+48.5 / 14.6 / 7.1\,kHz vs 30.6 / 15.3 / 8.5\,kHz in the fast chain; the excess after the first cut is
+$\pi$ decays in the vessel. Shield-made hadrons disagree strongly (see D3).
+\sol Run one baseline design through FairShip and compare rates per plane and the veto inefficiency per
+muon type before trusting an optimum.
+\end{issue}
+
+\begin{issue}{C4}{Energy loss of bounced muons in the cavern}{C}{\stOK}{ISSUES.txt C4}
+\prob Whether the energy loss in the cavern rock is modelled for the bounced muons.
+\sol Nothing to do: it is in the stored muons from the transport.
+\end{issue}
+
+\begin{issue}{C5}{Weights and statistics}{C}{\stOPEN}{ISSUES.txt C5, CHANGELOG 2026-10-30}
+\prob The repeated-\texttt{evt\_n} weight correction is not applied in the optimisation dataset;
+\texttt{veto\_only} and \texttt{rock\_bounced} come from one run. For muon DIS in helium one input muon gives
+$6.8\times10^4$ of $10^6$ draws: $n_{\rm eff}\approx60$, $\pm23$\,\% on the rate. Flattening the weights to 1 was
+rejected: the $w=768.75$ minimum-bias class is 40.5\,\% of the true shield DIS rate.
+\sol Decide on the \texttt{evt\_n} correction; one forced interaction per crossing / per track is already used
+(errors halved for $\nu$); produce more independent seeds for the rare classes, and keep bootstrapping over
+\texttt{evt\_n} for all errors.
+\end{issue}
+
+\begin{issue}{C6}{Detector technology numbers}{C}{\stDONE}{ISSUES.txt C6 (commit f6d13ec)}
+\prob Straw / fibre / pixel / tile parameters needed the colleagues' input.
+\sol Updated in \texttt{technology.py}. Still to confirm: fibre timing (0.5\,ns kept, may reach $\sim100$\,ps),
+per-SiPM efficiency, tile channel count for mixed tile sizes.
+\end{issue}
+
+\begin{issue}{C7}{V$^0$ from DIS outside the vessel decaying inside}{C}{\stOPEN}{ISSUES.txt C7}
+\prob A $K_S$ / $\Lambda$ made by muon DIS in cavern air, a fin or the UBT can decay inside the vessel with no
+upstream hit of its own. Air: 0 of 45 air pairs after DOCA have a vertex in the vessel, but one air draw
+corresponds to $7\times10^6$ interactions per 15\,y (not conclusive). Fins / UBT are not in the interaction caches;
+$K_L$ kept stable.
+\sol Draws restricted to air and fins close to the vessel entrance (\texttt{dis\_cutflow.py}); add the fins / UBT
+to the interaction caches; decay $K_L$ in flight (as already done for MS7, D3).
+\end{issue}
+
+\begin{issue}{C8}{DIS rates with the new selection}{C}{\stOPEN}{ISSUES.txt C8}
+\prob Without the measured IP $<10$\,cm and $\le2$ tracks in SST1, before the veto per 15\,y:
+$\mu$ He $(6.0\pm1.4)\times10^4$, $\mu$ wall $7\,400\pm850$ (old PVC), $\nu$ He $467\pm2$
+(old selection: 1\,800 and 0.82).
+\sol Decide whether to bring back a pointing / track-multiplicity cut; the daughter-asymmetry cuts
+($|A_p|,|A_{IP}|<0.9$) keep 48\,\% of $\mu$ He DIS and 99\,\% of the wall DIS, so they alone are not enough.
+Redo the wall numbers with Mylar (D8).
+\end{issue}
+
+\begin{issue}{C9}{shah\_study categories: bounce flag not reliable}{C}{\stOPEN}{ISSUES.txt C9, CHANGELOG 2026-11-04}
+\prob In \texttt{cuda\_muons\_ship.categorize\_muons} every \texttt{bounced\_back} muon checked (seed 0) is a perfect
+straight line from 30.6\,m to 82\,m, and \texttt{straight\_past\_vessel} excludes straight muons through the vessel
+and contains 0.6\,\% bounced ones. With the category the straight \& selected UBT rate was 6.24\,kHz instead of
+8.13\,kHz.
+\sol Use the veto definition (offset from the 30.6\,m line $<$ \texttt{BOUNCE\_CUT} = 0.5\,m,
+\texttt{muon\_types.py}); report the bug to the MuonsAndMatter authors.
+\end{issue}
+
+% =================================================================
+\section*{D. Further issues from the other documents}
+
+\begin{issue}{D1}{Objective exploitable: signal term saturates}{A}{\stOPEN}{docs/SUMMARY\_2026-10-20.md \S5--6}
+\prob $\text{reward}=-[100(1-e^{-N})+10\min(\text{sig.\ lost}/0.10,1)+\text{cost}]$. The signal term saturates at
+10\,\% loss, so losing 10\,\% and 74\,\% cost the same. Once neutrinos dominate $N$, vetoing everything pays:
+evolution run 3 reached its best reward with a design losing 74\,\% of the signal (50\,mrad cone, $\sim15$ planes)
+to bring $\nu$ from 0.6 to 0.06.
+\sol
+\begin{itemize}
+\item A sensitivity figure of merit, e.g.\ maximise $\varepsilon_{\rm sig}/N_{90\%\,\rm UL}$.
+\item Leave neutrinos out of $N$ in the optimiser (or count them before the veto), since an upstream veto
+      cannot remove them (D2).
+\item A linear, uncapped signal term with a hard penalty above $\sim5$\,\% loss.
+\end{itemize}
+\end{issue}
+
+\begin{issue}{D2}{Neutrino DIS in helium: irreducible for an upstream veto}{B}{\stOPEN}{docs/SUMMARY\_2026-10-20.md \S4}
+\prob About 0.6 $\nu$ DIS in the helium per 15\,y survive all designs: the vertex is in the gas, nothing charged
+comes in, and the third that is vetoed is vetoed by random hits (like signal). Tagging the event's own extra
+products (wide-angle hadrons hitting fins downstream of the vertex, SBT-style) is not modelled:
+\texttt{interactions.charged\_tracks} keeps only forward tracks and the veto searches only upstream.
+\sol Keep all charged / neutral final-state particles, digitise hits downstream of the vertex on the fins, and add
+a ``vertex-activity'' veto; evaluate its signal cost with the realistic signal model (B4).
+\end{issue}
+
+\begin{issue}{D3}{MS7 shield DIS $\to K_L$: chain disagrees with FairShip}{B}{\stOPEN}{docs/shield\_iron\_dis.md, FairShip EM SST1 check}
+\prob The forced chain in the last 50\,cm of MS7 gives $K_L$ decays in the vessel of $\sim4.9$\,kHz and
+$(6.73\pm0.59)\times10^7$ per 15\,y after DOCA, fiducial and IP $<2.5$\,m. Concerns:
+\begin{itemize}
+\item unforced Geant4 gives only $0.52\pm0.15$ of the chain's $K_L$; the excess comes from the Pythia 6
+      component of \texttt{mu\_library\_iron} (9.5\,\% of interactions, 90\,\% of the $K_L$);
+\item FairShip full physics sees \emph{zero} $K_L$/$K_S$ from the shield reaching the SST, and shield-made
+      $\pi$ are $\sim17\times$ below the chain --- not explained by the Pythia excess;
+\item after the full selection the $\mu$ number rests on 3--7 MC events ($\pm40$--60\,\%);
+\item algorithm A cannot veto it (decay tracks have no upstream hits); asymmetry cuts keep 100\,\%.
+\end{itemize}
+\sol Find the source of the FairShip discrepancy: MS7 flux and field TRY6 vs TRY2026, the muon-nuclear model
+(Kokoulin in FairShip vs Pythia 6 high-$\nu$ DIS here), the flux footprint already agrees. Use $K_L$-enriched
+draws for statistics. Model a veto on any in-time hit (scattered muon in the UBT / fins) and a pointing cut.
+\end{issue}
+
+\begin{issue}{D4}{MS7 shield DIS chain: simplifications}{C}{\stOPEN}{docs/shield\_iron\_dis.md (Limitations)}
+\prob Straight parent lines from 29.20\,m (no bending in 2\,T, $\sim1.4$\,cm at 20\,GeV); muons stopping in the
+slab not removed; Pythia part on free nucleons; straight lines and no field after the plane; $\pi/K$ decays in
+flight ignored; neutron and $K_L$ interactions in the vessel / air not simulated; neutrino flux $p>10$\,GeV only,
+no $\nu_e$.
+\sol Propagate the parent with the field map (already in \texttt{shield\_iron.py}); decay $\pi/K$ in flight
+and transport neutrons / $K_L$ in helium and air; extend the neutrino flux below 10\,GeV and add $\nu_e$.
+\end{issue}
+
+\begin{issue}{D5}{Muon source: enriched input disagrees with the old sample}{B}{\stOPEN}{docs/fast\_veto\_sim.md \S5}
+\prob The SST1-selected rate is $1.55\times$ higher with the enriched input ($1.9\times$ above 100\,GeV) at the
+same flux above 150\,GeV --- larger than any statistical error. In addition the regeneration differs by
+10--20\,\% from the old file, the $>200$\,GeV tail has a $\sim\times2$ model dependence (Pythia version /
+diffraction), and 50--150\,GeV still has the old statistics.
+\sol Compare angle and momentum shapes of the two inputs above 150\,GeV; extend the enrichment down to
+50\,GeV; quote the source model as a systematic on the muon backgrounds.
+\end{issue}
+
+\begin{issue}{D6}{Interaction-library approximations}{C}{\stOPEN}{docs/fastveto\_physics.md (Open)}
+\prob Final states are not rescaled to the exact muon energy (15\,\% grid); no nuclear effects (Fermi motion,
+shadowing, re-interactions) in the Pythia part; no $\tau$ library ($\sim1$\,\% $\nu_\tau$ in the flux).
+\sol Rescale final states to the true energy (or finer grid); compare with a Geant4/GENIE nuclear model on
+a subset; build a $\nu_\tau$ library.
+\end{issue}
+
+\begin{issue}{D7}{Interactions upstream of 30.6\,m not simulated}{B}{\stOPEN}{docs/fast\_veto\_sim.md \S5, FairShip origin breakdown}
+\prob Apart from the last 50\,cm of MS7, interactions in the shield, cavern walls and rock are not simulated.
+FairShip shows that $\pi$ / p at SST1 come mostly from the cavern concrete and the vessel walls / SBT.
+\sol Add the cavern concrete (and the rest of the shield) as forced-DIS targets using the bounced-muon
+paths; use the FairShip origin breakdown as the reference.
+\end{issue}
+
+\begin{issue}{D8}{Results computed with the old PVC vessel wall}{B}{\stOPEN}{CHANGELOG 2026-11-04}
+\prob The vessel wall is now 350\,$\mu$m Mylar ($x/X_0$ 1.53 $\to$ 1.23\,$\times10^{-3}$, +18\,\% nucleons, no Cl).
+\texttt{results/interactions}, apply / reco-input files with ``pvc'' rows, scattering-dependent reco and the C8
+wall numbers are still PVC-based.
+\sol Rerun the wall DIS and the reco with Mylar; rename the target key \texttt{"pvc"} to \texttt{"wall"} once all
+saved files are regenerated.
+\end{issue}
+
+\begin{issue}{D9}{DIS$\times\mu$ pairs not redone}{C}{\stOPEN}{shield DIS notes (2026-11-02)}
+\prob With $K_S$/$\Lambda$ now tracked in the MS7 iron (\texttt{mu\_library\_iron\_v0stable.npz}), the
+\texttt{dis\_comb\_*} DIS$\times\mu$ combinatorial pairs were not redone.
+\sol Rerun \texttt{dis\_comb\_pairs\_asym.py} on the V$^0$-stable sample.
+\end{issue}
+
+\begin{issue}{D10}{Geant4 built-in neutrino physics unusable}{---}{\stDONE}{docs/geant4\_neutrino\_notes.md}
+\prob In Geant4 11.2.2 all $\nu$--nucleus models share one set of $x/Q^2$ tables (CC sampled from NC
+kinematics, $\langle y\rangle=0.13$--0.34 instead of 0.48), NC is $2.6\times$ too large and drops all hadrons,
+no Lund fragmentation, and a \texttt{fWeight} bug gives CC secondaries weight 1.
+\sol Done: GENIE 3.06.02 (tune G18\_02a) built and used for all neutrino interactions.
+\end{issue}
+
+\begin{issue}{D11}{Bugs found and fixed (record)}{---}{\stDONE}{CHANGELOG, SUMMARY 2026-10-20}
+\noindent Bugs that changed results, with the fix:
+\begin{itemize}
+\item \texttt{reco.own\_hits}: with MS on, tracks born downstream got a UBT hit at their start (9.5\,\% fake
+      vetoes for $\nu$ DIS in helium) --- start-upstream condition restored (2026-11-01).
+\item \texttt{make\_design\_explorer.py}: muons stopping in the shield (type 7) counted on the UBT
+      (5.3$\times10^9$ instead of 1.05$\times10^7$ per spill) --- excluded.
+\item \texttt{shield\_dis}: muon final states sampled twice per interaction --- fixed.
+\item shah\_study ``straight'' category replaced by the \texttt{BOUNCE\_CUT} definition (C9).
+\end{itemize}
+\end{issue}
+
+\end{document}

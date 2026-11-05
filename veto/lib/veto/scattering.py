@@ -4,7 +4,7 @@ The stored muon states have no scattering after the shield: A (z = 30.6 m) and B
 joined by straight lines (through the bounce point K for bounced muons). Here every muon collects
 the scatterers along its true path, with x/X0:
 
-    PVC walls, 0.3 mm (X0 = 19.63 cm)     vessel entrance (z = 30.6 m, inside the aperture),
+    walls, 350 um Mylar (X0 = 28.54 cm)    vessel entrance (z = 30.6 m, inside the aperture),
                                           exit (z = 80.6 m) and the lateral walls where crossed;
                                           path in the wall = thickness / |cos(incidence)|
     UBT                                   straw plane at z = 30.6 m (technology x0) if crossed
@@ -18,7 +18,7 @@ proportion to their x/X0 (Gaussian kicks in x and y). Bounced muons scatter only
 point (the transport handled the rock). Signal daughters scatter from their decay vertex.
 
 From fast-veto-sim (lib/fastveto/vessel.py; its msc.py, validated against Geant4, lives on here):
-  EXACT_CHORDS   the PVC is the shell between the helium surface and its outer surface 0.3 mm further out;
+  EXACT_CHORDS   the wall is the shell between the helium surface and its outer surface 350 um further out;
                  a straight piece crosses it in at most two chords (entrance window or a lateral wall on the
                  way in, a lateral wall or the exit wall on the way out), with their exact lengths. The old
                  incidence formula capped the path at 50 x thickness for grazing tracks: 4.4 x too little.
@@ -40,8 +40,10 @@ from . import muon_types as mt
 from . import technology as tech
 from .tracks import vessel_crossings
 
-X0_AIR, X0_HELIUM, X0_PVC = 303.9, 5671.0, 0.1963        # m (PDG)
-PVC_THICKNESS = 0.3e-3                                     # m, vessel walls
+X0_AIR, X0_HELIUM = 303.9, 5671.0                         # m (PDG)
+X0_WALL = 0.2854                                          # m, Mylar (39.95 g/cm^2 / 1.40 g/cm^3); PVC was 0.1963
+WALL_THICKNESS = 350e-6                                    # m, vessel walls (Mylar; 0.3 mm PVC until 2026-11-04)
+X0_PVC, PVC_THICKNESS = X0_WALL, WALL_THICKNESS           # old names, kept for older scripts
 DZ_SLICE = 1.0                                             # m, slicing of air / helium
 MEDIA = True                                               # air and helium as 1 m slices
 EXACT_CHORDS = True                                        # exact PVC chords (False: old incidence formula)
@@ -86,8 +88,8 @@ def _shell_crossings(p, u, box):
 
 
 HELIUM_BOX = (geo.Z_VESSEL_MIN, geo.Z_VESSEL_MAX, geo.VESSEL_X_IN, geo.VESSEL_X_OUT, geo.VESSEL_Y_IN, geo.VESSEL_Y_OUT)
-OUTER_BOX = (geo.Z_VESSEL_MIN - PVC_THICKNESS, geo.Z_VESSEL_MAX + PVC_THICKNESS, geo.VESSEL_X_IN + PVC_THICKNESS,
-             geo.VESSEL_X_OUT + PVC_THICKNESS, geo.VESSEL_Y_IN + PVC_THICKNESS, geo.VESSEL_Y_OUT + PVC_THICKNESS)
+OUTER_BOX = (geo.Z_VESSEL_MIN - WALL_THICKNESS, geo.Z_VESSEL_MAX + WALL_THICKNESS, geo.VESSEL_X_IN + WALL_THICKNESS,
+             geo.VESSEL_X_OUT + WALL_THICKNESS, geo.VESSEL_Y_IN + WALL_THICKNESS, geo.VESSEL_Y_OUT + WALL_THICKNESS)
 
 
 def pvc_chords(p, q):
@@ -121,7 +123,7 @@ def _segments(tr):
     a = np.stack([tr["ax"], tr["ay"], tr["az"]], 1).astype(float)
     k = np.stack([tr["kx"], tr["ky"], tr["kz"]], 1).astype(float)
     bounced = np.isfinite(k[:, 2])
-    # A is stored up to 2 cm after z = 30.6: start 5 cm earlier so planes at 30.6 are crossed
+    # A is stored up to 2 cm after z = 30.6: start 5 cm earlier (the UBT is now at 31.13 m, downstream of A)
     with np.errstate(invalid="ignore", divide="ignore"):
         a_ext = a - (b - a) * (mt.A_TOLERANCE / (b[:, 2] - a[:, 2]))[:, None]
     a_ext = np.where(np.isfinite(a_ext), a_ext, a)
@@ -152,16 +154,17 @@ def scatterers(tr, design, media=None):
     cos_z = 1 / path_per_dz                                    # incidence on planes of constant z
     zs, xs = [], []
 
-    # UBT and the vessel entrance window, at z = 30.6 m (start of the unbounced muons)
+    # UBT and the vessel entrance window at z = Z_UBT (31.13 m since the FairShip layout; muons start at the
+    # stored state A, 30.6 m, upstream of it)
     ubt = design.planes[0]
-    pa = p
-    near_a = np.abs(p[:, 2] - geo.Z_UBT) < 2 * mt.A_TOLERANCE
+    pa = _at_z(p, q, np.full(n, geo.Z_UBT))
+    near_a = np.isfinite(pa[:, 2])
     in_ubt = near_a & (np.abs(pa[:, 0]) < geo.UBT_HALF_X) & (pa[:, 1] >= ubt.y_lo) & (pa[:, 1] <= ubt.y_hi)
     x_ubt = tech.x0(tech.TECHNOLOGIES[ubt.technology]) if ubt.technology else 0.0
     zs.append(np.where(in_ubt, geo.Z_UBT, np.nan)); xs.append(np.where(in_ubt, x_ubt / cos_z, 0.0))
     if not EXACT_CHORDS:
         in_win = near_a & (np.abs(pa[:, 0]) < geo.VESSEL_X_IN) & (np.abs(pa[:, 1]) < geo.VESSEL_Y_IN)
-        zs.append(np.where(in_win, geo.Z_UBT, np.nan)); xs.append(np.where(in_win, PVC_THICKNESS / X0_PVC / cos_z, 0.0))
+        zs.append(np.where(in_win, geo.Z_UBT, np.nan)); xs.append(np.where(in_win, WALL_THICKNESS / X0_WALL / cos_z, 0.0))
 
     # fins: planes of constant z
     for plane in design.planes[1:]:
@@ -172,9 +175,9 @@ def scatterers(tr, design, media=None):
         zs.append(np.where(hit, plane.z, np.nan)); xs.append(np.where(hit, x_fin / cos_z, 0.0))
 
     if EXACT_CHORDS:
-        # PVC shell: exact chords on the way in (entrance window or a lateral wall) and out (wall or exit wall)
+        # wall shell: exact chords on the way in (entrance window or a lateral wall) and out (wall or exit wall)
         for zc, length in pvc_chords(p, q):
-            zs.append(zc); xs.append(np.where(np.isfinite(zc), length / X0_PVC, 0.0))
+            zs.append(zc); xs.append(np.where(np.isfinite(zc), length / X0_WALL, 0.0))
     else:
         c = vessel_crossings(p[:, 0], p[:, 1], p[:, 2], d[:, 0], d[:, 1], d[:, 2])
         lo, hi = np.minimum(p[:, 2], q[:, 2]), np.maximum(p[:, 2], q[:, 2])
@@ -189,20 +192,20 @@ def scatterers(tr, design, media=None):
             norm = np.sqrt(nx ** 2 + ny ** 2 + nz ** 2)
             cos_w = np.abs(np.abs(dn[:, 0]) * nx + np.abs(dn[:, 1]) * ny + dn[:, 2] * nz) / norm
             cos_w = np.maximum(cos_w, MIN_COS)
-            zs.append(np.where(on, zc, np.nan)); xs.append(np.where(on, PVC_THICKNESS / X0_PVC / cos_w, 0.0))
+            zs.append(np.where(on, zc, np.nan)); xs.append(np.where(on, WALL_THICKNESS / X0_WALL / cos_w, 0.0))
         pe = _at_z(p, q, np.full(n, geo.Z_VESSEL_MAX))
         hx, hy = geo.vessel_half_widths(np.full(n, geo.Z_VESSEL_MAX))
         in_exit = np.isfinite(pe[:, 2]) & (np.abs(pe[:, 0]) < hx) & (np.abs(pe[:, 1]) < hy)
-        zs.append(np.where(in_exit, geo.Z_VESSEL_MAX, np.nan)); xs.append(np.where(in_exit, PVC_THICKNESS / X0_PVC / cos_z, 0.0))
+        zs.append(np.where(in_exit, geo.Z_VESSEL_MAX, np.nan)); xs.append(np.where(in_exit, WALL_THICKNESS / X0_WALL / cos_z, 0.0))
 
 
     # air / helium, sliced in z (MEDIA)
-    slices = np.arange(geo.Z_UBT + DZ_SLICE / 2, geo.Z_SST1, DZ_SLICE) if (MEDIA if media is None else media) else []
+    slices = np.arange(geo.Z_STATE_A + DZ_SLICE / 2, geo.Z_SST1, DZ_SLICE) if (MEDIA if media is None else media) else []
     for zc in slices:
         pt = _at_z(p, q, np.full(n, zc))
         ok = np.isfinite(pt[:, 2])
         hx, hy = geo.vessel_half_widths(np.full(n, zc))
-        inside = ok & (zc < geo.Z_VESSEL_MAX) & (np.abs(pt[:, 0]) < hx) & (np.abs(pt[:, 1]) < hy)
+        inside = ok & (zc > geo.Z_VESSEL_MIN) & (zc < geo.Z_VESSEL_MAX) & (np.abs(pt[:, 0]) < hx) & (np.abs(pt[:, 1]) < hy)
         x0 = np.where(inside, X0_HELIUM, X0_AIR)
         zs.append(np.where(ok, zc, np.nan)); xs.append(np.where(ok, DZ_SLICE * path_per_dz / x0, 0.0))
     return np.stack(zs, 1), np.stack(xs, 1)

@@ -54,11 +54,11 @@ TECHNOLOGIES = {
                   cost_m2_per_layer=6.0, cost_channel=1.0),
     "fiber": dict(name="Scintillating fibre (SCSF-78MJ mats)", readout="strip", views=(0.0, 90.0),
                   layers_per_view=1, pitch=250e-6, sigma_x=100e-6, sigma_t=0.5e-9, time_window=None,
-                  veto_window=None, efficiency=0.999, max_length=3.0, max_rate=None, max_channel_rate=None,
+                  veto_window=None, efficiency=0.999, max_length=3.0, max_rate=None, max_channel_rate=1e6,
                   x0_per_layer=0.003, cost_m2_per_layer=170.0, cost_channel=4.0),
     "pixel": dict(name="Silicon pixel (Timepix-class)", readout="pad", views=None, layers_per_view=1,
                   pitch=55e-6, sigma_x=16e-6, sigma_t=0.2e-9, time_window=None, veto_window=None,
-                  efficiency=0.999, max_length=None, max_rate=None, max_channel_rate=None,
+                  efficiency=0.999, max_length=None, max_rate=3.5e8, max_channel_rate=None,
                   x0_per_layer=0.005, cost_m2_per_layer=3800.0, cost_channel=20.0),   # cost: estimate, see above
     "tile": dict(name="Scintillating tile (4 x 4 cm, SiPM)", readout="pad", views=None, layers_per_view=1,
                  pitch=0.04, sigma_x=0.04, sigma_t=0.12e-9, time_window=None, veto_window=1.5e-9,
@@ -69,6 +69,8 @@ TECHNOLOGIES = {
                   efficiency=0.999, max_length=None, max_rate=None, max_channel_rate=1e6,
                   x0_per_layer=0.024, cost_m2_per_layer=30.0, cost_channel=5.0),
 }
+# Rate limits of fibre (1 MHz per SiPM channel) and pixel (3.5 MHz/mm^2, Timepix4-like): placeholders set 2026-11-05
+# (ISSUES A3), to be confirmed by the detector colleagues.
 ALIASES = {"A": "straw", "B": "fiber", "C": "pixel", "fibre": "fiber", "tiles": "tile", "tile4": "tile"}
 
 
@@ -129,11 +131,56 @@ def x0(tech):
     return n_layers(tech) * tech["x0_per_layer"]
 
 
-def cost(tech, area):
-    """kCHF for a plane of `area` [m^2]; nan when the documents give no number."""
+# ---------------------------------------------------------------- modules (ISSUES A7, C2) and cost (A4), 2026-11-05
+# Planes are built from modules on a common 50 x 50 cm slot grid. size: the module footprint (slots x 0.5 m); active:
+# the sensitive part (tile: 48 cm in its 50 cm slot); frame: dead border [m] on every edge (fibre: readout end only,
+# the y_hi edge); pixel: quads of sub x sub with a sub_frame dead border, tiled in the slot. Frame widths are
+# Guglielmo's guesses (5 Nov 2026), to be confirmed by the detector colleagues.
+SLOT = 0.5
+MODULES = {
+    "straw": dict(size=(1.0, 1.0), active=(1.0, 1.0), frame=0.03, frame_edges="all"),
+    "tile2": dict(size=(0.5, 0.5), active=(0.5, 0.5), frame=0.01, frame_edges="all"),
+    "tile":  dict(size=(0.5, 0.5), active=(0.48, 0.48), frame=0.01, frame_edges="all"),
+    "fiber": dict(size=(0.5, 2.5), active=(0.5, 2.5), frame=0.02, frame_edges="y_hi"),
+    "pixel": dict(size=(0.5, 0.5), active=(0.48, 0.48), frame=0.0, frame_edges="all", sub=0.04, sub_frame=0.001),
+}
+# One cost model (A4, Guglielmo 5 Nov 2026): per module = electronics (channels x relative cost per channel x the kCHF
+# of one straw channel) + mechanics (MECH_FRACTION of the P-369 area cost). Pixel electronics = its area cost (ITk-based
+# estimate): a cost per 55 um pixel channel is meaningless. Reported as % of the budget (objective). Placeholders.
+STRAW_CHANNEL_KCHF = 97.2 / 3600
+MECH_FRACTION = 0.10
+BUDGET_KCHF = 8000.0
+
+
+def module(tech_key):
+    return MODULES[ALIASES.get(tech_key, tech_key)]
+
+
+def area_cost_m2(tech):
+    """P-369-style cost per m^2 of a full plane (all layers) [kCHF]; nan when unknown."""
     if tech["cost_m2_per_layer"] is None:
         return float("nan")
-    return area * n_layers(tech) * tech["cost_m2_per_layer"]
+    return n_layers(tech) * tech["cost_m2_per_layer"]
+
+
+def module_cost(tech_key):
+    """kCHF of one module: electronics + mechanics (see above)."""
+    key = ALIASES.get(tech_key, tech_key)
+    t, m = TECHNOLOGIES[key], MODULES[key]
+    au, ay = m["active"]
+    area = m["size"][0] * m["size"][1]
+    if key == "pixel":
+        electronics = au * ay * area_cost_m2(t)
+    else:
+        electronics = n_channels(t, au, ay) * t["cost_channel"] * STRAW_CHANNEL_KCHF
+    return electronics + MECH_FRACTION * area * area_cost_m2(t)
+
+
+def cost(tech, area):
+    """kCHF of `area` [m^2] of a technology with the module cost model (per m^2 of module footprint)."""
+    key = next(k for k, v in TECHNOLOGIES.items() if v is tech)
+    m = MODULES[key]
+    return area * module_cost(key) / (m["size"][0] * m["size"][1])
 
 
 def relative_cost(tech, width, height):

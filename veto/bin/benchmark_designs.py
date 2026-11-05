@@ -66,8 +66,12 @@ def candidates(t, dev, spill_chunk=400, dtype=torch.float64, opposite_charge=Tru
     return pairs, vertex, n_pairs
 
 
+IP_PRECUT = 3.0     # m, TRUE IP pre-cut (veto.vertex_selection.IP_PRECUT): the measured IP cut (10 cm full / 2.5 m
+                    # partial reconstruction, ISSUES C8) is applied later on measured tracks
+
+
 def _pair_cut(a, b, r, p):
-    """The candidate cuts on muon pairs (a, b): DOCA < 2 cm, vertex in the vessel, IP < 2.5 m."""
+    """The candidate cuts on muon pairs (a, b): DOCA < 2 cm, vertex in the vessel, true IP < IP_PRECUT."""
     r1, r2, p1, p2 = r[a], r[b], p[a], p[b]
     dr = r1 - r2
     cross = torch.linalg.cross(p1, p2)
@@ -82,7 +86,7 @@ def _pair_cut(a, b, r, p):
     dz = G.Z_TARGET - v[:, 2]
     ip = torch.hypot(v[:, 0] + mom[:, 0] / mom[:, 2] * dz, v[:, 1] + mom[:, 1] / mom[:, 2] * dz)
     keep = ((doca < 0.02) & (v[:, 2] > G.Z_VESSEL_MIN) & (v[:, 2] < G.Z_VESSEL_MAX)
-            & (v[:, 0].abs() < hx) & (v[:, 1].abs() < hy) & (ip < 2.5))
+            & (v[:, 0].abs() < hx) & (v[:, 1].abs() < hy) & (ip < IP_PRECUT))
     return a[keep], b[keep], v[keep]
 
 

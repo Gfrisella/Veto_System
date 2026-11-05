@@ -6,6 +6,12 @@ A cleaned-up version of the analysis in the repository root (`analysis.ipynb`,
 or script became a command-line program in `bin/`. The original files in the
 root are left as they were.
 
+**Geometry (since 2026-11-05): FairShip layout 2026-0.1, z = z_FairShip − 2.14 m.** Decay vessel 31.13–81.13 m,
+UBT on its entrance window, straw stations 82.08 / 84.08 / 91.08 / 93.08 m, timing detector 94.01 m (5.5 × 6.5 m),
+spectrometer magnet 84.36–89.56 m (field map, RK4 in `spectrometer.py`). The simulated muons are stored at
+z = 30.6 and 82.0 m (`Z_STATE_A/B`); every detector crossing is computed from those states. Results before
+2026-11-05 used the deck layout (vessel 30.6–80.6, SST1 82.0, straight lines to a 4 × 6 m timing plane at 92.71).
+
 ```
 veto/
   lib/veto/
@@ -20,7 +26,11 @@ veto/
     design.py      veto designs (UBT + fins) from designs/*.json, physical limits, stations per plane
     technology.py  detector technologies (straw, fibre, pixel, tile, tile2): layers, timing, rates, material, cost
     reco.py        digitization, accidental hits from rate maps, spectrometer, veto algorithm A, vertex cone
-    scattering.py  multiple scattering: planes, exact PVC chords, helium / air slices, single-scattering tails
+    spectrometer.py  RK4 through the spectrometer field map (timing-detector acceptance, yoke losses), ISSUES A6
+    g4vessel.py    Geant4 transport (cpp/g4vessel.cc) of interaction products through vessel, air and field
+    straws.py      FairShip straw stations (32 layers), digitisation, GenFit fit driver (bin/genfit_straws.py, bin/straw_reco.py)
+    signal_eventcalc.py  EventCalc LLP signal samples (data/signal/eventcalc, ISSUES B4)
+    scattering.py  multiple scattering: planes, exact vessel-wall chords (350 um Mylar), helium / air slices, single-scattering tails
     vertex_selection.py  the signal selection shared by every sample (measured IP < 0.1 m, <= 2 SST1 tracks)
     interactions.py  forced muon / neutrino interactions through the same selection and veto
     objective.py   reward of a design: "tiers" or "sensitivity" (expected 90 % CL limit), all background sources
@@ -62,6 +72,8 @@ veto/
     make_crossrun_pairs.py    independent pair sample (muons of different runs)
     subsample_candidates.py   Poisson subsample of the pair candidates proportional to weight
     replace_rate_maps.py      patch corrected rate maps into a reco-inputs file
+    make_peak_maps.py         2 x 2 cm^2 peak-rate maps near the flames (results/rate_maps/peak_maps.npz, A3)
+    check_peak_rates.py       coarse vs fine peak rates and rate penalty per design
     neff_by_type.py, neff_vs_seeds.py, probe_statistics.py, make_probe_html.py, scan_shah_study.py
                               statistics checks: independent input muons per type, per-cell probe
     -- interactions and end to end (see "Interactions" below)
@@ -81,6 +93,8 @@ veto/
   evolve/    LLM evolution of designs (see below)
   docs/      SUMMARY_2026-10-20.md (state of the study), fast_veto_sim.md, fastveto_physics.md,
              geant4_neutrino_notes.md, live_talk/ (the talk: veto_talk.tex, run.sh)
+             issues_report/veto_issues.pdf (2026-11-04: every issue met so far + possible solution,
+             from ISSUES.txt A1-C9 and the other docs D1-D11; LaTeX source veto_issues.tex)
   designs/   veto designs (JSON): D0 minimal ... D4 dense, D5 cell-size variants,
              D6 technology variants (straw, fiber, pixel, tile, tile2 fins),
              E1–E5 evolved designs (E3_robust, E4_ubt2 / E4_entry2 with second stations, E5_evolved)
@@ -293,7 +307,7 @@ the generic detector of D0–D5 (no cost, no material).
   × its area. `run_reco.py` prints `OVER RATE LIMIT` for a plane above its density limit
   (area in m²) or its per-channel limit. Rates assume a 1 s spill (`--spill`); the fin maps have
   20 × 20 cm bins, so a narrower peak is averaged down.
-- **Material:** multiple scattering in the planes, the PVC walls (exact chords) and helium / air
+- **Material:** multiple scattering in the planes, the vessel walls (350 um Mylar, 0.3 mm PVC before 2026-11-04; exact chords) and helium / air
   (`lib/veto/scattering.py`, with single-scattering tails tuned to Geant4); muon and neutrino
   interactions in the planes, walls, air and helium (see "Interactions").
 - **Not modelled yet:** σ_x (the 5 cm search window is far larger); ghost hits from combining
@@ -309,21 +323,27 @@ simplified vessel geometry.
 and a priority (A: before optimising, B: changes the results, C: second order). In short:
 
 - **A, blockers:** the pair background is saturated (2-3 survivors, use single-muon inefficiency
-  and factorisation); bounced muons are only 74-77 % vetoed; rate limits are not enforced; no
-  objective and two cost models; spill / PoT normalisation and spill structure.
-- **B, physics:** multiple scattering (air 29.89-30.6 m and 80.6-82 m, 0.3 mm PVC walls at the
+  and factorisation); bounced muons are only 74-77 % vetoed; rate limits enforced by a steep penalty with 2 cm peak maps (A3, done); no
+  objective and two cost models; spill / PoT normalisation and spill structure; the spectrometer field map is
+  not used (straight lines from SST1 to the timing detector, A6); planes have no predefined
+  module dimensions (straw 1x1 m, tile2 50x50 cm, tile 48x48 cm, fibre 0.5x2.5 m, pixel quad 4x4 cm;
+  modules tiled, stacked in z and mixed between technologies in one plane, A7).
+- **B, physics:** multiple scattering (air 29.89-30.6 m and 80.6-82 m, 350 um Mylar walls (was 0.3 mm PVC) at the
   vessel entrance and exit, helium in the vessel, the veto planes; for bounced muons only after
   the bounce); EM debris from the last 20 cm of shield iron, estimated from the full dataset;
   a literature-based HNL / dark-photon signal model. Neutrino and muon DIS are now modelled
   (see "Interactions"); `ISSUES.txt` may still list them as deferred.
 - **C, detector:** response simplifications, dead material, validation against FairShip,
   weights and statistics of the single-run classes.
+- **D, from the other docs (added 2026-11-04):** MS7 K_L chain vs FairShip (D3) and its simplifications (D4),
+  enriched vs old muon source (D5), library approximations (D6), no cavern-concrete interactions (D7),
+  PVC-based results to redo with Mylar (D8), DIS x mu pairs not redone (D9); D10-D11 done (GENIE, fixed bugs).
 
 ### Interactions and end to end
 
 Ported from fast-veto-sim into `lib/fastveto` (nothing reads the old repository any more): forced
 muon DIS (Geant4 library, `cpp/g4dis.cc`) and neutrino interactions (GENIE 3.06.02) in every target:
-helium, air, PVC walls and every plane of the design. `lib/veto/interactions.py` puts them through
+helium, air, vessel walls (350 um Mylar, target key "pvc") and every plane of the design. `lib/veto/interactions.py` puts them through
 the same selection and veto; the scattered muon's path starts from its parent's 30.6 m state and
 kinks at the vertex, so the parent's real upstream hits are digitised. Veto levels: (a) the two
 vertex tracks, (b) every reconstructed track, (c) a truth bound.
