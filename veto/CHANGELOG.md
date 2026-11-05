@@ -4,6 +4,16 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-06 — A2 bounce-aware search, A1 closure check, C5 weights (branch `veto-shield-dis`)
+
+- `reco`: `bounce_points`, second (mirrored) search window from the cavern wall / floor point for planes upstream of
+  it; `RecoConfig.bounce_search = True`, `bounce_r_slope = 0.21`. D6_straw bounced vetoed 0.760 -> 0.975 (signal lost
+  5.15 -> 6.38 %, toy signal).
+- New `bin/closure_check.py` (A1): direct vs factorised surviving pairs per design / candidate file, Poisson p, 90 % CL
+  limits. inputs.npz D0_minimal 1694 observed vs 1702 predicted.
+- `make_design_dataset.py`: repeated-evt_n correction of the old rows by default (`--no-evt-n-correction`);
+  `neff_by_type.py`: n_eff target 1000 with the seed factor needed (C5).
+
 ## 2026-11-05 (night) — A7 modules, C2 dead frames, A4 one cost model (branch `veto-shield-dis`)
 
 - `technology`: `SLOT` = 0.5 m, `MODULES` (straw 1 x 1 m, tile2 / tile 0.5 slot, fibre 0.5 x 2.5 m, pixel quads in a

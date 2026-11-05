@@ -46,6 +46,9 @@ class RecoConfig:
     ip_max: float = 0.10               # selection: measured IP < ip_max [m] at the target (vertex_selection.py):
                                        # 0.10 = fully reconstructed, 2.5 = partially reconstructed (IP_CUTS, C8)
     max_tracks: int = 2                # selection: at most this many tracks in SST1 (interaction events)
+    bounce_search: bool = True         # A2 (2026-11-05): second window for tracks whose backward line meets the cavern
+    bounce_r_slope: float = 0.21       # wall / floor upstream: mirrored line from that point W, radius r + slope x |W - plane|
+                                       # (0.21 = 68 % of bounced SST1 muons at z = 30.6; the bounce is not specular)
     straw_cuts: str = None             # A6b: None = accept every track (as before); "fairship" = straw hits + GenFit fit
                                        # (straws.py) on the vertex tracks: converged, ndf > 25, chi2/ndf < 5, fitted p > 1
     cone: float = 0.0                  # vertex cone [rad]: tracks of a vertex also search r0 + cone * (distance from
@@ -286,11 +289,28 @@ def measure(tr, cfg, rng):
 
 # ---------------------------------------------------------------- algorithm A
 
+def bounce_points(meas, z_min=geo.Z_STATE_A):
+    """A2: where each measured track, followed backwards, meets the cavern wall (x = CAVERN_X_WALL) or floor
+    (y = CAVERN_Y_FLOOR) upstream of SST1 and downstream of z_min. Returns z_W (NaN if neither), wall flag (True: side
+    wall, mirror x; False: floor, mirror y)."""
+    tx, ty = meas["tx"], meas["ty"]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        zw = meas["z"] + (geo.CAVERN_X_WALL - meas["x"]) / tx
+        zf = meas["z"] + (geo.CAVERN_Y_FLOOR - meas["y"]) / ty
+    zw = np.where((zw < meas["z"]) & (zw > z_min), zw, -np.inf)
+    zf = np.where((zf < meas["z"]) & (zf > z_min), zf, -np.inf)
+    zW = np.maximum(zw, zf)
+    return np.where(np.isfinite(zW), zW, np.nan), zw >= zf
+
+
 def predictions(meas, event, z_limit, design, cfg):
     """Backward straight-line prediction on every plane upstream of z_limit: one query per
-    (track, plane) that lands within reach of the plane. Returns dict of query arrays."""
+    (track, plane) that lands within reach of the plane. With cfg.bounce_search (A2), tracks whose backward line meets
+    the cavern wall / floor at W also get, on the planes upstream of W, a query on the mirrored line from W with a
+    radius growing by bounce_r_slope per metre from W. Returns dict of query arrays."""
     q = {k: [] for k in ("track", "event", "plane", "u", "y", "t", "r")}
     track = np.arange(len(event))
+    zW, wall = bounce_points(meas) if getattr(cfg, "bounce_search", False) else (np.full(len(event), np.nan), None)
     for plane in design.planes:
         dz = meas["z"] - plane.z
         x = meas["x"] - meas["tx"] * dz
@@ -307,6 +327,23 @@ def predictions(meas, event, z_limit, design, cfg):
                      ("r", r)):
             q[k].append(v[reach])
         q["plane"].append(np.full(reach.sum(), plane.index))
+        b = np.nonzero(np.isfinite(zW) & (plane.z < zW) & (plane.z < z_limit))[0]
+        if len(b):                              # A2: mirrored line from the wall / floor point W
+            xW = meas["x"][b] - meas["tx"][b] * (meas["z"][b] - zW[b])
+            yW = meas["y"][b] - meas["ty"][b] * (meas["z"][b] - zW[b])
+            txm = np.where(wall[b], -meas["tx"][b], meas["tx"][b])
+            tym = np.where(wall[b], meas["ty"][b], -meas["ty"][b])
+            dW = zW[b] - plane.z
+            xb, yb = xW - txm * dW, yW - tym * dW
+            dist_b = dist[b] + 0.0                       # path length ~ the straight one (time window)
+            rb = r[b] + cfg.bounce_r_slope * dW * np.sqrt(1 + txm ** 2 + tym ** 2)
+            ub = plane.to_local(xb)
+            rch = ((ub >= -rb - plane.cell_u) & (ub <= plane.u_max + rb + plane.cell_u)
+                   & (yb >= plane.y_lo - rb - plane.cell_y) & (yb <= plane.y_hi + rb + plane.cell_y))
+            for k, v in (("track", track[b]), ("event", event[b]), ("u", ub), ("y", yb),
+                         ("t", meas["t"][b] - dist_b / C), ("r", rb)):
+                q[k].append(v[rch])
+            q["plane"].append(np.full(rch.sum(), plane.index))
     return {k: np.concatenate(v) for k, v in q.items()}
 
 
