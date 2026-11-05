@@ -51,8 +51,8 @@ cost points: cost_slope per MCHF up to cost_knee, cost_slope_high per MCHF above
 
 D1 / D2 (2026-11-05, default): split_sensitivity = True gives the veto's two jobs separate weights,
     - w_bkg_tag (1 - S90(0) / S90(N_w)) - w_sig_veto (signal lost) - cost points - constraints,
-with N_w = w_src_muon N_muon-induced + w_src_nu N_neutrino-induced (w_src_nu = 0.1: neutrino DIS counts less, an
-upstream veto cannot tag it). For small losses this matches the product form when w_bkg_tag = w_sig_veto = w_sens.
+with N_w = w_src_nu_helium N(nu DIS in helium) + w_src_muon N(everything else), w_src_nu_helium = 0.01 (Guglielmo,
+2026-11-05: an upstream veto cannot tag neutrino DIS in the helium; nu DIS elsewhere counts like the muons). For small losses this matches the product form when w_bkg_tag = w_sig_veto = w_sens.
 "sensitivity" and "bkg_events_15y" stay the physical (unweighted) values.
 
     python -m veto.objective                      # score results/reco/results.json
@@ -96,13 +96,14 @@ class ObjectiveConfig:
     cost_slope: float = 2.0           # sensitivity: points per MCHF up to cost_knee_kchf
     cost_slope_high: float = 4.0      # sensitivity: points per MCHF above it
     cost_knee_kchf: float = 5000.0
-    # D1 / D2 (2026-11-05): separate weights for the two jobs of the veto, and neutrinos counted less than muons.
-    #   background sources enter N weighted by origin: muon-induced (combinatorial pairs, muon DIS) w_src_muon,
-    #   neutrino-induced w_src_nu (< 1: an upstream veto cannot tag them, D2; they are vetoed only by random hits).
+    # D1 / D2 (2026-11-05): separate weights for the two jobs of the veto, and neutrino DIS IN THE HELIUM counted less.
+    #   background sources enter N weighted: neutrino DIS in the helium w_src_nu_helium (Guglielmo: 0.01; nothing comes
+    #   in, an upstream veto cannot tag it, D2); every other source (combinatorial pairs, muon DIS anywhere, neutrino DIS
+    #   in air / walls / planes / shield) w_src_muon = 1.
     #   split_sensitivity: the sensitivity form becomes two terms, w_bkg_tag (1 - S90(0) / S90(N_w)) for background
     #   left untagged and w_sig_veto * (signal lost) for signal vetoed, instead of one product term.
     w_src_muon: float = 1.0
-    w_src_nu: float = 0.1
+    w_src_nu_helium: float = 0.01
     split_sensitivity: bool = True
     w_bkg_tag: float = 100.0
     w_sig_veto: float = 100.0
@@ -266,8 +267,16 @@ def score(res, stats, cfg=ObjectiveConfig()):
     # has them (run_reco / evaluate_designs "interactions": lib/veto/interactions.veto)
     sources = {"combinatorial": (bg["events_15y_after"], bg["events_15y_after_err"])}
     for kind, r in (res.get("interactions") or {}).items():
-        sources[f"{kind}_interactions"] = (r["total"], r["total_err"])
-    src_w = {k: (cfg.w_src_nu if k.startswith("nu") else cfg.w_src_muon) for k in sources}
+        he = (r.get("per_target") or {}).get("helium")
+        if kind.startswith("nu") and he is not None:          # helium split off: the only down-weighted source (D2)
+            he_v, he_e = he.get("survive", he.get("after", 0.0)), he.get("survive_err", he.get("after_err", 0.0))
+            sources["nu_helium_interactions"] = (he_v, he_e)
+            sources[f"{kind}_other_interactions"] = (r["total"] - he_v, math.sqrt(max(r["total_err"] ** 2 - he_e ** 2, 0.0)))
+        elif kind.startswith("nu"):
+            raise ValueError(f"interactions '{kind}': per_target['helium'] is needed to weight neutrino DIS in helium")
+        else:
+            sources[f"{kind}_interactions"] = (r["total"], r["total_err"])
+    src_w = {k: (cfg.w_src_nu_helium if k == "nu_helium_interactions" else cfg.w_src_muon) for k in sources}
     n_bkg_raw = sum(v for v, _ in sources.values())                      # physical events / 15 y
     n_bkg = sum(src_w[k] * v for k, (v, _) in sources.items())           # weighted by origin (D1 / D2): the reward's N
     n_bkg_err = math.sqrt(sum((src_w[k] * e) ** 2 for k, (_, e) in sources.items()))

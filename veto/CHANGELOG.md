@@ -55,7 +55,8 @@ what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20)
 
 ### D1 / D2: reward weights
 - `objective.ObjectiveConfig`: `split_sensitivity` (default True): `w_bkg_tag` (1 - S90(0)/S90(N_w)) and `w_sig_veto`
-  (signal lost, uncapped) as separate terms; `w_src_muon = 1`, `w_src_nu = 0.1` weight the background sources in N_w.
+  (signal lost, uncapped) as separate terms; `w_src_nu_helium = 0.01` for neutrino DIS in the helium only (split from
+  `per_target`), every other source `w_src_muon = 1` (was w_src_nu = 0.1 on all neutrino DIS, same day).
 
 ### D4: shield DIS chain
 - `shield_iron.curved_points`: parent muon bent by the MS7 field to the vertex (`shield_dis.BEND_PARENT`).
