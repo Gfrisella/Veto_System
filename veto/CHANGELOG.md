@@ -4,7 +4,7 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
-## 2026-11-05 — FairShip geometry, spectrometer field (A6), Geant4 vessel transport, C7, C8, D1/D2, D4, B4 import (branch `veto-shield-dis`, uncommitted)
+## 2026-11-05 — FairShip geometry, spectrometer field (A6), Geant4 vessel transport, C7, C8, D1/D2, D4, B4 import (branch `veto-shield-dis`, commit ffd5570)
 
 ### Geometry: FairShip layout, target-aligned (z_veto = z_FS - 2.14)
 - `lib/veto/geometry.py`: vessel 31.13 - 81.13 m (was 30.6 - 80.6), `Z_UBT` = entrance window 31.13, `Z_SST` = 82.08 /
