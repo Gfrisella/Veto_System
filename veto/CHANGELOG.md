@@ -4,6 +4,17 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-05 (night) — A7 modules, C2 dead frames, A4 one cost model (branch `veto-shield-dis`)
+
+- `technology`: `SLOT` = 0.5 m, `MODULES` (straw 1 x 1 m, tile2 / tile 0.5 slot, fibre 0.5 x 2.5 m, pixel quads in a
+  slot; dead frames 3 / 1 / 1 / 2 (readout end) / 0.1 cm), `module_cost` (electronics per channel + 10 % P-369 area
+  mechanics), `cost()` now per m^2 of module footprint (old P-369-only cost replaced), `BUDGET_KCHF`.
+- `design`: Plane gains u_off, mod_u / mod_y, dead_u / dead_y, sub / sub_dead, n_modules, `active_fraction`;
+  `inside()` rejects dead borders; "modules" design format, `module_blocks`, `validate_modules`, `snap_to_modules`,
+  `GRID_Y0`. Continuous designs still load (old format).
+- `reco`: rate maps / fine peaks shifted by the block's u_off. `objective`: `cost_pct_budget`.
+- New `bin/snap_designs.py` -> `designs/modules/*_mod.json` (all 18 designs).
+
 ## 2026-11-05 (evening) — issue review: A3 limits, D3 Pythia-only, D7 upstream air, A6b straw cuts, nu-He weight (branch `veto-shield-dis`)
 
 - Decisions of the review recorded in ISSUES.txt (A1, A2, A4, A5, A7, B1, B2, B3, B4, C2, C5, D3, D6, D7, A6b; C1, C3,

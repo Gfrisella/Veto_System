@@ -86,6 +86,10 @@ A4. No objective, two inconsistent cost models
     5 Nov 2026, Guglielmo: ONE cost model = per module: channels x cost per channel of the technology + area-based
       mechanics; pixel gets a per-channel number (no nan). Reported as % of the 8 MCHF budget (never money in talks).
       Goes with A7 (cost per module).
+      Implemented (5 Nov): technology.module_cost = channels x cost_channel x 97.2/3600 kCHF (straw channel) +
+      0.10 x P-369 area cost (mechanics, placeholder); pixel electronics = ITk-based area cost; objective
+      "cost_pct_budget". Per m^2: straw 58, tile 81, tile2 341, fibre 1071, pixel 3882 kCHF (P-369: 36 / 30 / 30 / 340 /
+      3800): the per-channel model makes fine segmentation much dearer -> numbers to be checked with the colleagues.
 
 A5. Spill and PoT normalisation
     STATUS: DECIDED (5 Nov 2026): keep the flat 1 s spill
@@ -183,6 +187,12 @@ A7. Detector planes have no predefined module dimensions
     5 Nov 2026, Guglielmo: common 50 x 50 cm slot grid. Straw module = 2 x 2 slots, fibre mat = 1 x 5 slots (0.5 x 2.5 m),
       tile2 = 1 slot, tile (48 cm) = 1 slot with the 2 cm as dead area, pixel quads tiled inside a slot. Each slot =
       (technology, stations stacked in z). Technologies can be mixed slot by slot. Dead frame widths: to be given.
+      Implemented (5 Nov): technology.MODULES / SLOT; design JSON "modules": [{"tech", "u", "y", "stations"}] per plane
+      (+ "y0": grid origin, -1.5 UBT / -3.0 fins); design.module_blocks merges same-technology modules stacked in y
+      into one Plane block (u_off, mod_u / mod_y, dead borders, pixel quads); Plane.inside rejects the dead borders;
+      reco rate maps shifted by u_off; design.snap_to_modules + bin/snap_designs.py -> designs/modules/*_mod.json.
+      D6_straw: 141 modules, 88 % active, veto on 3000 muons 76.4 % -> 69.5 % (frames + area). Still to do: the
+      evolution's free parameters (evolve/evolve_designs.py) on the slot grid.
 
 ----------------------------------------------------------------------------------------------
 B. PHYSICS MISSING: changes the results
@@ -314,6 +324,8 @@ C2. Dead material and dead regions
     UBT this matters most: the tensioned-straw frame sits in the acceptance (SR-370 open question).
     5 Nov 2026, Guglielmo: dead border per module edge, per technology (guesses, to be confirmed by the detector
       colleagues): straw 3 cm (frame + manifolds), tile / tile2 1 cm (SiPM side), fibre 2 cm (readout end), pixel 1 mm.
+      Implemented with A7 (technology.MODULES frame / frame_edges / sub_frame). Dead material of the frames (scattering,
+      DIS) not added.
 
 C3. Validation against full simulation
     STATUS: OPEN
@@ -395,7 +407,7 @@ D2. Neutrino DIS in helium: irreducible for an upstream veto
     STATUS: IN PROGRESS (5 Nov 2026: nu DIS in helium weighted 0.01 in the reward; vertex-activity veto not done)
 
 D3. MS7 shield DIS -> K_L: chain disagrees with FairShip
-    STATUS: OPEN (PRIORITY B) - 5 Nov 2026: Pythia 6 only, issue kept
+    STATUS: OPEN (PRIORITY A, major) - 5 Nov 2026: Pythia 6 only (DIS part) confirmed, issue kept open as major
     Forced chain in the last 50 cm of MS7: K_L decays in the vessel ~4.9 kHz, (6.73 +- 0.59)e7 per 15 y
     after DOCA < 1 cm, fiducial, IP < 2.5 m (docs/shield_iron_dis.md).
       - plain Geant4 (bin/shield_natural_check.py) gives 0.52 +- 0.15 of the chain's K_L; the excess is the
@@ -411,7 +423,8 @@ D3. MS7 shield DIS -> K_L: chain disagrees with FairShip
       (split "pythia" instead of the crossover Geant4 + Pythia 6 mix). Implemented: fastveto.dis.MuonLibrary(split="pythia"),
       shield_dis.MU_SPLIT. NOTE: Pythia 6 alone is the deep-inelastic part only: sigma(iron) 1.18 / 3.46 ub per nucleon
       at 20 / 100 GeV vs 9.55 / 16.5 for the crossover mix (the soft photonuclear part, Geant4, is dropped), so the
-      shield interaction rate falls by x 5 - 8 while the K_L (90 % from the Pythia part) fall much less. To confirm.
+      shield interaction rate falls by x 5 - 8 while the K_L (90 % from the Pythia part) fall much less. Confirmed by
+      Guglielmo (5 Nov): keep the DIS part only, D3 stays a MAJOR open issue.
 
 D4. MS7 shield DIS chain: simplifications
     STATUS: IN PROGRESS (5 Nov 2026: solution accepted, code done, runs pending)

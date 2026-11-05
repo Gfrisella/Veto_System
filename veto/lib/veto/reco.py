@@ -115,9 +115,9 @@ def plane_rate_map(plane, maps):
         side = 0 if plane.sign > 0 else 1
         iz = int(np.clip(np.round(plane.z - maps["z_slices"][0]), 0, len(maps["z_slices"]) - 1))
         h = maps["fin_maps"][side, iz]
-        ub, yb = maps["u_bins"], maps["y_bins"]
+        ub, yb = maps["u_bins"] - plane.u_off, maps["y_bins"]          # module blocks start at u_off on the fin
     uc, yc = 0.5 * (ub[1:] + ub[:-1]), 0.5 * (yb[1:] + yb[:-1])
-    keep = (uc <= plane.u_max)[:, None] & ((yc >= plane.y_lo) & (yc <= plane.y_hi))[None, :]
+    keep = ((uc >= 0) & (uc <= plane.u_max))[:, None] & ((yc >= plane.y_lo) & (yc <= plane.y_hi))[None, :]
     return ub, yb, np.where(keep, h, 0.0)
 
 
@@ -161,15 +161,15 @@ def fine_peak(plane, pm, scale):
     yb = pm["y_bins"]
     b = float(yb[1] - yb[0])
     if plane.kind == "ubt":
-        w, w2, ub = pm["ubt_w"], pm["ubt_w2"], pm["ubt_x_bins"] + geo.UBT_HALF_X     # u = x + 0.5
+        w, w2, ub = pm["ubt_w"], pm["ubt_w2"], pm["ubt_x_bins"] + geo.UBT_HALF_X - plane.u_off  # u = x + 0.5 - u_off
     else:
         iz = int(np.argmin(np.abs(pm["fin_z"] - plane.z)))
         if abs(pm["fin_z"][iz] - plane.z) > 0.5:
             return None
         side = 0 if plane.sign > 0 else 1
-        w, w2, ub = pm["fin_w"][side, iz], pm["fin_w2"][side, iz], pm["fin_u_bins"]
+        w, w2, ub = pm["fin_w"][side, iz], pm["fin_w2"][side, iz], pm["fin_u_bins"] - plane.u_off
     uc, yc = 0.5 * (ub[1:] + ub[:-1]), 0.5 * (yb[1:] + yb[:-1])
-    keep = (uc <= plane.u_max)[:, None] & ((yc >= plane.y_lo) & (yc <= plane.y_hi))[None, :]
+    keep = ((uc >= 0) & (uc <= plane.u_max))[:, None] & ((yc >= plane.y_lo) & (yc <= plane.y_hi))[None, :]
     k = max(1, int(round(scale / b)))
     if keep.sum(0).max() < k or keep.sum(1).max() < k:
         return None
