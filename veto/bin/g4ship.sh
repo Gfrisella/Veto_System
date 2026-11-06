@@ -8,7 +8,7 @@ set -euo pipefail
 G4=/cvmfs/ship.cern.ch/25.09/sw/slc9_x86-64/GEANT4/v10.7.3-local1
 XERCES=/cvmfs/ship.cern.ch/25.09/sw/slc9_x86-64/XercesC/v3.3.0-local1
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
-set +u; source "$G4/bin/geant4.sh" >/dev/null 2>&1; set -u
+set +eu; source "$G4/bin/geant4.sh" >/dev/null 2>&1; set -eu   # geant4.sh can return non-zero in non-interactive shells
 if [ "${1:-}" = "build" ]; then
     PY=/usr/bin/python3
     EXT=$($PY -c "import sysconfig;print(sysconfig.get_config_var('EXT_SUFFIX'))")

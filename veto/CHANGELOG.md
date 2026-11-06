@@ -10,6 +10,10 @@ what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20)
   both parts and picked the empty Geant4 part (StopIteration): now the kept part, nearest grid energy with events.
 - `bin/em_debris.py` also saves the raw plane crossings (`em_raw_n*_d*.npz`) to rebin the maps for new inputs.
 - New `bin/retype_store.py`: muon types of a store with the FairShip geometry + field into new columns `*_fs`.
+- `bin/g4ship.sh`: geant4.sh may return non-zero in non-interactive shells, which killed background jobs silently
+  under `set -e`: now sourced with `set +e`.
+- Results: DIS-parent store re-typed (selected 12.96 -> 16.81 % of the weight, ~8.2 -> 10.6 kHz); peak maps at
+  31.13 .. 41.13 m (UBT 8.2e6, first fin slice 1.37 / 1.85e9 per spill); shield chain K_L 5 604 decays / spill (D3).
 - Runs (logs/rerun_2026-11-06): EM debris 2e4 and 2e5 muons (1.25e9 e/gamma per spill leave the shield; first fin
   planes 1.2e8 e + 8.5e8 gamma per spill); MS7 shield chain muons (Pythia only: 1.78e5 interactions / spill),
   peak maps at the new positions, DIS-parent store re-typed.

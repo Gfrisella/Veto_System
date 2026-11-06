@@ -462,6 +462,11 @@ D3. MS7 shield DIS -> K_L: chain disagrees with FairShip
       at 20 / 100 GeV vs 9.55 / 16.5 for the crossover mix (the soft photonuclear part, Geant4, is dropped), so the
       shield interaction rate falls by x 5 - 8 while the K_L (90 % from the Pythia part) fall much less. Confirmed by
       Guglielmo (5 Nov): keep the DIS part only, D3 stays a MAJOR open issue.
+      6 Nov re-run (2e6 interactions, Pythia only, bent parents, results/shield_dis/shield_muon_fs2026.*): 1.78e5
+      interactions / spill (was 1.04e6), but K_L decays in the vessel 5 604 / spill (was 4 885), K_S 36 (94), Lambda 14
+      (36): Pythia 6 makes the K_L and now also models the soft (low-nu) interactions Geant4 had -> the disagreement
+      with FairShip (no shield K_L at the SST) GROWS. Geant4 transport after the plane: 79 980 of 2.18e6 interactions
+      pre-selected, 662 109 charged at SST1 (shield_muon_fs2026_g4.npz).
 
 D4. MS7 shield DIS chain: simplifications
     STATUS: IN PROGRESS (5 Nov 2026: solution accepted, code done, runs pending)
