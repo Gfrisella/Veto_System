@@ -280,6 +280,10 @@ B2. EM debris rate (electrons / photons from the end of the shield)
       reco.plane_rate_map adds them when loaded (run_reco.py --em-debris). Both Geant4 modules built on the host
       (bin/g4ship.sh build). Smoke test 300 muons: ~2.9 e / gamma per muon crossing the iron, 1.4e9 / spill; fin
       planes ~1.3e8 e and 9e8 gamma / spill. Production (--n >= 2e4) with the re-runs. STATUS -> IN PROGRESS.
+      6 Nov: depth test (Guglielmo proposed only the last 3 X0): muons carried (field, dE/dx) to the slab, Geant4 on the
+      slab only; yield vs depth 3 / 6 / 10 / 20 X0 = 17 / 30 / 72 / 72 % of the full depth, same run time ->
+      decided: the whole last 50 cm (28.5 X0, from the real iron start 29.39 m; the old g4shield start 29.19 m put 20 cm
+      of iron too many in front). em_debris.DEPTH_X0, bin/em_debris.py --depth.
 
 B3. Neutrino and muon deep inelastic scattering
     STATUS: DONE (5 Nov 2026): modelled, follow-up in C7, C8, D2 - D9

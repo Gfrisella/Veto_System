@@ -9,6 +9,8 @@ what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20)
 - New `lib/veto/em_debris.py`, `bin/em_debris.py`: g4shield (MS7 iron + field) -> e / gamma at 29.90 m -> g4vessel
   to the UBT / fin planes; maps in the muon-map binning; `reco.plane_rate_map` adds P_e e + P_gamma gamma when the
   maps carry em_*; `run_reco.py --em-debris`. `bin/g4ship.sh build` also builds g4shield; shield_iron finds it.
+- `em_debris.DEPTH_X0` = whole last 50 cm (28.5 X0), `--depth` [X0]: muons carried to the slab with
+  `shield_iron.curved_points`, `init_g4shield(z_iron0=)`. 3 X0 gives only 17 % of the full-depth yield.
 
 ## 2026-11-06 — B4 EventCalc signal in run_reco (branch `veto-shield-dis`)
 

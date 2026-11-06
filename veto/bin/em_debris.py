@@ -26,12 +26,12 @@ OUT = paths.results_dir() / "em_debris"
 _G = None
 
 
-def _init_shield(seed):
+def _init_shield(seed, z_iron0):
     global _G
-    _G = si.init_g4shield(seed=seed * 1000003 + os.getpid(), e_cut=em.E_CUT)
+    _G = si.init_g4shield(seed=seed * 1000003 + os.getpid(), e_cut=em.E_CUT, z_iron0=z_iron0)
 
 
-def _init_vessel(seed):
+def _init_vessel(seed, _unused=None):
     global _G
     from veto import g4vessel
     _G = g4vessel.init(seed * 1000003 + os.getpid(), e_cut=em.E_CUT, planes=em.Z_PLANES)
@@ -44,9 +44,9 @@ def _run(job):
     return r
 
 
-def pool_run(init, seed, jobs, workers):
+def pool_run(init, seed, jobs, workers, extra=None):
     res = []
-    with mp.get_context("spawn").Pool(workers, initializer=init, initargs=(seed,)) as pool:
+    with mp.get_context("spawn").Pool(workers, initializer=init, initargs=(seed, extra)) as pool:
         for r in pool.imap_unordered(_run, jobs):
             res.append(r)
     return {k: np.concatenate([r[k] for r in res]) for k in res[0]} if res else {}
@@ -68,6 +68,7 @@ def main():
     ap.add_argument("--workers", type=int, default=16)
     ap.add_argument("--chunk", type=int, default=200)
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--depth", type=float, default=em.DEPTH_X0, help="iron simulated in Geant4, radiation lengths")
     ap.add_argument("--inputs", default="inputs.npz", help="results/reco file whose map binning is used")
     a = ap.parse_args()
     t0 = time.time()
@@ -79,8 +80,20 @@ def main():
     pos = np.stack([f["x"][idx], f["y"][idx], f["z"][idx]], 1)
     mom = np.stack([f["px"][idx], f["py"][idx], f["pz"][idx]], 1)
     pdg = (-13 * f["q"][idx].astype(int))
+    # only the last --depth X0 of iron in Geant4: carry the muons there first (field, mean dE/dx)
+    z_iron0 = si.Z_SHIELD_END - a.depth * em.X0_FE
+    p_mag = np.linalg.norm(mom, axis=1)
+    u = mom / p_mag[:, None]
+    z_start = z_iron0 - 1e-3
+    pos, u, p_new = si.curved_points(pos, u, p_mag, -np.sign(pdg).astype(float), (z_start - pos[:, 2]) / u[:, 2])
+    alive = p_new > 0.2
+    mom = u * np.maximum(p_new, 0.0)[:, None]
+    pos[:, 2] = z_start
+    print(f"  Geant4 slab {z_iron0:.4f} - {si.Z_SHIELD_END} m ({a.depth:g} X0 = {a.depth * em.X0_FE * 100:.1f} cm); "
+          f"{(~alive).sum()} muons below 0.2 GeV before it dropped", flush=True)
+    pdg = np.where(alive, pdg, 0)                                      # pdg 0: not shot (g4shield skips it)
     print(f"{a.n:,} muons drawn of {len(w):,} ({w.sum():.4g} per spill cross the iron), {time.time() - t0:.0f} s", flush=True)
-    s1 = pool_run(_init_shield, a.seed, list(chunks(np.arange(a.n), pdg, mom, pos, a.n, a.chunk)), a.workers)
+    s1 = pool_run(_init_shield, a.seed, list(chunks(np.arange(a.n), pdg, mom, pos, a.n, a.chunk)), a.workers, z_iron0)
     em_ = np.isin(s1["pdg"], [11, -11, 22])
     print(f"stage 1: {len(s1['pdg']):,} particles at z = {si.Z_PLANE} m, {em_.sum():,} e / gamma "
           f"({(w_mu[s1['ev'][em_]]).sum():.4g} per spill), {time.time() - t0:.0f} s", flush=True)
@@ -93,7 +106,7 @@ def main():
     inp = np.load(paths.results_dir() / "reco" / a.inputs)
     maps = em.make_maps(s2, w_mu, {k: inp[k] for k in ("u_bins", "y_bins", "z_slices", "ubt_y_bins")})
     OUT.mkdir(parents=True, exist_ok=True)
-    np.savez(OUT / em.EM_FILE, **maps, n_muons=a.n, muons_per_spill=float(w.sum()), e_cut=em.E_CUT)
+    np.savez(OUT / em.EM_FILE, **maps, n_muons=a.n, muons_per_spill=float(w.sum()), e_cut=em.E_CUT, depth_x0=a.depth)
     for k in ("e", "g"):
         print(f"  {'electrons' if k == 'e' else 'photons':9s}: UBT {maps[f'em_ubt_{k}'].sum():.4g} / spill; fins at z = "
               + ", ".join(f"{z:.2f}: {maps[f'em_fin_{k}'][:, i].sum():.3g}" for i, z in enumerate(inp['z_slices'][:4])))
