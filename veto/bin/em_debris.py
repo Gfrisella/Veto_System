@@ -103,6 +103,8 @@ def main():
     v1 = np.stack([s1["x"], s1["y"], np.full(len(s1["x"]), si.Z_PLANE)], 1)[em_][o]
     s2 = pool_run(_init_vessel, a.seed + 1, list(chunks(ev[o], s1["pdg"][em_][o], p1, v1, a.n, a.chunk)), a.workers)
     print(f"stage 2: {len(s2.get('pdg', [])):,} plane crossings, {time.time() - t0:.0f} s", flush=True)
+    OUT.mkdir(parents=True, exist_ok=True)                      # raw crossings: maps can be rebinned for new inputs
+    np.savez(OUT / f"em_raw_n{a.n}_d{a.depth:g}.npz", w_mu=w_mu, **{k: v for k, v in s2.items()})
     inp = np.load(paths.results_dir() / "reco" / a.inputs)
     maps = em.make_maps(s2, w_mu, {k: inp[k] for k in ("u_bins", "y_bins", "z_slices", "ubt_y_bins")})
     OUT.mkdir(parents=True, exist_ok=True)

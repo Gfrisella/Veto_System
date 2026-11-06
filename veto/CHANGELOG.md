@@ -4,6 +4,16 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-06 — re-runs started; fixes (branch `veto-shield-dis`)
+
+- `fastveto.dis.MuonLibrary.sample`: with split "pythia" an interaction below the Pythia grid had zero cross section in
+  both parts and picked the empty Geant4 part (StopIteration): now the kept part, nearest grid energy with events.
+- `bin/em_debris.py` also saves the raw plane crossings (`em_raw_n*_d*.npz`) to rebin the maps for new inputs.
+- New `bin/retype_store.py`: muon types of a store with the FairShip geometry + field into new columns `*_fs`.
+- Runs (logs/rerun_2026-11-06): EM debris 2e4 and 2e5 muons (1.25e9 e/gamma per spill leave the shield; first fin
+  planes 1.2e8 e + 8.5e8 gamma per spill); MS7 shield chain muons (Pythia only: 1.78e5 interactions / spill),
+  peak maps at the new positions, DIS-parent store re-typed.
+
 ## 2026-11-06 — B2 EM debris with the host Geant4 (branch `veto-shield-dis`)
 
 - New `lib/veto/em_debris.py`, `bin/em_debris.py`: g4shield (MS7 iron + field) -> e / gamma at 29.90 m -> g4vessel
