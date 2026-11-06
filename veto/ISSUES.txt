@@ -87,7 +87,7 @@ A3. Rate limits are reported, not enforced
       Implemented: technology.py fiber max_channel_rate = 1e6, pixel max_rate = 3.5e8 Hz/cm^2.
 
 A4. No objective, two inconsistent cost models
-    STATUS: DECIDED (5 Nov 2026), to implement
+    STATUS: DONE (5 Nov 2026: one module cost model; per-channel numbers flagged for the detector colleagues)
     optimize_sbt.py is a stub. To decide:
       - objective: e.g. minimise cost subject to background < X and signal loss < Y;
       - one cost model: kCHF per layer-m^2 (P-369 table 11) and relative cost per channel
@@ -115,7 +115,7 @@ A5. Spill and PoT normalisation
       no duty factor / 50 Hz ripple for now.
 
 A6. Spectrometer field map not used: products propagated in straight lines
-    STATUS: DONE (5 Nov 2026: RK4 in the field map; helium products in Geant4, to be built and run)
+    STATUS: DONE (5 Nov 2026: RK4 in the field map, re-centred; helium products in Geant4, built on the host)
     Downstream of SST1 (z = 82 m) every track (muons, DIS products, V0 daughters, signal daughters) is
     extrapolated in a STRAIGHT line to the timing detector (z = 92.71 m, muon_types.py:91, reco.py:383),
     through the spectrometer magnet (z = 84.36-89.56 m, |x| < 2.7, |y| < 3.8 m, geometry.SPECTROMETER_Z).
@@ -156,7 +156,7 @@ A6. Spectrometer field map not used: products propagated in straight lines
         other -> selected 4.8 % of the sample (larger 5.5 x 6.5 m TD, bending). Rates need the re-runs below.
 
 A6b. Realistic tracking: straw hits and track fit (post-processing)
-    STATUS: DONE (5 Nov 2026); selection decided, to implement
+    STATUS: DONE (5 Nov 2026: straws + GenFit; optional SHiP cuts --straw-cuts fairship)
     lib/veto/straws.py (FairShip strawtubes geometry and digitisation), bin/genfit_straws.py (GenFit DAF exactly as
     shipDigiReco.findTracks, SHiP CVMFS via bin/shipenv.sh), bin/straw_reco.py. Per track: n_hits, n_stations, fitted
     (>= 25 hits, >= 3 stations), converged, chi2 / ndf, fitted p and charge, state at SST1, good (chi2/ndf < 50).
@@ -171,7 +171,7 @@ A6b. Realistic tracking: straw hits and track fit (post-processing)
       mu+ mu- decays (3 - 20 GeV): 54 / 60 kept. Fitted p in the IP not yet (reco.measure still smears the truth).
 
 A7. Detector planes have no predefined module dimensions
-    STATUS: DECIDED (5 Nov 2026), to implement
+    STATUS: DONE (5 Nov 2026: 50 cm slot grid, module designs, evolution on the grid)
     Plane sizes are free and continuous (fin "length", "y_lo" / "y_hi", UBT extent in design.py); channels and
     cost are computed for exactly that area (technology.n_channels rounds cells, not modules). Only the straw
     length (max_length 1 m) and the fibre mat length (3 m) are quantised. A real plane is assembled from
@@ -352,7 +352,7 @@ C1. Detector response simplifications
     5 Nov 2026 (issue review with Guglielmo): left OPEN, no decision yet.
 
 C2. Dead material and dead regions
-    STATUS: DECIDED (5 Nov 2026, placeholder numbers), with A7
+    STATUS: DONE (5 Nov 2026: dead frames, placeholder widths to be confirmed; frame material not added)
     No frames, manifolds, overlaps between 1 m straw rows, module gaps, SiPMs or cables. For the
     UBT this matters most: the tensioned-straw frame sits in the acceptance (SR-370 open question).
     5 Nov 2026, Guglielmo: dead border per module edge, per technology (guesses, to be confirmed by the detector
@@ -512,7 +512,7 @@ D6. Interaction-library approximations
       - nu_tau: build a nu_tau library with bin/nu_library.py (GENIE, --nus 16 -16), ~1 % of the flux.
 
 D7. Interactions upstream of z = 30.6 m not simulated
-    STATUS: DECIDED (5 Nov 2026), to implement
+    STATUS: DONE (5 Nov 2026: air from the shield end in the targets; numbers with the re-runs)
     Apart from the last 50 cm of MS7, interactions in the shield, cavern walls and rock are not simulated.
     The FairShip origin breakdown (/disk/users/gfrise/fairship_sst1_origin) shows pi / p at SST1 come
     mostly from the cavern concrete and the vessel walls / SBT.
