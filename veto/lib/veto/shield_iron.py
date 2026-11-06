@@ -110,6 +110,7 @@ def init_g4shield(seed, e_cut=0.5, field=True):
     import sys
     from . import paths
     sys.path.insert(0, str(paths.cpp_build()))
+    sys.path.insert(0, str(paths.PROJECT_DIR / "cpp" / "build_ship"))   # host build (bin/g4ship.sh), other python
     import g4shield
     fm = load_field() if field else dict(field=np.zeros((0, 0, 0, 3)), x0=0, dx=1, y0=0, dy=1, z0=0, dz=1, z_shift=0)
     g4shield.initialize(seed=seed, z_iron0=Z_IRON0 - 0.2, z_iron1=Z_SHIELD_END, half_x=HALF_X, half_y=HALF_Y,

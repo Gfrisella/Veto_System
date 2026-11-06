@@ -122,3 +122,53 @@ def charged_tracks(ev, pa, tracks_only=True, forward_only=True):
 def production_point():
     """LLP production point (EventCalc origin) in the veto frame. NOTE: -0.87 m, not geometry.Z_TARGET (-2.14)."""
     return np.array(meta()["frame"]["production_point_veto"])
+
+
+# ---------------------------------------------------------------- B4: the signal model of the optimisation (2026-11-05)
+BENCHMARK_SET = {"HNL-mu_m1_ct100": 1.0, "Dark-photons_m0.9_ct100": 1.0, "Scalar-mixing_m2_ct100": 1.0,
+                 "ALP-fermion_m1_ct100": 1.0}   # name: weight of its signal loss in the average (Guglielmo: weighted set)
+
+
+def selected_signal(name, cfg, rng, n_max=None):
+    """EventCalc decays of one benchmark through the same selection as every sample: charged tracks from the decay
+    vertex (straight to SST1, timing detector through the field), pairs of good tracks (opposite charge, DOCA < 2 cm,
+    vertex in the vessel, true IP < IP_PRECUT), measured IP < cfg.ip_max (10 cm full / 2.5 m partial) and at most
+    cfg.max_tracks tracks in SST1. Returns (tracks in reco's signal format: bx.. bpz, vx vy vz; z_vertex per row; event
+    per row; event weight per selected event; acceptance dict). n_max: at most this many decays (weighted draw)."""
+    from . import geometry as geo
+    from . import interactions as ix
+    from . import spectrometer
+    ev, pa = load(name)
+    n_ev = len(ev["weight"])
+    w_all = np.asarray(ev["weight"], np.float64)
+    if n_max is not None and n_max < n_ev:
+        pick = np.sort(rng.choice(n_ev, n_max, replace=False, p=w_all / w_all.sum()))
+        w_ev = np.full(n_max, w_all.sum() / n_max)            # drawn proportional to w: equal weights
+    else:
+        pick, w_ev = np.arange(n_ev), w_all
+    remap = np.full(n_ev, -1); remap[pick] = np.arange(len(pick))
+    vtx, mom, q, idx = charged_tracks(ev, pa)
+    keep = remap[idx] >= 0
+    vtx, mom, q, inter = vtx[keep], mom[keep], q[keep].astype(float), remap[idx[keep]]
+    in_vessel = np.asarray(ev["in_vessel"]).astype(bool)[pick]
+    b = vtx + mom / mom[:, 2:3] * (geo.Z_SST1 - vtx[:, 2:3])
+    acc = (np.abs(b[:, 0]) < geo.SST1_HALF_X) & (np.abs(b[:, 1]) < geo.SST1_HALF_Y)
+    good = acc & (np.linalg.norm(mom, axis=1) > 1)
+    g = np.nonzero(good)[0]
+    if len(g):
+        good[g] = spectrometer.timing_acceptance(b[g], mom[g], q[g])[0]
+    good &= in_vessel[inter]
+    tr = dict(row=np.arange(len(q)), inter=inter, q=q, beam=np.zeros(len(q), bool), v=vtx, p=mom, b=b, acc=acc, good=good)
+    sel, pair, vertex = ix.select(tr, len(pick), cfg=cfg, rng=rng)
+    if cfg.max_tracks is not None and len(sel):
+        n_acc = np.bincount(inter[acc], minlength=len(pick))[sel]
+        m = n_acc <= cfg.max_tracks
+        sel, pair, vertex = sel[m], pair[m], vertex[m]
+    rows = pair.T.ravel()                                       # all first tracks, then all second (reco's layout)
+    n_sel = len(sel)
+    sig = dict(bx=b[rows, 0], by=b[rows, 1], bz=np.full(len(rows), geo.Z_SST1), bpx=mom[rows, 0], bpy=mom[rows, 1],
+               bpz=mom[rows, 2], vx=vtx[rows, 0], vy=vtx[rows, 1], vz=vtx[rows, 2])
+    evt = np.tile(np.arange(n_sel), 2)
+    acceptance = dict(benchmark=name, decays=int(len(pick)), weight_total=float(w_ev.sum()),
+                      selected=int(n_sel), selected_weight_frac=float(w_ev[sel].sum() / w_ev.sum()) if len(pick) else 0.0)
+    return sig, sig["vz"].copy(), evt, w_ev[sel], acceptance

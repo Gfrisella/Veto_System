@@ -4,6 +4,27 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-06 — B2 EM debris with the host Geant4 (branch `veto-shield-dis`)
+
+- New `lib/veto/em_debris.py`, `bin/em_debris.py`: g4shield (MS7 iron + field) -> e / gamma at 29.90 m -> g4vessel
+  to the UBT / fin planes; maps in the muon-map binning; `reco.plane_rate_map` adds P_e e + P_gamma gamma when the
+  maps carry em_*; `run_reco.py --em-debris`. `bin/g4ship.sh build` also builds g4shield; shield_iron finds it.
+
+## 2026-11-06 — B4 EventCalc signal in run_reco (branch `veto-shield-dis`)
+
+- `signal_eventcalc.BENCHMARK_SET`, `selected_signal()`: EventCalc decays through the common selection (field, both IP
+  categories, max_tracks); `run_reco.py --signal eventcalc`: weighted average signal loss + per-benchmark results.
+
+## 2026-11-06 — A2 bounce-aware search, A1 closure check, C5 weights (branch `veto-shield-dis`)
+
+- `reco`: `bounce_points`, second (mirrored) search window from the cavern wall / floor point for planes upstream of
+  it; `RecoConfig.bounce_search = True`, `bounce_r_slope = 0.21`. D6_straw bounced vetoed 0.760 -> 0.975 (signal lost
+  5.15 -> 6.38 %, toy signal).
+- New `bin/closure_check.py` (A1): direct vs factorised surviving pairs per design / candidate file, Poisson p, 90 % CL
+  limits. inputs.npz D0_minimal 1694 observed vs 1702 predicted.
+- `make_design_dataset.py`: repeated-evt_n correction of the old rows by default (`--no-evt-n-correction`);
+  `neff_by_type.py`: n_eff target 1000 with the seed factor needed (C5).
+
 ## 2026-11-05 (night) — A7 modules, C2 dead frames, A4 one cost model (branch `veto-shield-dis`)
 
 - `technology`: `SLOT` = 0.5 m, `MODULES` (straw 1 x 1 m, tile2 / tile 0.5 slot, fibre 0.5 x 2.5 m, pixel quads in a

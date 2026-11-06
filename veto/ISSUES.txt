@@ -21,7 +21,7 @@ GEOMETRY (5 Nov 2026): FairShip layout (geometry_config.py 2026-0.1), target-ali
     EVERY result before this date (types in the stores, rate maps, reco inputs, interactions) uses the old layout.
 
 A1. Background figure of merit is saturated
-    STATUS: DECIDED (5 Nov 2026), to implement
+    STATUS: IN PROGRESS (5 Nov 2026: closure check done on inputs.npz; cross-run check with the re-runs)
     The pair background is 2-3 surviving pairs out of 196,736 candidates (-> ~1e-5 events in
     15 years). Every reasonable design gives ~0, so differences between designs are Poisson
     noise.
@@ -31,9 +31,15 @@ A1. Background figure of merit is saturated
     5 Nov 2026, Guglielmo: factorised estimate stays the default (objective bkg_estimate = "factorised"), plus a closure
       check against the direct count on a high-statistics sample (cross-run pairs, bin/make_crossrun_pairs.py) and a 90 %
       CL upper limit quoted when the direct count is 0. A1 DONE once the closure check is in.
+      Implemented (5 Nov): bin/closure_check.py (direct surviving count vs factorised prediction per design and per
+      candidate file, Poisson p-value, 90 % CL limit 2.3 / n_pairs when 0 survive; objective already quoted it).
+      inputs.npz (3 027 pairs after measured IP < 10 cm): D0_minimal observed 1694 vs factorised 1702 (p = 0.86):
+      the unweighted factorisation closes; weighted FN direct 0.138 vs factorised 0.254 (factorised conservative by
+      x 1.8: heavy muons). D1 / D6_straw / E3_robust: 0 observed, < 7.6e-4 (90 % CL). Cross-run pairs
+      (inputs_xrun.npz, bin/make_crossrun_pairs.py) needed for the high-statistics check: with the re-runs.
 
 A2. Bounced muons: the veto barely sees them
-    STATUS: DECIDED (5 Nov 2026), to implement
+    STATUS: IN PROGRESS (5 Nov 2026: bounce-aware search implemented; statistics and tuning with the re-runs)
     Only 74-77 % of bounced SST1 muons are vetoed. The search window contains the true crossing
     for only 30 % of them: a straight line extrapolated back from the spectrometer cannot follow
     the bounce off the cavern wall / floor. This term will probably decide the fin layout.
@@ -44,6 +50,13 @@ A2. Bounced muons: the veto barely sees them
     5 Nov 2026, Guglielmo: bounce-aware search. Study the class alone; a second search window aimed at the cavern wall /
       floor (kink allowed at the wall); the optimiser may use fins downstream of the bounce point; more bounced statistics
       from extra seeds (rock_bounced / veto_only come from one run now).
+      Implemented (5 Nov): reco.bounce_points + predictions: tracks whose backward line meets the cavern wall / floor at
+      W (z > 30.6) get, on the planes upstream of W, a second query on the mirrored line from W, radius r +
+      bounce_r_slope (0.21) x |W - plane| (the bounce is not specular: mirrored miss / distance from W = 0.16 median,
+      0.21 at 68 %, on 2e5 bounced SST1 muons; straight-line miss at 30.6 m 9.1 m median, mirrored 4.8 m).
+      RecoConfig.bounce_search (default True), bounce_r_slope. Quick test on inputs.npz (toy signal, 20k decays):
+      D6_straw bounced SST1 vetoed 0.760 -> 0.975, signal lost 5.15 -> 6.38 %; E3_robust 0.000 -> 0.140, 0.07 -> 0.20 %.
+      Still to do: more bounced statistics (C5 seeds); tune bounce_r_slope against the signal cost.
 
 A3. Rate limits are reported, not enforced
     STATUS: DONE (4 Nov 2026: steep penalty in the objective + fine peak maps near the flames)
@@ -240,7 +253,7 @@ B1. Multiple scattering (at least this interaction must be modelled)
       entering through the sides see more material there (scattering, wall DIS) than in our model.
 
 B2. EM debris rate (electrons / photons from the end of the shield)
-    STATUS: DECIDED (5 Nov 2026), to implement
+    STATUS: IN PROGRESS (6 Nov 2026: Geant4 chain implemented, production with the re-runs)
     Only muons are simulated: no delta rays, bremsstrahlung or pair-production debris leaking from
     the shield. These add hits (occupancy, rate limits) and accidental vetoes (signal loss).
     Plan (estimate from data we have):
@@ -260,6 +273,13 @@ B2. EM debris rate (electrons / photons from the end of the shield)
       UpstreamTagger, vetoPoint): e / gamma rate maps at the UBT and fin positions, per muon, scaled to our muon flux. COPY
       the needed part of the sample into the local folder (data/fairship_em/) so it can be reused. Needs lxplus access
       (ControlMaster socket ~/.ssh/cm-lxplus, opened by Guglielmo).
+      6 Nov 2026, Guglielmo: use our own Geant4 instead (the FairShip sample was produced SST-only: lower bound).
+      Implemented: lib/veto/em_debris.py + bin/em_debris.py (g4shield MS7 last 50 cm with field -> e / gamma > 1 MeV at
+      29.90 m -> g4vessel to the UBT and fin planes 31.13 .. 41.13 m), maps in the muon-map binning
+      (results/em_debris/em_maps.npz), detection P_e = efficiency, P_gamma = conversion in the plane material;
+      reco.plane_rate_map adds them when loaded (run_reco.py --em-debris). Both Geant4 modules built on the host
+      (bin/g4ship.sh build). Smoke test 300 muons: ~2.9 e / gamma per muon crossing the iron, 1.4e9 / spill; fin
+      planes ~1.3e8 e and 9e8 gamma / spill. Production (--n >= 2e4) with the re-runs. STATUS -> IN PROGRESS.
 
 B3. Neutrino and muon deep inelastic scattering
     STATUS: DONE (5 Nov 2026): modelled, follow-up in C7, C8, D2 - D9
@@ -307,6 +327,12 @@ B4. Signal model
     5 Nov 2026, Guglielmo: replace the toy signal by a fixed benchmark set, weighted (e.g. HNL-mu 1 GeV, dark photon
       0.9 GeV, scalar 2 GeV, ALP 1 GeV at c tau 100 m), each through the full selection (field, both IP categories) and the
       veto; toy kept for comparison. Numbers only with the regenerated samples (production point at the target).
+      Implemented (6 Nov): signal_eventcalc.BENCHMARK_SET (HNL-mu 1 GeV, dark photon 0.9 GeV, scalar 2 GeV, ALP 1 GeV,
+      c tau 100 m, weight 1 each), selected_signal (tracks straight to SST1, TD through the field, pairs as
+      interactions.select, measured IP cut, <= max_tracks), run_reco.py --signal eventcalc (signal loss = weighted
+      average over the set, per_benchmark in the result). Selected fraction (IP < 10 cm / 2.5 m): HNL-mu 10.5 / 37 %,
+      dark photon 62 / 63 %, scalar 15 / 37 %, ALP 11 / 39 %. Signal lost: D6_straw toy 6.38 % vs set 6.29 % (HNL-mu
+      8.5, DP 4.5, scalar 5.2, ALP 7.0 %); E3_robust 0.20 vs 0.19 %. Production point still at z = -0.87 (old samples).
 
 ----------------------------------------------------------------------------------------------
 C. DETECTOR AND BOOKKEEPING: second order
@@ -341,7 +367,7 @@ C4. Energy loss of bounced muons in the cavern
     Well modelled in the stored muons (from the transport); nothing to do.
 
 C5. Weights and statistics
-    STATUS: DECIDED (5 Nov 2026), to implement
+    STATUS: IN PROGRESS (5 Nov 2026: correction + n_eff report implemented; extra seeds with the re-runs)
     The repeated-evt_n weight correction is not applied in the design-optimisation dataset;
     veto_only and rock_bounced are from one run. Decide whether to apply the correction and how
     many extra runs are needed for the rare classes.
@@ -349,6 +375,10 @@ C5. Weights and statistics
     1e6 draws, n_eff ~ 60 over evt_n -> +-23 % on the mu DIS rate (errors summed per evt_n).
     5 Nov 2026, Guglielmo: apply the repeated-evt_n weight correction in the dataset and add seeds for the rare classes
       (with A2) until n_eff per class > ~1000; errors from the bootstrap over evt_n as now.
+      Implemented (5 Nov): make_design_dataset.py applies weights.corrected_weights to the old rows by default
+      (--no-evt-n-correction: as before); bin/neff_by_type.py flags classes below n_eff 1000 with the seed factor
+      needed. dis-parents store: sst1_selected n_eff 55 (top-10 inputs 32 % of the rate, ~x18 seeds), sst1_other 384
+      (~x3), sst1_bounced 3.8e5, veto_only 1.6e4. Production of the extra seeds: with the re-runs.
 
 C6. Detector technology numbers
     STATUS: DONE (15 Oct 2026, commit f6d13ec)

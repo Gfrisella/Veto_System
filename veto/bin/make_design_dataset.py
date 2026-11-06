@@ -28,6 +28,7 @@ from pathlib import Path
 import numpy as np
 
 from veto import io, paths
+from veto import weights
 from veto import muon_types as mt
 
 NAME = "design-optimization-dataset-alpha-14-oct-2026"
@@ -95,6 +96,8 @@ def main():
     parser.add_argument("--stop", type=int, default=None, help="only the first N rows of each source (testing)")
     parser.add_argument("--out", default=str(paths.store_dir(NAME)))
     parser.add_argument("--seed", type=int, default=14102026)
+    parser.add_argument("--no-evt-n-correction", dest="evt_n_correction", action="store_false",
+                        help="C5: do not apply the repeated-evt_n weight correction to the old rows (as before 2026-11-05)")
     args = parser.parse_args()
     rng = np.random.default_rng(args.seed)
     start_time = time.time()
@@ -119,7 +122,12 @@ def main():
         rows = finish(old_rows(store, idx), source=0)
         assert np.all(rows["type"] == t)
         raw = rows["weight"].copy()
-        rows["weight"] = rows["weight"] * scale / n_files
+        if args.evt_n_correction:
+            # C5 (2026-11-05): an input muon (evt_n) seen in several old files counts once on average:
+            # weights.corrected_weights divides by the repetitions and keeps the total per file
+            rows["weight"] = weights.corrected_weights(rows["weight"] * scale, rows["evt_n"], n_files)
+        else:
+            rows["weight"] = rows["weight"] * scale / n_files
         rows["scale"] = np.full(len(raw), scale / n_files, np.float32)
         info[mt.TYPES[t]] = dict(source="old", n_source=int((types_old == t).sum()), n_kept=len(idx),
                                  scale=scale, runs=n_files, muons_per_spill=float(rows["weight"].sum()))
@@ -166,7 +174,9 @@ def main():
         "created": datetime.date.today().isoformat(),
         "description": "Muons for veto design optimisation: SST1-acceptance types from the 20 001 old runs, "
                        "everything else from one full run; each type capped and re-weighted.",
-        "weight": "muons per spill (old: / n_old_files; capped types: * n_type / n_kept). The repeated-evt_n "
+        "weight": "muons per spill (old: / n_old_files; capped types: * n_type / n_kept). Repeated-evt_n correction "
+                  f"{'APPLIED to the old rows (weights.corrected_weights, C5)' if args.evt_n_correction else 'not applied'}. Was: "
+                  "The repeated-evt_n "
                   "correction of the original analysis is NOT applied: plain average over runs.",
         "sources": {"old": {"store": str(args.old_store), "n_files": n_files, "rows": n_old},
                     "new": {"file": str(args.new_file), "rows": n_new,
