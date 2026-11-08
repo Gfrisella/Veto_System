@@ -24,3 +24,11 @@ target_link_libraries(g4shield PRIVATE ${Geant4_LIBRARIES})
 pybind11_add_module(g4vessel g4vessel.cc)
 target_include_directories(g4vessel PRIVATE ${Geant4_INCLUDE_DIRS})
 target_link_libraries(g4vessel PRIVATE ${Geant4_LIBRARIES})
+
+pybind11_add_module(g4slab g4slab.cc)                       # EM debris behind slabs (bin/em_debris_study.py)
+target_include_directories(g4slab PRIVATE ${Geant4_INCLUDE_DIRS})
+target_link_libraries(g4slab PRIVATE ${Geant4_LIBRARIES})
+
+pybind11_add_module(g4rock g4rock.cc)                       # cavern-wall DIS: what leaves the rock (bin/rock_dis.py)
+target_include_directories(g4rock PRIVATE ${Geant4_INCLUDE_DIRS})
+target_link_libraries(g4rock PRIVATE ${Geant4_LIBRARIES})

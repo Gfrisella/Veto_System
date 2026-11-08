@@ -20,8 +20,12 @@ FONT = dict(family="Fira Sans, Helvetica, sans-serif", size=7, color=INK)
 RES = paths.results_dir()
 TYPE_LABELS = ["SST1 bounced", "SST1 selected", "SST1 other", "veto only", "rock bounced", "straight past",
                "stops 30.6–82 m", "stops in shield"]
-PROBES = {"gamma (old input)": "design-optimization-dataset-gamma-2026-10-17_all",
-          "delta (enriched input)": "design-optimization-dataset-delta-enriched-2026-10-19"}
+PROBES = {"gamma": "design-optimization-dataset-gamma-2026-10-17_all",
+          "delta": "design-optimization-dataset-delta-enriched-2026-10-19",
+          "epsilon": "design-optimization-dataset-epsilon-enriched-6k-2026-10-21",
+          "new storage": "design-optimization-dataset-alpha-storage-v0-800seeds-2026-10-22"}
+PROBE_TITLES = {"gamma": "gamma: old input, 1 715 seeds", "delta": "delta: enriched input, 484 seeds",
+                "epsilon": "epsilon: enriched input, 6000 seeds", "new storage": "new storage (alpha): enriched input, 800 seeds"}
 SOURCES = [("combinatorial", "combinatorial", None), ("μ helium", "muon", "helium"), ("μ air", "muon", "air"),
            ("μ PVC walls", "muon", "pvc"), ("μ veto planes", "muon", "planes"), ("ν helium", "nu", "helium"),
            ("ν air", "nu", "air"), ("ν PVC walls", "nu", "pvc"), ("ν veto planes", "nu", "planes")]
@@ -68,7 +72,7 @@ def register(pres, plane_meshes, geometry, scene):
         f = RES / "probe" / f"probe_{stem}.npz"
         if f.exists():
             probe[label] = dict(np.load(f))
-    pres.radio("probe_ds", list(PROBES), value="delta (enriched input)", label="dataset")
+    pres.radio("probe_ds", list(PROBES), value="delta", label="dataset")
 
     @pres.output("probe3d", inputs=["probe_ds"])
     def probe3d(label):
@@ -95,15 +99,17 @@ def register(pres, plane_meshes, geometry, scene):
                                      colorbar=dict(title=dict(text="log₁₀ independent input muons / 25 cm cell", side="top",
                                                               font=dict(size=6)), orientation="h", x=0.5, y=0.02, len=0.55,
                                                    thickness=7, tickfont=dict(size=6))))
-        return layout(go.Figure(traces), scene=scene(z_range=(26, 86), x_range=(-6, 6), y_range=(-3.6, 3.6)),
-                      margin=dict(l=0, r=0, t=0, b=0))
+        fig = go.Figure(traces)
+        fig.add_annotation(xref="paper", yref="paper", x=0.01, y=0.99, xanchor="left", yanchor="top", showarrow=False,
+                           text=f"<b>{PROBE_TITLES.get(label, label)}</b>", font=dict(size=7, color=INK))
+        return layout(fig, scene=scene(z_range=(26, 86), x_range=(-6, 6), y_range=(-3.6, 3.6)), margin=dict(l=0, r=0, t=0, b=0))
 
     @pres.output("probe_bands")
     def probe_bands():
         """Median independent input muons per cell in bands of distance from the vessel wall (fins), and per floor plane."""
         fig = go.Figure()
         bands = ((0, 0.5), (0.5, 1), (1, 2), (2, 5))
-        for (label, d), col in zip(probe.items(), (MUT, RED)):
+        for (label, d), col in zip(list(probe.items())[:2], (MUT, RED)):        # gamma and delta (the others: st_bands)
             pl = json.loads(str(d["planes"]))
             xs, ys = [], []
             for lo, hi in bands:
@@ -118,13 +124,12 @@ def register(pres, plane_meshes, geometry, scene):
                 if p["kind"] in ("floor", "ubt"):
                     r, n = d[f"p{i}_rate"], d[f"p{i}_neff_in"]
                     xs.append(p["name"].replace(" z=", " ")); ys.append(float(np.median(n[r > 0])))
-            fig.add_trace(go.Bar(x=xs, y=ys, name=label.split(" ")[0], marker_color=col, text=[f"{v:.0f}" for v in ys],
-                                 textposition="outside", textfont=dict(size=5.5)))
+            fig.add_trace(go.Bar(x=xs, y=ys, name=label.split(" ")[0], marker_color=col,
+                                 hovertemplate=f"{label}<br>%{{x}}: %{{y:.0f}}<extra></extra>"))
         fig.add_hline(y=10, line=dict(color=RED, dash="dot"))
-        fig.update_yaxes(type="log", title_text="median per 25 cm cell", range=[0.5, 3.1])
-        fig.update_xaxes(tickangle=-35, tickfont=dict(size=6))
-        return layout(fig, showlegend=True, barmode="group", legend=dict(x=0.7, y=1.0, font=dict(size=6.5)),
-                      margin=dict(l=40, r=6, t=10, b=50))
+        fig.update_yaxes(type="log", title_text="median per cell", range=[0.5, 3.1], dtick=1, title_standoff=2)
+        fig.update_xaxes(tickangle=-45, tickfont=dict(size=5.5))
+        return layout(fig, barmode="group", margin=dict(l=34, r=4, t=6, b=44))
 
     # ---------------------------------------------------------------- end to end
     f = RES / "end_to_end" / "e2e.json"

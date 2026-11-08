@@ -9,5 +9,6 @@ g++ -O2 -std=c++17 pythia_mesons.cc -o build/pythia_mesons -I/usr/local/include 
 echo "built build/pythia_mesons"
 cd build
 cmake -Dpybind11_DIR="$(python3 -m pybind11 --cmakedir)" -DPython_EXECUTABLE="$(which python3)" .. > cmake.log
+grep -i pythia cmake.log || true
 make -j16 2>&1 | grep -E "error|Built target" || true
 ls tailtransport*.so

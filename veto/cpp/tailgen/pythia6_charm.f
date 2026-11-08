@@ -8,6 +8,10 @@ C     pythia6_charm gen BEAM MOM NEV SEED EMIN OUT.bin [Z_OVER_A]
 C         NEV forced c cbar events of BEAM (Pythia name, e.g. p+ n0 pi+ pi- K+ K- KL0 KS0) at momentum MOM along +z
 C         on p+ (fraction Z/A, default 0.43 as makeCascade.py's fracp) then n0; charm and taus decayed by Pythia;
 C         writes muons with E > EMIN as float64 records (event, pdg, px, py, pz, E); OUT.bin.txt: counts.
+C     pythia6_charm had BEAM MOM NEV SEED EMIN OUT.bin [Z_OVER_A] [MSEL]
+C         as gen, but the weakly decaying charm and beauty hadrons are left undecayed and written instead of muons
+C         (FairShip's charm / beauty input: the hadrons, decayed later by Pythia 8 in Geant4); MSEL 4 (c cbar,
+C         default) or 5 (b bbar). Also xsec takes MSEL as 6th argument (default 4).
       PROGRAM P6CHARM
       IMPLICIT DOUBLE PRECISION(A-H, O-Z)
       COMMON/PYJETS/N,NPAD,K(4000,5),P(4000,5),V(4000,5)
@@ -15,6 +19,10 @@ C         writes muons with E > EMIN as float64 records (event, pdg, px, py, pz,
       COMMON/PYSUBS/MSEL,MSELPD,MSUB(500),KFIN(2,-40:40),CKIN(200)
       COMMON/PYPARS/MSTP(200),PARP(200),MSTI(200),PARI(200)
       COMMON/PYDATR/MRPY(6),RRPY(100)
+      COMMON/PYDAT3/MDCY(500,3),MDME(8000,2),BRAT(8000),KFDP(8000,5)
+      INTEGER PYCOMP, KFHF(15), MSELV, KC, IHF
+      LOGICAL ISHF
+      DATA KFHF /411, 421, 431, 4122, 4132, 4232, 4332, 511, 521, 531, 541, 5122, 5132, 5232, 5332/
       CHARACTER*256 ARG, OUTF
       CHARACTER*8 MODE, BEAM, TGT
       INTEGER*8 NEV, NP, NTARG, IEV, NDONE, NWRIT
@@ -39,13 +47,18 @@ C         writes muons with E > EMIN as float64 records (event, pdg, px, py, pz,
       MSTP(82) = 1
       PARP(89) = 1000D0
       MSTP(122) = 0
+      MSELV = 4
+      IF (TRIM(MODE) .EQ. 'xsec' .AND. COMMAND_ARGUMENT_COUNT() .GE. 6) THEN
+        CALL GET_COMMAND_ARGUMENT(6, ARG)
+        READ(ARG,*) MSELV
+      ENDIF
       IF (TRIM(MODE) .EQ. 'xsec') THEN
         DO IT = 1, 2
           IF (IT .EQ. 1) TGT = 'p+'
           IF (IT .EQ. 2) TGT = 'n0'
           MRPY(1) = 19780503 + 2*ISEED + IT
           MRPY(2) = 0
-          MSEL = 4
+          MSEL = MSELV
           CALL PYINIT('FIXT', TRIM(BEAM), TRIM(TGT), PMOM)
           DO IEV = 1, NEV
             CALL PYEVNT
@@ -71,6 +84,16 @@ C         writes muons with E > EMIN as float64 records (event, pdg, px, py, pz,
         CALL GET_COMMAND_ARGUMENT(8, ARG)
         READ(ARG,*) ZA
       ENDIF
+      IF (COMMAND_ARGUMENT_COUNT() .GE. 9) THEN
+        CALL GET_COMMAND_ARGUMENT(9, ARG)
+        READ(ARG,*) MSELV
+      ENDIF
+      IF (TRIM(MODE) .EQ. 'had') THEN
+        DO IHF = 1, 15
+          KC = PYCOMP(KFHF(IHF))
+          IF (KC .GT. 0) MDCY(KC,1) = 0
+        ENDDO
+      ENDIF
       NP = NINT(ZA*NEV, 8)
       OPEN(21, FILE=TRIM(OUTF), ACCESS='STREAM', FORM='UNFORMATTED', STATUS='REPLACE')
       NDONE = 0
@@ -86,13 +109,21 @@ C         writes muons with E > EMIN as float64 records (event, pdg, px, py, pz,
         IF (NTARG .LE. 0) CYCLE
         MRPY(1) = 19780503 + 2*ISEED + IT
         MRPY(2) = 0
-        MSEL = 4
+        MSEL = MSELV
         CALL PYINIT('FIXT', TRIM(BEAM), TRIM(TGT), PMOM)
         DO IEV = 1, NTARG
           CALL PYEVNT
           DO I = 1, N
             IF (K(I,1) .LT. 1 .OR. K(I,1) .GT. 10) CYCLE
-            IF (ABS(K(I,2)) .NE. 13) CYCLE
+            IF (TRIM(MODE) .EQ. 'had') THEN
+              ISHF = .FALSE.
+              DO IHF = 1, 15
+                IF (ABS(K(I,2)) .EQ. KFHF(IHF)) ISHF = .TRUE.
+              ENDDO
+              IF (.NOT. ISHF) CYCLE
+            ELSE IF (ABS(K(I,2)) .NE. 13) THEN
+              CYCLE
+            ENDIF
             IF (P(I,4) .LT. EMIN) CYCLE
             REC(1) = DBLE(NDONE + IEV - 1)
             REC(2) = DBLE(K(I,2))

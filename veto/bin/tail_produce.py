@@ -16,11 +16,19 @@ Per slice:
      (p / m) c tau); real decay muons are dropped. Muons above PMIN are carried to z = -0.0045 m, the plane
      of MuonsAndMatter's input sample.
 Weight per muon: muons per spill = w / REP * 5e13 / (events of the whole production) (tail_combine.py).
-Not included: K_mu3 and K_L decays, charm / beauty (kept from the input sample).
+Legacy mode (default): forced pi / K -> mu nu, K_mu3 and K_L -> pi mu nu; --dimuon adds the vector mesons and gamma -> mu mu.
+--mode complete: every muon source of Pythia's and Geant4's tables, forced and weighted (tailtransport.cc header: every
+decay channel with a muon of every long-lived and prompt species, gamma -> mu mu, e+ e- -> mu mu, the Pythia event's own
+muons, any other process); extra columns proc (1 long-lived decay, 2 prompt decay, 3 gamma -> mu mu, 4 e+ e- -> mu mu,
+5 Pythia muon, 6 other, 7 prompt decay in the cascade), hf (open charm / beauty ancestor), ch (prompt decays: products
+besides muons and neutrinos, 0 = pure mu mu; -1 otherwise) and pcx, pcy, pcz (momentum at creation). --mode analog: the same without forcing (its unbiased reference).
+In these modes EMIN is a total-energy threshold for every particle followed.
 """
 
 import _bootstrap  # noqa: F401
 import argparse
+import json
+import os
 import subprocess
 import sys
 import time
@@ -29,7 +37,8 @@ import numpy as np
 
 from veto import paths
 
-sys.path.insert(0, str(paths.PROJECT_DIR / "cpp/tailgen/build"))      # tailtransport module
+# tailtransport module: our Geant4 11 build, or another (bin/g4_10.sh: Geant4 10.00.p04, cpp/tailgen_g410/build)
+sys.path.insert(0, os.environ.get("TAILTRANSPORT_BUILD", str(paths.PROJECT_DIR / "cpp/tailgen/build")))
 OUT = paths.source_data() / "tail"
 INPUT = str(paths.MUONS_AND_MATTER / "data/muons/full_sample_after_target.h5")
 EMIN, PMIN = 130.0, 130.0                    # GeV: hadrons followed / muons kept at the decay
@@ -37,7 +46,20 @@ M = {211: 0.13957039, 321: 0.493677}
 CTAU = {211: 7.8045, 321: 3.7118}            # m
 BR_MUNU = {211: 0.999877, 321: 0.6356}
 M_MU = 0.1056584
-Z_OVER_A = {"Mo": 42 / 95.95, "W": 74 / 183.84, "water": 10 / 18.015, "Fe": 26 / 55.845}
+Z_OVER_A = {"Mo": 42 / 95.95, "W": 74 / 183.84, "water": 10 / 18.015, "Fe": 26 / 55.845, "Ta": 73 / 180.95, "Cu": 29 / 63.546,
+            "He": 2 / 4.0026, "Inconel": 0.46, "steel": 0.465, "air": 0.5, "vacuum": 0.5}
+
+
+def prepare_fairship_beam(n=2_000_000, smear=0.008, paint=0.05, seed=20261103):
+    """FairShip's default beam profile (macro/run_simScript.py --SmearBeam 0.8 --PaintBeam 5, shipgen/BeamSmearingUtils.cxx):
+    Gaussian smearing sigma 0.8 cm in x and y plus painting on a circle of radius 5 cm (uniform angle) -> beamspot.npy [m]."""
+    rng = np.random.default_rng(seed)
+    phi = rng.uniform(0, 2 * np.pi, n)
+    x = rng.normal(0, smear, n) + paint * np.cos(phi)
+    y = rng.normal(0, smear, n) + paint * np.sin(phi)
+    OUT.mkdir(parents=True, exist_ok=True)
+    np.save(OUT / "beamspot.npy", np.stack([x, y], 1).astype(np.float32))
+    print(f"FairShip beam: {n} points, sigma {smear * 100:.1f} cm + painting radius {paint * 100:.0f} cm -> {OUT / 'beamspot.npy'}")
 
 
 def prepare():
@@ -120,7 +142,8 @@ def boost_decay(pdg, p3, rng):
 
 
 def run_slice(k, n_slices, events, rep, emin=None, tag="tail", target="MoW", primary="pythia", physics="FTFP_BERT",
-              l0=0.0, pmin_mu=None, dimuon=False, gamma_factor=500.0, pik=True, vm_fairship=False):
+              l0=0.0, pmin_mu=None, dimuon=False, gamma_factor=500.0, pik=True, vm_fairship=False, mode="legacy",
+              ep_factor=100.0, onia=False, roulette=None, muon_window=None, split=1):
     global EMIN, PMIN
     if emin is not None:
         EMIN = PMIN = emin
@@ -133,14 +156,31 @@ def run_slice(k, n_slices, events, rep, emin=None, tag="tail", target="MoW", pri
     if primary in ("pythia", "pythia6"):
         exe = "pythia_mesons" if primary == "pythia" else "pythia6_mesons"
         extra = ["0.5"] if primary == "pythia6" else []   # equal p / n pools; reweighted to the vertex material below
-        if dimuon:                                  # vector mesons undecayed in the generator: forced mu mu in Geant4
+        if mode != "legacy":                        # prompt muonic species undecayed, the event's muons written
+            if primary != "pythia":
+                raise SystemExit("--mode complete / analog need --primary pythia")
+            extra = ["0.4025", "complete"] + (["onia"] if onia else []) + ([f"roulette={roulette}"] if roulette else [])
+        elif dimuon:                                # vector mesons undecayed in the generator: forced mu mu in Geant4
             extra = ["0.5", "vm"] if primary == "pythia6" else \
                 ["0.4025"] + [f"{v}:mayDecay = off" for v in (221, 223, 113, 331, 333)]
-        subprocess.run([str(paths.PROJECT_DIR / "cpp/tailgen/build" / exe), str(events), str(1000 + k), str(EMIN), str(binf)] + extra,
-                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        exe_path = os.environ.get("PYTHIA_MESONS_EXE", str(paths.PROJECT_DIR / "cpp/tailgen/build" / exe)) \
+            if primary == "pythia" else str(paths.PROJECT_DIR / "cpp/tailgen/build" / exe)   # e.g. a Pythia 8.223 build
+        env = dict(os.environ)                      # the generator's own Pythia data (PYTHIA_MESONS_DATA), e.g. 8.223's
+        if primary == "pythia" and "PYTHIA_MESONS_DATA" in env:
+            env["PYTHIA8DATA"] = env["PYTHIA_MESONS_DATA"]
+        ncol = 7 if roulette else 6
+        for attempt in range(3):                        # a short write on the shared filesystem: generate again
+            subprocess.run([exe_path, str(events), str(1000 + k), str(EMIN), str(binf)] + extra,
+                           check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+            raw = np.fromfile(binf, dtype=np.float64)
+            if raw.size % ncol == 0:
+                break
+            print(f"slice {k}: generator output of {raw.size} values is not whole records, generating again", flush=True)
+        else:
+            raise SystemExit(f"slice {k}: generator output inconsistent three times")
         meta = dict(l.split()[:2] for l in open(str(binf) + ".txt") if len(l.split()) >= 2)
         n_ev = int(meta["events_generated"])
-        rec = np.fromfile(binf, dtype=np.float64).reshape(-1, 6)
+        rec = raw.reshape(-1, ncol)
     else:                                   # Geant4 does the first interaction too (FairShip's -G mode): beam protons
         n_ev = events
         rec = np.zeros((events, 6))
@@ -149,8 +189,16 @@ def run_slice(k, n_slices, events, rep, emin=None, tag="tail", target="MoW", pri
         rec[:, 4] = 400.0
         rec[:, 5] = 400.0
     t_py = time.time() - t0
-    T.initialize(seed=5000 + k, target=target, physics=physics, dimuon=dimuon, gamma_factor=gamma_factor)
+    T.initialize(seed=5000 + k, target=target, physics=physics, dimuon=dimuon, gamma_factor=gamma_factor, mode=mode,
+                 ep_factor=ep_factor)
     T.set_pik(pik)
+    if split > 1:                                     # decay splitting of the prompt species
+        T.set_split(split)
+    if roulette:                                      # the same importance sampling in the cascade
+        T.set_roulette(*[float(x) for x in roulette.split(",")])
+    if muon_window:                                   # weight window of the recorded muons (npz: p_edges, pt_edges, w_min)
+        ww = np.load(muon_window)
+        T.set_muon_window(ww["p_edges"].tolist(), ww["pt_edges"].tolist(), ww["w_min"].ravel().tolist())
     T.set_vm_fairship(vm_fairship)
     lay = Layout(T, T.target_layout())
     rng = np.random.default_rng(7000 + k)
@@ -158,7 +206,7 @@ def run_slice(k, n_slices, events, rep, emin=None, tag="tail", target="MoW", pri
     ev_ids, first = np.unique(rec[:, 0].astype(np.int64), return_index=True)
     offsets = np.append(first, len(rec))
     m = len(ev_ids)
-    muons = []
+    muons, diags = [], []
     for r_ in range(rep):                               # same Pythia events, new vertices / cascades
         zs = np.full(m, lay.z0[0])
         d_p, _ = sample_along(lay.path_pieces(zs, np.ones(m)), lay.lam(2212, np.full(m, 400.0)), rng)
@@ -167,7 +215,9 @@ def run_slice(k, n_slices, events, rep, emin=None, tag="tail", target="MoW", pri
         xy = spot[rng.integers(0, len(spot), m)].astype(np.float64)
         t1 = time.time()
         o = T.cascade(offsets.tolist(), rec[:, 1].astype(int).tolist(), rec[:, 2].tolist(), rec[:, 3].tolist(),
-                      rec[:, 4].tolist(), xy[:, 0].tolist(), xy[:, 1].tolist(), (zs + d_p).tolist(), EMIN, PMIN, l0)
+                      rec[:, 4].tolist(), xy[:, 0].tolist(), xy[:, 1].tolist(), (zs + d_p).tolist(), EMIN, PMIN, l0,
+                      rec[:, 5].tolist() if mode != "legacy" else [], rec[:, 6].tolist() if roulette else [])
+        diags.append(o.pop("diag", {}))
         o = {kk: np.asarray(v) for kk, v in o.items()}
         o["event"] = ev_ids[o["ev"]]
         if primary == "pythia6":            # FairShip: target nucleon p / n with the Z/A of the material at the vertex
@@ -185,7 +235,9 @@ def run_slice(k, n_slices, events, rep, emin=None, tag="tail", target="MoW", pri
     np.savez(OUT / f"{tag}_{k}.npz", events=n_ev, rep=rep, emin=EMIN, pmin=PMIN,
              pdg=o["q"].astype(int), x=o["x"], y=o["y"], z=o["z"], px=o["px"], py=o["py"], pz=o["pz"],
              w_decay=o["w"], parent=o["parent"], z_decay=o["z_decay"], gen=o["gen"], event=o["event"],
-             z_int=np.zeros(len(o["w"])), p_prod=o["p_create"])
+             z_int=np.zeros(len(o["w"])), p_prod=o["p_create"], hf=o["hf"], mode=mode,
+             **{k: o[k] for k in ("ch", "pcx", "pcy", "pcz") if k in o},
+             diag=json.dumps(diags))
     if binf.exists():
         binf.unlink()
     print(f"slice {k}: {n_ev} events, {m} with hadrons > {EMIN:.0f} GeV ({len(rec)} hadrons), x{rep}: "
@@ -196,13 +248,15 @@ def run_slice(k, n_slices, events, rep, emin=None, tag="tail", target="MoW", pri
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--prepare", action="store_true")
+    ap.add_argument("--prepare-fairship-beam", action="store_true", help="beamspot.npy = FairShip's default beam profile")
     ap.add_argument("--slice", type=int, default=0)
     ap.add_argument("--n-slices", type=int, default=1)
     ap.add_argument("--events", type=int, default=2_000_000)
     ap.add_argument("--rep", type=int, default=1)
     ap.add_argument("--emin", type=float, default=None, help="energy threshold for hadrons and muons (tests)")
     ap.add_argument("--tag", default="tail")
-    ap.add_argument("--target", default="MoW", choices=["MoW", "W"], help="ECN3 target: Mo front + W (default) or all W")
+    ap.add_argument("--target", default="MoW", choices=["MoW", "W", "SHiP2018", "MoW+Fe", "W+Fe", "SHiP2018+Fe", "FairShip"],
+                    help="ECN3 target: Mo front + W (default), all W, or the 2018 FairShip target (targetOpt 17)")
     ap.add_argument("--primary", default="pythia", choices=["pythia", "pythia6", "geant4"],
                     help="first interaction by Pythia 8.316, Pythia 6.4.28 (external/pythia6) or Geant4 FTF (FairShip -G)")
     ap.add_argument("--physics", default="FTFP_BERT", choices=["FTFP_BERT", "QGSP_BERT"], help="Geant4 list for the cascade")
@@ -211,14 +265,24 @@ def main():
     ap.add_argument("--dimuon", action="store_true", help="forced eta/omega/rho/eta'/phi -> mu mu (X) and boosted gamma -> mu mu")
     ap.add_argument("--gamma-factor", type=float, default=500.0)
     ap.add_argument("--no-pik", action="store_true", help="switch off the forced pi / K -> mu nu decays")
+    ap.add_argument("--mode", default="legacy", choices=["legacy", "complete", "analog"],
+                    help="complete: every muon source, forced and weighted; analog: the same unforced (validation)")
+    ap.add_argument("--ep-factor", type=float, default=100.0, help="e+ e- -> mu mu cross-section factor (complete)")
+    ap.add_argument("--onia", action="store_true", help="complete / analog: only the quarkonia of each Pythia event")
+    ap.add_argument("--roulette", default=None, help="QMIN,E1,N,PT0: importance sampling (generator and cascade), weight 1/q")
+    ap.add_argument("--muon-window", default=None, help="npz (p_edges, pt_edges, w_min): weight window of the recorded muons")
+    ap.add_argument("--split", type=int, default=1, help="complete mode: muonic decays per prompt decay (weight / split)")
     ap.add_argument("--vm-fairship", action="store_true",
                     help="dimuons as the old production: all 5 mesons from the first collision, only omega/phi/rho from the cascade")
     a = ap.parse_args()
-    if a.prepare:
+    if a.prepare_fairship_beam:
+        prepare_fairship_beam()
+    elif a.prepare:
         prepare()
     else:
         run_slice(a.slice, a.n_slices, a.events, a.rep, a.emin, a.tag, a.target, a.primary, a.physics, a.l0, a.pmin_mu,
-                  a.dimuon, a.gamma_factor, not a.no_pik, a.vm_fairship)
+                  a.dimuon, a.gamma_factor, not a.no_pik, a.vm_fairship, a.mode, a.ep_factor, a.onia, a.roulette,
+                  a.muon_window, a.split)
 
 
 if __name__ == "__main__":
