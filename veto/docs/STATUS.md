@@ -617,3 +617,10 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   --n 500000 --v0-copies 100 --nu-stores .../neutrinos/store2026; new options --nu-lib / --nu-stores, defaults v2 + 6 flavours):
   1.34 interactions / spill (2.0e7 / 15 y), V0 decays in the vessel 2.1e5 / 15 y; D6_straw_mod selected 3.9 +- 0.5, after veto
   b 2.4 +- 0.4 per 15 y (108 MC copies; 1 copy: 9.2 / 5.4 from 2 MC). ~1e-4 of the muon MS7 K_L, comparable to nu in helium.
+- MS7 muon DIS -> K_L with Geant4 (2026-11-10, chosen default; Pythia 6 ~x2.7 higher noted as the generator spread):
+  Slurm 2035587, 10 x 2e6 interactions, Geant4 11.2.2 library (Guglielmo's mu_library_iron.npz, split geant4), his MS7
+  parents, 5 copies / V0 (results/shield_dis/shield_muon_g4v112_s101-110.npz). V0 decays in the vessel 2.33e10 / 15 y
+  (K_L 1540 / spill). D6_straw_mod full selection: 0 in each file. Passing everything but the IP cut 1.4e7 / 15 y; measured
+  IP < 2 / 1 / 0.5 / 0.25 / 0.1 m: 8.1e6 / 2.1e6 / 3.8e5 / 7.6e4 / 1.8e4 (356 / 98 / 18 / 3 / 1 copies). ~IP^2 near 0 ->
+  **~1.5e4 per 15 y (range 1-2e4)**, not vetoable (bin/shield_ip_tail.py). Geant4 10.7.3 (FairShip's) run: 0 selected,
+  consistent. Selection step segfaults in the batch container (external/pylib + torch): run it with exec_cudabear.
