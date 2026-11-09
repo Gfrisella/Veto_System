@@ -15,6 +15,8 @@ what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20)
 - GenFit removed in favour of ACTS: `bin/genfit_straws.py`, `bin/straw_reco.py`, `straws.reconstruct` deleted;
   `straws.track_quality` and `run_interactions.py --straw-cuts acts` raise NotImplementedError until the ACTS
   parametrisation exists (ISSUES D14).
+- `bin/shipenv.sh`: `SHIP_RELEASE` (default 25.09); for 26.x the host FreeType is preloaded so ACTS imports
+  (host harfbuzz vs CVMFS FreeType 2.10.1). `results/straws` (GenFit fits, 429 MB) deleted.
 
 ## 2026-11-09 (night) — issue review: decisions for every open item (branch `veto-shield-dis`, docs only)
 

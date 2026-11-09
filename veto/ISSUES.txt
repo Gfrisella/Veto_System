@@ -725,6 +725,11 @@ D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_invento
       9 Nov 2026 (done, Guglielmo): GenFit DISCARDED in favour of ACTS: bin/genfit_straws.py, bin/straw_reco.py and
       straws.reconstruct removed; straws.track_quality / --straw-cuts acts raise NotImplementedError until the ACTS
       parametrisation (SHiP CVMFS 26.10) is in. Straw geometry, RK4 layer states and digitisation are kept.
+      9 Nov 2026: ACTS on this host: `import acts` (26.10) failed with "libharfbuzz.so.0: undefined symbol
+      FT_Get_Transform" (CVMFS FreeType 2.10.1 + host harfbuzz needing FreeType >= 2.11). Fixed in bin/shipenv.sh
+      (SHIP_RELEASE=26.10 preloads the host FreeType 2.13): acts, ROOT 6.40 and FairShip ACTSReco import; ACTSReco then
+      needs a FairShip geometry file (global_variables.geoFile) from a 26.10 simulation. results/straws (GenFit fits)
+      deleted. Next: FairShip 26.10 particle gun -> convertToACTS -> run_ACTSTracking -> resolution parametrisation.
 
 D15. CVMFS library loading under load (shield_dis / shield_natural workers)
     STATUS: OPEN (9 Nov 2026, decided: retry + count check)
