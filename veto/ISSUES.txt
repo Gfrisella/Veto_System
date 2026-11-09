@@ -757,7 +757,7 @@ D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_invento
       that do not exist, removed builder arguments, no SHiPTrackWriter, ACTS-fork StrawtubeBuilder layers facing the
       wrong way, field map scrambled by rotateAxis, digi config that fits no track). A patched local build got it
       running but is superseded and was removed. 26.10 vs ours: straw config identical, spectrometer 15 cm upstream
-      (SST 84.07 / 86.07 / 93.07 / 95.07, magnet 89.57 m FS -> z_26.10 = z_veto + 1.99 m), field map 2025_02_12 MgB2.
+      (SST 84.07 / 86.07 / 93.07 / 95.07, magnet 89.57 m FS; FairShip 26.09 sources), field map 2025_02_12 MgB2.
     10 Nov 2026, Guglielmo: take it from FairShip PR #1545 (fix(reco): ACTS straw material from the geometry). FairShip
       main has its own ACTS module (ActsTracking/: free StrawSurfaces keyed by the strawtubes detector ID, Kalman with
       DirectNavigator on drift radii, field = any TVirtualMagField, Truth / Segments pattern recognition), built in
@@ -767,7 +767,12 @@ D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_invento
       10 GeV, ShipReco --trackFitter acts --patRec Truth): 499 tracks, 32 hits, p median 9.992 GeV, core sigma(p)/p
       0.94 %, chi2/ndf 0.92. The geometry file is used for the straws only (ActsStrawGeometry takes only "straw"
       volumes: FairShip's TRY_2026 shield is not in the fit).
-      Next: our straw hits (straws.digitize detIDs + drift radii, z + 1.99 m) and OUR field map as a TVirtualMagField
+      10 Nov 2026 (Guglielmo): the frame shift stays 2.14 m (target-aligned). Checked in the pixi env 26.10
+      (geometry_config, TRY_2026): target front FS 0, vessel 33.27 - 83.27, SST 84.22 / 86.22 / 93.22 / 95.22, magnet
+      89.72 m = exactly our layout + 2.14 (shield z 2.14, length 30.04 m). The "+1.99 m" / 15 cm upstream above was the
+      slc9 "26.10" release, which carries FairShip 26.09 (shield length 29.89 m). Only difference: UpstreamTagger at
+      FS 32.87 (veto 30.73), 40 cm before the vessel window; ours sits on the window (geometry.Z_UBT).
+      Next: our straw hits (straws.digitize detIDs + drift radii, z + 2.14 m) and OUR field map as a TVirtualMagField
       -> ActsStrawTracker.FitCandidate per track -> resolution / efficiency parametrisation for reco.measure.
 
 D15. CVMFS library loading under load (shield_dis / shield_natural workers)
