@@ -295,7 +295,8 @@ def exit_summary(inter, part):
 
 
 def generate(a):
-    global NU_LIB, NU_STORE_PREFIX
+    global NU_LIB, NU_STORE_PREFIX, PREPARED
+    PREPARED = Path(a.prepared) if a.prepared else PREPARED
     NU_LIB = Path(a.nu_lib) if a.nu_lib else NU_LIB
     NU_STORE_PREFIX = Path(a.nu_stores) if a.nu_stores else NU_STORE_PREFIX
     t0 = time.time()
@@ -343,6 +344,7 @@ def main():
     g.add_argument("--per-track", action="store_true", help="one interaction per parent track, weight w P (--n ignored)")
     g.add_argument("--mu-split", choices=["pythia", "geant4", "crossover", "w2"], default=None,
                    help=f"which generator of the muon library (default {MU_SPLIT!r}, D3); geant4 = Geant4 muonNuclear only")
+    g.add_argument("--prepared", default=None, help=f"muons through the iron from prepare (default {PREPARED})")
     g.add_argument("--nu-lib", default=None, help=f"neutrino library (default {NU_LIB})")
     g.add_argument("--nu-stores", default=None, help=f"neutrino flux store prefix, <prefix>_nu<pdg> (default {NU_STORE_PREFIX})")
     g.add_argument("--v0-copies", type=int, default=1, help="forced vessel decays per V0 at the plane (weight / copies)")
