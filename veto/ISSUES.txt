@@ -488,6 +488,10 @@ D1. Objective exploitable: signal term saturates
 
 D2. Neutrino DIS in helium: irreducible for an upstream veto
     STATUS: IN PROGRESS (9 Nov 2026: study the veto from lateral tracks of the same event, with the signal loss)
+    9 Nov 2026 (Shah Rukh, new flux + GENIE v2, D6_straw_mod, bin/nu_activity.py): 3.6 selected nu-He events / 15 y
+      (all flavours; 3.3 after veto b). 77 % have >= 1 product leaving through the vessel side walls (charged p > 0.1 GeV
+      75 %, photon E > 0.1 GeV 53 %, straight lines from the vertex); none has an extra charged track at SST1. Left 0.8:
+      mostly anti-nu QE-like (lepton + n). Upper bound for a lateral veto (no efficiency, no conversion, no signal loss).
     9 Nov 2026, Guglielmo: possible handle: in the same event, lateral tracks of the nu DIS (hadronic system) that hit
       the veto planes (fins / UBT) can veto it. Must be studied together with the signal loss (signal daughters /
       accidentals hitting the same planes). Study: per nu-He DIS event, own hits of all its charged products on the
@@ -555,6 +559,10 @@ D3. MS7 shield DIS -> K_L: chain disagrees with FairShip
 
 D4. MS7 shield DIS chain: simplifications
     STATUS: IN PROGRESS (5 Nov 2026: solution accepted, code done, runs pending)
+    9 Nov 2026 (Shah Rukh): GENIE library v2 (data/interactions/genie/nu_library_v2.npz, bin/nu_library.py, splines
+      gxspl-fvs.xml with 15 nuclei): nu_mu, anti-nu_mu, nu_e, anti-nu_e, nu_tau, anti-nu_tau on H, He4, C, N, O, Na, Mg, Al,
+      Si, Cl35/37, Ar40, K39, Ca40, Fe56; 36 energies 1-500 GeV x 2000 events; tau decayed by GENIE. Covers the iron
+      library with nu_e / nu_tau needed for the MS7 nu chain (and concrete for the cavern).
     Straight parent lines from z = 29.20 m (no bending in 2 T, ~1.4 cm at 20 GeV); muons stopping in the
     slab not removed (mean loss only); Pythia part on free nucleons; after the plane straight lines, no
     field / scattering in the 0.7 m of air; pi / K decays in flight ignored; neutron and K_L interactions
@@ -630,6 +638,12 @@ D6. Interaction-library approximations
 
 D7. Interactions upstream of z = 30.6 m not simulated
     STATUS: IN PROGRESS (9 Nov 2026: air DONE 5 Nov; cavern walls / rock implemented by Shah Rukh, PR #13)
+    9 Nov 2026 (Shah Rukh): selection + veto of the cavern-rock products (bin/rock_select.py, the same
+      interactions.evaluate): muon rock 0 selected (4.6e9 / 15 y with >= 2 good tracks, best-pair IP >= 12.6 m), neutrino
+      rock (bin/nu_rock.py: GENIE v2 on concrete, g4rock, walls / floor / ceiling / face) 0 selected (3.2e3 with >= 2
+      good tracks, IP >= 6.8 m). Rock single tracks: 1.8e4 good tracks / spill at SST1 (vs 3.7e4 muons); in the
+      combinatorial term (bin/rock_combinatorial.py) mu x rock 8.2e3 candidates -> 0.023 after veto / 15 y (rock leg
+      explained 0.9999), rock x rock 0: negligible after the veto. Coarse sample (7e7 / 15 y per two-track draw).
     9 Nov 2026: cavern-wall DIS in PR #13 (docs/STATUS.md 2026-11-07/08, docs/full_sim_inventory.md): bin/rock_hits.py
       (1.5e9 mu / spill into the -x wall, 8.9e7 into the floor, ~1.2e5 come back), cpp/g4rock.cc (concrete half-space,
       forced muonNuclear; charged hadrons escape from the top ~30 cm, n / gamma from ~1 m), bin/rock_library.py (Geant4
@@ -705,6 +719,12 @@ D13. Protons per spill: one convention
 
 D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_inventory.md, moved here 9 Nov 2026)
     STATUS: OPEN (PRIORITY C unless noted)
+    9 Nov 2026 (Shah Rukh): neutrino DIS in the vessel with the 2026 flux + GENIE v2, D6_straw_mod, per 15 y:
+      interactions helium 2.9e4, air 6.6e4, wall 5.8e4, planes 5.8e3; after selection + veto 3.3 (nu_e 1.37, nu_mu 1.02,
+      anti-nu_mu 0.51, anti-nu_e 0.39, nu_tau 0.04), all but ~0.07 in helium; air / wall < 0.1 - 0.2 per flavour.
+      The 2018 sample through the same (current) code: 0.89. 2018 vs 2026 explained: the 2018 sample kept neutrinos with
+      a stored sister muon (p >~ 20 GeV): pion-parent nu_mu > 10 GeV agree (0.94), K+- x6.5 and charm x3.7-5.5 were cut.
+      Cross-check vs SHiP 2025 (arXiv 2504.06692 Table 1, 3 t W SND): within 20 - 30 % per flavour. docs/neutrinos_2026.md.
       - Neutrino flux: 2018 FairShip flux only, p > 10 GeV, no nu_tau; new neutrino sample at the target / shield
         (decided), then nu DIS in the cavern walls and in MS7 with it (nu_e library missing).
       - EM debris from the cavern walls (bounce points), the vessel walls (Mylar) and the veto planes (delta rays):

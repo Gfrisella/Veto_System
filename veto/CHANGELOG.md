@@ -4,6 +4,19 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-10 — neutrinos with the 2026 target: production, GENIE v2, vessel / rock backgrounds (branch `veto-neutrino-2026`)
+
+- Production: `bin/nu_prod.sbatch` (min bias, charm, beauty), `tailtransport.cc` / `tail_produce.py` neutrino mode,
+  `charm_cascade.py` scratch on node-local /tmp, `hf_decay.py --neutrino`; summaries `bin/nu_flux.py`, `bin/nu_maps.py`,
+  `bin/nu_validate.py`. Paths through `VETO_SHARED` / `VETO_DIR` / `APPTAINER_ENV` / `CUDABEAR_SIF` (also `bin/genie.sh`).
+- GENIE library v2: 6 flavours x 15 nuclei incl. Fe56 and the concrete nuclei (`genie_splines.py`, `nu_library.py`; tau
+  decayed by GENIE); `fastveto.nudis.COMPOSITION["concrete"]`.
+- `nu_dis_apply.py --chunk` (memory); `run_interactions.py --pot-spill` for weights not at POT_PER_SPILL.
+- New: `bin/nu_rock.py` (nu DIS in the cavern concrete through g4rock), `bin/rock_select.py` (rock draws through
+  interactions.evaluate, cut flow), `bin/rock_combinatorial.py` (rock tracks in the combinatorial term),
+  `bin/nu_activity.py` (lateral activity of selected nu-He events). Results: `docs/neutrinos_2026.md`, ISSUES D2 / D4 /
+  D7 / D14.
+
 ## 2026-11-10 — ACTS straw tracking: FairShip pixi environment + PR #1545 (branch `veto-shield-dis`)
 
 - New `bin/fairship_env.sh`: runs a command in the FairShip pixi environment 26.10 on CVMFS (ROOT 6.40, Geant4 11.4,
