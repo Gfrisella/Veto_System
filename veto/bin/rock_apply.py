@@ -34,7 +34,7 @@ from veto import muon_types as mt
 XW, YF = geo.CAVERN_X_WALL, geo.CAVERN_Y_FLOOR
 DEDX = 0.5                                                     # GeV / m in the rock
 D_EDGES = np.array([0, 0.05, 0.1, 0.2, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0])
-from veto.config import SPILLS_15Y as SPILLS  # noqa: E402  (1.5e7)
+from veto.config import POT_PER_SPILL, SPILLS_15Y as SPILLS  # noqa: E402  (1.5e7)
 C = 0.299792458
 CHARGED = (11, 13, 211, 321, 2212, 3222, 3112, 3312, 3334)
 CHARGE = {11: -1, 13: -1, 211: 1, 321: 1, 2212: 1, 3222: 1, 3112: -1, 3312: -1, 3334: -1}
@@ -135,7 +135,11 @@ def main():
     ap.add_argument("--seeds", type=int, default=300); ap.add_argument("--draws", type=int, default=20000)
     ap.add_argument("--dedx", type=float, default=DEDX); ap.add_argument("--seed", type=int, default=5)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--em-out", default=None, help="also write every e+- / gamma leaving the rock (first --em-seeds seeds) here")
+    ap.add_argument("--em-seeds", type=int, default=30)
     a = ap.parse_args()
+    em_rows = {k: [] for k in ("seed", "w", "surf", "vx", "vy", "vz", "pdg", "x", "y", "z", "px", "py", "pz", "ekin", "t")}
+    n_em = 0
     rng = np.random.default_rng(a.seed)
     lib = Library(a.library)
     des = dmod.load(f"designs/modules/{a.design}.json")
@@ -200,6 +204,14 @@ def main():
         charged = (q != 0) & ~beam
         notbeam = ~beam
         T["out"] += wd * notbeam.sum(); T["out_charged"] += wd * charged.sum()
+        if a.em_out and n_em < a.em_seeds:                         # every e+- / gamma out of the rock, for the debris page
+            km = notbeam & np.isin(pdg, (22, 11, -11))
+            for k_, v_ in (("seed", np.full(km.sum(), n)), ("w", np.full(km.sum(), wd)), ("surf", (~wall[i])[owner][km].astype(np.int8)),
+                           ("vx", surf0[owner][km, 0]), ("vy", surf0[owner][km, 1]), ("vz", surf0[owner][km, 2]), ("pdg", pdg[km]),
+                           ("x", pos[km, 0]), ("y", pos[km, 1]), ("z", pos[km, 2]), ("px", mom[km, 0]), ("py", mom[km, 1]),
+                           ("pz", mom[km, 2]), ("ekin", ek[km]), ("t", tt[km])):
+                em_rows[k_].append(v_)
+            n_em += 1
         pm = np.linalg.norm(mom, axis=1)
         dirv = mom / np.maximum(pm, 1e-12)[:, None]
         # veto planes (constant z): crossing point of the straight line, inside the plane's rectangle
@@ -269,6 +281,10 @@ def main():
     json.dump(out, open(a.out + ".json", "w"), indent=1)
     np.savez(a.out + "_draws.npz", **{k: np.concatenate(v) if v else np.zeros(0) for k, v in keep_rows.items()})
     print(f"-> {a.out}.json, {a.out}_draws.npz ({time.time() - t0:.0f} s)")
+    if a.em_out:                                                    # weight per spill = w / n_seeds
+        np.savez(a.em_out, n_seeds=n_em, pot_per_spill=POT_PER_SPILL, design=a.design,
+                 **{k: np.concatenate(v) if v else np.zeros(0) for k, v in em_rows.items()})
+        print(f"-> {a.em_out}: {sum(len(v) for v in em_rows['pdg']):,} e / gamma from {n_em} seeds")
 
 
 if __name__ == "__main__":
