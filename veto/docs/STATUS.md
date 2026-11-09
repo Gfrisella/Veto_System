@@ -592,3 +592,9 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   BUT single tracks: the muon rock puts 1.84e4 good tracks (p > 1 GeV, SST1 + timing acceptance) per spill into SST1, mostly
   hadrons / electrons (muons 300), vs ~3e4 direct muons -> feeds the combinatorial background (rate^2), not included yet.
   Neutrino rock: 0.024 per spill (negligible).
+- Rock tracks in the combinatorial term (bin/rock_combinatorial.py, D6_straw_mod, dataset c, inputs_c_s, cone 0, 2M-muon
+  subsample x scale): per 15 y, candidates / IP < 10 cm / after veto: mu x mu 852 / 405 / 51 (legs explained 0.74 / 0.64);
+  mu x rock 8190 / 2927 / 0.023 (662 MC; rock leg explained 0.9999: rock tracks cross the walls / planes on the way in);
+  rock x rock 5e-7 / 0 / 0. Rock raises the candidates x8 but adds ~nothing after the veto. NOTE mu x mu after veto = 51 for
+  D6_straw_mod vs ~1e-4 for D6_tile2 / E3 / E4 (e2e_c): this straw design leaves 26-36 % of pair legs unexplained - check.
+  Run time 48 min (pairing 1.3e6 x 6.4e3 rows on farm-gpu3). Full dataset c (262 M SST1 rows) is too big to load: subsample.
