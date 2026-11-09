@@ -4,6 +4,13 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-09 (evening) — natural Geant4 validation of the MS7 chain (branch `veto-shield-dis`)
+
+- New `cpp/g4shieldnat.cc` (g4shield + physics list by name via G4PhysListFactory, muonNuclear x bias with weights,
+  origin per particle), built by `bin/g4ship.sh build` (`G4SHIP_MODULES` selects modules).
+- `shield_iron.init_g4shield(natural=...)`, `shield_dis.transport(natural=...)`; new `bin/shield_natural.py`.
+- Results: results/shield_dis/natural_{QGSP_BERT_HP_PEN,FTFP_BERT}_b10.json (summary in docs/shield_iron_dis.md).
+
 ## 2026-11-09 (afternoon) — Pythia 8 photoproduction library, comparison at 4e13 (branch `veto-shield-dis`)
 
 - `bin/p8_library.py --variant full`: Pythia 8 photoproduction (Q² < 1.5, W > 5, Annual Report 2026 Table 7) + DIS

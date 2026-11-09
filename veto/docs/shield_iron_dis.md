@@ -244,6 +244,27 @@ Chain (`shield_muon_fs2026_p8full`, all columns now per 4e13 p.o.t.; older runs 
 
 Expected FairShip MC entries use 6.15 Hz per entry (7.69 Hz at 5e13 × 0.8). Deck: `deck_d3` (9 Nov, pending approval).
 
+### Validation with natural Geant4 (2026-11-09, `bin/shield_natural.py`, `cpp/g4shieldnat.cc`)
+
+The chain's parent muons (drawn ∝ weight, 1e7 per run) through the same MS7 iron box + field, Geant4 10.7.3 (FairShip's
+version), every process natural, muonNuclear σ × 10 (products weight 1/10). Leaving the iron, p > 1 GeV, per spill (4e13):
+
+| | natural, QGSP_BERT_HP_PEN (FairShip list) | natural, FTFP_BERT | chain, G4 10.7 (forced) |
+|---|---|---|---|
+| K_L | 3 499 ± 128 (899 MC) | 3 686 ± 130 | 3 387 |
+| π± | 93 770 ± 1 020 | 92 970 ± 1 010 | 93 090 |
+| K± | 7 014 ± 193 | 7 108 ± 197 | 6 704 |
+| p / n | 59 370 / 68 820 | 59 050 / 69 310 | 59 340 / 69 440 |
+| K_S / Λ | 1 728 / 907 | 1 522 / 915 | 582 / 286 |
+
+- The forced chain reproduces natural Geant4 for K_L, π, K±, p, n (1–2σ): forcing, library and transport are unbiased.
+- Physics list: QGSP_BERT_HP_PEN vs FTFP_BERT changes the K_L by 5 % (1σ).
+- Not in the chain (origin 2: photonuclear of the muon's radiated photons, ...): 1–2 % of the K_L, ~3 % of p / n.
+- K_S and Λ are 3× low in the chain: the default library decays them at the vertex (D9, V0-stable library);
+  K_S decays in the vessel stay ~1 % of the K_L decays.
+- Conclusion: FairShip's 0 MS7 K0-decay tracks is not explained by the iron physics. Left: the muon flux into MS7
+  (our TRY6 one-run parents vs FairShip TRY_2026 from the target) and anything between the shield exit and SST1.
+
 ### Q² and W of the interactions that make the K_L (`bin/kl_q2w.py` → `results/shield_dis/kl_q2w*.{md,json}`, `kl_q2w_<label>.png`)
 
 Generator level (K_L in the library final state, before the iron). Every library event weighted by how often the

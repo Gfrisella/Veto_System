@@ -14,7 +14,7 @@ if [ "${1:-}" = "build" ]; then
     EXT=$($PY -c "import sysconfig;print(sysconfig.get_config_var('EXT_SUFFIX'))")
     INC=$($PY -c "import sysconfig;print(sysconfig.get_paths()['include'])")
     mkdir -p "$HERE/cpp/build_ship"
-    for mod in g4vessel g4shield g4dis; do                # vessel transport, MS7 shield-iron transport, DIS library
+    for mod in ${G4SHIP_MODULES:-g4vessel g4shield g4dis g4shieldnat}; do   # vessel, MS7 iron transport, DIS library, natural MS7 test
     /usr/bin/g++ -O2 -shared -fPIC -std=c++17 -w -I"$HERE/external/pybind11_pkg/pybind11/include" -I"$INC" \
         -I"$G4/include/Geant4" -I"$XERCES/include" "$HERE/cpp/$mod.cc" -o "$HERE/cpp/build_ship/$mod$EXT" \
         -L"$G4/lib64" -Wl,-rpath,"$G4/lib64" -lG4physicslists -lG4run -lG4event -lG4tracking -lG4parmodels \

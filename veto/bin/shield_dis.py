@@ -185,10 +185,10 @@ def draw(kind, par, n, rng, per_track=False, mu_lib=None, mu_split=None):
 _G4 = None
 
 
-def _worker_init(seed):
+def _worker_init(seed, natural=None):
     import os
     global _G4
-    _G4 = si.init_g4shield(seed=seed * 1000003 + os.getpid())        # a different random stream in every worker
+    _G4 = si.init_g4shield(seed=seed * 1000003 + os.getpid(), natural=natural)   # a different stream in every worker
 
 
 def _transport_chunk(args):
@@ -199,7 +199,7 @@ def _transport_chunk(args):
     return r
 
 
-def transport(part, n_inter, workers, chunk=2000, seed=1):
+def transport(part, n_inter, workers, chunk=2000, seed=1, natural=None):
     """Every final state through the iron with Geant4, in chunks of interactions over forked workers."""
     starts = np.searchsorted(part["int"], np.arange(n_inter + 1))
     jobs = []
@@ -210,7 +210,7 @@ def transport(part, n_inter, workers, chunk=2000, seed=1):
                      part["p"][a:b, :3].astype(np.float64), part["v"][a:b].astype(np.float64)))
     ctx = mp.get_context("spawn")
     res = []
-    with ctx.Pool(workers, initializer=_worker_init, initargs=(seed,)) as pool:
+    with ctx.Pool(workers, initializer=_worker_init, initargs=(seed, natural)) as pool:
         for i, r in enumerate(pool.imap_unordered(_transport_chunk, jobs)):
             res.append(r)
             if (i + 1) % max(1, len(jobs) // 20) == 0:
