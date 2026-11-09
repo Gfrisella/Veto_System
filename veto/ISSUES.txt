@@ -772,6 +772,7 @@ D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_invento
       89.72 m = exactly our layout + 2.14 (shield z 2.14, length 30.04 m). The "+1.99 m" / 15 cm upstream above was the
       slc9 "26.10" release, which carries FairShip 26.09 (shield length 29.89 m). Only difference: UpstreamTagger at
       FS 32.87 (veto 30.73), 40 cm before the vessel window; ours sits on the window (geometry.Z_UBT).
+      Guglielmo (10 Nov): keep our UBT on the vessel window.
       Next: our straw hits (straws.digitize detIDs + drift radii, z + 2.14 m) and OUR field map as a TVirtualMagField
       -> ActsStrawTracker.FitCandidate per track -> resolution / efficiency parametrisation for reco.measure.
 
