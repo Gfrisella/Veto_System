@@ -551,3 +551,18 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
 - Decided next (user, 2026-11-08): direct forced Geant4 from the stored 30.6 m states in the real cavern (wall + floor,
   G4BOptrForceCollision, forced K_L / neutral decays in the vessel), storing design-independent trees to SST1, mapped onto
   designs afterwards (straight lines or ParticleShaker). The library stays as the quick estimate and cross-check.
+
+## 2026-11-09: GSimple 2026 final-target neutrino flux
+- Converted A. Iuliano's GSimple flux (EOS, 16.1 M rows, 1.46e9 PoT) to h5 in the veto frame (FS z - 2.14), per-spill weights:
+  `Study_on_Veto_System/Neutrino_flux_gsimple2026/` (README there). Compared with Shah Rukh's Nov-9 production and fastveto.neutrinos (2018):
+  nu_mu agrees with Shah Rukh to 1-4 %, nu_e -20 %, nu_tau x0.55; the 2018 flux used by the veto is x2-2.7 low for nu_mu > 10 GeV.
+
+## 2026-11-09 (evening): Guglielmo's veto side (merged here; open problems in ISSUES.txt, code log in CHANGELOG.md)
+- Branch `veto-shield-dis`, commits d2c867b + issue-review commit. Nothing running at the end of the session.
+- D3: natural Geant4 (bin/shield_natural.py, cpp/g4shieldnat) validates the Geant4 MS7 chain (K_L 3.5e3 / spill at the
+  exit vs 3.4e3); Pythia 6 x 2.7 high. Still 7.9 expected FairShip entries vs 0. Decision: Geant4 default; next a small
+  FairShip run with our MS7 parents. Table results/shield_dis/generators_natural.md.
+- Issue review with decisions for every open item: action list at the top of ISSUES.txt. Pending Guglielmo: approval
+  of the D5 convention check and of the re-run batch (after D5 / D3), which neutrino flux to adopt.
+- Questions for the detector colleagues: docs/detector_questions.md (to send).
+- D3 deck to update with the natural-Geant4 result.

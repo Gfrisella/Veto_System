@@ -9,6 +9,28 @@ PRIORITY:      A = must be fixed before optimising, B = changes the results, C =
 Numbers quoted below are from run_reco.py on D6_tile / D6_straw (15 Oct 2026), unless noted.
 
 
+
+ISSUE REVIEW 9 NOV 2026 (Guglielmo): every open item decided; the solution of each is the dated "9 Nov 2026" note under it.
+Action list, in order (re-runs need approval, see the end):
+  1. D5   check the momentum convention of the enriched tail (production vs after-target); fix the tail if confirmed.
+  2. D3   shield chain default -> Geant4 muonNuclear (P6 / P8 = systematic); small FairShip run on lxplus with our MS7
+          parents (like-for-like K_L count). D4: cut chords at the muon range.
+  3. code before the re-runs: D12 (debris_maps.py -> em_* cross-check), C7 (forced K_L decays in fastveto), D9
+          (multi-vertex rejection in the DIS x mu pairs), C1 (ghost hits), B4 (re-import EventCalc, benchmark set in the
+          objective), A2 (bounce_r_slope / r0 free in the optimiser), D15 (import retry + chunk check), D14 debris in time
+          (planes delta rays, cavern-wall debris at the bounce points, shield debris attached to its muon).
+  4. neutrinos (D4 / D14): adopt the new flux (GSimple 2026 or Shah Rukh's Nov-9 production; the 2018 flux is x 2-2.7
+          low above 10 GeV) + iron GENIE library with nu_e.
+  5. re-run batch in the FairShip layout at 4e13: stores / maps / inputs.npz (C8, D8), run_reco both IP cuts, muon
+          interactions with air margin (C7, D7) + forced cavern Geant4 (D7), extra seeds (C5, A2), cross-run closure (A1),
+          EM debris (B2), DIS x mu pairs (D9); B1 ms_slope / r_ms check. Old results kept until the new ones are checked.
+  6. tracking: ACTS (SHiP CVMFS 26.10) resolution parametrisation into reco.measure (D14).
+  7. side branches: D6 energy rescaling (veto-d6-energy-rescale); D2 lateral-track veto study with the signal loss;
+          C9 MuonsAndMatter categorize_muons patch.
+  8. after the first optimum: C3 FairShip validation of the optimised design.
+  Questions to the detector colleagues (C2, C6): docs/detector_questions.md. Decided / closed: A5 flat spill, cosmics
+  ignored, +x cavern wall not needed, parked shield muons accepted.
+
 ----------------------------------------------------------------------------------------------
 A. BLOCKERS: fix before optimising
 ----------------------------------------------------------------------------------------------
@@ -57,6 +79,8 @@ A2. Bounced muons: the veto barely sees them
       RecoConfig.bounce_search (default True), bounce_r_slope. Quick test on inputs.npz (toy signal, 20k decays):
       D6_straw bounced SST1 vetoed 0.760 -> 0.975, signal lost 5.15 -> 6.38 %; E3_robust 0.000 -> 0.140, 0.07 -> 0.20 %.
       Still to do: more bounced statistics (C5 seeds); tune bounce_r_slope against the signal cost.
+    9 Nov 2026, Guglielmo: bounce_r_slope (and the bounce query r0) become free parameters of the design optimisation:
+      the objective (bkg tag vs signal veto) picks them.
 
 A3. Rate limits are reported, not enforced
     STATUS: DONE (4 Nov 2026: steep penalty in the objective + fine peak maps near the flames)
@@ -113,6 +137,7 @@ A5. Spill and PoT normalisation
     and the straw signal loss (5.3 % with a +-25 ns window) scales with them.
     5 Nov 2026, Guglielmo: keep the flat 1 s spill at 5e13 PoT/s (rates in kHz at 5e13 PoT/s), stated as an assumption;
       no duty factor / 50 Hz ripple for now.
+    9 Nov 2026, Guglielmo: keep the flat spill (confirmed again).
 
 A6. Spectrometer field map not used: products propagated in straight lines
     STATUS: DONE (5 Nov 2026: RK4 in the field map, re-centred; helium products in Geant4, built on the host)
@@ -215,7 +240,7 @@ B. PHYSICS MISSING: changes the results
 ----------------------------------------------------------------------------------------------
 
 B1. Multiple scattering (at least this interaction must be modelled)
-    STATUS: IN PROGRESS (side-wall material: decided 5 Nov 2026, mild issue)
+    STATUS: DONE pending the ms_slope / r_ms check in the re-run batch (9 Nov 2026)
     The stored muons have NO multiple scattering after the shield: the states at z = 30.6 m and
     z = 82 m are joined by straight lines and the transport did not include the air / vessel.
     Material along a muon's path (now fully defined, so MS can be computed for every muon):
@@ -251,6 +276,7 @@ B1. Multiple scattering (at least this interaction must be modelled)
     5 Nov 2026, Guglielmo: vessel side walls stay 350 um Mylar like the windows (our design has no SBT, the fins replace
       it). Left as a MILD issue (priority C): FairShip's lateral walls carry the SBT (Al + liquid scintillator), so muons
       entering through the sides see more material there (scattering, wall DIS) than in our model.
+    9 Nov 2026, Guglielmo: close B1 once the re-run batch checks that reco ms_slope / r_ms cover the true scatter.
 
 B2. EM debris rate (electrons / photons from the end of the shield)
     STATUS: IN PROGRESS (6 Nov 2026: Geant4 chain implemented, production with the re-runs)
@@ -294,7 +320,7 @@ B3. Neutrino and muon deep inelastic scattering
       planes, MS7 shield chain, Geant4 transport of the products); open points are tracked in C7, C8 and D2 - D9.
 
 B4. Signal model
-    STATUS: IN PROGRESS (5 Nov 2026: EventCalc samples imported)
+    STATUS: IN PROGRESS (9 Nov 2026: re-import regenerated samples, benchmark set into the objective)
     Now: neutral particle decaying uniformly in the vessel volume, two daughters uniform over the
     SST1 acceptance, p uniform 1-50 GeV. Signal is lost only through accidental hits.
     Plan: use an HNL (and dark photon) model from the literature:
@@ -341,6 +367,9 @@ B4. Signal model
 ----------------------------------------------------------------------------------------------
 C. DETECTOR AND BOOKKEEPING: second order
 ----------------------------------------------------------------------------------------------
+    9 Nov 2026, Guglielmo: re-import the regenerated EventCalc samples (production at the target,
+      --vessel-z0-eventcalc 32.4768) and make the benchmark-set signal loss the objective's signal term (toy kept for
+      comparison); the missing dark photon 4 GeV c tau 100 m is accepted.
 
 C1. Detector response simplifications
     STATUS: DECIDED (9 Nov 2026): ghost hits only, to implement
@@ -361,6 +390,8 @@ C2. Dead material and dead regions
       colleagues): straw 3 cm (frame + manifolds), tile / tile2 1 cm (SiPM side), fibre 2 cm (readout end), pixel 1 mm.
       Implemented with A7 (technology.MODULES frame / frame_edges / sub_frame). Dead material of the frames (scattering,
       DIS) not added.
+    9 Nov 2026, Guglielmo: ask the detector colleagues (question list docs/detector_questions.md, with C6); frames stay
+      massless until the answers.
 
 C3. Validation against full simulation
     STATUS: DEFERRED (9 Nov 2026): FairShip validation of the first optimum
@@ -396,6 +427,7 @@ C6. Detector technology numbers
     Still to confirm: fibre timing (0.5 ns kept, can reach ~100 ps: ask Ettore); fibre plane
     efficiency 99.9 % ("basically 100 %"), per-SiPM efficiency not modelled; tile channel count
     on a 1 x 2.7 m plane depends on the tile combination (mixed sizes not modelled).
+    9 Nov 2026: open confirmations in the question list docs/detector_questions.md (with C2).
 
 C7. V0 from DIS outside the vessel decaying inside
     STATUS: IN PROGRESS (5 Nov 2026: air draws restricted near the vessel and the fins)
@@ -411,6 +443,8 @@ C7. V0 from DIS outside the vessel decaying inside
       --air-margin (< 0 = all the air). Weights are the true chord lengths, so the rate per 15 y is absolute for that
       region; the far air is no longer sampled. On 5e4 muons the kept air is 38 % of the air nucleon column (muons run
       along the vessel walls and through the 3 x 6 m fin slabs). To do: re-run the muon interactions (approval).
+    9 Nov 2026, Guglielmo: force K_L decays in fastveto (same forced-decay copies as the shield chain, weight x P(decay in
+      the vessel)) for every target (helium, air, walls, planes); K_L are stable there now.
 
 C8. DIS rates with the new selection
     STATUS: IN PROGRESS (5 Nov 2026: two selections on the measured IP)
@@ -512,6 +546,10 @@ D3. MS7 shield DIS -> K_L: chain disagrees with FairShip
       fixes it); K_S-decay tracks 4-5 Hz, minor.
       Proposal (to decide): chain default = Geant4 muonNuclear (natural-validated) instead of Pythia 6, P6 / P8 as the
       generator systematic.
+    9 Nov 2026, Guglielmo: chain DEFAULT -> Geant4 muonNuclear (validated by natural Geant4); Pythia 6 and Pythia 8
+      (PP + DIS) quoted as the generator systematic (reverses the 5 Nov 'Pythia 6 only'). Next: a small FairShip run on
+      lxplus with our MS7 parents injected at the last 50 cm (muonNuclear biased), K_L counted at the iron exit and at
+      SST1: like-for-like with the chain and with natural Geant4.
 
 D4. MS7 shield DIS chain: simplifications
     STATUS: IN PROGRESS (5 Nov 2026: solution accepted, code done, runs pending)
@@ -533,6 +571,11 @@ D4. MS7 shield DIS chain: simplifications
       - nu flux below 10 GeV: NOT possible with the 2018 production (p > 10 GeV cut at production); needs a dedicated
         neutrino flux file (e.g. the FairShip neutrino production): open.
       - still straight: the chord L in the iron (path length change ~1e-4); muons stopping in the slab not removed.
+    9 Nov 2026 (numbers from data/shield_dis/muons_iron.npz, 2.6e7 parents, 3.9e8 / spill): 1.9 % of the flux ranges out
+      in the slab (all below 1 GeV at the iron start), 0.87 % of the muon path length does not exist; effect on K_L /
+      SST1 tracks << 1 %. Guglielmo: cut each chord at the muon's range (drop the stoppers' missing path); straight chord
+      (1e-4) and new muons made in the shield (~25 Hz on 24.3 kHz at SST1) accepted as documented limitations.
+      D4 closes with the new neutrino flux (D14) and the range cut.
 
 D5. Muon source: enriched input disagrees with the old sample
     STATUS: IN PROGRESS (9 Nov 2026: test the production / after-target momentum convention)
@@ -589,6 +632,8 @@ D7. Interactions upstream of z = 30.6 m not simulated
       shield), kept region = the vessel entrance grown by AIR_MARGIN (C7); V0 decays in the vessel follow as for air.
       Implemented: fastveto.targets.UPSTREAM_AIR / Z_SHIELD_END. On 3e4 muons: air upstream of the vessel 1.13e28 ->
       2.47e28 weighted nucleons/m^2 (helium and wall unchanged).
+    9 Nov 2026, Guglielmo: go ahead with the forced Geant4 from the 30.6 m states in the real cavern (wall + floor, forced
+      K_L decays in the vessel), with the Geant4 default generator (D3). No +x wall: it is far away, not relevant.
 
 D8. Results computed with the old PVC vessel wall
     STATUS: OPEN (PRIORITY B)
@@ -658,3 +703,18 @@ D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_invento
         Pythia, physics list, target layout or Geant4 version (Shah Rukh, 31 Oct); see D5.
     9 Nov 2026, Guglielmo (with D4): new neutrino sample at the target / shield (no 10 GeV cut, all flavours) and the
       iron GENIE library rebuilt with nu_e (bin/nu_library.py --nus 14 -14 12 -12).
+    9 Nov 2026, Guglielmo: model (a) delta rays in the veto planes (g4slab per crossing), (b) cavern-wall debris at the
+      bounce points in time with the bounced muon, (c) shield-end debris attached in time to its parent muon. Cosmic
+      muons: ignored. Track fit: use ACTS (FairShip in SHiP CVMFS 26.10: python/ACTSReco.py, macro/run_ACTSTracking.py)
+      instead of GenFit: particle-gun tracks through FairShip 26.10 + ACTS -> p / angle / IP resolution and efficiency
+      vs p -> reco.measure; full ACTS on a subsample for validation. Parked shield muons: accepted (see D4).
+      9 Nov 2026 (docs/STATUS.md, other session): GSimple 2026 final-target neutrino flux converted
+      (Study_on_Veto_System/Neutrino_flux_gsimple2026/): nu_mu agrees with Shah Rukh's Nov-9 production to 1-4 %, the 2018
+      flux used by the veto is x 2 - 2.7 LOW for nu_mu > 10 GeV -> every nu DIS number so far is underestimated.
+
+D15. CVMFS library loading under load (shield_dis / shield_natural workers)
+    STATUS: OPEN (9 Nov 2026, decided: retry + count check)
+    With many workers some fail to load CVMFS Geant4 libraries (ImportError libG4analysis.so; 16 416 in the p8full log,
+    88 MB) and are restarted; all 2e6 interactions came back, but a silent loss is possible.
+    Guglielmo (9 Nov): import retried with backoff and logged once per worker; at the end assert that every chunk came
+    back (fail loudly otherwise); workers capped at ~48.

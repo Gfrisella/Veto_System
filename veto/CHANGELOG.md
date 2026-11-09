@@ -4,6 +4,14 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-09 (night) — issue review: decisions for every open item (branch `veto-shield-dis`, docs only)
+
+- ISSUES.txt: dated "9 Nov 2026" decision under every open item, action list at the top, new D15 (CVMFS library loading
+  under load). D3 default -> Geant4 muonNuclear; D4 range cut; C7 forced K_L decays in fastveto; ACTS (CVMFS 26.10)
+  for the track-fit parametrisation; D14 debris in time; B4 benchmark set into the objective.
+- New docs/detector_questions.md (C2 + C6). docs/STATUS.md: section for the veto side (+ the GSimple 2026 neutrino-flux
+  note from another session, committed with it).
+
 ## 2026-11-09 (evening) — natural Geant4 validation of the MS7 chain (branch `veto-shield-dis`)
 
 - New `cpp/g4shieldnat.cc` (g4shield + physics list by name via G4PhysListFactory, muonNuclear x bias with weights,
