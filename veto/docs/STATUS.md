@@ -551,3 +551,44 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
 - Decided next (user, 2026-11-08): direct forced Geant4 from the stored 30.6 m states in the real cavern (wall + floor,
   G4BOptrForceCollision, forced K_L / neutral decays in the vessel), storing design-independent trees to SST1, mapped onto
   designs afterwards (straight lines or ParticleShaker). The library stays as the quick estimate and cross-check.
+
+## 2026-11-09 Neutrino production with the new target (DONE)
+- Data: /disk/lhcb_data/sqasim/nu_prod/tail/ — nuMB_nu_600000-600499 (500 x 2e4 p, 3.3 GB), charmc_nu_30000-30999
+  (1000 x 1e4 p, charm hadrons > 1 GeV, keep 0.5, 1.7 GB), beautyc_nu_21000-21399 (400 x 2.5e4 p from the Nov-4 beauty
+  hadrons, keep 0.05, 210 MB), charmc_had_* (soft charm hadrons, 5.7 GB), nu_flux_summary.npz ((E, theta) histograms per
+  proton per component and flavour). Per proton = sum w_decay / (events x rep), per component; drop hf > 0 rows in nuMB.
+  Cuts: E >= 1 GeV, theta <= 0.3 rad, made upstream of z = -0.0045 m. Summary: bin/nu_flux.py <dir> [--had-old <nov4 dir>].
+- Per proton (per spill 4e13): nu_mu 5.50e-3 (2.2e11; charm 4.6 %), anti nu_mu 3.94e-3 (1.6e11), nu_e 5.55e-4 (2.2e10;
+  charm 46 %), anti nu_e 5.29e-4 (2.1e10; charm 52 %), nu_tau 3.90e-5 and anti nu_tau 3.95e-5 (1.6e9 each, all charm, D_s);
+  beauty ~5e-8 per flavour. Min-bias nu_e: K+- 1.3e-4, K_L 9.8e-5, K_S 6.7e-5. Made at z -2.2 .. -1.4 m.
+- Soft charm vs Nov-4 > 10 GeV set above 10 GeV: ratio 1.0000 (pull -0.17; D0, D+, Ds, Lambda_c all 1.000); the soft part adds
+  x1.16 to the charm hadron weight.
+- Fixes during the run: charm_cascade Pythia 6 scratch files now on node-local /tmp (112 slices on GFS stalled in D state);
+  nu_prod.sbatch charm step skips charm_cascade if charmc_had exists.
+- Next: GENIE / neutrino interactions in the detector and surroundings from nu_flux_summary.npz or the row files.
+
+### 2026-11-09 Neutrino DIS apply on the 2026 flux + flux validation
+- Apply done (library v2, one process per flavour): D6_straw_mod, 15 y, all flavours: helium 2.87e4, air 6.57e4, PVC 5.77e4,
+  UBT + fins 5.8e3 (`data/interactions/genie/apply2026_D6_straw_mod_nu*.json`). D6_straw nu_mu / anti-nu_mu also done.
+- vs 2018 flux: x3.7 (helium) to x31 (fins). Not a bug: the 2018 sample (neutrinos from Guglielmo's `_mu` files) only kept
+  neutrinos with p > 10 GeV whose sister muon was stored, and that muon has p >= 15 GeV (5 % quantile 21 GeV). Above 10 GeV
+  pion-parent nu_mu agree (new/old 0.94, 1.01 at 10-20 GeV); K+- (x6.5, x9.8 at 10-20 GeV falling to x1.1 > 100 GeV) and
+  charm (x3.7-5.5) are what the muon cut removed. Plus: no E < 10 GeV (65 % of the sigma-weighted new flux), off-axis spread.
+- Independent check vs SHiP 2025 (arXiv 2504.06692, Table 1, CC DIS in 3 t W, 15 y): 2026 flux folded on a 40-50 cm W block at
+  z = 26-30 m gives nu_mu 3.8-5.2e6 (SHiP 5.8e6), anti-nu_mu 1.1-1.5e6 (1.3e6), nu_e 1.6-2.2e6 (2.0e6), anti-nu_e 4.3-5.7e5
+  (4.0e5), nu_tau ~1e5 (5.9e4; no tau threshold suppression in the estimate). The 2018 sample gives nu_mu 2.0-2.9e6, nu_tau 4e3.
+  Scripts: /disk/lhcb_data/sqasim/nu_lib/{cmp,par,snd}.py.
+- Selection + veto (bin/run_interactions.py --kind nu, new --pot-spill 4e13; current RecoConfig) on the 2026 samples, per 15 y,
+  after veto level b: D6_straw_mod nu_mu 1.02, anti-nu_mu 0.51, nu_e 1.37, anti-nu_e 0.39, nu_tau 0.02, anti-nu_tau 0.02 ->
+  total 3.3 (selected 3.9), all but ~0.07 from helium (not vetoable: a ~ b ~ selected). Air / PVC: 0-1 selected draws each
+  (upper limit ~0.1-0.2 per flavour). Like for like: the 2018 sample through today's code gives 1.03 selected / 0.89 after veto
+  (the 469 in results/interactions/D6_straw_nu.json is from the pre-Oct-21 selection, stale). New D6_straw nu_mu + anti: 1.58.
+  So the neutrino background is x1.8 (muon flavours) and x3.7 with nu_e, not x4-30. Outputs:
+  /disk/lhcb_data/sqasim/workspace/uzh/Veto_System/veto/results/interactions/*_nu2026_nu*.json, D6_straw_nu2018_rerun.json.
+  Run with EXEC="... exec_cudabear... env VETO_RESULTS=/disk/lhcb_data/.../results VETO_INTERACTIONS=..." (gfs not mounted).
+- Cavern rock through the same selection (new bin/rock_select.py: rock_apply / nu_rock draws -> interactions.evaluate, cut flow):
+  D6_straw_mod, 0 selected for both. Neutrino rock: 3.2e3 / 15 y with >= 2 good tracks (84 draws), best-pair measured IP
+  >= 6.8 m. Muon rock: 4.6e9 / 15 y with >= 2 good tracks (64 draws, 7e7 each), IP >= 12.6 m. Vertices are killed by geometry.
+  BUT single tracks: the muon rock puts 1.84e4 good tracks (p > 1 GeV, SST1 + timing acceptance) per spill into SST1, mostly
+  hadrons / electrons (muons 300), vs ~3e4 direct muons -> feeds the combinatorial background (rate^2), not included yet.
+  Neutrino rock: 0.024 per spill (negligible).

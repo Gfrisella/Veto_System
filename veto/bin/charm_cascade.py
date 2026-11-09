@@ -115,11 +115,24 @@ def run_slice(k, events, flavour="charm", hadrons=False, target="MoW"):
     FRACP = FRACP_TARGET.get(target, 0.43)
     if os.environ.get("HF_EMIN"):                     # hadron threshold of --hadrons (default 20 GeV)
         EMIN_HAD = float(os.environ["HF_EMIN"])
-    import tailtransport as T
     t0 = time.time()
     fl = FLAVOUR[flavour]
     table = json.load(open(fl["table"]))
-    binf = OUT / f"charmc_mb_{k}.bin"
+    # Pythia 6 scratch files (hundreds of small create / unlink per slice) on a node-local directory: on a shared cluster file
+    # system (GFS) many slices doing this at once stall in lock waits
+    import shutil, tempfile
+    tmp = Path(os.environ.get("HF_TMP") or tempfile.mkdtemp(prefix=f"hfc_{k}_", dir=os.environ.get("TMPDIR", "/tmp")))
+    tmp.mkdir(parents=True, exist_ok=True)
+    try:
+        return _run_slice(k, events, flavour, fl, table, hadrons, target, t0, tmp)
+    finally:
+        if not os.environ.get("HF_TMP"):
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+def _run_slice(k, events, flavour, fl, table, hadrons, target, t0, tmp):
+    import tailtransport as T
+    binf = tmp / f"charmc_mb_{k}.bin"
     subprocess.run([P6M, str(events), str(4000 + k), str(EMIN_CASC), str(binf), str(FRACP)], check=True,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     meta = dict(l.split()[:2] for l in open(str(binf) + ".txt") if len(l.split()) >= 2)
@@ -176,7 +189,7 @@ def run_slice(k, events, flavour="charm", hadrons=False, target="MoW"):
                     gid += 1
                     if gid >= 4000:
                         raise RuntimeError("more than 4000 Pythia 6 runs in a slice: seed range exceeded")
-                    cf = OUT / f"{fl['tag']}_{k}_{gid}.bin"
+                    cf = tmp / f"{fl['tag']}_{k}_{gid}.bin"
                     try:
                         subprocess.run([P6C, "had" if hadrons else "gen", nm, f"{pc:.1f}", str(len(bsel)), str(p6_seed(k, gid)),
                                         str(EMIN_HAD if hadrons else EMIN_MU), str(cf), str(FRACP), str(fl["msel"])], check=True,

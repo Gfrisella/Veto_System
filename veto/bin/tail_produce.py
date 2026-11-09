@@ -23,6 +23,10 @@ muons, any other process); extra columns proc (1 long-lived decay, 2 prompt deca
 5 Pythia muon, 6 other, 7 prompt decay in the cascade), hf (open charm / beauty ancestor), ch (prompt decays: products
 besides muons and neutrinos, 0 = pure mu mu; -1 otherwise) and pcx, pcy, pcz (momentum at creation). --mode analog: the same without forcing (its unbiased reference).
 In these modes EMIN is a total-energy threshold for every particle followed.
+--neutrino (with --mode complete / analog): the neutrinos instead of the muons (tailtransport's neutrino mode): recorded where
+they are made with E >= --nu-emin and angle <= --nu-theta, upstream of z = -0.0045 m; output <tag>_nu_<K>.npz (pdg, x, y, z =
+production point, px, py, pz, w_decay, parent, proc, hf, event; events, rep as the muon files). For E_nu >= 1 GeV every
+source is above EMIN = 1.1 GeV (pi -> mu nu: E_nu <= 0.43 E_pi; K: <= 0.95 E_K).
 """
 
 import _bootstrap  # noqa: F401
@@ -143,7 +147,7 @@ def boost_decay(pdg, p3, rng):
 
 def run_slice(k, n_slices, events, rep, emin=None, tag="tail", target="MoW", primary="pythia", physics="FTFP_BERT",
               l0=0.0, pmin_mu=None, dimuon=False, gamma_factor=500.0, pik=True, vm_fairship=False, mode="legacy",
-              ep_factor=100.0, onia=False, roulette=None, muon_window=None, split=1):
+              ep_factor=100.0, onia=False, roulette=None, muon_window=None, split=1, neutrino=False, nu_emin=1.0, nu_theta=0.3):
     global EMIN, PMIN
     if emin is not None:
         EMIN = PMIN = emin
@@ -190,7 +194,9 @@ def run_slice(k, n_slices, events, rep, emin=None, tag="tail", target="MoW", pri
         rec[:, 5] = 400.0
     t_py = time.time() - t0
     T.initialize(seed=5000 + k, target=target, physics=physics, dimuon=dimuon, gamma_factor=gamma_factor, mode=mode,
-                 ep_factor=ep_factor)
+                 ep_factor=ep_factor, **({"neutrino": True} if neutrino else {}))
+    if neutrino:
+        T.set_nu_cuts(nu_emin, nu_theta)
     T.set_pik(pik)
     if split > 1:                                     # decay splitting of the prompt species
         T.set_split(split)
@@ -206,7 +212,7 @@ def run_slice(k, n_slices, events, rep, emin=None, tag="tail", target="MoW", pri
     ev_ids, first = np.unique(rec[:, 0].astype(np.int64), return_index=True)
     offsets = np.append(first, len(rec))
     m = len(ev_ids)
-    muons, diags = [], []
+    muons, diags, nus = [], [], []
     for r_ in range(rep):                               # same Pythia events, new vertices / cascades
         zs = np.full(m, lay.z0[0])
         d_p, _ = sample_along(lay.path_pieces(zs, np.ones(m)), lay.lam(2212, np.full(m, 400.0)), rng)
@@ -218,6 +224,10 @@ def run_slice(k, n_slices, events, rep, emin=None, tag="tail", target="MoW", pri
                       rec[:, 4].tolist(), xy[:, 0].tolist(), xy[:, 1].tolist(), (zs + d_p).tolist(), EMIN, PMIN, l0,
                       rec[:, 5].tolist() if mode != "legacy" else [], rec[:, 6].tolist() if roulette else [])
         diags.append(o.pop("diag", {}))
+        if neutrino:
+            nu = {kk: np.asarray(v) for kk, v in o.pop("nu").items()}
+            nu["event"] = ev_ids[nu["ev"]] if len(nu["ev"]) else nu["ev"]
+            nus.append(nu)
         o = {kk: np.asarray(v) for kk, v in o.items()}
         o["event"] = ev_ids[o["ev"]]
         if primary == "pythia6":            # FairShip: target nucleon p / n with the Z/A of the material at the vertex
@@ -231,6 +241,18 @@ def run_slice(k, n_slices, events, rep, emin=None, tag="tail", target="MoW", pri
     t_g4 = time.time() - t1
     # per-muon arrays only: the module also returns the scalar "interactions" (charm logging, added to tailtransport
     # after the tail2 production), which the fast-veto-sim script tried to concatenate as well
+    if neutrino:
+        nu = {kk: np.concatenate([x[kk] for x in nus]) for kk in nus[0]}
+        np.savez(OUT / f"{tag}_nu_{k}.npz", events=n_ev, rep=rep, emin=EMIN, nu_emin=nu_emin, nu_theta=nu_theta, mode=mode,
+                 target=target, pdg=nu["pdg"].astype(int), x=nu["x"], y=nu["y"], z=nu["z"], px=nu["px"], py=nu["py"], pz=nu["pz"],
+                 w_decay=nu["w"], parent=nu["parent"], proc=nu["proc"], hf=nu["hf"], event=nu["event"], diag=json.dumps(diags))
+        if binf.exists():
+            binf.unlink()
+        fl = {f: nu["w"][nu["pdg"] == f].sum() / rep / n_ev for f in (14, -14, 12, -12, 16, -16)}
+        print(f"slice {k}: {n_ev} events, {len(rec)} hadrons > {EMIN:.2g} GeV, x{rep}: {len(nu['w'])} neutrino rows; per proton "
+              + ", ".join(f"{f}: {v:.3g}" for f, v in fl.items()) + f"; pythia {t_py:.0f} s, geant4 (last rep) {t_g4:.0f} s, "
+              f"total {time.time() - t0:.0f} s", flush=True)
+        return
     o = {kk: np.concatenate([mu[kk] for mu in muons]) for kk in muons[0] if np.ndim(muons[0][kk]) > 0}
     np.savez(OUT / f"{tag}_{k}.npz", events=n_ev, rep=rep, emin=EMIN, pmin=PMIN,
              pdg=o["q"].astype(int), x=o["x"], y=o["y"], z=o["z"], px=o["px"], py=o["py"], pz=o["pz"],
@@ -272,6 +294,9 @@ def main():
     ap.add_argument("--roulette", default=None, help="QMIN,E1,N,PT0: importance sampling (generator and cascade), weight 1/q")
     ap.add_argument("--muon-window", default=None, help="npz (p_edges, pt_edges, w_min): weight window of the recorded muons")
     ap.add_argument("--split", type=int, default=1, help="complete mode: muonic decays per prompt decay (weight / split)")
+    ap.add_argument("--neutrino", action="store_true", help="complete / analog: the neutrinos instead of the muons")
+    ap.add_argument("--nu-emin", type=float, default=1.0, help="neutrino mode: minimum neutrino energy [GeV]")
+    ap.add_argument("--nu-theta", type=float, default=0.3, help="neutrino mode: maximum angle to the beam [rad]")
     ap.add_argument("--vm-fairship", action="store_true",
                     help="dimuons as the old production: all 5 mesons from the first collision, only omega/phi/rho from the cascade")
     a = ap.parse_args()
@@ -282,7 +307,7 @@ def main():
     else:
         run_slice(a.slice, a.n_slices, a.events, a.rep, a.emin, a.tag, a.target, a.primary, a.physics, a.l0, a.pmin_mu,
                   a.dimuon, a.gamma_factor, not a.no_pik, a.vm_fairship, a.mode, a.ep_factor, a.onia, a.roulette,
-                  a.muon_window, a.split)
+                  a.muon_window, a.split, a.neutrino, a.nu_emin, a.nu_theta)
 
 
 if __name__ == "__main__":

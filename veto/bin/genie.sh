@@ -8,6 +8,9 @@ HERE="$(cd "$(dirname "$0")/.." && pwd)"
 X=$HERE/external/genie
 L=$X/install/lib:$X/pythia6/lib:$X/log4cpp/install/lib:$X/egpythia6/install/lib:$X/gsl/install/lib:$X/libxml2/install/lib
 L=$L:$X/lhapdf/install/lib:$(dirname $(ls $X/tbb/install/lib*/libtbb.so.12 | head -1)):$(dirname $(ls $X/egpythia6/install/lib*/libEGPythia6.so | head -1))
-exec bash /disk/lhcb_data/sqasim/images/shared/exec_cudabear_november_2025.sh \
+# apptainer directly (as the batch jobs): the shared exec_cudabear wrapper binds /run/user/<uid>, absent in Slurm jobs
+source /disk/users/sqasim/apptainer_shared/env.sh
+exec apptainer exec -B /scratch -B /cvmfs -B /disk/users -B /disk/lhcb_data -B /home/hep \
+    /disk/lhcb_data/sqasim/images/cudabear_november_2025.sif \
     env GENIE=$X/src PATH=$X/install/bin:/hepsw/root/bin:/usr/bin:/bin LD_LIBRARY_PATH=$L:/hepsw/root/lib \
         ROOT_INCLUDE_PATH=$X/src/src:$X/egpythia6/install/include GXMLPATH=$HERE/cpp/genie/config "$@"

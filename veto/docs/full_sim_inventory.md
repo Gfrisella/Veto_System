@@ -11,7 +11,7 @@ Status: ✅ have, ⚠️ partial, ❌ missing, ⏸ parked (decision column = use
 | New muons made in the shield (pi/K decays in the shield, gamma -> mu mu, tridents) | ⏸ | Nothing (pool = muons at z = -0.0045 m; cuda-muons makes no secondaries) | pi/K decay before interacting ~1e-3 (lambda_int Fe 17 cm vs decay length O(100 m)); gamma -> mu mu and tridents ~(m_e/m_mu)^2 ~ 2e-5 of the e+e- analogues | Parked: rare |
 | DIS in the vessel walls | ✅ | fastveto forced interactions, library Geant4 muonNuclear (low nu) + Pythia 6 (high nu); wall 350 um Mylar | Reruns with Mylar on the new pool (D8) | Mylar (PVC would have sufficed) |
 | DIS in the veto planes | ✅ | Every design plane a target, technology material | Frames / dead material not targets (C2) | |
-| DIS in the cavern walls | ❌ | Nothing | ISSUES D7; FairShip origin breakdown: pi / p at SST1 mostly from cavern concrete | **Do it, from the stored trajectories (plan below)** |
+| DIS in the cavern walls | ⚠️ | g4rock library (2.7e6 events) applied (`bin/rock_apply.py`): 7.7e4 charged > 1 GeV / spill at SST1, 2.2e3 with >= 2 (2026-11-08) | Selection + veto on the saved draws; decays after the surface (K_L); direct forced Geant4 from the 30.6 m states (reference) | From the stored trajectories (done) |
 | DIS in helium | ✅ | Forced, products optionally through Geant4 (g4vessel) | 15 % energy grid, no nuclear effects in Pythia (D6) | |
 | DIS in air | ✅ | Air within 0.4 m of the vessel / fins + shield-to-vessel gap | C7 / C8 reruns pending | |
 | DIS in the last magnet -> pi, K | ⚠️ | Last 50 cm of MS7, parent bent by the field, products through Geant4 | D3 (K_L vs FairShip, major); Pythia-6-only part; parents from the old one-run pickle (the new production stores nothing inside MS7); rest of the shield | |
@@ -25,10 +25,10 @@ Status: ✅ have, ⚠️ partial, ❌ missing, ⏸ parked (decision column = use
 
 | Item | Status | What we have | What is missing | Decision |
 |---|---|---|---|---|
-| Neutrino flux | ⚠️ | 2018 FairShip flux (`bin/extract_neutrinos.py`, `fastveto.neutrinos`), p > 10 GeV | Not from our target production (tailtransport kills neutrinos); nothing below 10 GeV; nu_tau | **New neutrino sample at the target / shield, as for the muons (plan below)** |
-| DIS in vessel walls, veto planes, helium, air | ✅ | GENIE 3.06 library, forced (`bin/nu_dis_apply.py`) | Rerun on the new flux | |
-| DIS in the cavern walls | ❌ | Nothing | nu in concrete / rock, incl. CC muons entering the cavern (Guglielmo's nu-induced muons) | With the new sample |
-| DIS in the last magnet -> pi, K | ⚠️ | Shield chain with a GENIE iron library | nu_mu only (no nu_e library); 2018 flux, > 10 GeV; last 50 cm only | With the new sample |
+| Neutrino flux | ✅ | 2026-11 production (`bin/nu_prod.sbatch`): new target, all flavours, E >= 1 GeV, min bias + soft charm + beauty; validated (analog vs forced); stores `store2026_nu*` | Charm normalisation uncertainty (20-30 %) | Done 2026-11-09 |
+| DIS in vessel walls, veto planes, helium, air | ⚠️ | GENIE library v2 (6 flavours, 15 nuclei, 6.5e6 events); `nu_dis_apply` on the new flux running (nu_mu: helium 1.5e4, air 3.6e4, walls 3.1e4 per 15 y) | Remaining flavours; selection on the interactions | |
+| DIS in the cavern walls | ⚠️ | `bin/nu_rock.py` (2026-11-09): 12.4 interactions / spill (4 sides + upstream face, deep CC muons); SST1 charged > 1 GeV 0.045 / spill, >= 2 charged 4.6e-4 / spill (floor) | Selection on the saved draws | Done (first version) |
+| DIS in the last magnet -> pi, K | ⚠️ | Shield chain with a GENIE iron library | Rerun with library v2 (Fe56, all flavours) and the new flux; last 50 cm only | Next |
 
 ## Not in the list but part of the simulation
 

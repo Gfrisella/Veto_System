@@ -63,6 +63,8 @@ def main():
     ap.add_argument("--g4", default=None, help="Geant4 transport of the helium products (bin/g4_vessel_transport.py)")
     ap.add_argument("--air-margin", type=float, default=0.4,
                     help="air interactions only within this distance [m] of the vessel and the fins (ISSUES C7); < 0 = all the air")
+    ap.add_argument("--pot-spill", type=float, default=5e13,
+                    help="protons per spill of the interaction weights (2026 neutrino production: 4e13); rescaled to the 5e13 of SPILLS_15Y")
     ap.add_argument("--tag", default="", help="suffix of the saved interaction npz (results/interactions/<design>_muon_interactions<tag>.npz)")
     args = ap.parse_args()
     from fastveto import targets as _tg
@@ -85,6 +87,8 @@ def main():
         save = paths.results_dir() / "interactions" / f"{design.name}_muon_interactions{args.tag}.npz"
         save.parent.mkdir(parents=True, exist_ok=True)
         np.savez(save, **{f"int_{k}": v for k, v in inter.items()}, **{f"part_{k}": v for k, v in part.items()})
+    if args.pot_spill != 5e13:
+        inter["weight"] = inter["weight"] * (5e13 / args.pot_spill)
     print(f"{len(inter['weight']):,} interactions, {len(part['pdg']):,} particles ({source}), {time.time() - t0:.0f} s", flush=True)
 
     muons = None
