@@ -55,7 +55,7 @@ V0 = {130: 15.34, 310: 0.026844, 3122: 0.0789, -3122: 0.0789, 3322: 0.0871, -332
 MASS = {130: 0.497611, 310: 0.497611, 3122: 1.115683, 3322: 1.31486}
 OUT = paths.results_dir() / "shield_dis"
 PREPARED = paths.PROJECT_DIR / "data" / "shield_dis" / "muons_iron.npz"
-NU_STORES = Path("/disk/users/sqasim/workspace/uzh/Veto_System/veto/data/interactions/neutrinos")
+NU_STORES = paths.interactions_data() / "neutrinos2026"      # Shah Rukh 2026-11-09 flux (bin/nu_prepare.py); 2018 flux discarded
 MU_SPLIT = "pythia"                           # D3 (Guglielmo 2026-11-05): Pythia 6 part only of the iron library
 BEND_PARENT = True                            # D4: parent muon bent by the MS7 field (si.curved_points)
 NU_FLAVOURS = (14, -14, 12, -12)              # D4: nu_e added where a store and the iron library have it
@@ -176,7 +176,7 @@ def draw(kind, par, n, rng, per_track=False, mu_lib=None, mu_split=None):
     order = np.argsort(part["int"], kind="stable")
     part = {k: v[order] for k, v in part.items()}
     summ = dict(parents=len(P), parents_per_spill=float(par["weight"].sum()),
-                interactions_per_spill=S, interactions_15y=S * SPILLS_15Y, draws=n, dropped_low_E=int((~ok).sum()),
+                interactions_per_spill=S, pot_per_spill=POT_PER_SPILL, interactions_15y=S * SPILLS_15Y, draws=n, dropped_low_E=int((~ok).sum()),
                 sampling="one per track, weight w P" if per_track else "proportional to w P, weight S / N")
     return inter, part, summ
 
@@ -185,10 +185,10 @@ def draw(kind, par, n, rng, per_track=False, mu_lib=None, mu_split=None):
 _G4 = None
 
 
-def _worker_init(seed):
+def _worker_init(seed, natural=None):
     import os
     global _G4
-    _G4 = si.init_g4shield(seed=seed * 1000003 + os.getpid())        # a different random stream in every worker
+    _G4 = si.init_g4shield(seed=seed * 1000003 + os.getpid(), natural=natural)   # a different stream in every worker
 
 
 def _transport_chunk(args):
@@ -199,7 +199,7 @@ def _transport_chunk(args):
     return r
 
 
-def transport(part, n_inter, workers, chunk=2000, seed=1):
+def transport(part, n_inter, workers, chunk=2000, seed=1, natural=None):
     """Every final state through the iron with Geant4, in chunks of interactions over forked workers."""
     starts = np.searchsorted(part["int"], np.arange(n_inter + 1))
     jobs = []
@@ -210,7 +210,7 @@ def transport(part, n_inter, workers, chunk=2000, seed=1):
                      part["p"][a:b, :3].astype(np.float64), part["v"][a:b].astype(np.float64)))
     ctx = mp.get_context("spawn")
     res = []
-    with ctx.Pool(workers, initializer=_worker_init, initargs=(seed,)) as pool:
+    with ctx.Pool(workers, initializer=_worker_init, initargs=(seed, natural)) as pool:
         for i, r in enumerate(pool.imap_unordered(_transport_chunk, jobs)):
             res.append(r)
             if (i + 1) % max(1, len(jobs) // 20) == 0:

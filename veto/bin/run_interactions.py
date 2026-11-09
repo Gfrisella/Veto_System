@@ -59,8 +59,8 @@ def main():
     ap.add_argument("--out", default=None)
     ap.add_argument("--ip-cut", choices=("full", "partial"), default="full",
                     help="measured-IP selection: full (IP < 10 cm) | partial (IP < 2.5 m) (ISSUES C8)")
-    ap.add_argument("--straw-cuts", choices=("none", "fairship"), default="none",
-                    help="A6b: straw hits + GenFit fit on the vertex tracks with the SHiP cuts (none = accept all, as before)")
+    ap.add_argument("--straw-cuts", choices=("none", "acts"), default="none",
+                    help="A6b: straw track-fit quality cuts on the vertex tracks; acts = ACTS parametrisation (pending, D14)")
     ap.add_argument("--g4", default=None, help="Geant4 transport of the helium products (bin/g4_vessel_transport.py)")
     ap.add_argument("--air-margin", type=float, default=0.4,
                     help="air interactions only within this distance [m] of the vessel and the fins (ISSUES C7); < 0 = all the air")

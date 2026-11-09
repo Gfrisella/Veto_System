@@ -10,7 +10,8 @@ Geometry: FairShip strawtubes.cxx + geometry/strawtubes_config.yaml (SHiP CVMFS 
 Digitisation as FairShip (strawtubesHit + shipDigiReco): a straw is hit if the track crosses its gas (DOCA to the wire
 < 0.9964 cm); measured drift distance |Gauss(DOCA, 120 um)|; only the earliest hit per straw (one track: one per
 straw). No inefficiency, no noise hits, no t0 smearing (FairShip default withT0 = False).
-Track fit: bin/genfit_straws.py (GenFit DAF, as shipDigiReco.findTracks), driven by bin/straw_reco.py.
+Track fit: GenFit discarded 2026-11-09 (Guglielmo); the fit will come from ACTS (FairShip, SHiP CVMFS 26.10,
+python/ACTSReco.py) as a resolution / efficiency parametrisation (ISSUES D14). Hits and digitisation stay here.
 
     LAYERS                          table of the 32 layers (station, view, layer, z [m], angle [rad])
     layer_states(pos, mom, q)       (x, y, tx, ty) of tracks at every layer z (RK4 in the field map), lost mask
@@ -158,64 +159,9 @@ def hit_summary(h, n_tracks):
     return nh, st[:, 1:].sum(1)
 
 
-def reconstruct(pos, mom, q, rng, workdir, workers=8, states=None, lost=None, min_hits=25, min_stations=3):
-    """Post-processing reconstruction of tracks with the straws: layer states (RK4, or given: e.g. Geant4 with
-    scattering), digitisation, GenFit DAF fit (bin/genfit_straws.py in the SHiP CVMFS ROOT, `workers` processes).
-    pos / mom (n, 3), q (n,): states at a common plane before SST1. Returns dict of per-track arrays: n_hits,
-    n_stations, fitted, converged, chi2, ndf, chi2ndf, p (fit), charge (fit), state at SST1 (x_ref, ..), good
-    (FairShip: converged and 0 <= chi2/ndf < 50), plus p_true."""
-    import subprocess
-    from pathlib import Path
-    from . import paths, spectrometer
-    workdir = Path(workdir)
-    workdir.mkdir(parents=True, exist_ok=True)
-    n = len(pos)
-    if states is None:
-        states, _, lost = layer_states(pos, mom, q)
-    h = digitize(states, rng, lost)
-    f = spectrometer.field_map()
-    grid = f.grid.reshape(*f.n, 3)
-    chunks = np.array_split(np.arange(n), max(1, min(workers, n)))
-    procs = []
-    for i, c in enumerate(chunks):
-        if not len(c):
-            continue
-        m = (h["track"] >= c[0]) & (h["track"] <= c[-1])
-        sub = {k: v[m] for k, v in h.items()}
-        sub["track"] = sub["track"] - c[0]
-        hp, op = workdir / f"hits_{i}.npz", workdir / f"fit_{i}.npz"
-        np.savez(hp, **sub, n_tracks=len(c), field=grid, x0=f.x0[0], y0=f.x0[1], z0=f.x0[2], dx=f.d[0], dy=f.d[1],
-                 dz=f.d[2], z_seed_cm=100 * 0.5 * (geo.Z_VESSEL_MIN + geo.Z_VESSEL_MAX), z_ref_cm=100 * geo.Z_SST1,
-                 min_hits=min_hits, min_stations=min_stations)
-        log = open(workdir / f"fit_{i}.log", "w")
-        procs.append((c, op, subprocess.Popen([str(paths.PROJECT_DIR / "bin/shipenv.sh"), "python3",
-                                               str(paths.PROJECT_DIR / "bin/genfit_straws.py"), str(hp), str(op)],
-                                              stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)))
-    out = None
-    for c, op, pr in procs:
-        if pr.wait() != 0:
-            raise RuntimeError(f"genfit_straws.py failed, see {op.with_suffix('.log')}")
-        r = np.load(op)
-        if out is None:
-            out = {k: np.full(n, np.nan) for k in r.files}
-        for k in r.files:
-            out[k][c] = r[k]
-    out["chi2ndf"] = out["chi2"] / out["ndf"]
-    out["good"] = (out["converged"] == 1) & (out["chi2ndf"] >= 0) & (out["chi2ndf"] < 50)
-    out["p_true"] = np.linalg.norm(mom, axis=1)
-    out["q_true"] = np.asarray(q, float)
-    return out
-
-
 FAIRSHIP_CUTS = dict(ndf_min=25, chi2ndf_max=5.0, p_min=1.0)   # usual SHiP analysis track cuts (A6b, 2026-11-05)
 
 
-def track_quality(b, p, q, rng, workdir, cuts=FAIRSHIP_CUTS, workers=8):
-    """Straw reconstruction of tracks given by their state b (n, 3) at SST1 and momentum p (n, 3), charge q, and the
-    FairShip quality cuts. Starts the tracks 0.5 m upstream of SST1 (straight, no field there). Returns (mask, fit)."""
-    b, p = np.asarray(b, float), np.asarray(p, float)
-    start = b - p / p[:, 2:3] * 0.5
-    fit = reconstruct(start, p, q, rng, workdir, workers=workers)
-    ok = ((fit["converged"] == 1) & (fit["ndf"] > cuts["ndf_min"]) & (fit["chi2ndf"] >= 0)
-          & (fit["chi2ndf"] < cuts["chi2ndf_max"]) & (fit["p"] > cuts["p_min"]))
-    return ok, fit
+def track_quality(*args, **kwargs):
+    """The GenFit fit was discarded on 2026-11-09 (ISSUES D14): ACTS parametrisation pending."""
+    raise NotImplementedError("straw track fit: GenFit discarded, ACTS parametrisation not implemented yet (ISSUES D14)")

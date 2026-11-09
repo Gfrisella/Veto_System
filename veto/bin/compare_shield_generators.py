@@ -20,6 +20,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from veto import geometry as geo, spectrometer, straws
+from veto.config import POT_PER_SPILL
 
 P_MIN, N_STATIONS_MIN = 1.0, 3
 
@@ -32,14 +33,15 @@ def stations_seen(v, p, q, seed=1):
     return straws.hit_summary(h, len(v))[1]
 
 Z_SST1, AX, AY, Z_PLANE = 82.0, 2.0, 3.0, 29.90
-FAIRSHIP = {"pi": 800.0, "p": 0.0, "K0-decay tracks": 0.0}      # Hz, cut 1 (pi: 1 MC, w = 769; K0: 0 decay tracks,
-# < 18 Hz 90 % CL; the 8 Hz entry is a pi from a K_L hadronic interaction in the cavern, 2026-11-09)
+FAIRSHIP = {"pi": 800.0 * 0.8, "p": 0.0, "K0-decay tracks": 0.0}      # Hz, cut 1 (pi: 1 MC, w = 769 at 5e13 -> x0.8; K0: 0 decay tracks,
+# < 14 Hz 90 % CL at 4e13 (< 18 at 5e13); the 8 Hz (5e13) entry is a pi from a K_L hadronic interaction in the cavern, 2026-11-09)
 CHARGED = {"pi": [211], "p": [2212], "K": [321], "e": [11], "mu": [13]}
 
 
 def analyse(path):
     z = np.load(path); js = json.load(open(Path(path).with_suffix(".json")))
-    w_int = z["int_weight"]; code = z["int_code"]; v0 = z["int_v0"]
+    f = POT_PER_SPILL / js.get("pot_per_spill", 5e13)      # D13: runs before 2026-11-09 are per 5e13 -> 4e13
+    w_int = z["int_weight"] * f; code = z["int_code"]; v0 = z["int_v0"]
     pi, pdg, p, v = z["part_int"], z["part_pdg"], z["part_p"], z["part_v"]
     w = w_int[pi]
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -48,12 +50,12 @@ def analyse(path):
     acc = (p[:, 2] > 0) & (np.abs(x) < AX) & (np.abs(y) < AY)
     c3 = code[pi] == 3
     dec = (code[pi] == 4) & (v[:, 2] > Z_PLANE + 0.01)
-    r = {"split": js.get("mu_split", "not recorded"), "interactions": js["interactions_per_spill"],
+    r = {"split": js.get("mu_split", "not recorded"), "interactions": js["interactions_per_spill"] * f,
          "draws": js["draws"]}
     for k in ("K_L", "K_S", "Lambda", "pi+-", "p", "n"):
-        r[f"exit {k}"] = js["exit"][k]["per_spill"]
+        r[f"exit {k}"] = js["exit"][k]["per_spill"] * f
     d = js["v0_decays_in_vessel_per_spill"]
-    r["K_L decays in vessel"] = d.get("130", 0.0); r["K_S decays in vessel"] = d.get("310", 0.0)
+    r["K_L decays in vessel"] = d.get("130", 0.0) * f; r["K_S decays in vessel"] = d.get("310", 0.0) * f
     for name, codes in CHARGED.items():
         m = c3 & acc & np.isin(np.abs(pdg), codes)
         r[f"SST1 {name}"] = float(w[m].sum()); r[f"SST1 {name} MC"] = int(m.sum())

@@ -49,7 +49,7 @@ class RecoConfig:
     bounce_search: bool = True         # A2 (2026-11-05): second window for tracks whose backward line meets the cavern
     bounce_r_slope: float = 0.21       # wall / floor upstream: mirrored line from that point W, radius r + slope x |W - plane|
                                        # (0.21 = 68 % of bounced SST1 muons at z = 30.6; the bounce is not specular)
-    straw_cuts: str = None             # A6b: None = accept every track (as before); "fairship" = straw hits + GenFit fit
+    straw_cuts: str = None             # A6b: None = accept every track (as before); "acts" = straw fit quality cuts (ACTS, pending: GenFit discarded 2026-11-09)
                                        # (straws.py) on the vertex tracks: converged, ndf > 25, chi2/ndf < 5, fitted p > 1
     cone: float = 0.0                  # vertex cone [rad]: tracks of a vertex also search r0 + cone * (distance from
                                        # the vertex to the plane), for parents bent at the vertex (0 = off)

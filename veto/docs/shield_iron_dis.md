@@ -212,6 +212,59 @@ from the job's log + ROOT file and the upstream code the branch inherits:
 - The sample cannot give the fraction of MS7 interactions reaching SST1 (no-hit interactions are not stored): compare
   rates per particle type at SST1.
 
+### FairShip's muon-nuclear definition (2026-11-09, checked on lxplus in /cvmfs/ship.cern.ch/26.10)
+
+- `--MuonBack` transport (TRY_2026 sample): Geant4 muonNuclear switched on (`SetProcess("MUNU", 1)`, SetCuts.C), no
+  muon-nuclear specific cut in SetCuts.C / g4config.in. G4KokoulinMuonNuclearXS + G4MuonVDNuclearModel: only cut
+  ν > 0.2 GeV (CutFixed); Q² between the kinematic limits, no W cut; γ* → Bertini below 10 GeV, π⁰ in FTFP above.
+- `muonDIS/makeMuonDIS.py` (Pythia 6.4.28, not used in `--MuonBack`): MSEL = 2, PARP(2) = 2, CKIN defaults → W ≥ 2 GeV.
+- Ours: the Geant4 part (`cpp/g4dis.cc`, FTFP_BERT) is the same process with no extra cut; the Pythia 6 part is the
+  makeMuonDIS set-up (W > 2 GeV). So **columns A / C (Geant4 only) define an interaction exactly as the FairShip
+  sample** (9.9e5 / spill); the Pythia-6 default (1.8e5, W > 2) is not directly comparable by interaction count.
+- Consequence for D3: the like-for-like column C still expects 16 (box) / 6.3 (≥ 3/4 stations, p > 1) MC entries
+  where FairShip has 0. The generator / cut definition is ruled out as the explanation; left: the parent muon flux
+  into the last 50 cm (our TRY6 one-run pickle vs FairShip TRY_2026 from the target), production cuts / track killing
+  in the FairShip run, and our chain's V0 transport and forced-decay weights.
+
+### Pythia 8 photoproduction + DIS (2026-11-09, Annual Report 2026 Table 7 settings)
+
+`bin/p8_library.py --variant full` → `mu_library_iron_p8full.npz`: Pythia 8.230 photoproduction (`PDF:lepton2gamma`,
+`Photon:Q2max = 1.5`, `Photon:Wmin = 5`, the lowest value 8.230 allows; it hung before because the default W_min = 10
+GeV is above W_max at 20 GeV) + DIS (Q² > 1.5, W > 2), mixed by cross section. Photoproduction only above E_μ ≈ 14
+GeV (W_max > 5). σ per nucleon (p): 0.13 / 0.51 / 1.85 / 5.0 μb photoproduction + 0.04 / 0.07 / 0.13 / 0.24 μb DIS at
+19.5 / 34 / 106 / 500 GeV; total 35–75 % of Pythia 6. Not covered: Q² < 1.5 with W < 5 GeV.
+Chain (`shield_muon_fs2026_p8full`, all columns now per 4e13 p.o.t.; older runs × 0.8 in `generators.md`):
+
+| per spill (4e13) | Pythia 6 | Geant4 10.7 | P8 PP W>5 + DIS | FairShip |
+|---|---|---|---|---|
+| K_L decays in the vessel | 4 480 | 1 810 | 2 640 | |
+| K0-decay tracks at SST1 (box, all p) | 272 Hz | 98 Hz | 164 Hz | 0 (< 14 Hz) |
+| ≥ 3/4 stations, p > 1 | 113 Hz (18.4 entries) | 38.5 Hz (6.3) | 71.8 Hz (11.7, P(0) = 9e-6) | 0 |
+| K0 decays with 2 such tracks | 11.4 Hz | 3.1 Hz | 6.8 Hz | |
+
+Expected FairShip MC entries use 6.15 Hz per entry (7.69 Hz at 5e13 × 0.8). Deck: `deck_d3` (9 Nov, pending approval).
+
+### Validation with natural Geant4 (2026-11-09, `bin/shield_natural.py`, `cpp/g4shieldnat.cc`)
+
+The chain's parent muons (drawn ∝ weight, 1e7 per run) through the same MS7 iron box + field, Geant4 10.7.3 (FairShip's
+version), every process natural, muonNuclear σ × 10 (products weight 1/10). Leaving the iron, p > 1 GeV, per spill (4e13):
+
+| | natural, QGSP_BERT_HP_PEN (FairShip list) | natural, FTFP_BERT | chain, G4 10.7 (forced) |
+|---|---|---|---|
+| K_L | 3 499 ± 128 (899 MC) | 3 686 ± 130 | 3 387 |
+| π± | 93 770 ± 1 020 | 92 970 ± 1 010 | 93 090 |
+| K± | 7 014 ± 193 | 7 108 ± 197 | 6 704 |
+| p / n | 59 370 / 68 820 | 59 050 / 69 310 | 59 340 / 69 440 |
+| K_S / Λ | 1 728 / 907 | 1 522 / 915 | 582 / 286 |
+
+- The forced chain reproduces natural Geant4 for K_L, π, K±, p, n (1–2σ): forcing, library and transport are unbiased.
+- Physics list: QGSP_BERT_HP_PEN vs FTFP_BERT changes the K_L by 5 % (1σ).
+- Not in the chain (origin 2: photonuclear of the muon's radiated photons, ...): 1–2 % of the K_L, ~3 % of p / n.
+- K_S and Λ are 3× low in the chain: the default library decays them at the vertex (D9, V0-stable library);
+  K_S decays in the vessel stay ~1 % of the K_L decays.
+- Conclusion: FairShip's 0 MS7 K0-decay tracks is not explained by the iron physics. Left: the muon flux into MS7
+  (our TRY6 one-run parents vs FairShip TRY_2026 from the target) and anything between the shield exit and SST1.
+
 ### Q² and W of the interactions that make the K_L (`bin/kl_q2w.py` → `results/shield_dis/kl_q2w*.{md,json}`, `kl_q2w_<label>.png`)
 
 Generator level (K_L in the library final state, before the iron). Every library event weighted by how often the
