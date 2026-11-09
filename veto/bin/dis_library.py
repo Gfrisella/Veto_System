@@ -143,6 +143,7 @@ def p6_pack(r, E):
 # ------------------------------------------------------------------ Geant4 (one process per material)
 def g4_worker(material, n, out):
     sys.path.insert(0, str(paths.cpp_build()))
+    sys.path.insert(0, str(paths.PROJECT_DIR / "cpp" / "build_ship"))   # host build (bin/g4ship.sh, Geant4 10.7.3)
     import g4dis
     nist, rho = G4_MATERIALS[material]
     g4dis.initialize(seed=4242 + list(G4_MATERIALS).index(material), material=nist)

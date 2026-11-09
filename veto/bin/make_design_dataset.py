@@ -114,7 +114,16 @@ def main():
     if len(other):
         print(f"warning: old rows of non-SST1 types {other.tolist()} dropped: "
               f"{np.isin(types_old, other).sum():,} rows")
-    chosen_old = pick({t: np.where(types_old == t)[0] for t in SST1_TYPES}, args.cap, rng)
+    rows_by_type = {t: np.where(types_old == t)[0] for t in SST1_TYPES}
+    chosen_old = pick(rows_by_type, args.cap, rng)
+    reps_old = {}
+    if args.evt_n_correction:
+        # C5 (2026-11-06): repetitions of each evt_n counted on ALL old rows of its type, before the cap
+        evt_old = np.asarray(store["evt_n"][:n_old]).astype(np.int64)
+        for t, idx_all in rows_by_type.items():
+            k_all = weights.repetition_counts(evt_old[idx_all])
+            reps_old[t] = k_all[np.searchsorted(idx_all, chosen_old[t][0])]
+        del evt_old
     print(f"old: {n_old:,} rows classified, {time.time() - start_time:.0f} s", flush=True)
 
     parts = []
@@ -124,8 +133,10 @@ def main():
         raw = rows["weight"].copy()
         if args.evt_n_correction:
             # C5 (2026-11-05): an input muon (evt_n) seen in several old files counts once on average:
-            # weights.corrected_weights divides by the repetitions and keeps the total per file
-            rows["weight"] = weights.corrected_weights(rows["weight"] * scale, rows["evt_n"], n_files)
+            # weights.corrected_weights divides by the repetitions (counted before the cap, 2026-11-06)
+            # and keeps the total of the type per file
+            rows["weight"] = weights.corrected_weights(rows["weight"] * scale, rows["evt_n"], n_files,
+                                                       counts=reps_old[t])
         else:
             rows["weight"] = rows["weight"] * scale / n_files
         rows["scale"] = np.full(len(raw), scale / n_files, np.float32)

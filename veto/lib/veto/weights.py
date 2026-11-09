@@ -8,12 +8,14 @@ def repetition_counts(evt_n):
     return counts[inverse]
 
 
-def corrected_weights(weight, evt_n, n_files):
+def corrected_weights(weight, evt_n, n_files, counts=None):
     """Divide by the number of repetitions, keep the total, express it per file (per spill).
 
-    Used by analysis.ipynb and Analysis_multifiles.py.
+    counts: repetitions of each row's evt_n counted on the full sample (default: counted on `evt_n` itself).
+    Pass it when `weight` / `evt_n` are a random subsample, otherwise repetitions are under-counted.
+    Used by analysis.ipynb, Analysis_multifiles.py, make_design_dataset.py, run_selection.py.
     """
-    corrected = weight / repetition_counts(evt_n)
+    corrected = weight / (repetition_counts(evt_n) if counts is None else counts)
     return corrected * (weight.sum() / n_files) / corrected.sum()
 
 

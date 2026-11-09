@@ -4,6 +4,46 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-09 — origin/main: PR #13 (Shah Rukh, `veto-end-to-end`, 53dcc57) fetched, not yet merged here
+
+- Shell storage, source-pool / 2018-file comparisons, EM debris (g4slab, emdebris, debris_maps), CPU transport, cavern-rock
+  DIS (g4rock, rock_hits / rock_library / rock_apply), splitting sandbox, docs/STATUS.md, full_sim_inventory.md.
+- Trial merge into `veto-shield-dis`: clean, no file touched by both. Review notes: macOS binary cpp/emdebris/emdebris
+  committed; ~20 files with sqasim / CSCS paths; two EM-debris implementations; muon flow quoted at 4e13 PoT / spill.
+
+## 2026-11-09 — tracking cuts on the MS7 K0-decay tracks (branch `veto-shield-dis`, uncommitted)
+
+- `bin/compare_shield_generators.py`: new rows "K0/K_L/K_S-decay trk (3/4 st, p>1)" and "K0 decays, 2 trk": |p| > 1 GeV
+  and >= 3 of 4 straw stations with a hit (`straws.layer_states` + `digitize` + `hit_summary`, field map RK4).
+  Re-made `results/shield_dis/generators.{md,json}` from the existing chain outputs (no regeneration); previous table
+  kept as `generators_2026-11-06.*`. Summary in docs/shield_iron_dis.md.
+
+## 2026-11-06 (night) — DIS generator comparison for the MS7 K_L (D3) (branch `veto-shield-dis`, uncommitted)
+
+- `shield_dis.py generate --mu-split {pythia,geant4,crossover,w2}` (default still `pythia`); split stored in the json.
+- `bin/g4ship.sh build` also builds `g4dis` against FairShip's Geant4 10.7.3; `dis_library.py` finds it in cpp/build_ship.
+  New library `data/interactions/dis/mu_library_iron_g4v1073.npz` (iron Geant4 part with 10.7.3, 1 M events).
+- New `cpp/pythia8dis/` (pythia8_dis.cc + build.sh, CVMFS Pythia 8.230: NC DIS / photoproduction modes) and
+  `bin/p8_library.py` -> `mu_library_iron_p8dis.npz` (Pythia 8 DIS Q2 > 1, W > 2; vertices 0, weak decays by
+  fastveto.decay because Pythia 8.230 vertices are unusable) and `mu_library_iron_p6q2.npz` (Pythia 6 with Q2 > 1).
+- New `bin/compare_shield_generators.py` (chain vs FairShip table), `bin/kl_q2w.py` (Q2 / W of the K_L-making
+  interactions), `bin/plot_dis_sigma_generators.py`.
+- Runs: results/shield_dis/shield_muon_fs2026_{crossover,geant4only,geant4v1073,p6q2,p8dis}.{npz,json}; summary in
+  docs/shield_iron_dis.md "DIS generator comparison". Geant4 only = K_L / 2.6; Geant4 10.7 = 11.2; FairShip still
+  ~9-15x below; 86 % of the default K_L from Q2 < 1.
+- Note: under heavy load some g4ship workers fail to load libG4physicslists.so from CVMFS; the pool restarts them and
+  all chunks complete (checked: 1000/1000).
+
+## 2026-11-06 (evening) — C5 repeated-evt_n correction made consistent (branch `veto-shield-dis`, uncommitted)
+
+- `weights.corrected_weights(..., counts=None)`: optional repetitions counted on the full sample (for subsamples).
+- `make_design_dataset.py`: the repetitions k of each evt_n are now counted on ALL old rows of its type before the
+  per-type cap (before: inside the capped subsample, k under-counted); weight w*scale/k, type total kept per file.
+- `run_selection.py --pairing kdtree`: all copies kept with `corrected_weights` like time-window (C5);
+  `--kdtree-unique` restores the old one-entry-per-evt_n (`keep_unique_events`, temp1.py) behaviour.
+- Decision (Guglielmo, 6 Nov): keep every copy, divide by the repetitions, rescale to keep the rate.
+  Not re-run: datasets / results built before keep the old weights until regenerated.
+
 ## 2026-11-06 — re-runs started; fixes (branch `veto-shield-dis`)
 
 - `fastveto.dis.MuonLibrary.sample`: with split "pythia" an interaction below the Pythia grid had zero cross section in
