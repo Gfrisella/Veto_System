@@ -580,7 +580,7 @@ D4. MS7 shield DIS chain: simplifications
       D4 closes with the new neutrino flux (D14) and the range cut.
 
 D5. Muon source: enriched input disagrees with the old sample
-    STATUS: IN PROGRESS (9 Nov 2026: test the production / after-target momentum convention)
+    STATUS: DEFERRED (9 Nov 2026: check done, convention x 0.905 + tail angles x 0.56; enriched sample kept as is)
     The SST1-selected rate is 1.55x higher with the enriched input (1.9x above 100 GeV), at the same flux
     above 150 GeV: larger than any statistical error (docs/fast_veto_sim.md section 5). Also: the
     regeneration differs by 10-20 % from the old file, the > 200 GeV tail has a ~x2 model dependence
@@ -596,6 +596,19 @@ D5. Muon source: enriched input disagrees with the old sample
       muons to after-target momentum (target energy loss, /disk/lhcb_data/sqasim/fairship_match/afterTarget.py) and
       recompute the SST1-selected rate on a subsample (re-run, small).
 
+    9 Nov 2026 (D5 check, results/d5_convention/README.md): CONVENTION CONFIRMED but MINOR. The tail npz stores the
+      target-exit momentum + p_prod; build_enriched.py writes p_prod (mean loss above 150 GeV 5.2 %). The old file has a
+      flat shape against the tail at target exit (0.83-0.87 at 150-300 GeV) and a rising one at production (1.03 -> 1.26).
+      Fix alone: SST1-selected x 0.905. MAIN CAUSE of the 1.55x: the tail ANGLES (mean 3.04 vs 2.71 mrad, q90 5.45 vs
+      4.89 mrad at 200-350 GeV) with S(SST1 selected) rising 1e-5 -> 0.3 from < 1 to 10-15 mrad. Tail with the old
+      angles: x 0.563; old flux + angles x tail S = 3.67e3 vs 3.06e3 measured with the old input (N_eff 8). Both
+      together: about 1.06x the old input. Control: identical input rows give the same rate in alpha and delta.
+      Proposed (needs approval): rebuild the enriched file at target-exit momentum; settle the angles against the 2018
+      production pT / the SHiP muon-flux measurement, or reweight the tail in (p, theta); meanwhile quote +40 % as a
+      source systematic on the SST1-selected rate.
+    9 Nov 2026, Guglielmo: LEAVE THE ENRICHED SAMPLE AS IT IS for the moment (no rebuild, no re-run); the momentum
+      convention (x 0.905) and the tail angles (x 0.56) stay documented here; source systematic on the SST1-selected
+      muon rate quoted from this check until the angles are settled.
 D6. Interaction-library approximations
     STATUS: DECIDED (9 Nov 2026): energy rescaling on a branch
     Final states not rescaled to the exact muon energy (15 % grid); no nuclear effects (Fermi motion,
@@ -730,6 +743,15 @@ D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_invento
       (SHIP_RELEASE=26.10 preloads the host FreeType 2.13): acts, ROOT 6.40 and FairShip ACTSReco import; ACTSReco then
       needs a FairShip geometry file (global_variables.geoFile) from a 26.10 simulation. results/straws (GenFit fits)
       deleted. Next: FairShip 26.10 particle gun -> convertToACTS -> run_ACTSTracking -> resolution parametrisation.
+    9 Nov 2026, Guglielmo: ACTS option A. FairShip's ACTS gets the straw surfaces from FairShip's ROOT geometry file
+      (acts.examples.StrawtubeBuilder); we build that file ONCE with FairShip 26.10 (geometry only, no events) and feed
+      it OUR hits (straws.digitize gives FairShip detIDs -> geometry_id = GeometryIdentifier(volume 1, layer = 8 station
+      + 2 view - 6, sensitive = straw + layer x 300 (views 0, 3) / 315 (stereo)), as convertToACTS.py), then the same
+      chain: Gaussian 168 um smearing, truth seeds, Kalman fit in the field map, hit cut. CAUTION (Guglielmo): the MUON
+      SHIELD in FairShip 26.10 is NOT ours (we use TRY6): use the geometry file only for the straw tracker; check that
+      the straw station z (and the spectrometer field position) agree with our frame (z_FS - 2.14, geometry.Z_SST /
+      Z_MAGNET) and that nothing of FairShip's shield / cavern enters the ACTS tracking geometry or its material.
+      Alternative B (straw surfaces built in Python from straws.py, no FairShip file) not pursued.
 
 D15. CVMFS library loading under load (shield_dis / shield_natural workers)
     STATUS: OPEN (9 Nov 2026, decided: retry + count check)

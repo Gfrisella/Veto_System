@@ -4,6 +4,12 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-09 (night) — D5 momentum-convention check (results only, no code change)
+
+- `results/d5_convention/` (scripts, json, plots, README): the tail rows of the enriched input carry the production momentum
+  (target-exit momentum in the old file's convention would lower SST1-selected by ~10 %). The 1.55x excess comes mostly from
+  the tail's wider input angles (x 0.56 with the old angular shape). ISSUES D5.
+
 ## 2026-11-09 (night) — new neutrino flux, 2018 flux discarded; GenFit removed (branch `veto-shield-dis`)
 
 - `fastveto.neutrinos.load`: Shah Rukh's 2026-11-09 production (`/disk/gfs_lhcb/sqasim/nu_prod/tail`, `$VETO_NU_DIR`;
