@@ -150,8 +150,7 @@ def classify(d):
 
 def side_plane_x(z):
     """Half width of the side-wall planes: the vessel's lateral walls, continued past z = 80.6 m."""
-    slope = (geo.VESSEL_X_OUT - geo.VESSEL_X_IN) / (geo.Z_VESSEL_MAX - geo.Z_VESSEL_MIN)
-    return geo.VESSEL_X_IN + slope * (z - geo.Z_VESSEL_MIN)
+    return geo.vessel_half_widths(z)[0]
 
 
 def path_at_z(a, k, b, z):

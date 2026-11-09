@@ -4,7 +4,7 @@ FairShip TRY_2026_EM_SST1_origin full-physics numbers (fairship_sst1_origin/READ
 
     python3 bin/compare_shield_generators.py label=results/shield_dis/shield_muon_X.npz [...] [--out results/shield_dis/generators]
 
-Per file (rates per spill = Hz at 5e13 PoT/s):
+Per file (rates per spill = Hz at 4e13 PoT/s; files made before 2026-11-09 are read at 5e13, see the json / docs):
   interactions, what leaves the iron (p > 1 GeV, from the .json), V0 decays in the vessel (forced copies, .json);
   charged tracks at SST1 as in the FairShip comparison: straight line from their start point to z = 82 m,
   abs x < 2, abs y < 3, all p: pi, p, K, e, mu (code 3 = the interactions), "K0-decay tracks" = charged daughters of

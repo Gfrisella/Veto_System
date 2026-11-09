@@ -29,7 +29,7 @@ from . import geometry as geo
 from . import muon_types as mt
 from . import reco
 
-SPILLS_15Y = 6e20 / 5e13
+from .config import SPILLS_15Y  # noqa: E402  (4e13 p.o.t. per spill)
 CHARGE = {11: -1, 13: -1, 15: -1, 211: 1, 321: 1, 2212: 1, 3222: 1, 3112: -1, 3312: -1, 3334: -1, 411: 1, 431: 1,
           4122: 1, 521: 1}
 CODE_NAMES = {0: "helium", 1: "air", 2: "pvc", 3: "shield_iron", 4: "shield_iron_v0"}   # bin/shield_dis.py: last 50 cm of

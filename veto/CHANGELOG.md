@@ -4,6 +4,26 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-09 — 4e13 p.o.t. per spill everywhere (D13), shared geometry (branch `veto-shield-dis`)
+
+- **Normalisation (D13, decided by Guglielmo):** `config.POT_PER_SPILL = 4e13`, `SPILLS_15Y = 6e20 / 4e13 = 1.5e7`; every
+  `SPILLS_15Y` (interactions, shield_dis, dis_closure, muon / nu_dis_apply, run_reco, rock_apply, fastveto.neutrinos)
+  imports it. Inputs normalised to another p.o.t. are rescaled when READ: `weights.source_pot` (meta `pot_per_spill`;
+  else 4e13 for the Nov-4 pool v5 by its path; else legacy 5e13) and `weights.to_spill`, applied in io.load_output_file
+  (+ all planes), io.open_pickle_columns, io.open_store (weight / weight_raw; EventCalc stores untouched),
+  io.load_vessel_dataset / load_distribution, generate_muon_study (pool.json or path), make_design_dataset_gamma (seed
+  meta), shield_dis prepare / parents, em_debris, convert_ubt_data, make_muon_distribution, the neutrino flux and
+  nu stores. New stores / seeds / prepared files record `pot_per_spill = 4e13` (io.write_store), so nothing is scaled
+  twice. Source builders (tail_combine, build_enriched, build_pool) and the 2018-file comparisons keep their 5e13
+  internals (same normalisation as the 2018 file); build_pool records pot_per_spill = 5e13 in pool.json.
+- Effect (checked): legacy stores read x 0.8 (test stores; shield parents 0.8000); 15-year totals of single-muon
+  backgrounds unchanged, rates per spill x 0.8, combinatorial pairs x 0.64 per spill / x 0.8 per 15 years.
+  Result files made before this keep their 5e13 numbers until re-run.
+- **Shared geometry:** `geometry.Z_SHIELD_END`, `SHIELD_END_HALF_X / _Y` (were in shield_iron, fastveto.debris,
+  fastveto.targets, shell); `geometry.vessel_half_widths(z, clip=False)` takes numpy or torch and clips on request, used
+  by muon_types.side_plane_x, em_debris, shell.half, vessel_surface_map.vhalf; rock_apply.in_vessel = geometry.inside_vessel.
+  Checked identical to the old copies (side_plane_x within 4e-16 m).
+
 ## 2026-11-09 — origin/main: PR #13 (Shah Rukh, `veto-end-to-end`, 53dcc57) fetched, not yet merged here
 
 - Shell storage, source-pool / 2018-file comparisons, EM debris (g4slab, emdebris, debris_maps), CPU transport, cavern-rock

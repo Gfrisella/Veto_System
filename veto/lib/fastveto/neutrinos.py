@@ -24,8 +24,8 @@ Z_FIRST_VERTEX_OLD = -71.045      # m, fStartZ min of the sample
 Z_TARGET_ECN3 = -2.14             # m
 SHIFT = Z_TARGET_ECN3 - Z_FIRST_VERTEX_OLD
 TOTAL_EVENTS = 411_947_589
-POT_PER_SPILL = 5e13
-SPILLS_15_YEARS = 6e20 / POT_PER_SPILL
+FLUX_POT = 5e13                   # the 2018 flux file's weights: per spill of 5e13 p.o.t. (rescaled when read)
+from veto.config import POT_PER_SPILL, SPILLS_15Y as SPILLS_15_YEARS  # noqa: E402
 
 COLUMNS = ("pdg", "px", "py", "pz", "x", "y", "z", "mother_pdg", "mu_sibling", "mu_w")
 
@@ -58,7 +58,7 @@ def load(in_dir=DEFAULT_DIR, max_rows=None, vessel_only=False, pdgs=None, seed=0
     for k in ("px", "py", "pz"):
         d[k] = d[k].astype(np.float64)
     d["p"] = np.sqrt(d["px"] ** 2 + d["py"] ** 2 + d["pz"] ** 2)
-    d["w"] = d.pop("mu_w").astype(np.float64) * TOTAL_EVENTS / n_events
+    d["w"] = d.pop("mu_w").astype(np.float64) * TOTAL_EVENTS / n_events * (POT_PER_SPILL / FLUX_POT)   # per 4e13 spill
     if vessel_only:
         c = V.crossings(d["x"], d["y"], d["z"], d["px"], d["py"], d["pz"])
         m = c["face_in"] > 0

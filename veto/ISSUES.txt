@@ -592,7 +592,7 @@ D12. EM debris implemented twice (with B2)
     current dataset's muons.
 
 D13. Protons per spill: one convention
-    STATUS: IN PROGRESS (9 Nov 2026: decision 4e13 p.o.t. per spill everywhere, Guglielmo)
+    STATUS: DONE (9 Nov 2026: config.POT_PER_SPILL = 4e13, legacy inputs rescaled when read, CHANGELOG 2026-11-09)
     Was mixed: Nov-4 pool (build_pool_v5 --pot 4e13), rock_apply SPILLS = 1.5e7 vs config.py pot_spill, interactions /
     shield_dis / muon_dis_apply / nu_dis_apply / fastveto.neutrinos SPILLS_15Y = 6e20 / 5e13 and older pools (5e13).
     15-year totals agree; per-spill rates differ by 0.8.

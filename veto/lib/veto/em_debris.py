@@ -54,7 +54,7 @@ def make_maps(rec, w_per_spill, maps):
             if not len(ip):
                 continue                                 # no EM plane within 0.5 m (beyond Z_UBT + 10 m): 0
             sel = m & (rec["plane"] == ip[0])
-            xw = geo.VESSEL_X_IN + (geo.VESSEL_X_OUT - geo.VESSEL_X_IN) / (geo.Z_VESSEL_MAX - geo.Z_VESSEL_MIN) * (z - geo.Z_VESSEL_MIN)
+            xw = geo.vessel_half_widths(z)[0]
             u = np.abs(rec["x"][sel]) - xw
             side = (rec["x"][sel] < 0).astype(int)       # 0 = left (+x), 1 = right (-x): as fin_maps
             for sd in (0, 1):

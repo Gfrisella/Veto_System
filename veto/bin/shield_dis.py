@@ -48,7 +48,8 @@ from veto import paths
 from veto import shield_iron as si
 
 CODE_SHIELD, CODE_SHIELD_V0 = 3, 4             # veto.interactions.CODE_NAMES
-SPILLS_15Y = 6e20 / 5e13
+from veto.config import POT_PER_SPILL, SPILLS_15Y  # noqa: E402  (6e20 / 4e13 p.o.t.)
+from veto import weights  # noqa: E402
 UB = 1e-34                                    # microbarn -> m^2
 V0 = {130: 15.34, 310: 0.026844, 3122: 0.0789, -3122: 0.0789, 3322: 0.0871, -3322: 0.0871}   # c tau [m]
 MASS = {130: 0.497611, 310: 0.497611, 3122: 1.115683, 3322: 1.31486}
@@ -74,7 +75,7 @@ def prepare(a):
     z = z + si.MUON_Z_SHIFT
     p = np.sqrt(px ** 2 + py ** 2 + pz ** 2)
     L, s_in, s_out = si.iron_chord(x, y, z, px / p, py / p, pz / p)
-    w = np.asarray(d["weight"], np.float64)
+    w = weights.to_spill(np.asarray(d["weight"], np.float64), weights.source_pot(path=si.MUON_FILE))   # D13: per 4e13
     keep = (L > 0) & (pz > 0) & (w > 0)
     print(f"{len(x):,} muons ({w.sum():.4g} per spill), {keep.sum():,} cross the iron ({w[keep].sum():.4g} per spill), "
           f"z plane {np.median(z):.3f} m, {time.time() - t0:.0f} s")
@@ -83,7 +84,8 @@ def prepare(a):
              q=np.asarray(d["pdg"])[keep].astype(np.int8), weight=w[keep], evt_n=np.asarray(d["evt_n"])[keep],
              L=L[keep], s_in=s_in[keep], s_out=s_out[keep],
              meta=np.array(json.dumps(dict(source=str(si.MUON_FILE), z_shift=si.MUON_Z_SHIFT, n_all=len(x),
-                                           w_all=float(w.sum()), iron=[si.Z_IRON0, si.Z_SHIELD_END, si.HALF_X, si.HALF_Y]))))
+                                           w_all=float(w.sum()), iron=[si.Z_IRON0, si.Z_SHIELD_END, si.HALF_X, si.HALF_Y],
+                                           pot_per_spill=POT_PER_SPILL))))
     print(f"wrote {PREPARED}")
 
 
@@ -91,10 +93,11 @@ def parents(kind):
     """Lines through the iron: dict(x, y, z, u (n,3), p, L, s_in, s_out, weight, evt_n, pdg)."""
     if kind == "muon":
         f = np.load(PREPARED)
+        fs = POT_PER_SPILL / weights.source_pot(json.loads(str(f["meta"])), PREPARED)   # D13: legacy file 5e13 -> 4e13
         pv = np.stack([f["px"], f["py"], f["pz"]], 1)
         p = np.linalg.norm(pv, axis=1)
         return dict(x=f["x"], y=f["y"], z=f["z"], u=pv / p[:, None], p=p, L=f["L"], s_in=f["s_in"], s_out=f["s_out"],
-                    weight=f["weight"], evt_n=f["evt_n"], pdg=-13 * f["q"].astype(np.int64))
+                    weight=f["weight"] * fs, evt_n=f["evt_n"], pdg=-13 * f["q"].astype(np.int64))
     out = []
     have = set(np.load(NU_LIB)["nus"].tolist()) if Path(NU_LIB).exists() else {14, -14}
     for fl in NU_FLAVOURS:
@@ -279,7 +282,7 @@ def force_v0(inter, part, rng, copies=1):
 
 
 def exit_summary(inter, part):
-    """What leaves the shield per spill (kHz at 5e13 PoT/s = per spill / 1e3), by species, p > 1 GeV."""
+    """What leaves the shield per spill (kHz at 4e13 PoT/s = per spill / 1e3), by species, p > 1 GeV."""
     w = inter["weight"][part["int"]]
     pm = np.linalg.norm(part["p"][:, :3], axis=1)
     out = {}

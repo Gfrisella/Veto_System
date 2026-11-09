@@ -18,10 +18,12 @@ from pathlib import Path
 
 import numpy as np
 
-Z_SHIELD_END = 29.89
+from . import geometry as geo
+
+Z_SHIELD_END = geo.Z_SHIELD_END
 DZ = 0.5
 Z_IRON0 = Z_SHIELD_END - DZ
-HALF_X, HALF_Y = 1.71, 1.27
+HALF_X, HALF_Y = geo.SHIELD_END_HALF_X, geo.SHIELD_END_HALF_Y
 RHO_FE = 7.874                      # g/cm^3 (G4_Fe)
 A_FE, Z_FE = 55.845, 26.0
 DEDX_MU = 1.6                       # GeV/m, mean muon energy loss in iron (10 - 300 GeV, ionisation + radiative)

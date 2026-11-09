@@ -12,6 +12,7 @@ results/em_debris/em_maps.npz (load with run_reco.py --em-debris). Each stage ru
 import _bootstrap  # noqa: F401
 
 import argparse
+import json
 import multiprocessing as mp
 import os
 import time
@@ -19,7 +20,8 @@ import time
 import numpy as np
 
 from veto import em_debris as em
-from veto import paths
+from veto import paths, weights
+from veto.config import POT_PER_SPILL
 from veto import shield_iron as si
 
 OUT = paths.results_dir() / "em_debris"
@@ -73,7 +75,7 @@ def main():
     a = ap.parse_args()
     t0 = time.time()
     f = np.load(paths.PROJECT_DIR / "data" / "shield_dis" / "muons_iron.npz")    # shield_dis.py prepare
-    w = f["weight"].astype(np.float64)
+    w = f["weight"].astype(np.float64) * (POT_PER_SPILL / weights.source_pot(json.loads(str(f["meta"])), "muons_iron"))  # D13
     rng = np.random.default_rng(a.seed)
     idx = rng.choice(len(w), a.n, p=w / w.sum())
     w_mu = np.full(a.n, w.sum() / a.n)                               # per spill, per drawn muon

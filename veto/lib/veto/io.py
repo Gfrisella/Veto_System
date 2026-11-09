@@ -9,6 +9,8 @@ import numpy as np
 
 from . import geometry as geo
 from . import paths
+from . import weights
+from .config import POT_PER_SPILL
 
 TRACK_KEYS = ("x", "y", "z", "px", "py", "pz")
 
@@ -64,7 +66,7 @@ def load_output_file(filename, plane=2):
     state = raw["planes"][plane]
     data = {key: np.asarray(state[key]) for key in ("x", "y", "px", "py", "pz")}
     data["z"] = np.asarray(state["z"]) if "z" in state else np.full_like(data["x"], geo.Z_START)
-    data["weight"] = np.asarray(raw["weight"])
+    data["weight"] = weights.to_spill(np.asarray(raw["weight"]), weights.source_pot(path=filename))
     data["evt_n"] = np.asarray(raw["evt_n"])
     data["pdg"] = np.asarray(raw["pdg"])
     return data
@@ -75,7 +77,7 @@ def load_output_file_all_planes(filename):
     raw = load_pickle(filename)
 
     data = {
-        "weight": np.asarray(raw["weight"]),
+        "weight": weights.to_spill(np.asarray(raw["weight"]), weights.source_pot(path=filename)),
         "evt_n": np.asarray(raw["evt_n"]),
         "pdg": np.asarray(raw["pdg"]),
     }
@@ -113,7 +115,9 @@ def select(data, mask):
 def load_vessel_dataset(filename=None):
     filename = filename or paths.derived("muon_vessel_dataset.npz")
     with np.load(filename) as npz:
-        return {key: npz[key] for key in npz.files}
+        data = {key: npz[key] for key in npz.files}
+    f = POT_PER_SPILL / weights.source_pot(path=filename)          # D13: legacy (5e13) -> per 4e13 spill
+    return {k: v * f if k in WEIGHT_COLUMNS + ("weights", "w") else v for k, v in data.items()}
 
 
 def load_distribution(filename=None):
@@ -122,6 +126,7 @@ def load_distribution(filename=None):
     missing = [k for k in ("H", "x_edges", "y_edges", "z_edges") if k not in distribution]
     if missing:
         raise ValueError(f"Missing keys in {filename}: {missing}")
+    distribution["H"] = distribution["H"] * (POT_PER_SPILL / weights.source_pot(distribution, filename))   # D13
     return distribution
 
 
@@ -142,8 +147,11 @@ def write_store(directory, columns, meta=None):
     for key, value in columns.items():
         np.save(directory / f"{key}.npy", np.ascontiguousarray(value))
     n = len(next(iter(columns.values())))
+    meta = dict(meta or {})
+    if "weight" in columns and not str(meta.get("kind", "")).startswith("eventcalc"):
+        meta.setdefault("pot_per_spill", POT_PER_SPILL)          # weights written per spill of 4e13 p.o.t. (D13)
     with open(directory / "meta.json", "w") as f:
-        json.dump({"n": int(n), "columns": list(columns), **(meta or {})}, f, indent=2)
+        json.dump({"n": int(n), "columns": list(columns), **meta}, f, indent=2)
     print(f"Wrote {n:,} rows, columns {list(columns)} to {directory}")
 
 
@@ -152,7 +160,42 @@ def open_store(directory):
     with open(directory / "meta.json") as f:
         meta = json.load(f)
     columns = {key: np.load(directory / f"{key}.npy", mmap_mode="r") for key in meta["columns"]}
+    if not str(meta.get("kind", "")).startswith("eventcalc"):    # EventCalc weights: per 6e20 p.o.t., not per spill
+        columns = _rescaled(columns, weights.source_pot(meta, directory))
     return columns, meta
+
+
+WEIGHT_COLUMNS = ("weight", "weight_raw")
+
+
+class ScaledColumn:
+    """A memory-mapped weight column read as weights.to_spill(column) (D13: legacy 5e13 inputs -> 4e13 per spill).
+    Slicing / indexing / np.asarray read only what is asked, as for the memmap itself."""
+
+    def __init__(self, base, factor):
+        self.base, self.factor = base, factor
+        self.shape, self.dtype, self.ndim = base.shape, base.dtype, base.ndim
+
+    def __len__(self):
+        return len(self.base)
+
+    def __getitem__(self, idx):
+        return (np.asarray(self.base[idx]) * self.factor).astype(self.dtype, copy=False)
+
+    def __array__(self, dtype=None, copy=None):
+        a = np.asarray(self.base) * self.factor
+        return a.astype(dtype or self.dtype, copy=False)
+
+    def sum(self, *args, **kw):
+        return np.asarray(self).sum(*args, **kw)
+
+
+def _rescaled(columns, pot):
+    """Weight columns of an input normalised per spill of `pot` p.o.t., read per spill of config.POT_PER_SPILL."""
+    if pot == POT_PER_SPILL:
+        return columns
+    f = POT_PER_SPILL / pot
+    return {k: ScaledColumn(v, f) if k in WEIGHT_COLUMNS else v for k, v in columns.items()}
 
 
 def iterate_store(directory, chunk_size=10_000_000, columns=None, stop=None):
@@ -282,4 +325,5 @@ def scan_pickle_columns(filename, threshold=1 << 20):
 def open_pickle_columns(filename):
     """Memory-mapped columns of a large pickle (see scan_pickle_columns); nothing is loaded."""
     columns, n = scan_pickle_columns(filename)
-    return {k: np.memmap(filename, np.dtype(dtype), "r", offset, n) for k, (offset, dtype) in columns.items()}, n
+    cols = {k: np.memmap(filename, np.dtype(dtype), "r", offset, n) for k, (offset, dtype) in columns.items()}
+    return _rescaled(cols, weights.source_pot(path=filename)), n

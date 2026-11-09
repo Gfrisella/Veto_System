@@ -48,7 +48,8 @@ def main():
         for k, v in cols.items():
             np.save(out / f"{k}.npy", np.ascontiguousarray(v))
         json.dump({"n": n, "columns": list(cols), "flavour": int(pdg), "max_xy": a.max_xy,
-                   "weight": "neutrinos per spill (fastveto.neutrinos)", "source": "fastveto.neutrinos.load"},
+                   "weight": "neutrinos per spill (fastveto.neutrinos)", "source": "fastveto.neutrinos.load",
+                   "pot_per_spill": neutrinos.POT_PER_SPILL},
                   open(out / "meta.json", "w"), indent=1)
         print(f"nu {int(pdg)}: {n:,} of {int(m.sum()):,} rows, {cols['weight'].sum():.4g} per spill -> {out}")
 
