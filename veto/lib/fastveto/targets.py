@@ -29,7 +29,7 @@ from . import vessel as V
 
 TARGET_HELIUM, TARGET_AIR, TARGET_PVC, TARGET_PLANE0 = 0, 1, 2, 10
 AIR_MARGIN = 0.4                   # m, air kept around the vessel and the fins (None = all the air)
-Z_SHIELD_END = 29.89               # m, TRY6 shield end
+Z_SHIELD_END = geo.Z_SHIELD_END   # m, TRY6 shield end
 UPSTREAM_AIR = True                # D7 (2026-11-05): paths start at the shield end (straight back from A, no field there),
                                    # so the 1.24 m of air before the vessel is a target (only air lies there)
 MIN_COS = 0.02                     # planes of constant z: grazing incidence capped (as veto.scattering)

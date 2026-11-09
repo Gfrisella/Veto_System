@@ -46,6 +46,12 @@ VESSEL_SHIFT = Z_VESSEL_MIN - OLD_Z_VESSEL[0]   # +0.53 m: fins of old-frame des
 VESSEL_X_IN, VESSEL_X_OUT = 0.5, 2.0     # half widths at entrance / exit
 VESSEL_Y_IN, VESSEL_Y_OUT = 1.35, 3.0
 
+# End of the muon shield (TRY6, MuonsAndMatter frame): exit face of the last magnet (MS7) and its outer iron envelope,
+# constant along z (dX + gap + x_yoke = 69 + 8 + 94 cm, dY + dY_yoke = 51 + 76 cm). Used by shield_iron, fastveto
+# (targets, debris) and the shell storage.
+Z_SHIELD_END = 29.89
+SHIELD_END_HALF_X, SHIELD_END_HALF_Y = 1.71, 1.27
+
 # UBT aperture = vessel entrance window
 UBT_HALF_X, UBT_HALF_Y = VESSEL_X_IN, VESSEL_Y_IN
 
@@ -111,9 +117,15 @@ def shield_magnets(params=SHIELD_TRY6):
     return magnets
 
 
-def vessel_half_widths(z):
-    """Half widths (x, y) of the decay vessel at z (linear in z)."""
-    f = (np.asarray(z) - Z_VESSEL_MIN) / (Z_VESSEL_MAX - Z_VESSEL_MIN)
+def vessel_half_widths(z, clip=False):
+    """Half widths (x, y) of the decay vessel at z (linear in z). z: number, numpy array or torch tensor (same type
+    back). clip=False: the walls continued past both ends (fins / side planes); clip=True: entrance widths upstream of
+    the vessel, exit widths downstream."""
+    if not hasattr(z, "clip"):
+        z = np.asarray(z, dtype=float)
+    f = (z - Z_VESSEL_MIN) / (Z_VESSEL_MAX - Z_VESSEL_MIN)
+    if clip:
+        f = f.clip(0, 1)
     return (
         VESSEL_X_IN + (VESSEL_X_OUT - VESSEL_X_IN) * f,
         VESSEL_Y_IN + (VESSEL_Y_OUT - VESSEL_Y_IN) * f,

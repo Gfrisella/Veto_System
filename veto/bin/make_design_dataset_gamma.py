@@ -27,7 +27,8 @@ from pathlib import Path
 import numpy as np
 
 from make_design_dataset import finish
-from veto import io, paths
+from veto import io, paths, weights
+from veto.config import POT_PER_SPILL
 from veto import muon_types as mt
 
 NAME = "design-optimization-dataset-gamma"
@@ -63,8 +64,12 @@ def main():
         d = np.load(f)
         kept = d["kept_types"]
         n_seeds_by_type += kept
-        w_all += d["w_by_type"]
+        fs = POT_PER_SPILL / weights.source_pot(json.loads(str(d["meta"])), f)   # D13: legacy seeds 5e13 -> 4e13
+        w_all += d["w_by_type"] * fs
         rows = {k: d[k] for k in d.files if d[k].ndim == 1 and len(d[k]) == len(d["type"])}
+        for k in ("weight", "weight_raw"):
+            if k in rows and fs != 1:
+                rows[k] = (rows[k] * fs).astype(rows[k].dtype)
         rows["run"] = np.full(len(rows["type"]), int(d["seed"]), np.int32)
         parts.append(rows)
     data = io.concatenate(parts)

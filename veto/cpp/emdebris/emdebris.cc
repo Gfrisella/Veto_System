@@ -14,6 +14,7 @@
 // exit face with kinetic energy > 0.1 MeV is recorded in the MUON FRAME (offset from the muon's exit point and
 // momentum, rotated so the muon direction is +z), as the Geant4 library.
 //
+//   build (not committed): g++ -O2 -std=c++17 -o cpp/emdebris/emdebris cpp/emdebris/emdebris.cc
 //   emdebris E_GeV theta_rad n_muons seed out.bin [depth_cm]
 // out.bin: int32 n_muons, then records {int32 ev, int32 pdg, float ekin_GeV, float offx_m, float offy_m, float offz_m,
 // float px_GeV, float py_GeV, float pz_GeV, float dt_ns}. Prints the time per muon to stderr.

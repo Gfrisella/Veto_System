@@ -71,6 +71,8 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "lib"))
 
 from veto import muon_types as mt  # noqa: E402
+from veto import weights  # noqa: E402
+from veto.config import POT_PER_SPILL  # noqa: E402
 
 MM_DIR = Path("/disk/users/gfrise/MuonsAndMatter")       # = /home/hep/gfrise/work_dir/MuonsAndMatter
 INPUT = "data/muons/full_sample_after_target.h5"
@@ -167,6 +169,9 @@ class Simulation:
             for j, k in enumerate(("px", "py", "pz", "x", "y", "z", "pdg", "weight")):
                 muons[:, j] = f[k][:n]
             self.pool_index = f["pool_index"][:n] if "pool_index" in f else None
+        pool_json = Path(input_file).parent / "pool.json"           # D13: the pool's p.o.t. per spill (v5 records it)
+        pot = weights.source_pot(json.load(open(pool_json)) if pool_json.exists() else None, input_file)
+        muons[:, 7] = weights.to_spill(muons[:, 7], pot)              # weights per spill of config.POT_PER_SPILL
         self.muons, self.input_file = muons, str(input_file)
         self.charge = torch.from_numpy(muons[:, 6].copy())
         if self.charge.abs().eq(13).all():                            # as run_from_params: PDG id -> charge
@@ -540,7 +545,7 @@ def main():
                     n_input=int(len(typ)), params=args.params, mm_dir=args.mm_dir, input=sim.input_file, planes=PLANES,
                     types=mt.TYPES, created=time.strftime("%Y-%m-%d %H:%M:%S"),
                     settings="TRY6, diluted iron, NI from B, cavern, field simulated, n_steps 5000, every muon to every plane",
-                    storage=args.storage)
+                    storage=args.storage, pot_per_spill=POT_PER_SPILL)
         if args.storage == "alpha":
             meta.update(alpha_rows_per_seed=args.alpha_rows_per_seed, alpha_floor=args.alpha_floor, alpha=info)
         elif args.storage == "shell":

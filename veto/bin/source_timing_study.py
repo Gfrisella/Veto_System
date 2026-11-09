@@ -30,8 +30,10 @@ import numpy as np
 from veto import paths
 
 import old_convention as oc                                          # bin/: the 2018 loss map, the file's selection
+import os
+FVS_ROOT = os.environ.get("VETO_FVS", "/disk/users/sqasim/workspace/uzh/fast-veto-sim")   # read only
 
-FVS = Path("/disk/users/sqasim/workspace/uzh/fast-veto-sim")          # read only: the original productions
+FVS = Path(f"{FVS_ROOT}")          # read only: the original productions
 LOGP = np.arange(0.0, 2.81, 0.1)
 POT = 5e13
 PCUT = 150.0

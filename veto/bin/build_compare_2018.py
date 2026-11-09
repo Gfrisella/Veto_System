@@ -20,10 +20,12 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import os
+SHARED = os.environ.get("VETO_SHARED", "/disk/lhcb_data/sqasim")   # Shah Rukh's shared data (read only)
 
-SRC = "/disk/lhcb_data/sqasim/fairship_match/tail/fsm_p8_qgsp_t18_g410_[0-9]*.npz"
+SRC = f"{SHARED}/fairship_match/tail/fsm_p8_qgsp_t18_g410_[0-9]*.npz"
 H5 = "/disk/users/gfrise/MuonsAndMatter/data/muons/full_sample_after_target.h5"
-REF = "/disk/lhcb_data/sqasim/reference-2018-fairship-506M/reference_2018.h5"
+REF = f"{SHARED}/reference-2018-fairship-506M/reference_2018.h5"
 PE = np.geomspace(10, 400, 33)
 TE = np.linspace(0, 4, 21)
 MB = 768.75
@@ -136,7 +138,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("npz", nargs="?")
     ap.add_argument("--compute", action="store_true")
-    ap.add_argument("--out", default="/disk/lhcb_data/sqasim/compare2018")
+    ap.add_argument("--out", default=f"{SHARED}/compare2018")
     a = ap.parse_args()
     compute(a.out) if a.compute else plot(a.npz)
 

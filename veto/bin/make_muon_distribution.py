@@ -15,13 +15,14 @@ import pickle
 import numpy as np
 
 from veto import geometry as geo
-from veto import io, paths, plotting
+from veto import io, paths, plotting, weights
 from veto.tracks import extrapolate_to_z
 
 
 def load_flat(filename):
     raw = io.load_pickle(filename)
     data = {key: np.asarray(raw[key], dtype=float) for key in ("x", "y", "px", "py", "pz", "weight")}
+    data["weight"] = weights.to_spill(data["weight"], weights.source_pot(path=filename))   # D13: per 4e13 spill
     data["z"] = np.asarray(raw["z"], dtype=float) if "z" in raw else np.zeros_like(data["x"])
     lengths = {key: len(v) for key, v in data.items()}
     if len(set(lengths.values())) != 1:
@@ -88,7 +89,7 @@ def main():
     H_full[:, mid:, :] = H[:, :mid, :][:, ::-1, :]
     print(f"Full distribution weight: {H_full.sum():.6g} (expected {2 * H[:, :mid, :].sum():.6g})")
 
-    distribution = {"H": H_full, "x_edges": x_edges, "y_edges": y_edges, "z_edges": z_edges,
+    distribution = {"H": H_full, "x_edges": x_edges, "y_edges": y_edges, "z_edges": z_edges, "pot_per_spill": weights.POT_PER_SPILL,
                     "dx": args.dx, "dy": args.dy, "dz": args.dz,
                     "y_symmetry": True, "y_range_stored": (y_min, y_max)}
     output = args.output or paths.results_dir() / "muon_distribution_3d.pkl"

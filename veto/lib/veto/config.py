@@ -4,6 +4,13 @@ import argparse
 
 from . import geometry as geo
 
+# Normalisation (ISSUES D13, decided 2026-11-09): every weight is muons (neutrinos, ...) per spill of 4e13 p.o.t.
+# (FairShip run_fixedTarget.py), a 1 s spill, so rates per spill = Hz. 6e20 p.o.t. in 15 years -> 1.5e7 spills.
+# Inputs normalised to another p.o.t. are rescaled when they are read (weights.to_spill, weights.source_pot).
+POT_PER_SPILL = 4e13
+POT_15_YEARS = 6e20
+SPILLS_15Y = POT_15_YEARS / POT_PER_SPILL
+
 DEFAULT_CONFIG = {
     # single-muon cuts
     "p_min": 1.0,                     # GeV/c
@@ -25,8 +32,8 @@ DEFAULT_CONFIG = {
     "candidate_radius": 0.10,         # m, deliberately larger than doca_max
 
     # normalization
-    "pot_spill": 5e13,
-    "pot_15_years": 6e20,
+    "pot_spill": POT_PER_SPILL,
+    "pot_15_years": POT_15_YEARS,
 }
 
 

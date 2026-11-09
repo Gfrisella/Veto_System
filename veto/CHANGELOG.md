@@ -4,11 +4,159 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-10 — ACTS straw tracking: FairShip pixi environment + PR #1545 (branch `veto-shield-dis`)
+
+- New `bin/fairship_env.sh`: runs a command in the FairShip pixi environment 26.10 on CVMFS (ROOT 6.40, Geant4 11.4,
+  ACTS 48.2; works on this host without workarounds) with our `libShipActsTracking` first.
+- New `external/fairship_acts/` (force-added, the rest of `external/` stays ignored): FairShip `ActsTracking/` from PR
+  #1545 head 786b361 (straw material from the TGeo straw volumes), `build.sh` rebuilds the library in that
+  environment, README with provenance and the validation (499 / 500 muons of 10 GeV fitted, p median 9.992 GeV, core
+  sigma(p)/p 0.94 %, chi2/ndf 0.92).
+- `bin/shipenv.sh`: comment points to `bin/fairship_env.sh` for ACTS. The attempt on the slc9 release 26.10 (patched
+  ACTS-fork library, own ACTS-examples chain, EL9 compatibility libraries) was dropped; findings in ISSUES D14.
+
+## 2026-11-09 (night) — D5 momentum-convention check (results only, no code change)
+
+- `results/d5_convention/` (scripts, json, plots, README): the tail rows of the enriched input carry the production momentum
+  (target-exit momentum in the old file's convention would lower SST1-selected by ~10 %). The 1.55x excess comes mostly from
+  the tail's wider input angles (x 0.56 with the old angular shape). ISSUES D5.
+
+## 2026-11-09 (night) — new neutrino flux, 2018 flux discarded; GenFit removed (branch `veto-shield-dis`)
+
+- `fastveto.neutrinos.load`: Shah Rukh's 2026-11-09 production (`/disk/gfs_lhcb/sqasim/nu_prod/tail`, `$VETO_NU_DIR`;
+  parts nuMB hf == 0, charmc, beautyc; weight w_decay x POT_PER_SPILL / protons per part; keys + `part`). The 2018
+  loader and `bin/extract_neutrinos.py` removed. `bin/nu_prepare.py` -> `data/interactions/neutrinos2026/store_nu*`
+  (6 flavours, 1.4 min); `shield_dis.NU_STORES`, `nu_dis_apply.py --store` default to it.
+- Discarded (Guglielmo): every file made with the 2018 flux (`logs/nu2026/discarded_2018_nu.txt`, ~42 GB) and the
+  symlink `data/interactions/neutrinos` (target in Shah Rukh's area untouched).
+- GenFit removed in favour of ACTS: `bin/genfit_straws.py`, `bin/straw_reco.py`, `straws.reconstruct` deleted;
+  `straws.track_quality` and `run_interactions.py --straw-cuts acts` raise NotImplementedError until the ACTS
+  parametrisation exists (ISSUES D14).
+- `bin/shipenv.sh`: `SHIP_RELEASE` (default 25.09); for 26.x the host FreeType is preloaded so ACTS imports
+  (host harfbuzz vs CVMFS FreeType 2.10.1). `results/straws` (GenFit fits, 429 MB) deleted.
+
+## 2026-11-09 (night) — issue review: decisions for every open item (branch `veto-shield-dis`, docs only)
+
+- ISSUES.txt: dated "9 Nov 2026" decision under every open item, action list at the top, new D15 (CVMFS library loading
+  under load). D3 default -> Geant4 muonNuclear; D4 range cut; C7 forced K_L decays in fastveto; ACTS (CVMFS 26.10)
+  for the track-fit parametrisation; D14 debris in time; B4 benchmark set into the objective.
+- New docs/detector_questions.md (C2 + C6). docs/STATUS.md: section for the veto side (+ the GSimple 2026 neutrino-flux
+  note from another session, committed with it).
+
+## 2026-11-09 (evening) — natural Geant4 validation of the MS7 chain (branch `veto-shield-dis`)
+
+- New `cpp/g4shieldnat.cc` (g4shield + physics list by name via G4PhysListFactory, muonNuclear x bias with weights,
+  origin per particle), built by `bin/g4ship.sh build` (`G4SHIP_MODULES` selects modules).
+- `shield_iron.init_g4shield(natural=...)`, `shield_dis.transport(natural=...)`; new `bin/shield_natural.py`.
+- Results: results/shield_dis/natural_{QGSP_BERT_HP_PEN,FTFP_BERT}_b10.json (summary in docs/shield_iron_dis.md).
+
+## 2026-11-09 (evening) — D3 natural-Geant4 validation of the MS7 chain; issue decisions (branch `veto-shield-dis`)
+
+- New `cpp/g4shieldnat.cc` (g4shield geometry + field, natural muonNuclear biased by `--mu-bias`, products weighted
+  1/bias, origin 1 = muonNuclear / 2 = other secondaries) and `bin/shield_natural.py` (draws the chain's MS7 parents,
+  counts what crosses z = 29.90 m per species and origin, compares with the chain runs). `--save` (+ `--v0-copies`, 50)
+  writes the muonNuclear products at the plane in the `shield_dis.py` npz format (one "interaction" per particle,
+  forced V0 decays in the vessel) so `compare_shield_generators.py` reads it like a chain run.
+- Runs (9.8e6 muons, bias 10, ~4-6 min each): `results/shield_dis/natural_{QGSP_BERT_HP_PEN,FTFP_BERT}_b10.json`,
+  `shield_muon_natural_*_b10.{npz,json}`, table `generators_natural.md`: exit K_L 3 510 / 3 540 per spill vs chain
+  G4 10.7 3 390 (Pythia 6 9 490); K0-decay tracks (>= 3/4 st, p > 1) 48.4 / 42.7 Hz vs 38.5 -> 7.9 expected FairShip
+  entries, FairShip 0 (ISSUES D3).
+- Also committed: `bin/sst1_bounce_categories.py` (straight / wall / floor SST1 muons), `bin/verify_zeta.py`, small
+  fixes in `shield_dis.py`, `shield_iron.py` (natural module loader), `g4ship.sh`.
+- ISSUES decisions (Guglielmo, 9 Nov): D12 ours main, C9 K-based split + MuonsAndMatter patch, C3 deferred, D5 test
+  the momentum convention, C1 ghost hits, D9 redo with multi-vertex rejection, D2 lateral-track veto study, D6 energy
+  rescaling branch, D4/D14 new neutrino sample + nu_e library.
+
+## 2026-11-09 (afternoon) — Pythia 8 photoproduction library, comparison at 4e13 (branch `veto-shield-dis`)
+
+- `bin/p8_library.py --variant full`: Pythia 8 photoproduction (Q² < 1.5, W > 5, Annual Report 2026 Table 7) + DIS
+  (Q² > 1.5, W > 2) mixed by σ -> `mu_library_iron_p8full.npz`; empty parts skipped per energy.
+- `bin/shield_dis.py` records `pot_per_spill` in its json; `bin/compare_shield_generators.py` puts every run on 4e13
+  (older runs × 0.8, FairShip π 800 -> 640 Hz). New chain run `shield_muon_fs2026_p8full` (2e6 draws, all transported).
+- Note: run shield_dis with `bin/g4ship.sh` (Geant4 10.7.3 env); under load many workers fail to load CVMFS libraries and
+  are restarted (16 416 ImportErrors in the log, all 2e6 interactions transported).
+
+## 2026-11-09 — 4e13 p.o.t. per spill everywhere (D13), shared geometry (branch `veto-shield-dis`)
+
+- **Normalisation (D13, decided by Guglielmo):** `config.POT_PER_SPILL = 4e13`, `SPILLS_15Y = 6e20 / 4e13 = 1.5e7`; every
+  `SPILLS_15Y` (interactions, shield_dis, dis_closure, muon / nu_dis_apply, run_reco, rock_apply, fastveto.neutrinos)
+  imports it. Inputs normalised to another p.o.t. are rescaled when READ: `weights.source_pot` (meta `pot_per_spill`;
+  else 4e13 for the Nov-4 pool v5 by its path; else legacy 5e13) and `weights.to_spill`, applied in io.load_output_file
+  (+ all planes), io.open_pickle_columns, io.open_store (weight / weight_raw; EventCalc stores untouched),
+  io.load_vessel_dataset / load_distribution, generate_muon_study (pool.json or path), make_design_dataset_gamma (seed
+  meta), shield_dis prepare / parents, em_debris, convert_ubt_data, make_muon_distribution, the neutrino flux and
+  nu stores. New stores / seeds / prepared files record `pot_per_spill = 4e13` (io.write_store), so nothing is scaled
+  twice. Source builders (tail_combine, build_enriched, build_pool) and the 2018-file comparisons keep their 5e13
+  internals (same normalisation as the 2018 file); build_pool records pot_per_spill = 5e13 in pool.json.
+- Effect (checked): legacy stores read x 0.8 (test stores; shield parents 0.8000); 15-year totals of single-muon
+  backgrounds unchanged, rates per spill x 0.8, combinatorial pairs x 0.64 per spill / x 0.8 per 15 years.
+  Result files made before this keep their 5e13 numbers until re-run.
+- **Shared geometry:** `geometry.Z_SHIELD_END`, `SHIELD_END_HALF_X / _Y` (were in shield_iron, fastveto.debris,
+  fastveto.targets, shell); `geometry.vessel_half_widths(z, clip=False)` takes numpy or torch and clips on request, used
+  by muon_types.side_plane_x, em_debris, shell.half, vessel_surface_map.vhalf; rock_apply.in_vessel = geometry.inside_vessel.
+  Checked identical to the old copies (side_plane_x within 4e-16 m).
+
+## 2026-11-09 — origin/main: PR #13 (Shah Rukh, `veto-end-to-end`, 53dcc57) fetched, not yet merged here
+
+- Shell storage, source-pool / 2018-file comparisons, EM debris (g4slab, emdebris, debris_maps), CPU transport, cavern-rock
+  DIS (g4rock, rock_hits / rock_library / rock_apply), splitting sandbox, docs/STATUS.md, full_sim_inventory.md.
+- Trial merge into `veto-shield-dis`: clean, no file touched by both. Review notes: macOS binary cpp/emdebris/emdebris
+  committed; ~20 files with sqasim / CSCS paths; two EM-debris implementations; muon flow quoted at 4e13 PoT / spill.
+
+## 2026-11-09 — tracking cuts on the MS7 K0-decay tracks (branch `veto-shield-dis`, uncommitted)
+
+- `bin/compare_shield_generators.py`: new rows "K0/K_L/K_S-decay trk (3/4 st, p>1)" and "K0 decays, 2 trk": |p| > 1 GeV
+  and >= 3 of 4 straw stations with a hit (`straws.layer_states` + `digitize` + `hit_summary`, field map RK4).
+  Re-made `results/shield_dis/generators.{md,json}` from the existing chain outputs (no regeneration); previous table
+  kept as `generators_2026-11-06.*`. Summary in docs/shield_iron_dis.md.
+
+## 2026-11-06 (night) — DIS generator comparison for the MS7 K_L (D3) (branch `veto-shield-dis`, uncommitted)
+
+- `shield_dis.py generate --mu-split {pythia,geant4,crossover,w2}` (default still `pythia`); split stored in the json.
+- `bin/g4ship.sh build` also builds `g4dis` against FairShip's Geant4 10.7.3; `dis_library.py` finds it in cpp/build_ship.
+  New library `data/interactions/dis/mu_library_iron_g4v1073.npz` (iron Geant4 part with 10.7.3, 1 M events).
+- New `cpp/pythia8dis/` (pythia8_dis.cc + build.sh, CVMFS Pythia 8.230: NC DIS / photoproduction modes) and
+  `bin/p8_library.py` -> `mu_library_iron_p8dis.npz` (Pythia 8 DIS Q2 > 1, W > 2; vertices 0, weak decays by
+  fastveto.decay because Pythia 8.230 vertices are unusable) and `mu_library_iron_p6q2.npz` (Pythia 6 with Q2 > 1).
+- New `bin/compare_shield_generators.py` (chain vs FairShip table), `bin/kl_q2w.py` (Q2 / W of the K_L-making
+  interactions), `bin/plot_dis_sigma_generators.py`.
+- Runs: results/shield_dis/shield_muon_fs2026_{crossover,geant4only,geant4v1073,p6q2,p8dis}.{npz,json}; summary in
+  docs/shield_iron_dis.md "DIS generator comparison". Geant4 only = K_L / 2.6; Geant4 10.7 = 11.2; FairShip still
+  ~9-15x below; 86 % of the default K_L from Q2 < 1.
+- Note: under heavy load some g4ship workers fail to load libG4physicslists.so from CVMFS; the pool restarts them and
+  all chunks complete (checked: 1000/1000).
+
+## 2026-11-06 (evening) — C5 repeated-evt_n correction made consistent (branch `veto-shield-dis`, uncommitted)
+
+- `weights.corrected_weights(..., counts=None)`: optional repetitions counted on the full sample (for subsamples).
+- `make_design_dataset.py`: the repetitions k of each evt_n are now counted on ALL old rows of its type before the
+  per-type cap (before: inside the capped subsample, k under-counted); weight w*scale/k, type total kept per file.
+- `run_selection.py --pairing kdtree`: all copies kept with `corrected_weights` like time-window (C5);
+  `--kdtree-unique` restores the old one-entry-per-evt_n (`keep_unique_events`, temp1.py) behaviour.
+- Decision (Guglielmo, 6 Nov): keep every copy, divide by the repetitions, rescale to keep the rate.
+  Not re-run: datasets / results built before keep the old weights until regenerated.
+
+## 2026-11-06 — re-runs started; fixes (branch `veto-shield-dis`)
+
+- `fastveto.dis.MuonLibrary.sample`: with split "pythia" an interaction below the Pythia grid had zero cross section in
+  both parts and picked the empty Geant4 part (StopIteration): now the kept part, nearest grid energy with events.
+- `bin/em_debris.py` also saves the raw plane crossings (`em_raw_n*_d*.npz`) to rebin the maps for new inputs.
+- New `bin/retype_store.py`: muon types of a store with the FairShip geometry + field into new columns `*_fs`.
+- `bin/g4ship.sh`: geant4.sh may return non-zero in non-interactive shells, which killed background jobs silently
+  under `set -e`: now sourced with `set +e`.
+- Results: DIS-parent store re-typed (selected 12.96 -> 16.81 % of the weight, ~8.2 -> 10.6 kHz); peak maps at
+  31.13 .. 41.13 m (UBT 8.2e6, first fin slice 1.37 / 1.85e9 per spill); shield chain K_L 5 604 decays / spill (D3).
+- Runs (logs/rerun_2026-11-06): EM debris 2e4 and 2e5 muons (1.25e9 e/gamma per spill leave the shield; first fin
+  planes 1.2e8 e + 8.5e8 gamma per spill); MS7 shield chain muons (Pythia only: 1.78e5 interactions / spill),
+  peak maps at the new positions, DIS-parent store re-typed.
+
 ## 2026-11-06 — B2 EM debris with the host Geant4 (branch `veto-shield-dis`)
 
 - New `lib/veto/em_debris.py`, `bin/em_debris.py`: g4shield (MS7 iron + field) -> e / gamma at 29.90 m -> g4vessel
   to the UBT / fin planes; maps in the muon-map binning; `reco.plane_rate_map` adds P_e e + P_gamma gamma when the
   maps carry em_*; `run_reco.py --em-debris`. `bin/g4ship.sh build` also builds g4shield; shield_iron finds it.
+- `em_debris.DEPTH_X0` = whole last 50 cm (28.5 X0), `--depth` [X0]: muons carried to the slab with
+  `shield_iron.curved_points`, `init_g4shield(z_iron0=)`. 3 X0 gives only 17 % of the full-depth yield.
 
 ## 2026-11-06 — B4 EventCalc signal in run_reco (branch `veto-shield-dis`)
 

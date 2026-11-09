@@ -16,7 +16,7 @@ import numpy as np
 from . import geometry as geo
 
 MARGIN = 1.5                         # m around the vessel / spectrometer
-Z0, Z1 = 29.89, 94.5                 # shield end .. just past the timing detector
+Z0, Z1 = geo.Z_SHIELD_END, 94.5     # shield end .. just past the timing detector
 ZA, ZB = geo.Z_STATE_A, geo.Z_STATE_B
 XS, YS, Z_SPEC = 2.7, 3.8, 84.98     # spectrometer half widths, its upstream end
 NZ, NA, NC = 32, 16, 8
@@ -29,9 +29,7 @@ N_CELLS = N_SIDE + 2 * N_CAP
 
 def half(z, margin=MARGIN, xp=np):
     """half widths (x, y) of the shell at z"""
-    t = xp.clip((z - geo.Z_VESSEL_MIN) / (geo.Z_VESSEL_MAX - geo.Z_VESSEL_MIN), 0, 1)
-    hx = geo.VESSEL_X_IN + t * (geo.VESSEL_X_OUT - geo.VESSEL_X_IN)
-    hy = geo.VESSEL_Y_IN + t * (geo.VESSEL_Y_OUT - geo.VESSEL_Y_IN)
+    hx, hy = geo.vessel_half_widths(z, clip=True)
     s = xp.clip((z - geo.Z_VESSEL_MAX) / (Z_SPEC - geo.Z_VESSEL_MAX), 0, 1)
     return hx + s * (XS - hx) + margin, hy + s * (YS - hy) + margin
 

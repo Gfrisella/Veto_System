@@ -18,20 +18,21 @@ from pathlib import Path
 
 import numpy as np
 
+from veto import io
 from veto import paths
 
 from fastveto import dis, nudis
 from fastveto import targets as tg
 from veto import design as vdesign
 
-SPILLS_15Y = 6e20 / 5e13
+from veto.config import SPILLS_15Y  # noqa: E402  (6e20 / 4e13 p.o.t.)
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--design", default="D6_straw")
     ap.add_argument("--lib", default=str(paths.interactions_data() / "genie/nu_library.npz"))
-    ap.add_argument("--store", default=str(paths.interactions_data() / "neutrinos/store"))
+    ap.add_argument("--store", default=str(paths.interactions_data() / "neutrinos2026/store"))
     ap.add_argument("--flavours", default="14,-14")
     for g, v in (("helium", 5e5), ("pvc", 5e5), ("air", 2e5), ("planes", 1e5)):
         ap.add_argument(f"--{g}", type=float, default=v, help=f"draws per flavour for {g} (planes: each plane)")
@@ -48,8 +49,8 @@ def main():
     n_int = 0
     for fl in [int(x) for x in a.flavours.split(",")]:
         store = Path(f"{a.store}_nu{fl}")
-        meta = json.load(open(store / "meta.json"))
-        cols = {k: np.load(store / f"{k}.npy", mmap_mode="r") for k in meta["columns"]}
+        cols, meta = io.open_store(store)                 # legacy stores (5e13) rescaled to 4e13 per spill (D13)
+        cols = {k: np.asarray(v) if isinstance(v, io.ScaledColumn) else v for k, v in cols.items()}
         lib = nudis.NuLibrary(a.lib, flavour=fl)
         inter, part, totals = dis.run(cols, design, lib, draws, rng, workers=a.workers)
         inter["flavour"] = np.full(len(inter["E"]), fl, np.int32)
