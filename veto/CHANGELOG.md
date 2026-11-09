@@ -11,6 +11,23 @@ what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20)
 - `shield_iron.init_g4shield(natural=...)`, `shield_dis.transport(natural=...)`; new `bin/shield_natural.py`.
 - Results: results/shield_dis/natural_{QGSP_BERT_HP_PEN,FTFP_BERT}_b10.json (summary in docs/shield_iron_dis.md).
 
+## 2026-11-09 (evening) — D3 natural-Geant4 validation of the MS7 chain; issue decisions (branch `veto-shield-dis`)
+
+- New `cpp/g4shieldnat.cc` (g4shield geometry + field, natural muonNuclear biased by `--mu-bias`, products weighted
+  1/bias, origin 1 = muonNuclear / 2 = other secondaries) and `bin/shield_natural.py` (draws the chain's MS7 parents,
+  counts what crosses z = 29.90 m per species and origin, compares with the chain runs). `--save` (+ `--v0-copies`, 50)
+  writes the muonNuclear products at the plane in the `shield_dis.py` npz format (one "interaction" per particle,
+  forced V0 decays in the vessel) so `compare_shield_generators.py` reads it like a chain run.
+- Runs (9.8e6 muons, bias 10, ~4-6 min each): `results/shield_dis/natural_{QGSP_BERT_HP_PEN,FTFP_BERT}_b10.json`,
+  `shield_muon_natural_*_b10.{npz,json}`, table `generators_natural.md`: exit K_L 3 510 / 3 540 per spill vs chain
+  G4 10.7 3 390 (Pythia 6 9 490); K0-decay tracks (>= 3/4 st, p > 1) 48.4 / 42.7 Hz vs 38.5 -> 7.9 expected FairShip
+  entries, FairShip 0 (ISSUES D3).
+- Also committed: `bin/sst1_bounce_categories.py` (straight / wall / floor SST1 muons), `bin/verify_zeta.py`, small
+  fixes in `shield_dis.py`, `shield_iron.py` (natural module loader), `g4ship.sh`.
+- ISSUES decisions (Guglielmo, 9 Nov): D12 ours main, C9 K-based split + MuonsAndMatter patch, C3 deferred, D5 test
+  the momentum convention, C1 ghost hits, D9 redo with multi-vertex rejection, D2 lateral-track veto study, D6 energy
+  rescaling branch, D4/D14 new neutrino sample + nu_e library.
+
 ## 2026-11-09 (afternoon) — Pythia 8 photoproduction library, comparison at 4e13 (branch `veto-shield-dis`)
 
 - `bin/p8_library.py --variant full`: Pythia 8 photoproduction (Q² < 1.5, W > 5, Annual Report 2026 Table 7) + DIS

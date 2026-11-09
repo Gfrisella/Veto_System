@@ -42,6 +42,9 @@ def main():
     ap.add_argument("--workers", type=int, default=48)
     ap.add_argument("--chunk", type=int, default=20000)
     ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--save", action="store_true",
+                    help="also write the muonNuclear products at the plane as a chain-format npz (+ forced V0 decays)")
+    ap.add_argument("--v0-copies", type=int, default=50, help="with --save: forced vessel decays per V0 (weight / copies)")
     a = ap.parse_args()
     t0 = time.time()
     rng = np.random.default_rng(a.seed)
@@ -83,6 +86,34 @@ def main():
     out = sd.OUT / f"natural_{a.physics_list}_b{a.mu_bias:g}.json"
     json.dump(res, open(out, "w"), indent=1)
     print(f"wrote {out}, {time.time() - t0:.0f} s")
+    if a.save:
+        save_chain_format(g, wt, a, len(rows), rng, res)
+
+
+def save_chain_format(g, wt, a, n_muons, rng, res):
+    """The muonNuclear products at the plane (origin 1, not the injected muons) in the bin/shield_dis.py npz format, so
+    bin/compare_shield_generators.py treats them like a chain run (D3 step 2, 2026-11-09). Every particle is its own
+    "interaction" (code 3) carrying its weight: per-particle observables (SST1 tracks, forced V0 decays in the vessel,
+    straw stations) are exact; only "per interaction" quantities (interactions_per_spill) are not defined (NaN)."""
+    m = (g["origin"] == 1) & (g["primary"] == 0)
+    sel = {k: x[m] for k, x in g.items()}
+    k = int(m.sum())
+    sel["ev"] = np.arange(k)
+    plane = sd.plane_particles(sel)
+    inter = dict(weight=wt[m].astype(np.float64), code=np.full(k, 3, np.int8))
+    summ = dict(mu_split=f"natural {a.physics_list} (muonNuclear x {a.mu_bias:g})", interactions_per_spill=float("nan"),
+                draws=n_muons, pot_per_spill=POT_PER_SPILL, natural=True,
+                exit={name: dict(per_spill=r["mu_nuclear"]["per_spill"], n=r["mu_nuclear"]["mc"])
+                      for name, r in res["species"].items()})
+    inter2, part2 = sd.force_v0(inter, plane, rng, a.v0_copies)
+    v0 = inter2["v0"] != 0
+    summ["v0_copies"], summ["copies_per_v0"] = int(v0.sum()), a.v0_copies
+    summ["v0_decays_in_vessel_per_spill"] = {str(c): float(inter2["weight"][inter2["v0"] == c].sum())
+                                             for c in np.unique(inter2["v0"][v0])}
+    out = sd.OUT / f"shield_muon_natural_{a.physics_list}_b{a.mu_bias:g}.npz"
+    np.savez(out, **{f"int_{kk}": vv for kk, vv in inter2.items()}, **{f"part_{kk}": vv for kk, vv in part2.items()})
+    json.dump(summ, open(out.with_suffix(".json"), "w"), indent=1)
+    print(f"V0 decays in the vessel per spill: {summ['v0_decays_in_vessel_per_spill']}; wrote {out}")
 
 
 if __name__ == "__main__":

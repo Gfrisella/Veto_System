@@ -343,13 +343,15 @@ C. DETECTOR AND BOOKKEEPING: second order
 ----------------------------------------------------------------------------------------------
 
 C1. Detector response simplifications
-    STATUS: OPEN
+    STATUS: DECIDED (9 Nov 2026): ghost hits only, to implement
       - sigma_x is not used (the 5 cm search window r0 is much larger);
       - no ghost hits from combining views when several muons share a time window;
       - straw time = uniform smearing in the 50 ns drift window; with a tile t0 the drift radius
         could be used (better time and position);
       - no cluster size, no tile cross-talk, plane efficiency independent per plane.
     5 Nov 2026 (issue review with Guglielmo): left OPEN, no decision yet.
+    9 Nov 2026, Guglielmo: add ghost hits from combining views (straw / fibre planes, several muons in a time window);
+      the rest (sigma_x, drift time, cluster size, cross-talk, correlated efficiency) accepted as second order, documented.
 
 C2. Dead material and dead regions
     STATUS: DONE (5 Nov 2026: dead frames, placeholder widths to be confirmed; frame material not added)
@@ -361,10 +363,11 @@ C2. Dead material and dead regions
       DIS) not added.
 
 C3. Validation against full simulation
-    STATUS: OPEN
+    STATUS: DEFERRED (9 Nov 2026): FairShip validation of the first optimum
     Run one baseline design through FairShip and compare rates and veto inefficiency before
     trusting an optimum.
     5 Nov 2026 (issue review with Guglielmo): left OPEN, no decision yet.
+    9 Nov 2026, Guglielmo: validate in FairShip only the optimised design (after the first optimum).
 
 C4. Energy loss of bounced muons in the cavern
     STATUS: OK
@@ -421,7 +424,7 @@ C8. DIS rates with the new selection
       per selection. To do: regenerate results/reco/inputs.npz (pre-cut 3 m) and re-run both selections (approval).
 
 C9. shah_study categories: bounce flag not reliable
-    STATUS: OPEN (4 Nov 2026)
+    STATUS: DECIDED (9 Nov 2026): veto definition + bounce point K; patch MuonsAndMatter too
     MuonsAndMatter cuda_muons_ship.categorize_muons: every muon of `bounced_back` checked in seed 0 is a perfect
     straight line from the z = 30.6 m state to z = 82 m (offset 0.000 m), and `straight_past_vessel` (z = 82, outside the
     vessel acceptance) excludes muons that go straight through the vessel and contains 0.6 % bounced ones. For
@@ -433,6 +436,10 @@ C9. shah_study categories: bounce flag not reliable
 ----------------------------------------------------------------------------------------------
 D. FROM THE OTHER DOCS (added 4 Nov 2026, from docs/issues_report/veto_issues.pdf)
 ----------------------------------------------------------------------------------------------
+    9 Nov 2026, Guglielmo: straight / bounced = BOUNCE_CUT (0.5 m off the 30.6 m line); wall / floor from the bounce point K
+      (closest approach of the 30.6 m and 82 m lines, nearer surface within 1 m; results/sst1_bounce_categories:
+      straight 16.10, wall 6.85, floor 1.39 kHz of 24.34). Ignore categorize_muons; ALSO patch MuonsAndMatter
+      cuda_muons_ship.categorize_muons with the K-based split (PR to MuonsAndMatter).
 
 D1. Objective exploitable: signal term saturates
     STATUS: DONE (5 Nov 2026, with D2)
@@ -444,7 +451,11 @@ D1. Objective exploitable: signal term saturates
     nu DIS in air / walls / planes / shield counts like the muons (w_src_muon = 1). "bkg_events_15y" and "sensitivity" stay physical.
 
 D2. Neutrino DIS in helium: irreducible for an upstream veto
-    STATUS: IN PROGRESS (5 Nov 2026: nu DIS in helium weighted 0.01 in the reward; vertex-activity veto not done)
+    STATUS: IN PROGRESS (9 Nov 2026: study the veto from lateral tracks of the same event, with the signal loss)
+    9 Nov 2026, Guglielmo: possible handle: in the same event, lateral tracks of the nu DIS (hadronic system) that hit
+      the veto planes (fins / UBT) can veto it. Must be studied together with the signal loss (signal daughters /
+      accidentals hitting the same planes). Study: per nu-He DIS event, own hits of all its charged products on the
+      veto planes -> veto fraction vs signal loss for the benchmark set.
 
 D3. MS7 shield DIS -> K_L: chain disagrees with FairShip
     STATUS: OPEN (PRIORITY A, major) - 5 Nov 2026: Pythia 6 only (DIS part) confirmed, issue kept open as major
@@ -488,6 +499,19 @@ D3. MS7 shield DIS -> K_L: chain disagrees with FairShip
       FairShip gap. 86 % of the Pythia 6 K_L from Q2 < 1 (98 % Geant4), W 5-10 GeV. Hard part only (Q2 > 1):
       Pythia 8.230 / Pythia 6 = 1/6 in K_L. To check: FairShip --MuonBackSSTOnly (sample may miss most MS7
       interactions); Q2 of the K_L surviving the selection (needs int_nu/int_W + K_L-enriched draws).
+    9 Nov 2026 (evening, D3 steps 1-2 approved): NATURAL Geant4 (bin/shield_natural.py --save, cpp/g4shieldnat, muonNuclear
+      x 10, same parents / geometry / field as the chain, 9.8e6 muons) per spill at the iron exit: K_L 3 510 +- 130
+      (QGSP_BERT_HP_PEN = FairShip's list) / 3 540 (FTFP_BERT) vs chain G4 10.7 3 390 -> the chain's production is
+      VALIDATED; the default Pythia 6 chain is x 2.7 too high in K_L. Other secondaries of the muon (photonuclear of
+      radiated photons, not in the chain) ~2 % of the K_L. Same forced vessel decays + straw cuts downstream
+      (results/shield_dis/generators_natural.md): K0-decay tracks >= 3/4 stations, p > 1 GeV 48.4 Hz (QGSP) / 42.7 (FTFP)
+      vs chain G4 10.7 38.5 -> 7.9 expected FairShip entries (6.15 Hz each), FairShip has 0: P(0) = 4e-4.
+      => the FairShip gap is NOT the DIS generator and NOT the physics list. Left: the FairShip sample itself (which
+      muons enter MS7, event filtering, weights) or the K_L handling in FairShip downstream of the shield.
+      K_S / Lambda at the exit 3x the G4 chain (the library decays K_S / Lambda at the vertex; mu_library_iron_v0stable
+      fixes it); K_S-decay tracks 4-5 Hz, minor.
+      Proposal (to decide): chain default = Geant4 muonNuclear (natural-validated) instead of Pythia 6, P6 / P8 as the
+      generator systematic.
 
 D4. MS7 shield DIS chain: simplifications
     STATUS: IN PROGRESS (5 Nov 2026: solution accepted, code done, runs pending)
@@ -511,7 +535,7 @@ D4. MS7 shield DIS chain: simplifications
       - still straight: the chord L in the iron (path length change ~1e-4); muons stopping in the slab not removed.
 
 D5. Muon source: enriched input disagrees with the old sample
-    STATUS: OPEN (PRIORITY B)
+    STATUS: IN PROGRESS (9 Nov 2026: test the production / after-target momentum convention)
     The SST1-selected rate is 1.55x higher with the enriched input (1.9x above 100 GeV), at the same flux
     above 150 GeV: larger than any statistical error (docs/fast_veto_sim.md section 5). Also: the
     regeneration differs by 10-20 % from the old file, the > 200 GeV tail has a ~x2 model dependence
@@ -519,9 +543,16 @@ D5. Muon source: enriched input disagrees with the old sample
     Plan: compare angle and momentum shapes of the two inputs above 150 GeV; extend the enrichment down to
     50 GeV; quote the source model as a systematic on the muon backgrounds.
     5 Nov 2026 (issue review with Guglielmo): left OPEN, no decision yet.
+    9 Nov 2026, Guglielmo: test the momentum-convention hypothesis. docs/fast_veto_sim.md says the old file stores the
+      production momentum, Shah Rukh (1 Nov, docs/STATUS.md 'Fossil hunt') found full_sample_after_target.h5 stores the
+      momentum AFTER the target (5-13 % lower at 60-150 GeV); the tail rows of the enriched file carry the production
+      momentum and cuda-muons does not transport the target -> the enriched tail is too hard, which would raise the
+      SST1-selected rate. Plan: check the tail rows vs the old rows (same convention?); if confirmed, shift the tail
+      muons to after-target momentum (target energy loss, /disk/lhcb_data/sqasim/fairship_match/afterTarget.py) and
+      recompute the SST1-selected rate on a subsample (re-run, small).
 
 D6. Interaction-library approximations
-    STATUS: OPEN (PRIORITY C)
+    STATUS: DECIDED (9 Nov 2026): energy rescaling on a branch
     Final states not rescaled to the exact muon energy (15 % grid); no nuclear effects (Fermi motion,
     shadowing, re-interactions) in the Pythia part; no tau library (~1 % nu_tau in the flux)
     (docs/fastveto_physics.md "Open").
@@ -536,6 +567,8 @@ D6. Interaction-library approximations
       - nuclear effects in the Pythia 6 part: compare 1e5 events with Geant4 / GENIE nuclear models (Fermi motion,
         shadowing, intranuclear re-interactions) on the same targets and take the difference as a systematic;
       - nu_tau: build a nu_tau library with bin/nu_library.py (GENIE, --nus 16 -16), ~1 % of the flux.
+    9 Nov 2026, Guglielmo: do the energy rescaling only (branch veto-d6-energy-rescale, compare V0 yield / multiplicity
+      with the current library); nuclear effects and nu_tau stay documented systematics.
 
 D7. Interactions upstream of z = 30.6 m not simulated
     STATUS: IN PROGRESS (9 Nov 2026: air DONE 5 Nov; cavern walls / rock implemented by Shah Rukh, PR #13)
@@ -566,11 +599,14 @@ D8. Results computed with the old PVC vessel wall
     are regenerated.
 
 D9. DIS x mu pairs not redone with the V0-stable library
-    STATUS: OPEN (PRIORITY C)
+    STATUS: DECIDED (9 Nov 2026): redo with multi-vertex rejection
     With K_S / Lambda tracked in the MS7 iron (data/interactions/dis/mu_library_iron_v0stable.npz,
     2026-11-02) the dis_comb_* DIS x mu combinatorial pairs were not redone.
     Plan: rerun artifacts_work/scripts/dis_comb_pairs_asym.py on the V0-stable sample.
     5 Nov 2026 (issue review with Guglielmo): left OPEN, no decision yet.
+    9 Nov 2026, Guglielmo: redo on the V0-stable sample in the re-run batch, AND reject a combination when it has more
+      than one vertex in the same time window (several tracks pointing to one vertex are fine; two vertices in the
+      same window are rare and are not a signal topology).
 
 D10. Geant4 built-in neutrino physics unusable
     STATUS: DONE
@@ -589,7 +625,7 @@ D11. Bugs found and fixed (record)
       - shah_study "straight" category replaced by the BOUNCE_CUT definition (C9).
 
 D12. EM debris implemented twice (with B2)
-    STATUS: OPEN (9 Nov 2026)
+    STATUS: DECIDED (9 Nov 2026): ours in the main chain, debris_maps.py -> em_* cross-check
     PR #13 bin/debris_maps.py adds e + 0.05 x gamma (P_GAMMA placeholder) straight into ubt_hist / fin_maps of the rate
     maps; ours (B2, run_reco --em-debris) adds em_* maps in reco.plane_rate_map. Using both counts the debris twice.
     His: muons back-projected straight to an iron box at 29.89 m (upper bound), 0.5 m iron library without field,
@@ -597,6 +633,9 @@ D12. EM debris implemented twice (with B2)
     technology, but parents from the old 506M one-run sample. Proposal: ours in the main chain, debris_maps.py writes
     em_* keys instead; his g4slab library for debris made in the veto planes / vessel walls; feed g4shield with the
     current dataset's muons.
+    9 Nov 2026, Guglielmo: OURS (B2) in the main chain; bin/debris_maps.py rewritten to write em_* keys (cross-check, never
+      summed); Shah Rukh's g4slab library reused for debris made in the veto planes / vessel walls (D14); g4shield fed
+      with the current dataset's muons.
 
 D13. Protons per spill: one convention
     STATUS: DONE (9 Nov 2026: config.POT_PER_SPILL = 4e13, legacy inputs rescaled when read, CHANGELOG 2026-11-09)
@@ -617,3 +656,5 @@ D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_invento
       - Cosmic muons: not looked at (one-line estimate).
       - Source model: our Pythia 6 + Geant4 source has 1.36-1.57x the 2018 file's flux at 30-150 GeV, not explained by
         Pythia, physics list, target layout or Geant4 version (Shah Rukh, 31 Oct); see D5.
+    9 Nov 2026, Guglielmo (with D4): new neutrino sample at the target / shield (no 10 GeV cut, all flavours) and the
+      iron GENIE library rebuilt with nu_e (bin/nu_library.py --nus 14 -14 12 -12).
