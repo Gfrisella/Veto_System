@@ -304,8 +304,8 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{Three datasets}
-  \footnotesize
+\begin{frame}{The datasets}
+  \scriptsize
   \begin{tabular}{@{}l>{\raggedright}p{0.4\textwidth}rr>{\raggedright\arraybackslash}p{0.2\textwidth}@{}}
     \toprule
     & built from & rows & size & used for\\
@@ -313,6 +313,8 @@
     \key{alpha} (14 Oct) & 20\,001 old runs (SST1 types) + the full run (everything else) & 57\,M & 5.8\,GB & first results, first evolution\\
     \key{gamma} (17 Oct) & SST1 types from alpha; types 3--7 from 1\,715 seeds of our production & 88\,M & 8.9\,GB & interactions, cone\\
     \key{delta} (19 Oct) & everything from 484 seeds of the \key{enriched} production (input with the Pythia\,6 tail) & 111\,M & 11\,GB & \key{the end-to-end results}\\
+    \key{epsilon} (21 Oct) & all 6\,000 seeds of the enriched production & 552\,M & 55\,GB & next results\\
+    new storage (22 Oct) & 800 seeds of a new storage rule (see below) & 73\,M & 7\,GB & common types, rate maps\\
     \bottomrule
   \end{tabular}\\[3mm]
   \begin{columns}[T]
@@ -344,13 +346,81 @@
   \begin{columns}[c]
     \begin{column}{0.6\textwidth}
       \livewidget{probe3d}{\linewidth}{0.6\textheight}\\[1mm]
-      \livewidget{probe_ds}{0.7\linewidth}{0.62cm}
+      \livewidget{probe_ds}{\linewidth}{0.62cm}
     \end{column}
     \begin{column}{0.38\textwidth}
-      \livewidget{probe_bands}{\linewidth}{0.36\textheight}\\[1mm]
+      \livewidget{probe_bands}{\linewidth}{0.33\textheight}\\[0.3mm]
+      \legendline{\sw{5B6475}\,gamma \ \sw{B0352B}\,delta; dotted: 10}\\[0.5mm]
       \footnotesize A probe, not a design: the UBT at full height, 42 fins every 2.5\,m and 5 floor planes tilted by 30$^\circ$; per 25\,cm cell the independent input muons crossing it.\\[1mm]
-      \key{Thin}: the first metre from the vessel wall (median 11--14), the floor beyond 32\,m (8--13). Enrichment does not help there.\\[1mm]
-      \aside{Red dotted: 10. Fins beyond 1\,m and the UBT: 140--430.}
+      \key{Thin}: the first metre from the vessel wall (median 11--14), the floor beyond 32\,m (8--13); fins beyond 1\,m and the UBT: 140--430.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{More seeds: what they buy}
+  \begin{columns}[c]
+    \begin{column}{0.5\textwidth}
+      \livewidget{st_seeds}{\linewidth}{0.54\textheight}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \livewidget{st_repeat}{\linewidth}{0.54\textheight}
+    \end{column}
+  \end{columns}
+  \vspace{1mm}\footnotesize
+  Every seed replays the same 601\,M input muons; only the randomness of the shield transport makes new ones reach a place.
+  \key{Bounced} muons grow with the seeds ($\times12$ from delta to epsilon); \key{SST1 selected} only $\times1.5$: it is limited by the input file.
+  The common types (straight past, rock bounced, stops) are kept by the first 20--27 seeds only: more seeds add \key{nothing} there.\\[0.5mm]
+  \legendline{Left: delta's first 60--484 seeds, epsilon's 6\,000. Right: probe cells, types kept completely (delta).}
+\end{frame}
+
+\begin{frame}{Where the storage goes}
+  \livewidget{st_plane_maps}{\linewidth}{0.56\textheight}\\[0.5mm]
+  \begin{columns}[c]
+    \begin{column}{0.56\textwidth}
+      \livewidget{st_plane}{\linewidth}{0.62cm}\\[0.3mm]
+      \livewidget{st_view}{0.55\linewidth}{0.62cm}
+    \end{column}
+    \begin{column}{0.42\textwidth}\footnotesize
+      Today: a \key{uniform} random 0.3\,\% of each common type, in the first seeds. The rows follow the muons: the hot lobe 1.5--3\,m out is full, the cells near the wall and on the floor get a handful.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{A storage rule that knows where muons cross}
+  \begin{columns}[c]
+    \begin{column}{0.44\textwidth}\scriptsize
+      Per seed, each muon of the common types is kept with
+      \[ p_i = \max\Bigl(p_\text{floor},\ \min\bigl(1,\ \lambda\, w_i \max_{c \ni i} \tfrac{1}{V_c}\bigr)\Bigr) \]
+      \vspace{-3mm}
+      \begin{itemize}\scriptsize
+        \item $c$: probe cells (25\,cm) on its path; $V_c$: muons per spill there, from the seed itself
+        \item $\propto w$ in a cell: equal weights $w_i/p_i$; every cell the same number of rows
+        \item $p_\text{floor}$: 500 per type and seed, shield stoppers too
+        \item $\lambda$: 10\,000 rows per seed; SST1 and veto-only stay complete
+        \item rate maps: histograms of \key{every} muon
+      \end{itemize}
+      \aside{Right: emulated on delta's rows (Horvitz--Thompson), same 58\,M rows over 6\,000 seeds.}
+    \end{column}
+    \begin{column}{0.54\textwidth}
+      \livewidget{st_policy}{\linewidth}{0.56\textheight}\\[0.5mm]
+      \legendline{\sw{2a78d6}\,now \sw{eb6834}\,today's rule over 6\,000 seeds \sw{1baf7a}\,$\propto$ weight \sw{eda100}\,by cell \sw{e87ba4}\,by cell, $\propto$ weight}\\[0.5mm]
+      \livewidget{st_metric}{0.7\linewidth}{0.62cm}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The new storage, tested}
+  \begin{columns}[c]
+    \begin{column}{0.62\textwidth}
+      \livewidget{st_bands}{\linewidth}{0.64\textheight}\\[0.5mm]
+      \legendline{\sw{2a78d6}\,delta (484 seeds) \ \sw{eb6834}\,epsilon (6\,000) \ \sw{1baf7a}\,new storage (800)}\\[0.5mm]
+      \livewidget{st_bands_metric}{0.8\linewidth}{0.62cm}
+    \end{column}
+    \begin{column}{0.36\textwidth}\footnotesize
+      \texttt{generate\_muon\_study.py --storage alpha}: 800 seeds of the enriched input, 73\,M rows (less than delta), 14\,h on 3 GPUs.\\[1.5mm]
+      Weakest cells (10th percentile) \key{23--80$\times$} better than epsilon in every band: 110 next to the wall, 70 on the floor, 1\,500 on the fins beyond 1\,m. Cells below 10: 30--44\,\% $\to$ \key{0--1\,\%}.\\[1mm]
+      Medians 8--150$\times$ higher too.\\[1.5mm]
+      \takeaway[\footnotesize]{Use it with epsilon: SST1 and veto-only types from epsilon's 6\,000 seeds, everything else and the rate maps from here.}
     \end{column}
   \end{columns}
 \end{frame}
@@ -966,7 +1036,7 @@
       \key{Physics and data}
       \begin{itemize}\footnotesize
         \item statistics: the surviving muon interactions are a handful of simulated events (weight 0.5 each); the first metre beside the walls and the floor have $\sim$10 independent input muons per cell
-        \item the rest of the enriched production (484 of 2\,000 seeds) and of our 20\,000-seed production
+        \item epsilon (6\,000 seeds) through the chain; an alpha-storage production ($\approx$1\,000 seeds) as the next dataset
         \item photon conversions and secondary interactions (fast chain $-5$ to $-9$\,\% vs Geant4); shield and rock interactions
         \item specific signal models beyond the two-body decay
       \end{itemize}

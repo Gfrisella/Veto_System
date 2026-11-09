@@ -1,0 +1,553 @@
+# Status — where everything is (living file, updated by Claude; last update: Fri 2026-10-30 20:30 CET)
+
+Pick-up file: what runs where, what is done, what is next, how to reach every machine. Paths: `R` =
+`/disk/users/sqasim/workspace/uzh/Veto_System/veto` (farm), `S` = `/disk/lhcb_data/sqasim/veto_source_pool1` (farm).
+
+## 1. Running right now
+| what | where | how to look | expected end |
+|---|---|---|---|
+| **zeta**: 6000-seed new-storage production (seeds 0-5999, 4134 done at 20:23) | farm-gpu5 GPUs 1-3, tmux `veto_zeta`, script `$R/data/sim/veto_muons_alpha_v0/run_6000_gpu5.sh` | `ls $R/data/sim/veto_muons_alpha_v0 \| grep -c ^seed_`; logs `.../logs/run6000_g5_gpu{1,2,3}.log`, `.../logs/run6000.log` | Sun ~morning; then it builds `design-optimization-dataset-zeta-new-storage-<N>seeds-<date>` + probe + n_eff by itself ("ZETA ALL DONE" in run6000.log) |
+| GPU memory hold for zeta | farm-gpu5, tmux `veto_zeta_hold`, `$R/bin/hold_gpu.py` (5 GB/GPU) + workers with `VETO_KEEP_GPU_CACHE=1` | `$R/data/sim/veto_muons_alpha_v0/logs/hold_gpu.log` | releases itself 5 min after the workers end |
+| ~~copy of the pool to daint~~ **done 20:28**: pool v1 as built (integral normalisation) is at `/ritom/scratch/cscs/sqasim/pool_v1_incoming/pool_v1/` (45 GB) | — | — | — |
+
+| **dataset (c) transport**: daint job **5216231** (array 0-3 = 4 nodes x 4 GH200), script `/ritom/scratch/cscs/sqasim/sim/daint_c.sbatch`, input `/ritom/scratch/cscs/sqasim/pool_v2/` | daint | `squeue -u sqasim`; seeds in `/ritom/scratch/cscs/sqasim/sim/veto_muons_pool_v2/{train,hidden}/`, logs `.../logs/gpuK.log`, slurm logs `/ritom/scratch/cscs/sqasim/sim/logs/` | ~3.5 h after start (submitted Fri 22:00; daint full, limit lowered to 5 h at 22:10 for backfill; first estimate was Sat 07:54) |
+
+**Pool v3 BUILDING (Fri 22:45, farm-gpu4 tmux `veto_pool3`)**: fresh parts reweighted per (p, pT) cell, because the 2D
+check (`bin/source_hist2d.py`, `bin/plot_source_hist2d.py`, `veto/results/pool_v2/source_hist2d_*.png`) showed v2 matches the
+file in p but differs by +-20 % in pT (angle; partly our rows carry the direction at the target exit, the file the one at
+production). Log `/disk/lhcb_data/sqasim/pool_v3_build.log` ("POOL3 DONE"), then `pool_v3_hist2d.log`, `pool_v3_edges.log`.
+**DONE Fri 23:40**: pool v3 built and checked (2D ratio within a few % below pT 2.5 GeV; above, the file itself is too sparse,
+p-only factor used), copied to daint `/ritom/scratch/cscs/sqasim/pool_v3`, and on daint `pool_v2 -> pool_v3` (symlink; old v2
+moved to `pool_v2_ponly`): the pending job 5216231 will read **v3**. Plots `veto/results/pool_v3/source_hist2d_*.png`.
+
+Pool v2 DONE (Fri 21:50): `/disk/lhcb_data/sqasim/pool_v2/` (farm) and `/ritom/scratch/cscs/sqasim/pool_v2/` (daint, sizes checked);
+pool / file = 1.00 in every momentum bin for all components (`pool_v2_edges.log`). Pool v1 (flat factors, with steps) kept for
+reference on both sides. Note: the farm proxy (2226) hung after the 45 GB copy (Fri ~22:00) — retry / restart it if needed.
+
+Nothing runs on eiger or daint. Next after v2: plot (`python3 bin/plot_pool_spectra.py results/pool_v2/edges.json`, locally after
+copying edges.json), copy `/disk/lhcb_data/sqasim/pool_v2` to daint `/ritom/scratch/cscs/sqasim/`, launch (c) there.
+
+## 2. Done today (results)
+- **(a)** dataset `design-optimization-dataset-zeta-snapshot-3084seeds-2026-10-30` (seeds 0-3083 of zeta, 281 M rows), probe in
+  `$R/results/compare_abc/probe_a.log`, `$R/results/probe/probe_<name>.npz`. **(b)** = epsilon (6000 seeds, default storage).
+- **Input thinning study** (`bin/input_thinning_study.py`, `results/thinning/`): source-bin rule keeping 20 % of the 601 M input
+  leaves the weakest cells and the rare types unchanged; `q_bin.npy` = that rule (q0 = 0.01).
+- **Source importance** (`bin/source_importance.py`): the weak cells / rare types are limited by **min. bias 20-150 GeV and charm
+  20-50 GeV** (heavy rows), not by the dimuon class.
+- **Source timing** (`bin/source_timing_study.py`, `results/timing/`): n_eff per core-hour per generator, file convention applied.
+  `--emin 20` min. bias: ~950 k n_eff / core-h in 30-150 GeV (12x mb2).
+- **Fresh pool production** (all done): `$S/tail/` pool_mb20 430 slices (k 10000-), pool_tail 1500 (k 20000-), pool_dmhigh 2220
+  (k 30000-, **made on eiger**), charmc 2179 of 2180 (k 1000-3179; slice 2245 failed, not rerun). Logs `$S/log/`.
+- **Pool v1** built: `/disk/lhcb_data/sqasim/pool_v1/` — `train_000..008.h5` (9 x 97.4 M), `hidden_000..001.h5` (2 x 77.3 M,
+  15 % of source events, never for training), `pool.json` (flux factors: mb20 0.717, tail 0.953, dmhigh 0.608, charm 0.858).
+  Build log `/disk/lhcb_data/sqasim/pool_v1_build.log`.
+- **OPEN ISSUE — spectrum edges** (`bin/pool_edges.py` → `pool_v1/edges.json`): our min. bias generator is softer than
+  Guglielmo's file (mb2 and mb20 alike: ~1.7x at 20 GeV → 1.0 at 126 GeV). With integral normalisation per part the pool has
+  a +10 % step at 30 GeV and a **-25 % step in min. bias at 150 GeV**; dimuon 0.91 just above 150, 1.3-1.6 at 260-340; charm
+  +2-6 % at 20-28. **Decision pending with the user**: (1) reweight fresh muons bin by bin to the file shape (recommended,
+  rebuild ~40 min), (2) keep, (3) our generator's shape. Plots: `veto/results/pool_v1/` (local).
+- **EM debris study** (`bin/em_debris_study.py`, `cpp/g4slab.cc`, `$R/results/em_debris/`): P(charged secondary > 1 MeV behind
+  1 m iron) 11-23 % (5-300 GeV), mostly a different 25 cm cell at 1-5 m; 1 cm scintillator ~4 %; straws ~0.1 %. Concrete at
+  normal incidence not representative (side walls are grazing).
+- **eiger** works: Apptainer (unprivileged) in `~/apptainer`, image + code + numpy on `/capstor/scratch/cscs/sqasim/`.
+  Dimuon part (2220 slices) ran there in 48 min on 18 nodes (job 8265127, ~14 node-h).
+- **Farm vs eiger, same slices**: Pythia identical; Geant4 cascade diverges (Intel vs AMD floating point) → statistically
+  equal, not bit-identical (54652 vs 54567 muons in slice 30000).
+- **daint GH200 transport validated**: user's container `cudabear_gh200_oct_2026` (Python 3.14, torch 2.14+cu132) via the
+  CSCS Container Engine; faster_muons_torch rebuilt for sm_90; geometry cached → **bit-identical** to the farm on 1 M muons
+  (positions/momenta exactly equal; weights to 1e-16), transport ~1.6x faster per GPU.
+
+**Chunked pool mode tested on daint (30 Oct ~21:00, pool v1)**: chunk load 5 s, ~30 s per seed of 97 M muons on one GH200
+(transport 18 s); rare-type rows per seed as in zeta. Job script ready (laptop copy:
+`~/.claude/jobs/e59a0386/tmp/daint_c.sbatch`; to be placed at `/ritom/scratch/cscs/sqasim/sim/daint_c.sbatch`): array of 4
+nodes x 4 GPUs, `--chunk-start` per worker, 6000 training seeds → `/ritom/scratch/cscs/sqasim/sim/veto_muons_pool_v2/train`,
+then 1000 hidden seeds → `.../hidden`. ~3 h on 4 nodes (~12 node-h). New generator options: `--n-chunks`, `--chunk-start`.
+
+**Parked physics question (revisit later, agreed with the user Fri 30 Oct)**: our Pythia 6 + Geant4 source is softer than
+Guglielmo's FairShip 2018 file — min. bias raw/file 1.5 at 30 GeV → 1.05 at 150 GeV (mb2 and mb20 alike), dimuon >= 150 GeV
+1.5-1.9, charm ~1.2 at 20-30 GeV. Pool v2 hides it by reweighting to the file; which spectrum is right is open (a systematic).
+Plots: `veto/results/pool_v1/pool_spectra.png` (before), `veto/results/pool_v2/pool_spectra.png` (after).
+
+**2018-recipe test running (Fri 23:30, farm-gpu4 tmux `veto_fsm`)**: min. bias >= 20 GeV with Pythia 8 + FTFP_BERT (tag
+`fsm_p8_ftfp`, slices 50000-50019) and Pythia 8 + QGSP_BERT (`fsm_p8_qgsp`, 51000-51019) into `/disk/lhcb_data/sqasim/fairship_match/`
+(done marker `log/done.txt`); compare with the file and with pool_mb20 (Pythia 6 + FTFP_BERT). FairShip 2018 recipe (read from
+CVMFS, `veto/results/fairship_ref/`): Pythia 8 SoftQCD:inelastic (+ gmgm2mumu, PromptPhoton, WeakBosonExchange), p/n by Z/A,
+cτ > 1 mm stable (decays in Geant4), Geant4 10.x QGSP_BERT_HP_PEN, dimuon class = BR(η,ω,ρ,η',φ → μμ) x100 (weight 768.75/100),
+charm/beauty from a Pythia 6 cascade file with chicc 1.7e-3, chibb 1.6e-7. User: no FairShip runs (30x slow), reproduce the
+recipe in our own chain. Next idea: compare everything with the SHiP 2018 muon-flux measurement (data).
+
+**Fossil hunt result (Sat 31 Oct 00:50)**: min. bias 20-150 GeV vs the 2018 file (file selection emulated):
+A Pythia 6 + G4 11 FTFP 1.36, B Pythia 8 + FTFP 1.40, C Pythia 8 + QGSP 1.42 (flux ratio 30-150 GeV). Momentum excess
+(1.7 at 20 GeV → 1.0 at 150) common to A/B/C → not Pythia, not the physics list. pT: Pythia 8 has 0.3-0.5x fewer
+large-pT muons above 40 GeV; Pythia 6 closer to the file. Plot `veto/results/pool_v3/recipe_compare.png`
+(`bin/recipe_compare.py`, `bin/plot_recipe_compare.py`). **Suspect**: survivor bias in our emulation of the 2018 selection
+(the loss map is built only from muons that reached the 2018 plane) → test with an unbiased survival probability from the
+2018 ROOT file's MCTracks (~15 min). **Then (user request)**: compile Geant4 10.0 (10.00.p04) from the official source with
+our own patches (NOT from FairShip/CVMFS), build tailtransport against it, rerun C.
+
+**EM debris library running (Sat 00:00, farm-gpu4 tmux `veto_debris`)**: `bin/debris_library.py` (21 jobs: 0.5 m iron
+B = 0 / 1.7 T mu- / mu+, 5 angles; scint, straw, steel), output `$R/results/debris_library/*.npz`, logs `.../log/`, marker
+`log/done.txt`. `cpp/g4slab.cc` now has an optional uniform B_y in the layers. Plan (agreed): debris generated in the veto
+sim (fastveto-like), from the muon paths: back-project A to the shield exit face z = 29.89 m (iron 25.89-29.89, last
+magnet) and check iron there with the geometry cache corners; stations crossed; walls at grazing incidence (bounce K).
+Library + a plain C++ model validated against it. NOT inside cuda-muons.
+
+**Plan B for the dataset question (user, not now)**: scale the fresh flux up so it is above the old sample everywhere
+(differences are about +-20 % in pT, up to +50 % in p → a factor ~1.25 to be conservative).
+
+**Sat 31 Oct 11:30 update**:
+- (c) transport job 5216231: nodes 0-2 ran 02:52-07:52 (TIMEOUT at 5 h) → train 5996/6000, hidden 796/1000; node 3
+  (nid006377) had no working GPU (torch: CUDA not available) → crashed at start. Stale claims cleared; top-up job
+  **5219422** (1 node, 1.5 h, --exclude=nid006377), pending. Hidden = transport of the 15 % hidden source muons (validation).
+- Dataset (c) build + probe + n_eff on daint: job **5219435** (`/ritom/scratch/cscs/sqasim/sim/daint_build_c.sbatch`),
+  store `VETO_STORE=/ritom/scratch/cscs/sqasim/store`, probe log `/ritom/scratch/cscs/sqasim/sim/logs/probe_c.log`.
+- Debris library DONE (21 files, `$R/results/debris_library/`): magnetised iron changes the debris by <= 5 % → no field
+  needed; iron 7.5-23 % of muons with e+- > 1 MeV (2-300 GeV), 0.7-13 photons; scint ~4 %, straw ~0.1 %.
+- Fossil hunt: the 2018 ROOT file contains only muons that reached the plane → no unbiased survival from it; but the excess
+  is 1.2-1.3 at 60-100 GeV where everyone survives → not the selection emulation. New suspect: the TARGET — 2018
+  (targetOpt 17): 13 Mo (58 cm) + 4 W (8,8,10,35 = 61 cm); ours ECN3 "MoW": same Mo + 5 W (5,8,10,20,35 = 78 cm).
+  Added `--target SHiP2018` (cpp/tailgen/tailtransport.cc, bin/tail_produce.py; rebuilt on the farm). Running (farm-gpu4,
+  tmux `veto_fsm2`): C' = Pythia 8 + QGSP + 2018 target (`fsm_p8_qgsp_t18`, 52000-), A' = Pythia 6 + FTFP + 2018 target
+  (`fsm_p6_ftfp_t18`, 53000-), marker `/disk/lhcb_data/sqasim/fairship_match/log/done2.txt`. Then Geant4 10.0 (own patches).
+
+**Sat 31 Oct 15:45 — end-to-end on (c), with and without EM debris (farm-gpu4 tmux `veto_c_e2e`,
+`$R/results/end_to_end/run_c_e2e.sh`, log `$R/results/end_to_end/run_c.log`, "ALL DONE" at the end)**: training seeds copied
+daint → `/disk/lhcb_data/sqasim/sim_c/train`; dataset `design-optimization-dataset-c-pool-v3-6000seeds-2026-10-31` built on the
+farm (daint build job cancelled); maps `sample_c.npz`; inputs `inputs_c.npz` → `inputs_c_s.npz`; muon DIS
+`results/end_to_end/<design>_c_mu.npz` (new `--mu-suffix`); evaluations tags `e2e_c`, `e2e_delta_em`, `e2e_c_em` (designs D6_tile2
+E3_robust E4_entry2 E4_ubt2 E5_evolved, cones 0 10 16 17.5 20; reference `e2e.json` = delta). EM debris: `lib/fastveto/debris.py`
+(library sampler), `bin/debris_maps.py` (UBT + fin maps of debris added to the muon maps; e+- full, photons x P_GAMMA = 0.05
+placeholder; iron = the last magnet's outer box |x| < 1.71, |y| < 1.27 at z = 29.89 m → upper bound). C++ model
+`cpp/emdebris/emdebris.cc` vs Geant4 (`bin/debris_model_compare.py`): shapes OK, P(e) -10..-37 %, ~50-100x faster → research track.
+
+**Sat 31 Oct ~20:30**:
+- Geant4 10.00.p04 BUILT from the official source (`/disk/lhcb_data/sqasim/geant4_10/{install,data}`, built on /scratch of
+  farm-gpu4; our patch `patches/01_glibc_fsqrt.patch`; build script `build_g410.sh`). tailtransport against it:
+  `cpp/tailgen_g410/` (C++14), run with `bin/g4_10.sh` (sets data + TAILTRANSPORT_BUILD); tailtransport.cc has version guards.
+- Fossil hunt (30-150 GeV flux / 2018 file): A 1.36, B 1.40, C 1.42, A18 1.36, C18 1.42, **A10 1.45, C10 1.57 (Geant4 10
+  makes it worse)**. Not Pythia, physics list, target layout, or Geant4 version. New suspect: our target stands in AIR
+  (FairShip's was enclosed in iron shielding) → added `--target SHiP2018+Fe` (target inside a 2x2 m iron block); running
+  (tmux `veto_fsm4`, tags fsm_p8_qgsp_t18fe 56000-, fsm_p6_ftfp_t18fe 57000-, marker log/done4.txt).
+- e2e chain: make_reco_inputs ran OUT OF GPU MEMORY after 2 h 20 (6000 runs, shared GPU) → rerun with `--pair-runs 1000`
+  (new option; pairs from 1000 runs, weights x 6) `--pair-block 2048` in tmux `veto_inputs_c` (log `results/reco/inputs_c.log`,
+  "INPUTS DONE"); the chain's muon-interaction generation continues; its e2e_c / e2e_c_em evaluations will fail (no inputs)
+  → rerun them by hand after INPUTS DONE (e2e_delta_em works).
+
+**Plan (user, Sat 31 Oct)**: validate our muon source against DATA — SHiP Collaboration, "Measurement of the muon flux
+from 400 GeV/c protons interacting in a thick molybdenum/tungsten target", Eur. Phys. J. C 80 (2020) 284,
+doi:10.1140/epjc/s10052-020-7788-y, arXiv:2001.04784 (H4 beam 2018, Mo/W target 13 lambda + 2.4 m iron absorber, drift-tube
+spectrometer, 3.27e11 p.o.t.). Needs their geometry as a tailtransport option and the spectra at their measurement plane.
+
+## 3. Next steps (in order)
+1. User decides the spectrum-edge handling (section 2). If "file shape": add per-bin factors to `bin/build_pool.py`, rebuild
+   on farm-gpu4 (tmux, ~40 min), re-run `bin/pool_edges.py`, re-copy to daint.
+2. Write the daint job: 2 nodes x 4 GH200, each GPU the seeds of one chunk (seed s uses chunk s % 9),
+   `generate_muon_study.py --input '<pool>/train_{chunk:03d}.h5' --n-chunks 9 --storage alpha --claim`, 6000 seeds;
+   the hidden chunks as a separate production. Env: `VETO_GEOMETRY_CACHE=/ritom/scratch/cscs/sqasim/work/geometry_TRY6.pt`,
+   `PYTHONPATH=/ritom/scratch/cscs/sqasim/work/pylib314`, `MPLBACKEND=Agg`, `--mm-dir /ritom/scratch/cscs/sqasim/work/MuonsAndMatter`.
+   ~4-5 h on 2 nodes.
+3. Dataset (c) (`make_design_dataset_gamma.py --old-types=`), probe, compare c vs a and b: rates per type, rate maps,
+   n_eff per band.
+4. Sunday: zeta final dataset (automatic), its band comparison.
+5. Commit (nothing of today is committed; branch `veto-end-to-end`, PR #8): see section 7.
+
+## 4. Access
+- **Farm**: our own OTP proxy on `127.0.0.1:2226` (`physik_deployment/custom_ssh/custom_ssh_2.py`; never print or sync
+  `custom_authenticator.py`). Login node: `ssh -p 2226 127.0.0.1` (farm-ui, shared disks). Nodes: `ssh -J 127.0.0.1:2226 farm-gpu4`
+  (gpu3/4/5). After a network change the proxy can hang once; retry.
+- **CSCS** (user `sqasim`, account `uzh42`): certificate `~/.ssh/cscs-key-cert.pub` valid 1 day — renew at
+  https://user-account.cscs.ch (SSH Keys → Sign Key, paste `~/.ssh/cscs-key.pub`). Jump host Ela; use
+  `ProxyCommand="ssh -o IdentitiesOnly=yes -i ~/.ssh/cscs-key -W %h:%p sqasim@ela.cscs.ch"` with `-i ~/.ssh/cscs-key -o IdentitiesOnly=yes`
+  to `sqasim@eiger.alps.cscs.ch` / `sqasim@daint.alps.cscs.ch` (`-J` does not pass the key). Too many failed tries → Ela blocks ~1 min.
+- eiger: x86, 128 cores/node, `/capstor/scratch/cscs/sqasim`. daint: aarch64 GH200 (4/node, driver 595, CUDA ≤ 13.2), scratch
+  `/ritom/scratch/cscs/sqasim`; container `srun --environment=/ritom/scratch/cscs/sqasim/cudabear_gh200/cudabear-gh200.toml`
+  (workdir is reset: always `cd` first; `CUDABEAR_SILENT=1`).
+
+## 5. Containers
+- Farm transport: `/disk/users/lprate/containers/MuonsAndMatterContainer.sif` (Python 3.10, snoopy at /opt/snoopy).
+- Farm Geant4 / generators: `bin/g4.sh` → `exec_cudabear_november_2025.sh` (image `/disk/lhcb_data/sqasim/images/cudabear_november_2025.sif`;
+  numpy etc. come from the farm `~/.local`, not the image).
+- Farm uproot/awkward work (old_convention, build_pool, pool_edges): `/disk/lhcb_data/sqasim/images/shared/srq_ml_and_gen_container_latest_stable.sif`.
+- Newer, not yet used here: `/disk/users/sqasim/images/cudabear_blackwell_oct_2026_base.sif`.
+
+## 6. Restart commands
+- Pool copy to daint (if it died): from the laptop,
+  `ssh -p 2226 127.0.0.1 "cd /disk/lhcb_data/sqasim && tar cf - pool_v1" | ssh <daint as above> "cd /ritom/scratch/cscs/sqasim/pool_v1_incoming && tar xf -"`
+  (check sizes after; ~30 min off VPN, ~3x slower on the UZH VPN; a VPN switch kills the stream).
+- zeta: if `veto_zeta` is gone, clear stale claims (`.claim_N` without `seed_N.npz`) and `tmux new -d -s veto_zeta bash run_6000_gpu5.sh`.
+
+## 7. Uncommitted code (Veto_System/veto)
+New: `bin/build_pool.py`, `bin/pool_edges.py`, `bin/source_importance.py`, `bin/source_timing_study.py`, `bin/input_thinning_study.py`,
+`bin/storage_policy_study.py`, `bin/em_debris_study.py`, `bin/hold_gpu.py`, `cpp/g4slab.cc`, `lib/veto/probe.py`, `docs/storage_policy.md`,
+`docs/live_talk/talk_storage.py`, this file. Modified: `bin/generate_muon_study.py` (keep-cache / reserve, pool chunks
+`--input ...{chunk}` + `--n-chunks`, `pool_index` → evt_n, extension path per machine, `VETO_GEOMETRY_CACHE`), `bin/probe_statistics.py`,
+`cpp/CMakeLists.txt`, `cpp/build.sh`, talk files. On the farm the production uses the older `bin/generate_muon_study.py`
+(md5 72d8b521634b); the new one is deployed there as `bin/generate_muon_study_next.py` and on daint as `bin/generate_muon_study.py`.
+
+## 8. Lessons (do not repeat)
+- `pkill -f` patterns can match `xargs`' own `bash -c` wrappers → xargs stops the whole queue (lost gpu4 6 h on 30 Oct).
+- `charm_cascade.py` seeds Pythia with 100000 x slice + group: slices must stay < ~9000 (Pythia 6 limit 9e8).
+- 300 slices on a 384-thread farm node run ~half speed (192 physical cores).
+- Laptop-relayed copies: ~8 MB/s on the VPN, ~24 MB/s off; switching networks kills them.
+
+## Fossil hunt: solved (Sun 1 Nov, ~06:00)
+- Reference built from all 67 FairShip 2018 files: /disk/lhcb_data/sqasim/ref2018/reference_2018.h5 (506,355,249 muons, 6.602e10 POT, weight scale 0.9852; bin/build_reference_2018.py). Figure: results/ref2018/reference_comparison.png (bin/plot_reference_comparison.py).
+- h5 vs reference: same muons (row count), same total flux per class and charge (ratio ~1.00), but the h5 momenta are shifted down.
+- The h5 momentum is the momentum AFTER THE TARGET, not at production: our min. bias, histogrammed in our after-target momentum, over the h5:
+  30-40: 1.01, 40-60: 0.98, 60-100: 0.93, 100-150: 0.87 (in production momentum: 1.49 / 1.36 / 1.22 / 1.09). Script: /disk/lhcb_data/sqasim/fairship_match/afterTarget.py.
+- So the "40 % more muons" was comparing our production momentum with the h5's after-target momentum. Recipe/Geant4-10 differences are secondary (~5-15 %).
+- Exact-match job (bin/compare_reference_h5.py) ended without output (likely memory/timeout); not needed any more.
+- Next: check the pool v3 reweighting used the after-target momentum on both sides (consistent with the h5), and the 100-150 GeV 0.87.
+- CONSEQUENCE for pool v3 / dataset c: bin/build_pool.py (lines ~128-135) scales our fresh muons UP to the production momentum
+  (s = p_prod / p) because we believed the h5 used it. The h5 actually stores the after-target momentum. The (p, pT) reweighting
+  to the h5 then pushed the flux back into line, but per muon the momentum and angle no longer belong together. That likely
+  explains the angle/pT mismatches and maybe the c vs delta SST1 excess. Fix = pool v4 with s = 1 (no scaling); the reweight
+  factors should then be ~0.87-1.0. Needs a new transport of the fresh part -> awaiting the user's decision.
+
+## Running (Sun 1 Nov, 13:50)
+- **Pool v4** (farm-gpu5 tmux `veto_pool4`): bin/build_pool.py now keeps the after-target momentum (no scaling), parts selected
+  in the after-target momentum, extra column p_prod (nan for old rows). Output /disk/lhcb_data/sqasim/pool_v4, log
+  /disk/lhcb_data/sqasim/pool_v4_build.log ("POOL4 DONE" at the end; then hist2d + edges). Check: the per-part flux factors /
+  bin_factors in pool.json should be ~0.87-1.0. Then GPU transport (farm / daint) = dataset c v4, after the user decides.
+- **2018-like comparison file** (farm-gpu4 tmux `veto_fsm5`, /disk/lhcb_data/sqasim/fairship_match/run_fsm5.sh): C10 recipe
+  (Pythia 8 + Geant4 10.00.p04 QGSP_BERT, 2018 target, min. bias >= 20 GeV), slices 54020-54219 (+ the 20 existing ->
+  1.1e7 p.o.t.), done marker log/done5.txt. Then on the farm: `bin/build_compare_2018.py --compute` ->
+  /disk/lhcb_data/sqasim/compare2018/compare_2018_minbias.h5 + compare_2018.npz; locally plot -> results/ref2018/compare_2018.png.
+  Missing vs 2018: dimuon/photon and charm classes (Geant4 10 build has no dimuon options), K_mu3 / K_L.
+- DONE 2018-like file: /disk/lhcb_data/sqasim/compare2018/compare_2018_minbias.h5 (1.1e7 p.o.t., 593 M muons), figure
+  results/ref2018/compare_2018.png. Production momentum vs the 2018 files: ours 1.13 (30 GeV) -> 1.0 (100) -> 0.77 (200)
+  -> ~0.55 (300): softer spectrum. After target vs h5: 1.2 at 30 GeV, crosses 1 at ~110. pT tail (> 1.5 GeV) narrower
+  than 2018 by up to 2-3x; the h5's pT shape follows the 2018 files. Our production pool_mb20 (Pythia 6 + Geant4 11) is
+  closer to the h5 (1.02-0.87) than this "2018 recipe": Geant4 10 adds ~+10 %. Suspects for the pT/high-p gap: decay channels
+  we don't force (K_mu3, K_L, hyperons), Pythia 8 version/tune.
+- Pool v4: pool_mb20 flux factor 1.017 (v3: ~1.36) -> convention fixed.
+
+## Complete target generator (Sun 1 Nov, evening) — user: "no holes" in the target production
+- Pool v4 DONE (/disk/lhcb_data/sqasim/pool_v4: 7 train chunks, 1 hidden; flux factors mb20 1.017, tail 1.193,
+  dmhigh 0.737, charm 1.151; v3 was 0.717 / 0.953 / 0.608 / 0.858). Ready for GPU transport, awaiting the user.
+- cpp/tailgen/tailtransport.cc: new initialize(mode="complete" | "analog") (needs Pythia: TT_WITH_PYTHIA, CMake finds
+  it). Generic forcing from Pythia's decay tables (+ K_S -> pi mu nu added): long-lived species per step, prompt species
+  (eta, omega, rho, phi, eta', J/psi, D, B, tau, ...) decayed by an embedded Pythia decayer wherever they appear,
+  gamma -> mu mu and e+ e- -> mu mu boosted, the Pythia event's own muons kept (pythia_mesons "complete" option),
+  other-process muons kept. Analog = same without forcing. Target "Air" for decay tests. Legacy mode unchanged.
+  Build used: /disk/lhcb_data/sqasim/tt_complete_build/tailtransport*.so (TAILTRANSPORT_BUILD).
+  bin/tail_produce.py --mode complete|analog; npz extra columns hf, mode, diag; gen = proc code.
+- Validation (bin/complete_validation.py, outputs /disk/lhcb_data/sqasim/complete_validation, runner run_cv.sh):
+  guns on farm-gpu5 tmux veto_cv_guns (done marker log/done_guns.txt), full events on farm-gpu4 tmux veto_cv_full
+  (cv_analog 2000 slices = 1e8 p.o.t., cv_complete 80 slices FTFP_BERT, cv_complete_qgsp 80 slices; log/done_full.txt).
+  Then: VETO_SOURCE=/disk/lhcb_data/sqasim/complete_validation python3 bin/complete_validation.py report (container).
+- (Sun ~18:00) Validation round 1 (guns) found: B mesons -12.5 % (Pythia lists B/D channels per charge, onMode 2/3:
+  BR_mu normalisation fixed per charge), K_L muon shape (now Geant4's own decay kinematics for forced decays where
+  Geant4 has the channel), Geant4 tables lack K_S / Lambda / Sigma- / Xi semileptonic muon channels (now added to
+  Geant4's tables in both modes). Everything else agreed to <= 1 %. Old outputs in complete_validation/v1; all reruns
+  on the new build (tt_complete_build md5 67825c6d...).
+- FairShip 2018 production decoded from git (FairShip muonShieldOptimization/run_fixedTarget.py, shipgen/
+  FixedTargetGenerator.cxx, gconfig/*, shipdist): Pythia 8.223 (Monash default), Geant4 10.1.p03 (NOT 10.0: "10.0" in
+  the file names is ecut), QGSP_BERT_HP_PEN, Pythia settings = ours (SoftQCD inelastic, gmgm2mumu, PromptPhoton,
+  WeakBosonExchange; tau0 > 1 mm stable), all Pythia final particles incl. muons passed to Geant4, Pythia8 external
+  decayer for D, Lambda_c, D_s, tau; gamma->mumu AND e+e- -> mumu x100; eta/omega/rho/eta'/phi mumu BRs x100 in Pythia;
+  charm removed from min. bias at the merge (mergeMbias.py), charm class added. Beam spot x = y = 0.
+- Pythia 8.223 built: /disk/lhcb_data/sqasim/pythia8223 (+ pythia_mesons_8223). Hadron spectra 8.316 / 8.223 (same
+  settings): +3-5 % at 20-40 GeV, -13 % pi+ at 100-400 GeV, -11..-23 % at pT > 1.5 GeV (results/pythia_versions).
+  Running: cv_complete_t18_p8223 (farm-gpu5 tmux veto_cv_p8223, 80 slices, SHiP2018 + QGSP_BERT + Pythia 8.223 events).
+- (Sun ~17:25) EIGER (user: "use eiger to get faster results"): code + new builds at /capstor/scratch/cscs/sqasim/
+  {veto, tt_complete_build, pythia8223}; job script veto/eiger_cv.sbatch (TAG, MODE, FIRST, LAST, PER, TARGET, PHYSICS,
+  EXTRA_ENV); outputs $S/cv/tail. Jobs: 8267973 cv_analog 60600-61999 (11 nodes; the farm has EMPTY PLACEHOLDER files
+  for these slices in complete_validation/tail -> replace with eiger's before the report!), 8267984 cv_complete_t18
+  62280-62599, 8267985 cv_complete_t18_p8223 62380-62699 (Pythia 8.223). Farm keeps cv_analog 60000-60599, cv_complete,
+  cv_complete_qgsp (gpu4), guns + t18 62200-62279 + p8223 62300-62379 (gpu5).
+- Geant4 10.01.p03 build running on farm-gpu4 (tmux veto_g4101, /disk/lhcb_data/sqasim/geant4_101/build_g4101.sh);
+  next: tailtransport against it + Pythia 8.223 (complete mode) = the exact 2018 combination.
+- (Sun ~17:35) Geant4 10.01.p03 BUILT (/disk/lhcb_data/sqasim/geant4_101; env bin/g4_101.sh; module
+  cpp/tailgen_g4101 = tailtransport + Pythia 8.223 static). Pythia 8.2 API: particle loops nextId(1) (nextId(0) returns 0
+  in 8.223: the first 8.223 runs had an empty species table / undecayed list -> all rerun). Generator Pythia data:
+  PYTHIA_MESONS_DATA (separate from the module's PYTHIA8DATA). The first p8223 attempts failed at start (no outputs).
+- Eiger jobs now: 8267984 cv_complete_t18 (8.316 + G4 11.2), 8267996 cv_complete_t18_p8223 62300-62699 (8.223 + G4 11.2),
+  8268000 cv_2018exact 62700-63099 (8.223 + G4 10.1.p03 = 2018), all SHiP2018 + QGSP_BERT, 20 M p.o.t. each;
+  Eiger copies: $S/geant4_101, $S/tt_g4101_build. cv_analog 60600-61999 DONE on eiger (12 min) -> copy to the farm
+  (replace placeholders) before the report.
+- (Sun ~17:55) VALIDATION PASSED. Guns (new build): all 27 species complete/analog within ~2 sigma, shape chi2/ndf ~ 1.
+  Full events (ECN3, FTFP_BERT, >20 GeV): analog 1e8 p.o.t. 3.930e-4/pot +-0.5 %, complete 4e6 p.o.t. 3.944e-4 +-0.2 %,
+  ratio 1.003; long-lived 1.003, prompt (+ "Pythia muon" label in analog) 1.01, gamma->mumu 0.95+-0.02 (boost x500 side
+  effect?), e+e- 1.05+-0.2. Figure results/complete_validation/complete_validation.png, summary.json.
+  NOTE nextId(0) in pythia_mesons ALSO returns nothing with 8.316 -> runs with binaries built 17:00-17:26 (analog slices,
+  eiger cv_complete_t18 job 8267984) had prompt species decayed by Pythia (labelled proc 5, unboosted, still unbiased).
+  Prompt decays dominate the muon flux above ~80 GeV and the high-pT tail.
+- (Sun ~18:15) 2018 COMPARISON (complete mode, SHiP2018 + QGSP_BERT, no charm, production momentum, / 2018 files):
+  8.223 + G4 11.2: 1.26 flat to 100 GeV -> 1.10 (200-300) -> 0.99 (300-400); exact 2018 (8.223 + G4 10.1.p03): 1.27-1.28
+  -> 1.10 -> 1.05; pT>1.5 share 0.79-0.89 of 2018's. Shape now close; ~+27 % normalisation. G4 10.1 vs 11.2 and Pythia
+  8.223 vs 8.316 matter little at muon level. Figures results/complete_validation/compare_*.png (local), overview
+  compare_complete_overview.png. Flux by parent (exact 2018): pi 42 %, K+- 17 %, eta 15 %, omega 14 %, gamma 5 %, rho 4 %.
+  Hypothesis: 2018 lacked cascade-level eta / eta' muons and the Dalitz channels (FairShip copied only pure mumu of
+  omega / phi / rho to Geant4). Test running: eiger job 8268057 cv_2018exact_b (120 slices, proc 7 = prompt decay in the
+  cascade; module $S/tt_g4101_build_b).
+- (Sun 18:35) Blue curve (cv_complete_t18, ours) is noisy: its pythia_mesons had the nextId bug -> first-collision prompt
+  mesons decayed unforced in Pythia. Rerun with fixed binaries: eiger job 8268067 cv_complete_t18_c 63300-63699
+  (module $S/tt_complete_build_b with proc 7). FairShip 2018 python/AddDiMuonDecayChannelsToG4.py: replaced Geant4's
+  tables of omega, phi, rho (223, 333, 113) with Pythia's (all channels, boosted BRs) -> only cascade eta / eta' lacked
+  muon channels in 2018 (the suspect for the +27 %).
+- (Sun ~19:10) THE 2018 EXCESS EXPLAINED. FairShip's muonShieldOptimization/extractMuonsAndUpdateWeight.py (2018) gave
+  weight 768.75/100 to EVERY muon with mother eta/omega/phi/rho0/eta' (and to 'Hadronic inelastic' muons), but the
+  diMu100 boost (FixedTargetGenerator channel indices) hit only eta->mumu (ch7), omega->mumu (ch7), rho->mumu, eta'->mumugamma,
+  phi->mumu in Pythia 8.223; eta->mumugamma (ch6, 3.1e-4: product order 22 13 -13 fails FairShip's check) and
+  omega->pi0mumu (ch5) were NOT boosted but still /100 -> effectively dropped. Plus cascade eta/eta' had no muon channels.
+  Emulating that on our exact-2018 run (cascade_test.py on eiger, cv_2018exact_b): ours/2018 total >25 GeV 1.29 -> 0.98;
+  per bin 1.01 (25-40), 0.96, 0.92, 0.86 (100-150), 0.87, 0.78 (200-300), 0.75 (300-400) (approximate: uniform scaling
+  of eta/omega muons). Remaining: ~15-25 % softer above 100 GeV; pT shape bump (suspect: our production pT is built from
+  the exit direction -> store creation direction next). Also: the J/psi muons were wrongly cut by my hf flag (is_hf counts
+  quarkonia) -> keep quarkonia in comparisons; fix is_hf for open flavour only.
+  => The 2018 sample and the h5 (and so pool v1-v4) lack ~24 % of the physical muon flux (eta Dalitz, omega Dalitz).
+- (Sun 20:25) 2018 MATCH DONE. Exact-2018 run with channel tags (cv_2018exact_c, eiger, 1e7 p.o.t.; module
+  $S/tt_g4101_build_c: new columns ch, pcx/pcy/pcz; is_hf open flavour only) + FairShip's 2018 weighting applied per muon
+  (rule2018.py: eta/omega Dalitz muons dropped, cascade eta/eta' dropped): ours/2018 total >25 GeV 1.016, every bin
+  0.99-1.03 from 25 to 400 GeV, pT shape ratio 1.00 (0-2.7 GeV). Without the 2018 weighting (our physics): 1.29.
+  The earlier pT bump was my exit-direction pT construction. 2018 file check (dalitz2018.py, 1 file): eta pairs 73 %
+  pure mumu (natural 2 %) -> eta Dalitz under-weighted x100 in 2018; omega Dalitz ~10x suppressed.
+  Figure results/complete_validation/match_2018.png. Pythia 8.316 (ours) vs 8.223: high-p muons 200-400 GeV 0.6x / 0.3x.
+- (Sun ~21:00) 2D maps: results/complete_validation/match_2018_2d.png, match_2018_2d_rebin2.png (bin/plot_match_2018_2d.py
+  <rule2018 npz> <compare_refs.npz> [rebin]). With the 2018 weighting: bulk pT < 1 GeV within +-3-5 %; at pT > 1-1.5 GeV
+  (J/psi 50-73 % there) ours red 1.2-1.3 at 80-160 GeV and blue 0.6-0.8 at 160-320 GeV, region totals 0.97 / 1.09 with the
+  same parent mix -> J/psi muon momentum shift and/or our thin J/psi statistics (few hundred J/psi per 1e7 p.o.t.).
+  Without the weighting: excess concentrated at pT < 0.5 GeV (eta / omega Dalitz). Optional next: J/psi-enhanced run.
+
+### SUMMARY OF SUN 1 NOV (for the user to digest)
+1. The h5 stores the momentum AFTER the target (not production) -> pool v1-v3 scaled our fresh muons wrongly; pool v4
+   (/disk/lhcb_data/sqasim/pool_v4) fixes it (flux factor 1.017). Not yet transported.
+2. 2018-like comparison file (old recipe C10): /disk/lhcb_data/sqasim/compare2018/compare_2018_minbias.h5.
+3. Complete target generator (tailtransport complete / analog modes): every muon source, forced + weighted; validated
+   against unforced: 27 particle types within ~2 sigma, full events 1.003 +- 0.5 %.
+4. FairShip 2018 decoded: Pythia 8.223, Geant4 10.1.p03 (built both), weighting script. With that software + FairShip's
+   weighting we reproduce the 2018 files to 1-3 % (1D) and the 2D map in the bulk.
+5. The 2018 files / h5 lack ~22 % of the physical muon flux (eta -> mu mu gamma, omega -> pi0 mu mu weighted /100
+   without the x100 boost) -> all our datasets inherit it. Pythia 8.316 vs 8.223: high-p muons (200-400 GeV) 0.6x / 0.3x.
+Open decisions for the user: new pool from the complete generator; shield transport + impact on rates / pair
+backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhanced run.
+
+## Full 2018-equivalent production (Sun 1 Nov, night) — user: "exact, don't come later and say we missed this"
+- 2018 inventory (fairship_match/inventory2018.py on reference_2018.h5): 7 weight classes: 768.75 min bias 59.4 %
+  (decays 98 %, primary 1.6 % = J/psi...), 7.6875 dimuon 20.5 % (primary VM decays 56 %, gamma->mumu 24 %, HADRONIC
+  INELASTIC 19 % = resonances decayed inside Geant4's models with FairShip's boosted tables), 326.16 charm 20.1 %,
+  3.26 (charm/100) 0.01 %, 9.37 beauty 0.01 %, 1 and 0.094 negligible.
+- New in tailtransport complete mode: proc 8 = muons of resonances decayed INSIDE hadronic models (Geant4 tables of
+  eta, omega, rho, phi, eta' replaced by Pythia's, <= 3-body channels (4-body crash in G4 10.1 models), muons as tag
+  particles, x100 boost); measured 3.9 % of our flux = 2018's 3.9 %. ch column, creation momentum (pcx..), is_hf = open
+  flavour only.
+- Charm / beauty: pythia6_charm "had" mode (weak charm / beauty hadrons undecayed, MSEL 4/5), charm_cascade.py
+  --hadrons [--flavour beauty] -> <tag>_had_K.npz, bin/hf_decay.py -> <tag>_mu_K.npz (complete mode decays). Beauty chi
+  table beauty_chi_table.json. Pythia 6 seed = 1e5 x slice: slices must be < 21474 (charm 14000-, beauty 15000-).
+- Onia: pythia_mesons "onia" (only quarkonia written), tail_produce --onia.
+- Eiger generic job: veto/eiger_run.sbatch (CMD with @ = slice, DONE, LOG, FIRST/LAST/PER, TT_BUILD); module
+  $S/tt_g4101_build_d; outputs $S/cv/tail. Jobs: 8268226 p18_mb 70000-71999 (1e8 p.o.t.), 8268242 p18_onia 72000-73499
+  (3e9 Pythia events), charm test 8268151 (14000-14003). Next: charm 14000-14299, beauty 15000-15099, then the
+  class / process / mother comparison vs the inventory with physical and 2018 weights.
+- (Sun 22:35) Running on eiger: p18_mb (8268226, 2000 slices, started 22:11), p18_onia DONE (1500), charm 8268280
+  (14008-14299; 14000-14007 done as test: 3.1-3.3e9 charm muons / spill > 20 GeV, 0 % production weight lost),
+  beauty 8268283 (15000-15099); then 8268284 (afterany) = compare_inventory_2018.py compute -> $S/cv/inventory_ours.npz.
+  Reference inventory: /disk/lhcb_data/sqasim/ref2018/inventory_ref.npz (farm). Report locally:
+  python3 bin/compare_inventory_2018.py report inventory_ours.npz inventory_ref.npz.
+  charm_cascade.py: Pythia 6 bins get a time limit + one retry (hangs near threshold); lost weight logged.
+
+## POOL v5 for the veto design studies (Mon 2 Nov, 00:00) — user: "let's just do it, we can always regenerate"
+- Choices (agreed): complete target production, latest Geant4 11.2 (FTFP_BERT), ECN3 target (MoW), threshold 10 GeV,
+  baseline generator Pythia 8.223 (conservative at > 200 GeV, reproduces 2018), variant Pythia 8.316 (source only);
+  charm / beauty from the Pythia 6 cascade, decays by Pythia 8; onia filter run. No h5 rows.
+- Eiger (outputs $S/v5/tail, logs $S/v5/log, job script veto/eiger_run11.sbatch, module $S/tt_g411_build_e):
+  8268342 v5_mb 80000-80399 (8.223, 2e7 p.o.t.), 8268343 v5_mb316 81000-81199, 8268348 v5_onia 82000-82499 DONE,
+  8268349 charm 16000-16299, 8268350 beauty 17000-17099.
+- Next: sbatch veto/eiger_pool5.sbatch (bin/build_pool_v5.py -> $S/v5/pool), then daint:
+  POOL=/capstor/scratch/cscs/sqasim/v5/pool OUT=/ritom/scratch/cscs/sqasim/sim/veto_muons_pool_v5 NTRAIN=.. NHIDDEN=..
+  sbatch /ritom/scratch/cscs/sqasim/sim/daint_c.sbatch (daint mounts /capstor).
+- Open (for the talk with Guglielmo): kaon-decay muons x1.35 vs 2018 with identical software (pions 1.00-1.03); charm /
+  beauty normalisation 0.825 of 2018's; Pythia 8.223 vs 8.316 above 200 GeV.
+- TODO (agreed, tomorrow): Pythia 6 hangs in charm_cascade bins (e.g. pi+ 110 GeV, p 135 GeV; slices 14081, 14294 hung
+  repeatedly): (1) reproduce one, attach gdb to find the loop; (2) split bins into ~50-event batches with own seeds and
+  short timeouts. Current loss: charm 0.03 %, beauty ~1 % of production weight; costs only wall time.
+- (Mon 03:15) POOL v5 DONE: /capstor/scratch/cscs/sqasim/v5/pool (2.43e9 rows, 21 train + 4 hidden chunks, 125 GB;
+  flux per spill: mb 6.20e10, onia 2.31e8, charm 7.56e9, beauty 2.54e6). DAINT TRANSPORT SUBMITTED: job 5233970 (array
+  0-3, name pool_v5, script /ritom/scratch/cscs/sqasim/sim/daint_v5.sbatch = daint_c.sbatch with
+  sim/cudabear-gh200-v5.toml (adds /capstor mount)), OUT /ritom/scratch/cscs/sqasim/sim/veto_muons_pool_v5 (train seeds
+  0-5999, hidden 0-999). The user's own daint jobs (pf-design4, pf-jets4, 1 node each): DO NOT TOUCH.
+- (Mon ~04:30) POOL v5 DIAGNOSIS (user: let v5 finish, diagnose, wait for instructions): v5 transport works but the
+  SST1 / veto-feeding phase space (source p 200-400 GeV, pT 1.5-3 GeV; c: SST1-selected sources p 199-342, pT median 2.7)
+  is statistically empty: per chunk n_eff 200-300 GeV pT 1.5-3: v3 49.5k vs v5 12; 300-400: 1061 vs 1.5; 100-200 pT
+  1.5-3: 37.7k vs 177. Per seed SST1-selected n_eff 472 (c) vs 1.5 (v5). Cause: v5 min bias = 2e7 p.o.t. in full
+  (10 GeV); v3's tail came from cheap high-threshold productions over billions of p.o.t. (pool_tail forced pi/K > 130 GeV,
+  pool_dmhigh > 150 GeV). Fluxes where v5 has statistics are compatible. FIX (proposed, not started): complete-mode tail
+  runs (threshold 130-150 GeV, ~1e10 p.o.t., ~800-1000 core-h; mid 50 GeV ~1e9 p.o.t.) stitched by after-target momentum.
+  Alternative for tomorrow: transport pool v4 (h5-based, convention-fixed). Waiting for the user's decision.
+  Local seeds for the diagnosis: ~/.claude/jobs/e59a0386/tmp/seedcmp; cellstat.py.
+- (Mon 10:10) v5 transport FINISHED (6000 train + 1000 hidden seeds, /ritom/scratch/cscs/sqasim/sim/veto_muons_pool_v5).
+- User: do everything in ONE production (no stitching), verify properly before daint. Implemented importance sampling
+  (Russian roulette) in the complete mode: pythia_mesons "roulette=QMIN,E1,N,PT0" (7th column weight), tailtransport
+  set_roulette (cascade secondaries), tail_produce --roulette. q = min(1, max(QMIN, (E/E1)^N) max(1, (pT/PT0)^2)).
+  Tests running on farm-gpu4 (tmux veto_rr, /disk/lhcb_data/sqasim/rr_test): unbiasedness rr_none vs rr_q05 (40 slices
+  x 20k events, same slices) + cost rr_prod (qmin 0.007). Check: rr_check.py. Plan: ~3e9 events, qmin ~0.007, E1 150,
+  N 3, PT0 0.5; then pool v6, verification (tail n_eff vs v3, bulk vs v5, a short GPU transport test), then daint.
+- (Mon 11:15) Roulette verified (rr_check: flux 0.995 +- 0.009, chi2/ndf 49/40; 8x cheaper per event, same tail stats
+  per event). Weight window of recorded muons (tailtransport set_muon_window, tail_produce --muon-window, table
+  /disk/lhcb_data/sqasim/rr_test/ww_table.npz = F 0.05 x sum w^2/sum w per (p, pT) cell, >= 1000 rows): C++ check
+  17x fewer rows, n_eff -9 %, chi2/ndf 48.7/40. USER APPROVED 3e9 events ("go for it"; can be extended).
+  EIGER v6 PRODUCTION SUBMITTED: job 8269279 (24 nodes), tag v6_mb, slices 100000-102999 x 1e6 events (Pythia 8.223,
+  G4 11.2 FTFP_BERT, ECN3 MoW, 10 GeV, --roulette 0.007,150,3,0.5, --muon-window $S/v6/ww_table.npz), outputs
+  $S/v6/tail (onia / charm / beauty linked from v5). Then: pool v6 (build_pool_v5.py --mb-tag v6_mb --src $S/v6/tail),
+  verification (bulk vs v5, tail n_eff vs v3, GPU transport test) BEFORE daint.
+- (Mon 11:25) 15 v6 slices failed (generator file not whole 7-column records: short write on capstor); tail_produce now
+  regenerates up to 3x. QUEUED CHAIN on eiger (runs without us): 8269279 (main, 24 tasks) -> 8269317 (retry of missing
+  slices, afterany) -> 8269318 pool6 (eiger_pool6.sbatch: build_pool_v5.py --src $S/v6/tail --out $S/v6/pool
+  --mb-tag v6_mb, then cellstat on v6 & v5 train_000 -> $S/v6/log/verify_cells.txt).
+  CSCS CERT EXPIRES Mon 11:50 -> user renews at user-account.cscs.ch. After that: read verify_cells.txt; compare tail
+  cells with v3 (farm: /disk/lhcb_data/sqasim/pool_v3/train_000.h5 numbers in this file above); GPU transport test
+  (daint debug partition, a few seeds of $S/v6/pool/train_000.h5, per-seed SST1 / veto n_eff vs c); only then
+  daint_v5.sbatch with POOL=$S/v6/pool OUT=/ritom/.../sim/veto_muons_pool_v6 NTRAIN/NHIDDEN from pool.json.
+- (Mon 11:57) THE 11:12 v6 RUN WAS BROKEN (my error): sbatch --export splits at commas, "--roulette 0.007,150,3,0.5"
+  truncated CMD -> every task ran slice 0 without roulette (same file, 6 columns). Cancelled (8269279/8269317/8269318),
+  ~570 core-h lost. FIX: eiger_run11.sbatch reads CMDFILE / EXTRAFILE ($S/v6/cmd_v6.txt, $S/v6/extra_8223.txt);
+  2-slice test OK (roulette 1, window: 0.7 rows/event, 6.8 ms/event on eiger). RESUBMITTED: 8269386 (24 nodes, main),
+  8269387 (retry missing, afterany), 8269388 (pool6 build + cellstat, afterany). At 11:56: 2990 distinct generator
+  files, all roulette 1, 0 failures. Slices ~1.9 h -> production ~14:00, pool ~16:00. NEVER put commas in --export.
+
+## Mon 2 Nov, afternoon
+- CPU port of cuda-muons' transport: `cpp/cpu_muons/` (OpenMP, same arguments as faster_muons_torch.propagate_muons_with_alias_sampling,
+  xoshiro RNG), driver `bin/cpu_transport.py` (dump / run / compare). Environment file (CPU tensors, TRY6):
+  /disk/lhcb_data/sqasim/cpu_muons/env_TRY6.pt. Validated vs GPU on 1 M muons (reach fractions and spectra = GPU seed-to-seed).
+  Full chunk (101 M muons, pool v4 train_000): farm GPU 15.0 s; CPU 28 threads (EPYC 9654, farm-gpu5) 1006 s
+  (3 600 muons/s/thread) -> ~300 s per seed on a 128-core eiger node (estimate), ~13x one GH200. Not run on eiger (user: verify
+  estimates with him first). Optimisation ideas (not done): drop acos/sin/cos in the rotation, cheaper field lookup, SIMD batches.
+- Incident: killing hung local ssh clients let old queued commands finish; one resubmitted eiger cv job 8269498 (tasks skipped
+  done slices in 2 s; leftover cancelled). v6 inputs checked unchanged (tail_produce.py md5, pythia binary).
+- LIVE TALK on the target studies (user, for a colleague): `docs/target_talk/` (target_talk.tex, target_talk.py, run.sh; theme and
+  storage widgets from ../live_talk). Data: results/complete_validation, results/pythia_versions, results/storage_policy,
+  results/target_talk/top_muons.npz (bin/top_muons_data.py on the farm from the gamma / c / zeta stores; output
+  /disk/lhcb_data/sqasim/target_talk/top_muons.npz).
+- (Mon ~18:30) THE COMPLETE PRODUCTION IS NOW CALLED `target-production-complete-november-2-2026` (user: refer only to it and to the
+  506 M 2018 reference from now on): /capstor/scratch/cscs/sqasim/target-production-complete-november-2-2026/{pool (20 train + 4
+  hidden, 2.33 G rows, 121 GB), production (minbias_*, minbias_generator_*, onia_*, charm_*, beauty_*; 300 GB; real files, no
+  links), config, logs, README.txt}. pool.json / h5 attrs carry the name and per-component recipe. Old folder v6/ keeps only the
+  broken first attempt (log_bad), the old links and MOVED.txt.
+  Cells (per ~99 M-row chunk, n_eff): min-bias-dominated cells 5-100x the previous production (300-400 GeV pT 0.75-1.5: 1 600);
+  pT 1.5-3 GeV at 100-300 GeV still 12-200 (onia + charm make 62-68 % of the flux there and are not importance-sampled).
+  Proposed (awaiting the user): biased onia + charm reruns, pool rebuild, recheck, then daint.
+- (Mon ~20:30) USER: only target-production-complete-november-2-2026 and the 506 M 2018 sample from now on.
+  * Dataset complete and self-contained: production/ now also has charm_hadrons_*, beauty_hadrons_*, onia_generator_*;
+    config/ chi tables; logs per component; README.md (versions, commands, seeds, columns, limitations); code/ (snapshot of
+    veto bin/lib/cpp + checksums of container and binaries); histograms/ (bin/compare_new_vs_506M.py, job 8269932).
+  * 506 M sample: /disk/lhcb_data/sqasim/reference-2018-fairship-506M/ (was ref2018; README.txt; histograms_506M.npz). Scripts
+    updated to the new path.
+  * JUNK: eiger $S/junk/{v5,v6,pool1,test1,veto_source_pool1}; farm /disk/lhcb_data/sqasim/junk/{pool_v1..v4 + logs,
+    veto_source_pool1}; daint /ritom/scratch/cscs/sqasim/junk/{pool_v1_incoming,pool_v2,pool_v2_ponly,pool_v3,veto_muons_pool_v5}.
+    Design datasets (alpha..zeta, c) and their transports untouched.
+  * New vs 506 M (2018 selection, production p > 25 GeV): all 1.17; min. bias 1.27 (0.975 with the 2018 weighting); onia
+    1.00; charm 0.82; beauty 0.83; eta/omega/rho/phi/eta' parents x2.8; mu+/mu- 1.3 vs 1.4. n_eff: new 10-100x above 250 GeV,
+    charm 7.7e5 vs 8.3e6 total.
+  * Talk docs/target_talk rewritten (29 pages): no old pools / datasets, no fixes of our own code; new part "The new sample"
+    (cmp_1d, cmp_2d, cmp_grp, cmp_charge widgets; data results/target_talk/{new_selected,new_all,histograms_506M}.npz).
+
+## Tue 3 Nov — A-to-Z production being prepared (CSCS cert expired 11:18; user renews)
+- Daint debug of the Nov-2 sample (job 5242774): transport fine (30 s / seed), but SST1-selected n_eff per seed 9 (one J/psi
+  row 94 %). Causes: onia had one muonic decay per J/psi (few J/psi), min bias rare prompt decays (J/psi, D, rho/omega) one
+  full-weight muon each. NOT roulette compounding (checked).
+- Fixes (validated on eiger, tpc_fix/test): decay splitting (set_split / --split; onia split 20: 0.998 +- 0.015, n_eff x20;
+  min bias roulette + split 10: 1.010 +- 0.008, high-p cells 50-100x n_eff per CPU); roulette rule now a weight window
+  (no compounding); new muon window for split weights: F = 0.1 -> 0.9 rows / event (tpc_fix/weight_window_split10_F0.1.npz,
+  MoW target: recompute for the FairShip target in the smoke test).
+- Found and fixed: cascade quarkonia (gen 7) were dropped by build_pool_v5 (1.1 % of quarkonium muons); Pythia 6 seed
+  19780503 + 2 x (1e5 slice + bin) overflowed (> 9e8 limit) for all our charm / beauty slices -> p6_seed = 4000 k + gid;
+  Pythia 6 bins now in batches of 100 with retries / halving (no weight lost).
+- User decisions: target = FairShip default target_config.yaml (19 W plates, Ta cladding, He gaps, Inconel vessel, steel
+  enclosure, copper proximity shielding in a vacuum box; tailtransport target "FairShip"); Pythia 8.223 everywhere (module
+  cpp/tailgen_g411_p8223, run with PYTHIA8DATA=$S/pythia8223/share/Pythia8/xmldoc); everything new, nothing reused.
+- Also from FairShip for this target: beam = Gaussian 0.8 cm + painting radius 5 cm (tail_produce --prepare-fairship-beam);
+  charm fracp 0.40 (W); chicc / chibb x (184/98)^0.29 = 1.200 (heavyFlavourScaling.py); chi tables must be REBUILT
+  (charm_cascade --table --target FairShip, charm and beauty) before the production.
+- Open for the user: protons per spill 4e13 (FairShip run_fixedTarget default) vs our 5e13 (normalisation only).
+- Next (after cert renewal): build module, layout + overlap check, smoke test (FairShip target: min bias / onia / charm /
+  beauty, window table, no lost Pythia 6 weight, timing), then the production (~80 node-h) on the user's go.
+- (Tue ~15:30) VALIDATION PASSED on the farm (farm-gpu4, /disk/lhcb_data/sqasim/tpc_validation, module
+  /disk/lhcb_data/sqasim/tt_g411_p8223 = G4 11.2 + Pythia 8.223 static): FairShip geometry no overlaps, on-axis layout as
+  FairShip (144.3 cm W, 5.7 Ta, 25 cm Cu); FairShip / MoW flux 0.795 (pi 0.74, K 0.67, eta/omega 0.98, gamma 1.09);
+  onia 4.52e-6 / proton (split 20, n_eff x20); charm x1.19, beauty x1.19 (A scaling), 0 % Pythia 6 weight lost; no errors,
+  no Pythia version mismatch. hf_decay now passes the hadron weights as primary weights (full muon weights) and takes
+  --muon-window; windows (F = 0.1) in tpc_validation/weight_window_{FairShip_split10,charmc_split10,beautyc_split10}_F0.1.npz:
+  min bias 19.6 -> 0.58 rows / event, charm 5.3x and beauty 3.9x fewer rows, flux 1.000, n_eff 99.9 %.
+  Production plan (Eiger, ~100 node-h): min bias 6000 x 5e5 (48 nodes), onia 2500 x 2e7 (20), charm 3000 x 1e4 (24),
+  beauty 400 x 2.5e4 (4), then pool (--pot 4e13 --tags minbias,onia,charmc_mu,beautyc_mu). Command files:
+  ~/.claude/jobs/e59a0386/tmp/tpcprod/. Waiting: CSCS cert renewal + the user's go.
+
+## Wed 4 Nov 00:35 — A-TO-Z PRODUCTION SUBMITTED (user: "yes", ~102 node-h)
+- Dataset: /capstor/scratch/cscs/sqasim/target-production-complete-november-4-2026 (tail/ outputs, log/, config/ windows,
+  cmds/). FairShip target, Pythia 8.223 (generator + decays: module $S/tt_g411_p8223), Geant4 11.2 FTFP_BERT, 10 GeV,
+  beam = FairShip (0.8 cm + 5 cm painting), 4e13 p.o.t. per spill. Job script veto/eiger_tpc.sbatch (VSRC required).
+- Jobs: min bias 8274546 (47 tasks, slices 400000-405999 x 5e5, roulette + split 10 + window), onia 8274547 (20 tasks,
+  410000-412499 x 2e7, split 20), charm 8274548 (24 tasks, 18000-20999 x 1e4, split 10 + window), beauty 8274549 (4 tasks,
+  21000-21399 x 2.5e4); retries (afterany, skip done) 8274550-8274553; pool + 506M histograms 8274554 (veto/eiger_tpcpool.sbatch,
+  "POOL DONE" in log/pool_*.out).
+- Smoke test passed (tpc_smoke): vs farm validation min bias 0.99, onia 1.06, charm 0.997, beauty 1.001, 0 % lost weight.
+- After the pool: README (versions, commands, seeds, code snapshot, checksums), cell check vs Nov-2, comparison with 506M
+  (note: compare_new_vs_506M.py uses 5e13 per spill), daint debug, transport. CSCS cert valid to Wed 11:54.
+- (Wed 11:30) Production COMPLETE: 6000 minbias + 2500 onia + 3000 charm + 400 beauty slices, 0 failed, 354 GB (Slurm put
+  25 tasks on "user env retrieval failed requeued held" -> released by hand + auto-release watcher). Pool job 8274554 TIMED
+  OUT at 6 h (4451/11900 files: the single-process writer appended small blocks); build_pool_v5.py now buffers 4 M rows per
+  chunk (identical output on the farm test); resubmitted as 8275986 (12 h, started 11:05; ~2.65 G rows -> 23 train + 4
+  hidden; expected ~15:00-16:00). TODO: rewrite the builder in parallel (per-worker parts + per-chunk concatenation).
+- CSCS scratch is purged after ~30 days: copy everything to the farm. Copy of tail/config/cmds started 11:30 (laptop relay)
+  to /disk/lhcb_data/sqasim/target-production-complete-november-4-2026; the pool to follow after it is built.
+- (Wed 14:40) BUG FOUND AND FIXED: tailtransport's Pythia decayers ran with Check:event = off and py_decay did not validate
+  the result; Pythia 8.223 returns broken B+ / B0 decays (~3e-7, e.g. B+ -> D*- pi+ pi+ pi0 with NaN pi0 photons and a
+  3.5 TeV D*-) -> 2 beauty events with 500-870 GeV muons (crashed the daint training seeds: momentum table ends at 400 GeV).
+  Standalone check (cpp/tailgen/decay_check.cc): D, eta, omega, rho, phi, eta', J/psi, Upsilon, tau, B_s clean in 9.6e6
+  each. Fix: Check:event on + py_decay validates (finite, energy conserved 0.1 %, max 5 retries; diag pythia_retries) +
+  T.decay_test(); module $S/tt_g411_p8223_v2 (verified: 9.6e6 B+ / B0 each, 0 bad returned). Charm + beauty DECAYS rerun from
+  the existing hadron files (jobs 8276442, 8276443; old outputs in $S/junk/target-production-november-4-2026-first-hf-decays),
+  pool rebuild 8276444 (also drops p >= 400 GeV, counted in pool.json), then daint debug (local chain).
+
+## 2026-11-07 (night): final-production plan, tests on the farm
+- Plan (artifact https://claude.ai/artifact/BrxHAGdA6ptFhkRnjgw3tt): statistics everywhere on a closed elliptic-arch SHELL around
+  the vessel (lib/veto/shell.py: margin 1.5 m, 29.89 -> 94.5 m, 32 x 16 side cells + 8 x 8 caps at 30.6 / 82 m), all muons that
+  stop in the last metre of the shield kept (with a ceiling), 1-in-N of the rest.
+- Response map (zeta store, /disk/gfs_lhcb/sqasim/shell_response): shell fed by 33-89 GeV sources (78 %), nothing < 20 GeV.
+- E1 test (min bias, farm Slurm `hep`, /disk/gfs_lhcb/sqasim/e1_test): A = Nov-4 settings, B = E1 25 no window, C = E1 25 +
+  per-cell window (window_percell.npz). Rates unbiased (1.000). C vs A, distinct-muon n_eff: median shell cell 3.8x, last metre
+  10.5x, 5.3x CPU, 3.3 vs 0.57 rows per collision.
+- KEY: shell statistics are transport-limited (seed-counted / distinct n_eff ~1.1). 10 seeds on ONE Nov-4 chunk
+  (/disk/gfs_lhcb/sqasim/nov4_pool/train_000.h5, copied Eiger -> farm directly, md5 OK): heavy rows are different muons every
+  seed (top-10 overlap 0 %); distinct n_eff grows ~linearly (9x at 10 seeds) except SST1 selected (4.2x: saturates ~10 seeds per
+  chunk). => The Nov-4 production is usable; what is needed is transport with ~10-20 seeds per chunk + shell storage. New
+  production only where the full shell map shows holes (likely last metre).
+- NEW transport storage `--storage shell` (bin/generate_muon_study.py): types 0-3 + last-metre stops kept (cap --keep-cap per
+  seed), shell-steered rows (--shell-rows-per-seed), floor per type; PLAIN Horvitz-Thompson weights (the per-type rescaling of
+  the other storages gave a coherent +4 %). Check: bin/shell_check.py <dir>. 3 seeds: bias 1.002, pull 0.00, no n_eff lost,
+  ~240 k rows / 28 MB per seed.
+- Farm notes: Slurm only from farm-gpu3/4/5 (not farm-ui1: no munge); batch jobs must call apptainer directly (the shared exec
+  script binds /run/user/<uid>); containers need -B /disk/gfs_lhcb now that data/ dirs are symlinks there; transport runs in
+  /disk/users/lprate/containers/MuonsAndMatterContainer.sif (Python 3.10); field map copied to Veto_System/MainSpectrometerField.h5.
+  generate_muon_study.py now passes pdg to the classifier (Guglielmo's field-map classify needs the charge).
+- Disk move done 2026-11-06: 1.5 TB from /disk/users to /disk/gfs_lhcb (symlinks), caches cleaned (56 GB).
+- Merged Gfrisella/Veto_System main locally (fast-forward + our uncommitted work on top; nothing committed).
+- Next: copy the full Nov-4 pool (136 GB) to the farm; transport 27 chunks x ~20 seeds with --storage shell on farm-gpu3
+  (~7.5 GPU-h, ~15 GB); shell map -> decide on a targeted production.
+
+## 2026-11-07 (evening): full-sim inventory, cavern-wall census
+- `docs/full_sim_inventory.md`: what we have / miss per source (muons, neutrinos), user's decisions (+x wall dropped for
+  now, new muons made in the shield parked as rare, Mylar kept, cavern-wall DIS and a new neutrino sample at the target
+  to do), plans for both.
+- 8-GPU shell extension DONE: 3,220 train + 560 hidden seeds (`/disk/gfs_lhcb/sqasim/nov4_pool/shell/`, 100 GB).
+- `bin/rock_hits.py` (300 seeds): 1.5e9 muons / spill go into the wall, 8.9e7 into the floor; only ~1.2e5 / spill come
+  back into the cavern. CORRECTION: the earlier "wall bounces 3.3e8 / spill" were muons stopping in the rock (fake bounce
+  point from the stop state); type 4 rock_bounced is 99 % muons inside the rock at 82 m. Type 0 unaffected.
+- Reco display tab "Veto reco" on https://claude.ai/artifact/8ttnXaQfgCcwR3CyvbvGpy (bounce-search windows ~ +-7.5 m).
+- Raw Nov-4 production (354 GB) still ONLY on CSCS scratch (purge ~Dec 4): copy pending the user's go.
+
+## 2026-11-08: cavern-wall DIS (ISSUES D7)
+- Muon flow per spill (4e13 p.o.t.): 4.69e10 from the target, 4.38e10 stop in the shield, 3.11e9 reach 30.6 m; of those
+  1.46e9 go into the -x wall (mu+), 9.1e7 into the floor, 1.39e9 fly past (mostly mu- to +x, where the model has no wall),
+  ~3e4 reach SST1. 15 years: 2.4e16 muons into the rock.
+- `cpp/g4rock.cc` (Geant4 half-space of G4_CONCRETE: forced muonNuclear, per-event depths, injection of given final states,
+  trajectory recording) + `bin/rock_dis.py` (scan, viz). Page: https://claude.ai/artifact/7e4c5hkyvZy1cupHhpqNGv.
+  Charged hadrons escape only from the top ~30 cm; neutrons / photons from ~1 m.
+- Library `bin/rock_library.py` (+ `bin/rock_library.sbatch`, job 2021285 on hep, 224 tasks): Geant4 part (nu < nu_x) +
+  Pythia 6 part (nu >= nu_x, from mu_library.npz) injected and transported; output /disk/lhcb_data/sqasim/rock_dis/library/.
+  `bin/rock_apply.py` applies it to the shell seeds (planes, vessel, SST1). Partial-library test: 1.6e7 interactions / spill
+  in the top 3 m, ~9e3 charged p > 1 GeV / spill at SST1 (preliminary).
+- Decided next (user, 2026-11-08): direct forced Geant4 from the stored 30.6 m states in the real cavern (wall + floor,
+  G4BOptrForceCollision, forced K_L / neutral decays in the vessel), storing design-independent trees to SST1, mapped onto
+  designs afterwards (straight lines or ParticleShaker). The library stays as the quick estimate and cross-check.

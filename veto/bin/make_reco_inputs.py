@@ -43,6 +43,7 @@ def main():
     parser.add_argument("--dataset", default=DATASET)
     parser.add_argument("--maps", default="sample.npz", help="rate maps: results/design_explorer/<this>")
     parser.add_argument("--out", default="inputs.npz", help="file name in results/reco")
+    parser.add_argument("--pair-runs", type=int, default=0, help="> 0: candidate pairs from this many runs only (weights rescaled)")
     parser.add_argument("--pair-block", type=int, default=0, help="> 0: pairs in blocks of this many muons per spill (big spills)")
     args = parser.parse_args()
     rng = np.random.default_rng(args.seed)
@@ -66,6 +67,12 @@ def main():
     good[gg] = mt.timing_ok(np.stack([d["bx"][gg], d["by"][gg], d["bz"][gg]], 1),
                             np.stack([d["bpx"][gg], d["bpy"][gg], d["bpz"][gg]], 1), -np.sign(d["pdg"][gg]))
     g = np.where(good)[0]
+    pair_factor = 1.0
+    if args.pair_runs and args.pair_runs < n_runs:     # pairs from the first N runs only (each run is a spill):
+        runs = np.unique(d["run"][g])[:args.pair_runs]  # unbiased with the weights x n_runs / N; 1/N the pairing time
+        g = g[np.isin(d["run"][g], runs)]
+        pair_factor = n_runs / len(runs)
+        print(f"pairs from {len(runs)} of {n_runs} runs (weights x {pair_factor:.3g})", flush=True)
     dev = args.device if torch.cuda.is_available() else "cpu"
     t = {k: torch.as_tensor(d[c][g].astype(np.float64), device=dev)
          for k, c in (("x", "bx"), ("y", "by"), ("z", "bz"), ("px", "bpx"), ("py", "bpy"), ("pz", "bpz"))}
@@ -73,7 +80,7 @@ def main():
     t["file_index"] = torch.as_tensor(d["run"][g].astype(np.int64), device=dev)
     pairs, vertex, n_pairs = (candidates_blocked(t, dev, args.pair_block) if args.pair_block else candidates(t, dev))
     pairs, vertex = g[pairs.cpu().numpy()], vertex.cpu().numpy()
-    w_pair = d["weight"][pairs[:, 0]].astype(np.float64) * d["weight"][pairs[:, 1]] * n_runs
+    w_pair = d["weight"][pairs[:, 0]].astype(np.float64) * d["weight"][pairs[:, 1]] * n_runs * pair_factor
     print(f"{good.sum():,} muons with p > 1 GeV in the timing acceptance, {n_pairs:,} opposite-charge pairs "
           f"in the same run -> {len(pairs):,} candidates ({w_pair.sum():.4g} pairs / spill before the time "
           f"coincidence), {time.time() - start:.0f} s")

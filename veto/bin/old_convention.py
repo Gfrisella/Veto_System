@@ -13,15 +13,10 @@
 import _bootstrap  # noqa: F401
 import argparse
 import glob
+import os
 from pathlib import Path
 
-import awkward as ak
-import h5py
 import numpy as np
-import uproot
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
 from veto import paths
 
@@ -32,6 +27,14 @@ rng = np.random.default_rng(11)
 
 
 def loss_map():
+    """Per production-momentum bin (LB), the losses production -> 2018 plane of the 2018 file's muons. Cached in
+    $LOSS_TABLE (npz) when that is set: written on the first call, read afterwards (machines without the ROOT file)."""
+    cache = os.environ.get("LOSS_TABLE")
+    if cache and Path(cache).exists():
+        d = np.load(cache)
+        return [d[f"b{i}"] for i in range(len(LB) - 1)]
+    import awkward as ak
+    import uproot
     t = uproot.open(str(paths.source_data() / "flux/pythia8_Geant4_10.0_withCharmandBeauty22000_mu.root"))["cbmsim"]
     mc = t.arrays(["MCTrack/MCTrack.fPdgCode", "MCTrack/MCTrack.fPx", "MCTrack/MCTrack.fPy", "MCTrack/MCTrack.fPz"], library="ak")
     vp = t.arrays(["vetoPoint/vetoPoint.fTrackID", "vetoPoint/vetoPoint.fPdgCode", "vetoPoint/vetoPoint.fPx",
@@ -53,6 +56,8 @@ def loss_map():
         if len(table[i]):
             print(f"   p_prod {LB[i]:6.1f}-{LB[i + 1]:6.1f} GeV: {len(table[i]):7d} muons, loss median {np.median(table[i]):6.2f}, "
                   f"q10/q90 {np.quantile(table[i], 0.1):6.2f}/{np.quantile(table[i], 0.9):6.2f} GeV")
+    if cache:
+        np.savez(cache, **{f"b{i}": t_ for i, t_ in enumerate(table)})
     return table
 
 
@@ -80,6 +85,10 @@ def load(tag, use_plane_plus_loss=False, mean_loss=None):
 
 
 def main():
+    import h5py
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=str(paths.results_dir() / "old_convention"))
     a = ap.parse_args()

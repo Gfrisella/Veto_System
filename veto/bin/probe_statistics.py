@@ -26,60 +26,17 @@ import time
 
 import numpy as np
 
-from veto import geometry as geo
-from veto import io, paths
-from veto import muon_types as mt
+from veto import io, paths, probe
 
 CHUNK = 8_000_000
 
 
 def planes(args):
-    """List of planes: dict(name, kind, z0, tilt, u-range / x-range, y-range, cell grid)."""
-    out = []
-    if args.ubt:                                          # UBT column in front of the vessel, as tall as the fins
-        out.append(dict(name="UBT z=30.6", kind="ubt", z0=float(geo.Z_UBT), tilt=0.0,
-                        u=(-float(geo.UBT_HALF_X), float(geo.UBT_HALF_X)), y=(mt.FIN_Y_MIN, 3.2)))
-    if args.only_ubt:
-        return out
-    for z in np.arange(geo.Z_VESSEL_MIN, geo.Z_VESSEL_MAX + 1e-6, args.dz):
-        X = mt.side_plane_x(z)
-        for side, sign, reach in (("right", -1, -mt.CAVERN_X_WALL - X), ("left", 1, args.left_reach)):
-            out.append(dict(name=f"{side} fin z={z:.1f}", kind="fin", side=side, sign=sign, z0=float(z), tilt=0.0,
-                            u=(0.0, float(reach)), y=(mt.FIN_Y_MIN, 3.2)))
-    for z in args.floor_z:
-        X = mt.side_plane_x(z) + 1.0
-        _, hy = geo.vessel_half_widths(np.array([z]))
-        out.append(dict(name=f"floor z={z:.1f}", kind="floor", z0=float(z), tilt=float(args.floor_tilt),
-                        u=(-float(X), float(X)), y=(mt.FIN_Y_MIN, -float(hy[0]))))
-    return out
+    """The probe planes of veto.probe for these command-line settings."""
+    return probe.planes(args.dz, args.left_reach, args.floor_z, args.floor_tilt, args.ubt, args.only_ubt)
 
 
-def crossing(a, k, b, plane):
-    """Where the paths cross the plane: global (x, y, z) and a mask. Fins: z = z0. Floor: the plane through
-    the line (z0, y = -3.2) rotated by tilt about x: f = (z - z0) - (y + 3.2) tan(tilt) = 0."""
-    if plane["kind"] in ("fin", "ubt"):
-        x, y, ok = mt.path_at_z(a, k, b, plane["z0"])
-        return x, y, np.full(len(x), plane["z0"]), ok
-    t = np.tan(np.radians(plane["tilt"]))
-    f = lambda p: (p[:, 2] - plane["z0"]) - (p[:, 1] - mt.FIN_Y_MIN) * t
-    bounced = np.isfinite(k[:, 2])
-    hit = np.zeros(len(a), bool)
-    pt = np.full((len(a), 3), np.nan)
-    for p0, p1, use in ((a, np.where(bounced[:, None], k, b), np.ones(len(a), bool)), (k, b, bounced)):
-        f0, f1 = f(p0), f(p1)
-        with np.errstate(invalid="ignore", divide="ignore"):
-            s = f0 / (f0 - f1)
-        m = use & ~hit & np.isfinite(s) & (s >= 0) & (s <= 1)
-        pt[m] = p0[m] + s[m, None] * (p1[m] - p0[m])
-        hit |= m
-    return pt[:, 0], pt[:, 1], pt[:, 2], hit
-
-
-def local(plane, x, y, z):
-    """Local (u, v) on the plane: fins u = distance from the vessel wall, v = y; floor u = x, v = y."""
-    if plane["kind"] == "fin":
-        return plane["sign"] * x - mt.side_plane_x(plane["z0"]), y
-    return x, y
+crossing, local = probe.crossing, probe.local
 
 
 def main():

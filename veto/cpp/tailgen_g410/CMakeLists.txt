@@ -1,0 +1,15 @@
+# tailtransport (cpp/tailgen/tailtransport.cc) built against Geant4 10.00.p04 (the 2018 FairShip production's major
+# version): bin/g4_10.sh bash cpp/tailgen_g410/build.sh. C++14: the Geant4 10.0 headers predate C++17.
+cmake_minimum_required(VERSION 3.16)
+project(tailtransport_g410 CXX)
+set(CMAKE_CXX_STANDARD 14)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+set(PYBIND11_FINDPYTHON ON)
+find_package(pybind11 CONFIG REQUIRED)
+find_package(Geant4 REQUIRED)
+pybind11_add_module(tailtransport ${CMAKE_CURRENT_SOURCE_DIR}/../tailgen/tailtransport.cc)
+target_include_directories(tailtransport PRIVATE ${Geant4_INCLUDE_DIRS})
+target_link_libraries(tailtransport PRIVATE ${Geant4_LIBRARIES})
+set_target_properties(tailtransport PROPERTIES INSTALL_RPATH "${Geant4_DIR}/../.." BUILD_RPATH_USE_ORIGIN OFF)

@@ -13,11 +13,17 @@
    proton on target, with chi = sigma(c cbar, MSEL 4) / sigma(tot, MSEL 2) on p / n (fracp 0.43), as the
    makeCascade.py tables. Muons above 2 GeV are carried to z = -0.0045 m by Geant4.
 Output data/tail/charmc_<K>.npz (tail_produce.py layout: w_decay = chicc x chi ratio, events = protons).
+
+--hadrons: the weakly decaying charm hadrons are written instead (pythia6_charm had: undecayed, as FairShip's charm input
+file) to data/tail/<tag>_had_<K>.npz (pdg, momentum, production point, weight per proton, events); bin/hf_decay.py decays
+and transports them with tailtransport's complete mode (Pythia 8 decays, every muon source, as FairShip's charm production).
+--flavour beauty: b bbar (MSEL 5), chibb = 1.6e-7 (FairShip run_fixedTarget.py), its own chi table, tag beautyc.
 """
 
 import _bootstrap  # noqa: F401
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -33,25 +39,48 @@ from tail_produce import Layout, sample_along, OUT  # noqa: E402
 P6C = str(paths.PROJECT_DIR / "cpp/tailgen/build/pythia6_charm")
 P6M = str(paths.PROJECT_DIR / "cpp/tailgen/build/pythia6_mesons")
 TABLE = OUT / "charm_chi_table.json"
+BATCH = 100                                         # interactions per Pythia 6 run
+
+
+def p6_seed(k, gid):
+    """Pythia 6 seed of run gid of slice k: unique for k < 50000, gid < 4000, and MRPY(1) = 19780503 + 2 seed + it stays
+    below Pythia 6's limit of 9e8 (the earlier 1e5 k + gid overflowed for k > 10737)."""
+    return 4000 * k + gid
+
+
+FLAVOUR = {"charm": dict(msel=4, chi=1.7e-3, table=OUT / "charm_chi_table.json", tag="charmc"),
+           "beauty": dict(msel=5, chi=1.6e-7, table=OUT / "beauty_chi_table.json", tag="beautyc")}
 NAMES = {2212: "p+", 2112: "n0", 211: "pi+", -211: "pi-", 321: "K+", -321: "K-", 130: "KL0", 310: "KS0",
          -2212: "pbar-", -2112: "nbar0"}
 GRID = [34, 45, 60, 80, 100, 125, 150, 200, 250, 300, 350, 400]
 PBINS = np.array([34, 40, 50, 60, 70, 80, 100, 120, 150, 180, 220, 260, 300, 350, 401])
 FRACP, CHICC, EMIN_CASC, EMIN_MU = 0.43, 1.7e-3, 34.0, 2.0
+FRACP_TARGET = {"FairShip": 0.40, "W": 0.40, "W+Fe": 0.40}          # makeCascade.py: tungsten 74 / 184, else (Mo) 0.43
+# FairShip python/heavyFlavourScaling.py: chicc / chibb are given for Mo (A = 98) and scale with the target as
+# (A / 98)^(1 - 0.71); tungsten (A = 184): x 1.200
+A_TARGET = {"FairShip": 184.0, "W": 184.0, "W+Fe": 184.0}
 
 
-def make_table():
+def hf_scale(target):
+    return (A_TARGET.get(target, 98.0) / 98.0) ** (1 - 0.71)
+EMIN_HAD = 20.0                    # --hadrons: hadrons above this energy (muons above 20 GeV at the plane)
+
+
+def make_table(flavour="charm"):
     from concurrent.futures import ThreadPoolExecutor
+    fl = FLAVOUR[flavour]
     jobs = [(b, p) for b in sorted(set(NAMES.values())) for p in GRID]
 
     def run(job):
         b, p = job
-        out = subprocess.run([P6C, "xsec", b, str(p), "20000", "7"], capture_output=True, text=True).stdout
+        out = subprocess.run([P6C, "xsec", b, str(p), "20000", "7", str(fl["msel"])], capture_output=True, text=True).stdout
         vals = {}
         for line in out.splitlines():
             f = line.split()
             if len(f) == 5:
                 vals[f[2]] = (float(f[3]), float(f[4]))
+        if "p+" not in vals or "n0" not in vals:      # below threshold (b bbar at low momentum): no production
+            return b, p, 0.0
         cc = FRACP * vals["p+"][0] + (1 - FRACP) * vals["n0"][0]
         tot = FRACP * vals["p+"][1] + (1 - FRACP) * vals["n0"][1]
         return b, p, cc / tot
@@ -62,7 +91,7 @@ def make_table():
         chi.setdefault(b, {})[p] = c
     ref = chi["p+"][400]
     table = {b: {str(p): v / ref for p, v in sorted(d.items())} for b, d in chi.items()}
-    json.dump({"grid": GRID, "ratio_to_p400": table, "chi_p400": ref, "fracp": FRACP}, open(TABLE, "w"), indent=1)
+    json.dump({"grid": GRID, "ratio_to_p400": table, "chi_p400": ref, "fracp": FRACP}, open(fl["table"], "w"), indent=1)
     print(json.dumps(table, indent=1))
 
 
@@ -81,10 +110,15 @@ def rotate_to(pz_frame, u):
     return pz_frame[:, 0:1] * e1 + pz_frame[:, 1:2] * e2 + pz_frame[:, 2:3] * u
 
 
-def run_slice(k, events):
+def run_slice(k, events, flavour="charm", hadrons=False, target="MoW"):
+    global EMIN_HAD, FRACP
+    FRACP = FRACP_TARGET.get(target, 0.43)
+    if os.environ.get("HF_EMIN"):                     # hadron threshold of --hadrons (default 20 GeV)
+        EMIN_HAD = float(os.environ["HF_EMIN"])
     import tailtransport as T
     t0 = time.time()
-    table = json.load(open(TABLE))
+    fl = FLAVOUR[flavour]
+    table = json.load(open(fl["table"]))
     binf = OUT / f"charmc_mb_{k}.bin"
     subprocess.run([P6M, str(events), str(4000 + k), str(EMIN_CASC), str(binf), str(FRACP)], check=True,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -92,7 +126,7 @@ def run_slice(k, events):
     n_ev = int(meta["events_generated"])
     rec = np.fromfile(binf, dtype=np.float64).reshape(-1, 6)
     binf.unlink()
-    T.initialize(seed=6000 + k, target="MoW")
+    T.initialize(seed=6000 + k, target=target)
     T.set_pik(False)
     T.set_log_interactions(True, EMIN_CASC)
     lay = Layout(T, T.target_layout())
@@ -124,19 +158,53 @@ def run_slice(k, events):
     mu = {kk: [] for kk in ("pdg", "px", "py", "pz", "x", "y", "z", "w", "src")}
     pb = np.clip(np.digitize(pmag, PBINS) - 1, 0, len(PBINS) - 2)
     gid = 0
+    lost_w = []
     for nm in np.unique(names):
         for b in np.unique(pb[names == nm]):
             sel = np.nonzero((names == nm) & (pb == b))[0]
-            pc = 0.5 * (PBINS[b] + PBINS[b + 1]) if b < len(PBINS) - 2 else 400.0
-            cf = OUT / f"charmc_{k}_{gid}.bin"
-            gid += 1
-            subprocess.run([P6C, "gen", nm, f"{pc:.1f}", str(len(sel)), str(100000 * k + gid), str(EMIN_MU), str(cf), str(FRACP)],
-                           check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            r = np.fromfile(cf, dtype=np.float64).reshape(-1, 6)
-            cf.unlink(); Path(str(cf) + ".txt").unlink()
-            if not len(r):
+            if chi[sel].sum() <= 0:                       # below threshold (b bbar at low momentum): nothing produced
                 continue
-            idx = sel[r[:, 0].astype(int)]                       # charm event i belongs to interaction sel[i]
+            pc = 0.5 * (PBINS[b] + PBINS[b + 1]) if b < len(PBINS) - 2 else 400.0
+            parts = []
+            # batches of <= BATCH interactions, each with its own seed and a short time limit; a batch that fails is retried
+            # with new seeds, then split in halves down to single interactions (Pythia 6 can loop near threshold)
+            todo = [sel[i:i + BATCH] for i in range(0, len(sel), BATCH)]
+            while todo:
+                bsel = todo.pop()
+                ok = False
+                for attempt in range(3):
+                    gid += 1
+                    if gid >= 4000:
+                        raise RuntimeError("more than 4000 Pythia 6 runs in a slice: seed range exceeded")
+                    cf = OUT / f"{fl['tag']}_{k}_{gid}.bin"
+                    try:
+                        subprocess.run([P6C, "had" if hadrons else "gen", nm, f"{pc:.1f}", str(len(bsel)), str(p6_seed(k, gid)),
+                                        str(EMIN_HAD if hadrons else EMIN_MU), str(cf), str(FRACP), str(fl["msel"])], check=True,
+                                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30 + 0.2 * len(bsel))
+                        ok = Path(str(cf) + ".txt").exists()
+                    except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+                        ok = False
+                    if ok:
+                        break
+                    for f_ in (cf, Path(str(cf) + ".txt")):
+                        if f_.exists():
+                            f_.unlink()
+                if not ok:
+                    if len(bsel) > 1:                        # split and try the halves
+                        todo += [bsel[:len(bsel) // 2], bsel[len(bsel) // 2:]]
+                        continue
+                    lost_w.append(float((wint[bsel] * chi[bsel]).sum()))
+                    print(f"   no output for {nm} at {pc:.1f} GeV (1 interaction, chi weight {chi[bsel].sum():.3g})", flush=True)
+                    continue
+                r = np.fromfile(cf, dtype=np.float64).reshape(-1, 6)
+                cf.unlink(); Path(str(cf) + ".txt").unlink()
+                if len(r):
+                    r = r.copy(); r[:, 0] = bsel[r[:, 0].astype(int)]   # batch index -> interaction index
+                    parts.append(r)
+            if not parts:
+                continue
+            r = np.concatenate(parts)
+            idx = r[:, 0].astype(int)                            # charm event i belongs to interaction idx
             u = pvec[idx] / pmag[idx, None]
             p_lab = rotate_to(r[:, 2:5], u)
             for kk, v in (("pdg", r[:, 1].astype(int)), ("px", p_lab[:, 0]), ("py", p_lab[:, 1]), ("pz", p_lab[:, 2]),
@@ -146,6 +214,15 @@ def run_slice(k, events):
     mu = {kk: np.concatenate(v) for kk, v in mu.items()}
     fwd = mu["pz"] > 0
     mu = {kk: v[fwd] for kk, v in mu.items()}
+    if hadrons:                                       # charm / beauty hadrons for bin/hf_decay.py
+        np.savez(OUT / f"{fl['tag']}_had_{k}.npz", events=n_ev, pdg=mu["pdg"], px=mu["px"], py=mu["py"], pz=mu["pz"],
+                 x=mu["x"], y=mu["y"], z=mu["z"], w=fl["chi"] * hf_scale(target) * mu["w"], src=mu["src"])
+        print(f"slice {k}: {n_ev} protons, {len(it['pdg'])} cascade interactions > {EMIN_CASC:.0f} GeV; {len(mu['pdg'])} "
+              f"{flavour} hadrons > {EMIN_HAD:.0f} GeV, weight per proton {fl['chi'] * hf_scale(target) * mu['w'].sum() / n_ev:.4g} "
+              f"(chi x {hf_scale(target):.3f} for the target, fracp {FRACP}); production "
+              f"weight lost in failed bins {sum(lost_w) / max((wint * chi).sum(), 1e-300):.2%}; "
+              f"total {time.time() - t0:.0f} s", flush=True)
+        return
     tr = T.transport(mu["pdg"].tolist(), mu["x"].tolist(), mu["y"].tolist(), mu["z"].tolist(),
                      mu["px"].tolist(), mu["py"].tolist(), mu["pz"].tolist())
     ok = tr["ok"] > 0
@@ -167,11 +244,16 @@ def main():
     ap.add_argument("--slice", type=int, default=0)
     ap.add_argument("--n-slices", type=int, default=1)
     ap.add_argument("--events", type=int, default=100000)
+    ap.add_argument("--flavour", choices=["charm", "beauty"], default="charm")
+    ap.add_argument("--hadrons", action="store_true", help="write the charm / beauty hadrons (bin/hf_decay.py) instead of muons")
+    ap.add_argument("--target", default="MoW", help="target of the cascade (tailtransport targets)")
     a = ap.parse_args()
     if a.table:
-        make_table()
+        global FRACP
+        FRACP = FRACP_TARGET.get(a.target, 0.43)
+        make_table(a.flavour)
     else:
-        run_slice(a.slice, a.events)
+        run_slice(a.slice, a.events, a.flavour, a.hadrons, a.target)
 
 
 if __name__ == "__main__":
