@@ -4,6 +4,15 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-09 (afternoon) — Pythia 8 photoproduction library, comparison at 4e13 (branch `veto-shield-dis`)
+
+- `bin/p8_library.py --variant full`: Pythia 8 photoproduction (Q² < 1.5, W > 5, Annual Report 2026 Table 7) + DIS
+  (Q² > 1.5, W > 2) mixed by σ -> `mu_library_iron_p8full.npz`; empty parts skipped per energy.
+- `bin/shield_dis.py` records `pot_per_spill` in its json; `bin/compare_shield_generators.py` puts every run on 4e13
+  (older runs × 0.8, FairShip π 800 -> 640 Hz). New chain run `shield_muon_fs2026_p8full` (2e6 draws, all transported).
+- Note: run shield_dis with `bin/g4ship.sh` (Geant4 10.7.3 env); under load many workers fail to load CVMFS libraries and
+  are restarted (16 416 ImportErrors in the log, all 2e6 interactions transported).
+
 ## 2026-11-09 — 4e13 p.o.t. per spill everywhere (D13), shared geometry (branch `veto-shield-dis`)
 
 - **Normalisation (D13, decided by Guglielmo):** `config.POT_PER_SPILL = 4e13`, `SPILLS_15Y = 6e20 / 4e13 = 1.5e7`; every

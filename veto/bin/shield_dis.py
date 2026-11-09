@@ -176,7 +176,7 @@ def draw(kind, par, n, rng, per_track=False, mu_lib=None, mu_split=None):
     order = np.argsort(part["int"], kind="stable")
     part = {k: v[order] for k, v in part.items()}
     summ = dict(parents=len(P), parents_per_spill=float(par["weight"].sum()),
-                interactions_per_spill=S, interactions_15y=S * SPILLS_15Y, draws=n, dropped_low_E=int((~ok).sum()),
+                interactions_per_spill=S, pot_per_spill=POT_PER_SPILL, interactions_15y=S * SPILLS_15Y, draws=n, dropped_low_E=int((~ok).sum()),
                 sampling="one per track, weight w P" if per_track else "proportional to w P, weight S / N")
     return inter, part, summ
 

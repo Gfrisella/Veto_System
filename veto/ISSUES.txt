@@ -453,6 +453,10 @@ D3. MS7 shield DIS -> K_L: chain disagrees with FairShip
     9 Nov 2026: --MuonBackSSTOnly = keep events with any real hit (not "muon reaches SST"): FairShip not a lower limit.
     FairShip's 8 Hz "K0" entry is a 0.61 GeV pi from a K_L hadronic interaction in the cavern concrete, not a decay:
     FairShip has 0 MS7 K0-decay tracks (< 18 Hz 90 % CL); chain with the cuts expects 6.3 MC entries (G4 10.7), 18 (P6).
+    9 Nov 2026: FairShip muonNuclear = Geant4 Kokoulin + VDNuclear, only nu > 0.2 GeV, no Q2 / W cut: same definition as our
+    Geant4-only columns -> generator / cut definition ruled out. Left: parent flux into MS7, FairShip cuts / killing, V0 chain.
+    9 Nov 2026: Pythia 8 photoproduction (W > 5, Q2 < 1.5) + DIS: 71.8 Hz after track cuts (11.7 FairShip entries expected).
+    FairShip FastMuon off (only via --FastMuon / --FollowMuon). Next: parent muon flux into MS7, K_L transport / weights.
     Forced chain in the last 50 cm of MS7: K_L decays in the vessel ~4.9 kHz, (6.73 +- 0.59)e7 per 15 y
     after DOCA < 1 cm, fiducial, IP < 2.5 m (docs/shield_iron_dis.md).
       - plain Geant4 (bin/shield_natural_check.py) gives 0.52 +- 0.15 of the chain's K_L; the excess is the
