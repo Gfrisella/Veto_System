@@ -27,6 +27,8 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import os
+SHARED = os.environ.get("VETO_SHARED", "/disk/lhcb_data/sqasim")   # Shah Rukh's shared data (read only)
 
 P_MIN = 25.0
 PE = np.geomspace(10, 400, 33)
@@ -117,7 +119,7 @@ def compute(a):
 
 def refs(a):
     import h5py
-    with h5py.File("/disk/lhcb_data/sqasim/reference-2018-fairship-506M/reference_2018.h5", "r") as f:
+    with h5py.File(f"{SHARED}/reference-2018-fairship-506M/reference_2018.h5", "r") as f:
         wf = f["w_fairship"][:].astype(np.float64)
         w = f["weight"][:].astype(np.float64)
         px, py, pz = (f[k][:].astype(np.float64) for k in ("px", "py", "pz"))

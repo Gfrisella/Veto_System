@@ -2,3 +2,4 @@ data/
 results/
 __pycache__/
 cpp/build_ship/
+cpp/emdebris/emdebris

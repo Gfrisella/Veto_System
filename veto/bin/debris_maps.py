@@ -4,8 +4,11 @@ added to a dataset's muon rate maps: the reco inputs then see muons + debris (bi
 
 Every muon of the dataset that reached z = 30.6 m (type != 7) and left the shield through its iron gets one library
 event; its e+- (kinetic > 1 MeV) and photons (> 0.1 MeV) go straight from the exit face to the UBT (z = 30.6, |x| < 0.5)
-and the fin slices (outward of the vessel wall). Maps per kind (e, gamma) and combined: muons + e + P_GAMMA x gamma
-(P_GAMMA: chance a photon makes a hit in a station, placeholder 5 % for 1 cm of scintillator).
+and the fin slices (outward of the vessel wall). Written as separate em_* maps (em_ubt_e / _g, em_fin_e / _g, the
+format of bin/em_debris.py, ISSUES B2 / D12): the muon maps ubt_hist / fin_maps are left unchanged, and
+reco.plane_rate_map adds P_e e + P_gamma gamma per plane technology (em_debris.detection_probability). Debris is then
+counted once; run_reco --em-debris replaces these em_* maps with the g4shield -> g4vessel ones (the main-chain source).
+(Before 2026-11-09 this script added e + 0.05 x gamma into ubt_hist / fin_maps.)
 
     python3 bin/debris_maps.py --dataset <name> --maps sample_<x>.npz --out sample_<x>_em.npz
 """
@@ -30,7 +33,6 @@ def main():
     ap.add_argument("--maps", required=True, help="the dataset's muon rate maps: results/design_explorer/<this>")
     ap.add_argument("--out", required=True, help="results/design_explorer/<this>: maps with the debris added")
     ap.add_argument("--lib", default=str(paths.results_dir() / "debris_library"))
-    ap.add_argument("--p-gamma", type=float, default=0.05)
     ap.add_argument("--chunk", type=int, default=2_000_000)
     ap.add_argument("--seed", type=int, default=5)
     ap.add_argument("--every", type=int, default=1, help="use every k-th chunk (seed blocks), weights x k: faster")
@@ -85,12 +87,9 @@ def main():
     base = dict(np.load(paths.results_dir() / "design_explorer" / a.maps))
     out = dict(base)
     shape = base["fin_maps"].shape
-    out["ubt_hist_mu"], out["fin_maps_mu"] = base["ubt_hist"], base["fin_maps"]
-    out["ubt_hist_e"], out["fin_maps_e"] = maps["e"]["ubt"], maps["e"]["fin"].reshape(shape)
-    out["ubt_hist_g"], out["fin_maps_g"] = maps["g"]["ubt"], maps["g"]["fin"].reshape(shape)
-    out["ubt_hist"] = base["ubt_hist"] + maps["e"]["ubt"] + a.p_gamma * maps["g"]["ubt"]
-    out["fin_maps"] = base["fin_maps"] + maps["e"]["fin"].reshape(shape) + a.p_gamma * maps["g"]["fin"].reshape(shape)
-    out["p_gamma"] = a.p_gamma
+    out["em_ubt_e"], out["em_fin_e"] = maps["e"]["ubt"], maps["e"]["fin"].reshape(shape)
+    out["em_ubt_g"], out["em_fin_g"] = maps["g"]["ubt"], maps["g"]["fin"].reshape(shape)
+    out["em_source"] = np.array("debris_maps (g4slab library, straight lines)")
     np.savez(paths.results_dir() / "design_explorer" / a.out, **out)
     print(f"muons reaching 30.6 m: {w_mu:.4g} /spill, of which left through the shield iron: {w_iron / w_mu:.3f}")
     for k, lab in (("ubt_hist", "UBT"), ("fin_maps", "fins (all slices)")):

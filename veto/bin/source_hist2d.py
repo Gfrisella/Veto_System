@@ -19,6 +19,8 @@ import numpy as np
 from veto import paths
 
 import build_pool as bp
+import os
+SHARED = os.environ.get("VETO_SHARED", "/disk/lhcb_data/sqasim")   # Shah Rukh's shared data (read only)
 
 P_EDGES = np.geomspace(10, 400, 41)
 PT_EDGES = np.linspace(0, 4, 41)
@@ -54,7 +56,7 @@ def hist(f, comp_of=None, scale=1.0, comp_col=None):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--pool", default="/disk/lhcb_data/sqasim/pool_v2")
+    ap.add_argument("--pool", default=f"{SHARED}/pool_v2")
     a = ap.parse_args()
     out = dict(p_edges=P_EDGES, pt_edges=PT_EDGES)
     out["old506_s1"], out["old506_s2"] = hist(str(paths.MUONS_AND_MATTER / "data/muons/full_sample_after_target.h5"))

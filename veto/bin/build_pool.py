@@ -48,8 +48,10 @@ from veto import paths
 
 import input_thinning_study as its
 import old_convention as oc
+import os
+FVS_ROOT = os.environ.get("VETO_FVS", "/disk/users/sqasim/workspace/uzh/fast-veto-sim")   # read only
 
-FVS_MB2 = "/disk/users/sqasim/workspace/uzh/fast-veto-sim/data/tail/mb2_[0-9]*.npz"     # read only: mean loss for charm
+FVS_MB2 = f"{FVS_ROOT}/data/tail/mb2_[0-9]*.npz"     # read only: mean loss for charm
 COLS = ("px", "py", "pz", "x", "y", "z", "pdg", "weight")
 MB_LO = 30.0                     # fresh min. bias from here: --emin 20 keeps muons above 20 GeV at the plane
 PARTS = {                        # tag: (component, p range at production)
