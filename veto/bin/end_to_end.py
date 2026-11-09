@@ -51,7 +51,7 @@ def generate(args):
         t0 = time.time()
         design = load_design(name)
         inter, part, _ = dis.run(muons, design, lib, draws, np.random.default_rng(args.seed), workers=args.workers)
-        np.savez(OUT / f"{design.name}_mu.npz", **{f"int_{k}": v for k, v in inter.items()},
+        np.savez(OUT / f"{design.name}{args.mu_suffix}_mu.npz", **{f"int_{k}": v for k, v in inter.items()},
                  **{f"part_{k}": v for k, v in part.items()})
         print(f"{design.name}: {len(inter['weight']):,} muon interactions, {time.time() - t0:.0f} s", flush=True)
 
@@ -85,7 +85,7 @@ def job(arg):
     cfg = reco.RecoConfig(seed=1, multiple_scattering=True, cone=cone * 1e-3)
     r = evaluate(d, _S["tr"], _S["inp"], cfg, args.n_signal, DEFAULT_CONFIG["time_window"], "target")
     comb = objective.score(r, _S["stats"], objective.ObjectiveConfig(bkg_estimate="max"))
-    mu = ix.evaluate(*load_npz(OUT / f"{d.name}_mu.npz"), d, _S["inp"], cfg, np.random.default_rng(1), muons=_S["muons"])
+    mu = ix.evaluate(*load_npz(OUT / f"{d.name}{args.mu_suffix}_mu.npz"), d, _S["inp"], cfg, np.random.default_rng(1), muons=_S["muons"])
     nu_file = OUT / f"{d.name}_nu.npz"
     nu = ix.evaluate(*load_npz(nu_file), d, _S["inp"], cfg, np.random.default_rng(2)) if nu_file.exists() else {}
     mu_g, nu_g = group(mu, d), group(nu, d)
@@ -120,6 +120,7 @@ def main():
     ap.add_argument("--workers", type=int, default=40)
     ap.add_argument("--seed", type=int, default=11)
     ap.add_argument("--tag", default="e2e")
+    ap.add_argument("--mu-suffix", default="", help="muon interactions in results/end_to_end/<design><this>_mu.npz (one set per dataset)")
     args = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
     if args.stage == "generate":
@@ -145,7 +146,7 @@ def main():
             tpr = 1 - after / before if before > 0 else float("nan")
             print(f"  {name:<16} before {before:>10.4g}   TP {before - after:>10.4g}   FN {after:>9.3g}   TPR {100 * tpr:8.3f} %")
     out = OUT / f"{args.tag}.json"
-    json.dump(dict(dataset=args.dataset, inputs=args.inputs, draws=args.draws, n_signal=args.n_signal, rows=rows),
+    json.dump(dict(dataset=args.dataset, inputs=args.inputs, mu_suffix=args.mu_suffix, draws=args.draws, n_signal=args.n_signal, rows=rows),
               open(out, "w"), indent=1, default=float)
     print(f"wrote {out}")
 

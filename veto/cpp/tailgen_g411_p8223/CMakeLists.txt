@@ -1,0 +1,15 @@
+# tailtransport (cpp/tailgen/tailtransport.cc) against Geant4 11.2 (the cudabear container) and Pythia 8.223 (static, the
+# generator's version): one Pythia version for the event generation and the decays. bash cpp/tailgen_g411_p8223/build.sh
+cmake_minimum_required(VERSION 3.16)
+project(tailtransport_g411_p8223 CXX)
+set(CMAKE_CXX_STANDARD 17)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+set(PYBIND11_FINDPYTHON ON)
+find_package(pybind11 CONFIG REQUIRED)
+find_package(Geant4 REQUIRED)
+pybind11_add_module(tailtransport ${CMAKE_CURRENT_SOURCE_DIR}/../tailgen/tailtransport.cc)
+target_include_directories(tailtransport PRIVATE ${Geant4_INCLUDE_DIRS} ${PYTHIA8_223}/include)
+target_compile_definitions(tailtransport PRIVATE TT_WITH_PYTHIA)
+target_link_libraries(tailtransport PRIVATE ${Geant4_LIBRARIES} ${PYTHIA8_223}/lib/libpythia8.a dl)

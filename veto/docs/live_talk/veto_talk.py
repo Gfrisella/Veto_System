@@ -1021,5 +1021,10 @@ import talk_e2e  # noqa: E402
 
 talk_e2e.register(pres, plane_meshes, geometry, scene)
 
+# ====================================================================== statistics and the storage policy
+import talk_storage  # noqa: E402
+
+talk_storage.register(pres, geometry, scene)
+
 if __name__ == "__main__":
     pres.run()
