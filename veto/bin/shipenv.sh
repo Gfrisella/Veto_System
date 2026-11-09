@@ -1,6 +1,6 @@
 #!/bin/bash
-# Run a command in the SHiP CVMFS software (FairShip / ROOT 6.30 / GenFit, release 25.09, slc9 build) on this host:
-#   bin/shipenv.sh python3 bin/genfit_straws.py hits.npz fit.npz
+# Run a command in the SHiP CVMFS software (FairShip / ROOT 6.30, release 25.09, slc9 build) on this host:
+#   bin/shipenv.sh python3 <script>
 # The host (openSUSE Leap 16) has no libcrypt.so.2: a link to libxcrypt's libcrypt.so.1 is put in a private directory.
 set -eo pipefail
 COMPAT="${TMPDIR:-/tmp}/shipenv-compat-$(id -u)"

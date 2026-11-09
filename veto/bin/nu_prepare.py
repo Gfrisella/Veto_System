@@ -1,8 +1,8 @@
 """The neutrino flux sample in the layout of the design-optimisation muon dataset, one column store per flavour.
 
-    python3 bin/nu_prepare.py [--max-xy 10] [--out data/neutrinos/store]
+    python3 bin/nu_prepare.py [--max-xy 10] [--out data/interactions/neutrinos2026/store]
 
-fastveto.neutrinos.load (2018 production, p > 10 GeV, weight per spill, ECN3 frame); straight lines from the
+fastveto.neutrinos.load (Shah Rukh 2026-11-09 production, E > 1 GeV, all flavours, weight per spill, veto frame); straight lines from the
 production point: state A at z = 30.6 m and B at z = 82 m (x, y, z, px, py, pz), no bounce (kx, ky, kz = NaN),
 type 0, evt_n = row index. Kept: lines within |x|, |y| < MAX_XY at both planes (the cavern). Output
 <out>_nu<pdg>/ with one .npy per column and meta.json (veto.io.write_store layout).
@@ -23,7 +23,7 @@ from fastveto import neutrinos
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--max-xy", type=float, default=10.0)
-    ap.add_argument("--out", default=str(paths.interactions_data() / "neutrinos/store"))
+    ap.add_argument("--out", default=str(paths.interactions_data() / "neutrinos2026/store"))
     a = ap.parse_args()
     d = neutrinos.load()
     for pdg in np.unique(d["pdg"]):
@@ -48,7 +48,7 @@ def main():
         for k, v in cols.items():
             np.save(out / f"{k}.npy", np.ascontiguousarray(v))
         json.dump({"n": n, "columns": list(cols), "flavour": int(pdg), "max_xy": a.max_xy,
-                   "weight": "neutrinos per spill (fastveto.neutrinos)", "source": "fastveto.neutrinos.load",
+                   "weight": "neutrinos per spill (fastveto.neutrinos)", "source": neutrinos.SOURCE,
                    "pot_per_spill": neutrinos.POT_PER_SPILL},
                   open(out / "meta.json", "w"), indent=1)
         print(f"nu {int(pdg)}: {n:,} of {int(m.sum()):,} rows, {cols['weight'].sum():.4g} per spill -> {out}")

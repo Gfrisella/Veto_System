@@ -4,6 +4,18 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-09 (night) — new neutrino flux, 2018 flux discarded; GenFit removed (branch `veto-shield-dis`)
+
+- `fastveto.neutrinos.load`: Shah Rukh's 2026-11-09 production (`/disk/gfs_lhcb/sqasim/nu_prod/tail`, `$VETO_NU_DIR`;
+  parts nuMB hf == 0, charmc, beautyc; weight w_decay x POT_PER_SPILL / protons per part; keys + `part`). The 2018
+  loader and `bin/extract_neutrinos.py` removed. `bin/nu_prepare.py` -> `data/interactions/neutrinos2026/store_nu*`
+  (6 flavours, 1.4 min); `shield_dis.NU_STORES`, `nu_dis_apply.py --store` default to it.
+- Discarded (Guglielmo): every file made with the 2018 flux (`logs/nu2026/discarded_2018_nu.txt`, ~42 GB) and the
+  symlink `data/interactions/neutrinos` (target in Shah Rukh's area untouched).
+- GenFit removed in favour of ACTS: `bin/genfit_straws.py`, `bin/straw_reco.py`, `straws.reconstruct` deleted;
+  `straws.track_quality` and `run_interactions.py --straw-cuts acts` raise NotImplementedError until the ACTS
+  parametrisation exists (ISSUES D14).
+
 ## 2026-11-09 (night) — issue review: decisions for every open item (branch `veto-shield-dis`, docs only)
 
 - ISSUES.txt: dated "9 Nov 2026" decision under every open item, action list at the top, new D15 (CVMFS library loading

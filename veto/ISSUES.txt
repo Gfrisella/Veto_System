@@ -194,6 +194,8 @@ A6b. Realistic tracking: straw hits and track fit (post-processing)
       Implemented: RecoConfig.straw_cuts (None = accept all, default; "fairship" = converged, ndf > 25, chi2/ndf < 5,
       fitted p > 1 GeV on both vertex tracks, straws.track_quality), bin/run_interactions.py --straw-cuts. Synthetic
       mu+ mu- decays (3 - 20 GeV): 54 / 60 kept. Fitted p in the IP not yet (reco.measure still smears the truth).
+    9 Nov 2026: the GenFit fit was discarded (Guglielmo): the track fit will be the ACTS parametrisation (D14); the
+      A6b numbers above are GenFit-based and indicative only.
 
 A7. Detector planes have no predefined module dimensions
     STATUS: DONE (5 Nov 2026: 50 cm slot grid, module designs, evolution on the grid)
@@ -711,6 +713,18 @@ D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_invento
       9 Nov 2026 (docs/STATUS.md, other session): GSimple 2026 final-target neutrino flux converted
       (Study_on_Veto_System/Neutrino_flux_gsimple2026/): nu_mu agrees with Shah Rukh's Nov-9 production to 1-4 %, the 2018
       flux used by the veto is x 2 - 2.7 LOW for nu_mu > 10 GeV -> every nu DIS number so far is underestimated.
+    9 Nov 2026 (done, Guglielmo): NEUTRINO FLUX = Shah Rukh's 2026-11-09 production (/disk/gfs_lhcb/sqasim/nu_prod/tail:
+      min bias hf == 0 + charm + beauty, E > 1 GeV, theta < 0.3, all flavours), weight w_decay x 4e13 / protons per part.
+      fastveto.neutrinos.load rewritten; stores rebuilt by bin/nu_prepare.py in data/interactions/neutrinos2026/store_nu*
+      (cavern |x|,|y| < 10 m: nu_mu 1.33e11, anti-nu_mu 1.06e11, nu_e 1.52e10, anti-nu_e 1.51e10, nu_tau 1.28e9,
+      anti-nu_tau 1.28e9 per spill); shield_dis NU_STORES and nu_dis_apply --store point there. The 2018 flux and EVERY
+      result made with it were discarded (list: logs/nu2026/discarded_2018_nu.txt, ~42 GB: copied 2018 stores, nu apply /
+      per-track / MS7 nu chain results; symlink data/interactions/neutrinos to Shah Rukh's 2018 files removed, his files
+      untouched; bin/extract_neutrinos.py removed). Kept: GENIE libraries (flux-independent), archived report / decks.
+      All neutrino-DIS numbers must be regenerated (re-run batch). Still needed: iron GENIE library with nu_e / nu_tau.
+      9 Nov 2026 (done, Guglielmo): GenFit DISCARDED in favour of ACTS: bin/genfit_straws.py, bin/straw_reco.py and
+      straws.reconstruct removed; straws.track_quality / --straw-cuts acts raise NotImplementedError until the ACTS
+      parametrisation (SHiP CVMFS 26.10) is in. Straw geometry, RK4 layer states and digitisation are kept.
 
 D15. CVMFS library loading under load (shield_dis / shield_natural workers)
     STATUS: OPEN (9 Nov 2026, decided: retry + count check)
