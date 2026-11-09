@@ -18,10 +18,12 @@ from pathlib import Path
 
 import numpy as np
 
-Z_SHIELD_END = 29.89
+from . import geometry as geo
+
+Z_SHIELD_END = geo.Z_SHIELD_END
 DZ = 0.5
 Z_IRON0 = Z_SHIELD_END - DZ
-HALF_X, HALF_Y = 1.71, 1.27
+HALF_X, HALF_Y = geo.SHIELD_END_HALF_X, geo.SHIELD_END_HALF_Y
 RHO_FE = 7.874                      # g/cm^3 (G4_Fe)
 A_FE, Z_FE = 55.845, 26.0
 DEDX_MU = 1.6                       # GeV/m, mean muon energy loss in iron (10 - 300 GeV, ionisation + radiative)
@@ -105,7 +107,7 @@ def field_at(fm, x, y, z):
     return np.where(ok[..., None], out, 0.0)
 
 
-def init_g4shield(seed, e_cut=0.5, field=True):
+def init_g4shield(seed, e_cut=0.5, field=True, z_iron0=None):
     """Import and initialise the Geant4 module (cpp/build/g4shield) for this target."""
     import sys
     from . import paths
@@ -113,7 +115,7 @@ def init_g4shield(seed, e_cut=0.5, field=True):
     sys.path.insert(0, str(paths.PROJECT_DIR / "cpp" / "build_ship"))   # host build (bin/g4ship.sh), other python
     import g4shield
     fm = load_field() if field else dict(field=np.zeros((0, 0, 0, 3)), x0=0, dx=1, y0=0, dy=1, z0=0, dz=1, z_shift=0)
-    g4shield.initialize(seed=seed, z_iron0=Z_IRON0 - 0.2, z_iron1=Z_SHIELD_END, half_x=HALF_X, half_y=HALF_Y,
+    g4shield.initialize(seed=seed, z_iron0=Z_IRON0 - 0.2 if z_iron0 is None else z_iron0, z_iron1=Z_SHIELD_END, half_x=HALF_X, half_y=HALF_Y,
                         z_plane=Z_PLANE, e_cut=e_cut, field=fm["field"], x0=fm["x0"], dx=fm["dx"], y0=fm["y0"],
                         dy=fm["dy"], z0=fm["z0"], dz=fm["dz"], z_shift=fm["z_shift"])
     return g4shield

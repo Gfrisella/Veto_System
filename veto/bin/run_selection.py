@@ -9,8 +9,10 @@ Pairing modes (each reproduces one of the original analyses):
   time-window  all files combined, muons get a random time in [0, 1) s, pairs within
                +-time_window; weights corrected for repeated evt_n
                (analysis.ipynb, Analysis_multifiles.py)
-  kdtree       all files combined, one entry per unique evt_n, pairs of opposite-charge
-               tracks passing within candidate_radius inside the vessel (temp1.py)
+  kdtree       all files combined, pairs of opposite-charge tracks passing within
+               candidate_radius inside the vessel (temp1.py); since 2026-11-06 all copies kept with
+               weights corrected for repeated evt_n as time-window (C5); --kdtree-unique: one entry
+               per unique evt_n, weight * repetitions / n_files (as temp1.py, before)
 
 Example:
   bin/run_selection.py --pairing per-file --max-files 200 --plots
@@ -63,7 +65,7 @@ def run_combined(files, config, mode, plots_dir):
     data = io.load_outputs(files)
     n_files = len(files)
 
-    if mode == "kdtree":
+    if mode == "kdtree" and config.get("kdtree_unique"):
         n_before = len(data["weight"])
         data = wt.keep_unique_events(data, n_files)
         print(f"Unique events: {len(data['weight']):,} of {n_before:,} "
@@ -125,12 +127,15 @@ def main():
     parser.add_argument("--max-files", type=int, default=None)
     parser.add_argument("--seed", type=int, default=None, help="RNG seed for the random muon times")
     parser.add_argument("--plots", action="store_true", help="save diagnostic plots")
+    parser.add_argument("--kdtree-unique", action="store_true",
+                        help="kdtree: one entry per evt_n (old temp1.py behaviour) instead of the C5 correction")
     parser.add_argument("--tag", default=None, help="name of the results sub-folder")
     add_config_args(parser)
     args = parser.parse_args()
 
     config = config_from_args(args)
     config["seed"] = args.seed
+    config["kdtree_unique"] = args.kdtree_unique
     outdir = paths.results_dir() / "selection" / (args.tag or args.pairing)
     plots_dir = outdir / "figures" if args.plots else None
     plotting.set_style()

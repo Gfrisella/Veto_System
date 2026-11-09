@@ -25,6 +25,11 @@ def main():
         print(f"{name}: UBT map {d['ubt_hist'].sum():.4g} -> {maps['ubt_hist'].sum():.4g} muons/spill, "
               f"fin maps {d['fin_maps'].sum():.4g} -> {maps['fin_maps'].sum():.4g}")
         d.update(fin_maps=maps["fin_maps"], ubt_hist=maps["ubt_hist"])
+        em = [k for k in maps.files if k.startswith("em_")]        # EM debris maps (bin/debris_maps.py), kept separate
+        d = {k: v for k, v in d.items() if not k.startswith("em_")}
+        d.update({k: maps[k] for k in em})
+        if em:
+            print(f"   + EM debris maps {', '.join(em)}")
         tmp = f.with_name(f.stem + ".tmp.npz")
         np.savez(tmp, **d)
         tmp.replace(f)

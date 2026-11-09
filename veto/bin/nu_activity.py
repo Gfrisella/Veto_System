@@ -38,7 +38,6 @@ def wall_exit(v, p):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("files", nargs="+"); ap.add_argument("--design", required=True)
-    ap.add_argument("--pot-spill", type=float, default=4e13)
     a = ap.parse_args()
     p_ = Path(a.design)
     design = dsg.load(p_ if p_.exists() else a.design)
@@ -46,7 +45,7 @@ def main():
     tot = {}
     for f in a.files:
         inter, part = load_npz(f)
-        w15 = inter["weight"] * (5e13 / a.pot_spill) * ix.SPILLS_15Y
+        w15 = inter["weight"] * ix.SPILLS_15Y
         n = len(w15)
         tr = ix.charged_tracks(part)
         sel, pair, vertex = ix.select(tr, n, cfg=cfg)

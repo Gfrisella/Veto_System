@@ -18,18 +18,14 @@ from pathlib import Path
 
 import numpy as np
 
+from veto import io
 from veto import paths
 
 from fastveto import dis, nudis
 from fastveto import targets as tg
 from veto import design as vdesign
 
-POT_15Y = 6e20
-
-
-def spills_15y(meta):
-    """spills in 15 years for the store's weight convention (2026 production: 4e13 p.o.t. per spill; 2018 flux: 5e13)"""
-    return POT_15Y / (4e13 if "4e13" in meta.get("weight", "") else 5e13)
+from veto.config import SPILLS_15Y  # noqa: E402  (6e20 / 4e13 p.o.t.)
 
 
 def main():
@@ -54,8 +50,8 @@ def main():
     n_int = 0
     for fl in [int(x) for x in a.flavours.split(",")]:
         store = Path(f"{a.store}_nu{fl}")
-        meta = json.load(open(store / "meta.json"))
-        cols = {k: np.load(store / f"{k}.npy", mmap_mode="r") for k in meta["columns"]}
+        cols, meta = io.open_store(store)                 # legacy stores (5e13) rescaled to 4e13 per spill (D13)
+        cols = {k: np.asarray(v) if isinstance(v, io.ScaledColumn) else v for k, v in cols.items()}
         lib = nudis.NuLibrary(a.lib, flavour=fl)
         inter, part, totals = dis.run(cols, design, lib, draws, rng, chunk=a.chunk, workers=a.workers)
         inter["flavour"] = np.full(len(inter["E"]), fl, np.int32)
@@ -64,7 +60,7 @@ def main():
         I.append(inter); P.append(part)
         cc = {tg.target_name(int(c), design): float(np.mean(inter["component"][inter["code"] == c] == 0))
               for c in np.unique(inter["code"])}
-        S15 = spills_15y(meta)
+        S15 = SPILLS_15Y
         summary["flavours"][str(fl)] = {"rows": int(meta["n"]), "interactions_per_spill": totals, "spills_15y": S15,
                                         "interactions_15y": {k: v * S15 for k, v in totals.items()}, "cc_fraction": cc}
         print(f"nu {fl}: " + ", ".join(f"{k} {v * S15:.3g}" for k, v in totals.items()) + " per 15 years", flush=True)

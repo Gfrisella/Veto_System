@@ -66,7 +66,7 @@ def rock_tracks(path, kind, seeds, draw_offset):
     nan = np.full(len(v), np.nan)
     return dict(ax=v[:, 0], ay=v[:, 1], az=v[:, 2], apz=p[:, 2], kx=nan, ky=nan, kz=nan.copy(),
                 bx=b[:, 0], by=b[:, 1], bz=b[:, 2], bpx=p[:, 0], bpy=p[:, 1], bpz=p[:, 2],
-                weight=inter["weight"][tr["inter"][g]] * (4e13 / 5e13),       # build() rescaled to 5e13; back to 4e13
+                weight=inter["weight"][tr["inter"][g]],                       # per spill of 4e13
                 type=np.full(len(v), 3.0), pdg=-13.0 * tr["q"][g],             # muon convention: pdg 13 has charge -1
                 draw=tr["inter"][g] + draw_offset)
 

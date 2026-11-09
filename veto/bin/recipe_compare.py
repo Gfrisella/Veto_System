@@ -25,18 +25,20 @@ from veto import paths
 
 import build_pool as bp
 import old_convention as oc
+import os
+SHARED = os.environ.get("VETO_SHARED", "/disk/lhcb_data/sqasim")   # Shah Rukh's shared data (read only)
 
 P_EDGES = np.geomspace(20, 150, 21)
 PT_EDGES = np.linspace(0, 4, 21)
-RECIPES = {"A": ("/disk/lhcb_data/sqasim/veto_source_pool1/tail", "pool_mb20"),
-           "B": ("/disk/lhcb_data/sqasim/fairship_match/tail", "fsm_p8_ftfp"),
-           "C": ("/disk/lhcb_data/sqasim/fairship_match/tail", "fsm_p8_qgsp"),
-           "A18": ("/disk/lhcb_data/sqasim/fairship_match/tail", "fsm_p6_ftfp_t18"),    # the 2018 target (SHiP2018)
-           "C18": ("/disk/lhcb_data/sqasim/fairship_match/tail", "fsm_p8_qgsp_t18"),
-           "A10": ("/disk/lhcb_data/sqasim/fairship_match/tail", "fsm_p6_ftfp_t18_g410"),   # Geant4 10.00.p04 (bin/g4_10.sh)
-           "C10": ("/disk/lhcb_data/sqasim/fairship_match/tail", "fsm_p8_qgsp_t18_g410"),
-           "A18Fe": ("/disk/lhcb_data/sqasim/fairship_match/tail", "fsm_p6_ftfp_t18fe"),     # target inside an iron shield
-           "C18Fe": ("/disk/lhcb_data/sqasim/fairship_match/tail", "fsm_p8_qgsp_t18fe")}
+RECIPES = {"A": (f"{SHARED}/veto_source_pool1/tail", "pool_mb20"),
+           "B": (f"{SHARED}/fairship_match/tail", "fsm_p8_ftfp"),
+           "C": (f"{SHARED}/fairship_match/tail", "fsm_p8_qgsp"),
+           "A18": (f"{SHARED}/fairship_match/tail", "fsm_p6_ftfp_t18"),    # the 2018 target (SHiP2018)
+           "C18": (f"{SHARED}/fairship_match/tail", "fsm_p8_qgsp_t18"),
+           "A10": (f"{SHARED}/fairship_match/tail", "fsm_p6_ftfp_t18_g410"),   # Geant4 10.00.p04 (bin/g4_10.sh)
+           "C10": (f"{SHARED}/fairship_match/tail", "fsm_p8_qgsp_t18_g410"),
+           "A18Fe": (f"{SHARED}/fairship_match/tail", "fsm_p6_ftfp_t18fe"),     # target inside an iron shield
+           "C18Fe": (f"{SHARED}/fairship_match/tail", "fsm_p8_qgsp_t18fe")}
 
 
 def h2(p, pt, w):
@@ -51,7 +53,7 @@ def h2(p, pt, w):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--slices", type=int, default=20)
-    ap.add_argument("--out", default="/disk/lhcb_data/sqasim/fairship_match")
+    ap.add_argument("--out", default=f"{SHARED}/fairship_match")
     a = ap.parse_args()
     table = oc.loss_map()
     out = dict(p_edges=P_EDGES, pt_edges=PT_EDGES)

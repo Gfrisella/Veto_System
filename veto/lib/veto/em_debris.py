@@ -1,9 +1,10 @@
 """EM debris from the end of the muon shield (ISSUES B2, decided 2026-11-05: our own Geant4, host build).
 
 Two Geant4 stages (separate processes: one G4RunManager per process), driven by bin/em_debris.py:
-  1. shield   the muons crossing the last 50 cm of MS7 iron (data/shield_dis/muons_iron.npz, state at z = 29.20 m)
-              through the iron with its field (cpp/g4shield, FTFP_BERT incl. EM); every e+-, gamma above E_CUT at the
-              plane z = 29.90 m is kept.
+  1. shield   the muons crossing the last 50 cm of MS7 iron (data/shield_dis/muons_iron.npz, state at z = 29.20 m),
+              carried to the last DEPTH_X0 radiation lengths (shield_iron.curved_points: field, mean dE/dx) and through
+              that slab with Geant4 (cpp/g4shield, FTFP_BERT incl. EM, field); every e+-, gamma above E_CUT at the plane
+              z = 29.90 m is kept.
   2. vessel   those e / gamma through air, the Mylar window and the helium (cpp/g4vessel, no field there) to the UBT
               plane and the fin planes z = Z_UBT .. Z_UBT + 10 m (every metre); every e+- / gamma crossing is recorded.
 Maps (make_maps) in the binning of the muon rate maps of results/reco/<inputs>.npz: UBT (|x| < 0.5, y bins) and fins
@@ -20,6 +21,10 @@ from . import geometry as geo
 from . import technology as tech
 
 E_CUT = 0.001                    # GeV kinetic: e / gamma followed and recorded above 1 MeV
+X0_FE = 0.01757                  # m, radiation length of iron
+DEPTH_X0 = 0.5 / X0_FE           # the whole last 50 cm of MS7 (28.5 X0, 29.39 - 29.89 m). Tested 2026-11-06 (2000 muons):
+                                 # 3 / 6 / 10 / 20 X0 give 17 / 30 / 72 / 72 % of the e / gamma of the full depth (deep
+                                 # showers, MeV photons ~3.4 X0), same run time -> Guglielmo: full 50 cm. --depth to vary.
 Z_PLANES = tuple(geo.Z_UBT + np.arange(0, 10.001, 1.0))
 EM_FILE = "em_maps.npz"          # results/em_debris/
 
@@ -49,7 +54,7 @@ def make_maps(rec, w_per_spill, maps):
             if not len(ip):
                 continue                                 # no EM plane within 0.5 m (beyond Z_UBT + 10 m): 0
             sel = m & (rec["plane"] == ip[0])
-            xw = geo.VESSEL_X_IN + (geo.VESSEL_X_OUT - geo.VESSEL_X_IN) / (geo.Z_VESSEL_MAX - geo.Z_VESSEL_MIN) * (z - geo.Z_VESSEL_MIN)
+            xw = geo.vessel_half_widths(z)[0]
             u = np.abs(rec["x"][sel]) - xw
             side = (rec["x"][sel] < 0).astype(int)       # 0 = left (+x), 1 = right (-x): as fin_maps
             for sd in (0, 1):

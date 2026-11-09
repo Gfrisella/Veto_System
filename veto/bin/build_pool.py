@@ -48,8 +48,10 @@ from veto import paths
 
 import input_thinning_study as its
 import old_convention as oc
+import os
+FVS_ROOT = os.environ.get("VETO_FVS", "/disk/users/sqasim/workspace/uzh/fast-veto-sim")   # read only
 
-FVS_MB2 = "/disk/users/sqasim/workspace/uzh/fast-veto-sim/data/tail/mb2_[0-9]*.npz"     # read only: mean loss for charm
+FVS_MB2 = f"{FVS_ROOT}/data/tail/mb2_[0-9]*.npz"     # read only: mean loss for charm
 COLS = ("px", "py", "pz", "x", "y", "z", "pdg", "weight")
 MB_LO = 30.0                     # fresh min. bias from here: --emin 20 keeps muons above 20 GeV at the plane
 PARTS = {                        # tag: (component, p range at production)
@@ -243,7 +245,8 @@ def main():
             (out / f"{name}_{j:03d}.h5.tmp").rename(out / f"{name}_{j:03d}.h5")
             print(f"  {name}_{j:03d}: {len(part):,} muons, {time.time() - t0:.0f} s", flush=True)
         info[name] = dict(muons=int(len(ids)), chunks=nch)
-    info.update(pool_muons=int(n), flux_by_component=total.tolist(), hidden_fraction=args.hidden, chunk=args.chunk,
+    info.update(pot_per_spill=5e13,                     # D13: weights per 5e13 (as the 2018 file); readers -> 4e13
+                pool_muons=int(n), flux_by_component=total.tolist(), hidden_fraction=args.hidden, chunk=args.chunk,
                 kept_by_component=np.bincount(pool["component"], minlength=5).tolist(),
                 fresh_by_component=np.bincount(pool["component"], weights=pool["fresh"], minlength=5).tolist())
     json.dump(info, open(out / "pool.json", "w"), indent=1)

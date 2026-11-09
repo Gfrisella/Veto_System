@@ -2,7 +2,7 @@
 """Selection and veto of the cavern-rock products (the same interactions.evaluate as the vessel interactions): the
 draws saved by bin/rock_apply.py (muon interactions in the rock, *_draws.npz) or bin/nu_rock.py combine (neutrino
 interactions in the rock, nu_rock_<design>_draws.npz). Each draw is one interaction; its particles start as straight
-lines at their exit points on the rock surface. Weights per spill of 4e13 p.o.t. (rescaled to interactions.SPILLS_15Y).
+lines at their exit points on the rock surface. Weights per spill of 4e13 p.o.t. (config.POT_PER_SPILL).
 Grouped by rock region (muons: wall / floor; neutrinos: -x wall, +x wall, floor, ceiling, face).
 
     python3 bin/rock_select.py --kind muon --draws /disk/lhcb_data/sqasim/rock_dis/apply_D6_straw_mod_draws.npz \
@@ -25,7 +25,6 @@ from veto import interactions as ix
 from veto import reco
 from veto import vertex_selection as vsel
 
-POT_SPILL = 4e13
 GROUPS = {"muon": ["rock wall (muons)", "rock floor (muons)"],
           "nu": ["rock -x wall (nu)", "rock +x wall (nu)", "rock floor (nu)", "rock ceiling (nu)", "rock face (nu)"]}
 
@@ -33,7 +32,7 @@ GROUPS = {"muon": ["rock wall (muons)", "rock floor (muons)"],
 def build(z, kind, seeds):
     draw = np.asarray(z["draw"])
     ids, first, inv = np.unique(draw, return_index=True, return_inverse=True)
-    w = np.asarray(z["w"], float)[first] * (5e13 / POT_SPILL)
+    w = np.asarray(z["w"], float)[first]
     if kind == "muon":
         w = w / seeds                                   # rock_apply: each draw carries S / M per seed
         grp = np.asarray(z["surf"])[first].astype(int)  # 0 wall, 1 floor
@@ -91,7 +90,7 @@ def cutflow(inter, part, cfg, seed):
         q = np.percentile(best[fin], [0, 1, 10, 50])
         print(f"    best-pair IP: min {q[0]:.3g} m, 1 % {q[1]:.3g}, 10 % {q[2]:.3g}, median {q[3]:.3g} m ({int(fin.sum())} draws)")
     print(f"    mean weight of a draw: {w15.mean():.3g} per 15 years", flush=True)
-    wsp = inter["weight"][tr["inter"]] * (POT_SPILL / 5e13)          # per spill of 4e13
+    wsp = inter["weight"][tr["inter"]]
     pid = np.abs(part["pdg"][tr["row"]])
     print(f"    single tracks per spill (4e13): in SST1 acceptance {wsp[tr['acc']].sum():.3g}, good (p > 1 GeV, timing) "
           f"{wsp[tr['good']].sum():.3g}, of which muons {wsp[tr['good'] & (pid == 13)].sum():.3g}", flush=True)
@@ -112,7 +111,7 @@ def main():
     for k, name in enumerate(GROUPS[a.kind]):
         ix.CODE_NAMES[5 + k] = name
     inter, part = build(np.load(a.draws), a.kind, a.seeds)
-    print(f"{len(inter['weight']):,} draws, {len(part['pdg']):,} particles, {inter['weight'].sum():.4g} per spill (5e13), "
+    print(f"{len(inter['weight']):,} draws, {len(part['pdg']):,} particles, {inter['weight'].sum():.4g} per spill, "
           f"{time.time() - t0:.0f} s", flush=True)
     _, maps = load_inputs()
     cfg = reco.RecoConfig(seed=a.seed, multiple_scattering=True, ip_max=vsel.IP_CUTS["full"])

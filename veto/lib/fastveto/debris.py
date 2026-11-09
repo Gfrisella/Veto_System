@@ -14,8 +14,10 @@ from pathlib import Path
 
 import numpy as np
 
-Z_EXIT = 29.89                                   # m, end of the last magnet's iron (geometry cache of TRY6)
-EXIT_HALF_X, EXIT_HALF_Y = 1.71, 1.27            # m, its outer face at z = Z_EXIT
+from veto import geometry as geo
+
+Z_EXIT = geo.Z_SHIELD_END                        # m, end of the last magnet's iron (geometry cache of TRY6)
+EXIT_HALF_X, EXIT_HALF_Y = geo.SHIELD_END_HALF_X, geo.SHIELD_END_HALF_Y   # m, its outer face at z = Z_EXIT
 ANGLES = (0.0, 0.02, 0.05, 0.1, 0.2)
 
 

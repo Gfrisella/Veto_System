@@ -12,6 +12,8 @@ import argparse
 
 import h5py
 import numpy as np
+import os
+SHARED = os.environ.get("VETO_SHARED", "/disk/lhcb_data/sqasim")   # Shah Rukh's shared data (read only)
 
 H5 = "/disk/users/gfrise/MuonsAndMatter/data/muons/full_sample_after_target.h5"
 CLASSES = {"min. bias 768.75": 768.75, "dimuon/photon 7.6875": 7.6875, "charm 326.16": 326.16}
@@ -32,7 +34,7 @@ def keys(px, py, pz):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ref", default="/disk/lhcb_data/sqasim/reference-2018-fairship-506M/reference_2018.h5")
+    ap.add_argument("--ref", default=f"{SHARED}/reference-2018-fairship-506M/reference_2018.h5")
     a = ap.parse_args()
     with h5py.File(a.ref, "r") as f:
         R = {k: f[k][:] for k in ("px", "py", "pz", "weight", "w_fairship", "mother", "proc", "z_start", "pdg")}

@@ -16,13 +16,15 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import os
+SHARED = os.environ.get("VETO_SHARED", "/disk/lhcb_data/sqasim")   # Shah Rukh's shared data (read only)
 
 PE = np.geomspace(10, 400, 33)
 TE = np.linspace(0, 4, 21)
 CLASSES = {"minbias": 768.75, "dimuon": 7.6875, "charm": 326.16}
 OURS = {"minbias": [("pool_mb20", (30, 150)), ("pool_tail", (150, 1e9))], "dimuon": [("pool_dmhigh", (150, 1e9))],
         "charm": [("charmc", (20, 1e9))]}
-SRC = "/disk/lhcb_data/sqasim/veto_source_pool1/tail"
+SRC = f"{SHARED}/veto_source_pool1/tail"
 
 
 def hist(p, pt, q, w):
@@ -40,7 +42,7 @@ def compute(out):
     import _bootstrap  # noqa: F401
     import old_convention as oc
     res = {}
-    for tag, path, wcol in (("ref", "/disk/lhcb_data/sqasim/reference-2018-fairship-506M/reference_2018.h5", "w_fairship"),
+    for tag, path, wcol in (("ref", f"{SHARED}/reference-2018-fairship-506M/reference_2018.h5", "w_fairship"),
                             ("h5", "/disk/users/gfrise/MuonsAndMatter/data/muons/full_sample_after_target.h5", "weight")):
         with h5py.File(path, "r") as f:
             wcls = f[wcol][:]
@@ -151,7 +153,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("npz", nargs="?")
     ap.add_argument("--compute", action="store_true")
-    ap.add_argument("--out", default="/disk/lhcb_data/sqasim/reference-2018-fairship-506M/reference_comparison.npz")
+    ap.add_argument("--out", default=f"{SHARED}/reference-2018-fairship-506M/reference_comparison.npz")
     a = ap.parse_args()
     compute(a.out) if a.compute else plot(a.npz)
 

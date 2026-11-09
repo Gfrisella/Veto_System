@@ -111,8 +111,12 @@ class MuonLibrary:
         keys = tgt.astype(np.int64) * 1000 + ie
         for k in np.unique(keys):
             m = keys == k
-            # a part can be empty at one grid energy and not at its neighbour (interpolated cross section > 0)
-            kk = next(x for x in (int(k), int(k) + 1, int(k) - 1, int(k) + 2, int(k) - 2) if x in g)
+            # a part can be empty at one grid energy and not at its neighbour (interpolated cross section > 0):
+            # the nearest grid energy of the same target that has events (split "pythia": none at the lowest energies)
+            kk = next((x for x in (int(k), int(k) + 1, int(k) - 1, int(k) + 2, int(k) - 2) if x in g), None)
+            if kk is None:
+                same = [x for x in g if x // 1000 == int(k) // 1000] or list(g)
+                kk = min(same, key=lambda x: abs(x % 1000 - int(k) % 1000))
             f, c = g[kk]
             out[m] = order[f + rng.integers(0, c, m.sum())]
         return out
@@ -124,6 +128,8 @@ class MuonLibrary:
         n = len(E)
         p6, g4 = self.sigma_parts(material, E)
         comp = (rng.random(n) * (p6 + g4) >= p6).astype(np.int8)
+        # no cross section in either part (energy below the kept part's grid): the part the split keeps
+        comp = np.where(p6 + g4 > 0, comp, 0 if self.split == "pythia" else 1).astype(np.int8)
         x = np.log(np.clip(E, self.E[0], self.E[-1]))
         j = np.clip(np.searchsorted(self.logE, x) - 1, 0, len(self.E) - 2)
         f = (x - self.logE[j]) / (self.logE[j + 1] - self.logE[j])

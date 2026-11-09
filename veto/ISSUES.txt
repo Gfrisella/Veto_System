@@ -87,7 +87,7 @@ A3. Rate limits are reported, not enforced
       Implemented: technology.py fiber max_channel_rate = 1e6, pixel max_rate = 3.5e8 Hz/cm^2.
 
 A4. No objective, two inconsistent cost models
-    STATUS: DECIDED (5 Nov 2026), to implement
+    STATUS: DONE (5 Nov 2026: one module cost model; per-channel numbers flagged for the detector colleagues)
     optimize_sbt.py is a stub. To decide:
       - objective: e.g. minimise cost subject to background < X and signal loss < Y;
       - one cost model: kCHF per layer-m^2 (P-369 table 11) and relative cost per channel
@@ -115,7 +115,7 @@ A5. Spill and PoT normalisation
       no duty factor / 50 Hz ripple for now.
 
 A6. Spectrometer field map not used: products propagated in straight lines
-    STATUS: DONE (5 Nov 2026: RK4 in the field map; helium products in Geant4, to be built and run)
+    STATUS: DONE (5 Nov 2026: RK4 in the field map, re-centred; helium products in Geant4, built on the host)
     Downstream of SST1 (z = 82 m) every track (muons, DIS products, V0 daughters, signal daughters) is
     extrapolated in a STRAIGHT line to the timing detector (z = 92.71 m, muon_types.py:91, reco.py:383),
     through the spectrometer magnet (z = 84.36-89.56 m, |x| < 2.7, |y| < 3.8 m, geometry.SPECTROMETER_Z).
@@ -156,7 +156,7 @@ A6. Spectrometer field map not used: products propagated in straight lines
         other -> selected 4.8 % of the sample (larger 5.5 x 6.5 m TD, bending). Rates need the re-runs below.
 
 A6b. Realistic tracking: straw hits and track fit (post-processing)
-    STATUS: DONE (5 Nov 2026); selection decided, to implement
+    STATUS: DONE (5 Nov 2026: straws + GenFit; optional SHiP cuts --straw-cuts fairship)
     lib/veto/straws.py (FairShip strawtubes geometry and digitisation), bin/genfit_straws.py (GenFit DAF exactly as
     shipDigiReco.findTracks, SHiP CVMFS via bin/shipenv.sh), bin/straw_reco.py. Per track: n_hits, n_stations, fitted
     (>= 25 hits, >= 3 stations), converged, chi2 / ndf, fitted p and charge, state at SST1, good (chi2/ndf < 50).
@@ -171,7 +171,7 @@ A6b. Realistic tracking: straw hits and track fit (post-processing)
       mu+ mu- decays (3 - 20 GeV): 54 / 60 kept. Fitted p in the IP not yet (reco.measure still smears the truth).
 
 A7. Detector planes have no predefined module dimensions
-    STATUS: DECIDED (5 Nov 2026), to implement
+    STATUS: DONE (5 Nov 2026: 50 cm slot grid, module designs, evolution on the grid)
     Plane sizes are free and continuous (fin "length", "y_lo" / "y_hi", UBT extent in design.py); channels and
     cost are computed for exactly that area (technology.n_channels rounds cells, not modules). Only the straw
     length (max_length 1 m) and the fibre mat length (3 m) are quantised. A real plane is assembled from
@@ -280,6 +280,10 @@ B2. EM debris rate (electrons / photons from the end of the shield)
       reco.plane_rate_map adds them when loaded (run_reco.py --em-debris). Both Geant4 modules built on the host
       (bin/g4ship.sh build). Smoke test 300 muons: ~2.9 e / gamma per muon crossing the iron, 1.4e9 / spill; fin
       planes ~1.3e8 e and 9e8 gamma / spill. Production (--n >= 2e4) with the re-runs. STATUS -> IN PROGRESS.
+      6 Nov: depth test (Guglielmo proposed only the last 3 X0): muons carried (field, dE/dx) to the slab, Geant4 on the
+      slab only; yield vs depth 3 / 6 / 10 / 20 X0 = 17 / 30 / 72 / 72 % of the full depth, same run time ->
+      decided: the whole last 50 cm (28.5 X0, from the real iron start 29.39 m; the old g4shield start 29.19 m put 20 cm
+      of iron too many in front). em_debris.DEPTH_X0, bin/em_debris.py --depth.
 
 B3. Neutrino and muon deep inelastic scattering
     STATUS: DONE (5 Nov 2026): modelled, follow-up in C7, C8, D2 - D9
@@ -348,7 +352,7 @@ C1. Detector response simplifications
     5 Nov 2026 (issue review with Guglielmo): left OPEN, no decision yet.
 
 C2. Dead material and dead regions
-    STATUS: DECIDED (5 Nov 2026, placeholder numbers), with A7
+    STATUS: DONE (5 Nov 2026: dead frames, placeholder widths to be confirmed; frame material not added)
     No frames, manifolds, overlaps between 1 m straw rows, module gaps, SiPMs or cables. For the
     UBT this matters most: the tensioned-straw frame sits in the acceptance (SR-370 open question).
     5 Nov 2026, Guglielmo: dead border per module edge, per technology (guesses, to be confirmed by the detector
@@ -379,6 +383,9 @@ C5. Weights and statistics
       (--no-evt-n-correction: as before); bin/neff_by_type.py flags classes below n_eff 1000 with the seed factor
       needed. dis-parents store: sst1_selected n_eff 55 (top-10 inputs 32 % of the rate, ~x18 seeds), sst1_other 384
       (~x3), sst1_bounced 3.8e5, veto_only 1.6e4. Production of the extra seeds: with the re-runs.
+    6 Nov 2026, Guglielmo: method confirmed (keep copies, w / repetitions, rescale to keep the rate; not
+      merge / drop). Fixed: repetitions counted before the per-type cap in make_design_dataset.py, and
+      run_selection kdtree uses the same correction (--kdtree-unique = old). Not re-run yet.
 
 C6. Detector technology numbers
     STATUS: DONE (15 Oct 2026, commit f6d13ec)
@@ -441,6 +448,11 @@ D2. Neutrino DIS in helium: irreducible for an upstream veto
 
 D3. MS7 shield DIS -> K_L: chain disagrees with FairShip
     STATUS: OPEN (PRIORITY A, major) - 5 Nov 2026: Pythia 6 only (DIS part) confirmed, issue kept open as major
+    9 Nov 2026: with p > 1 GeV and >= 3/4 straw stations (straws.py + field map) the K0-decay tracks drop 340 -> 141 Hz
+    (default) and 123 -> 48 Hz (Geant4 10.7); K0 decays with 2 good tracks 14 / 3.8 Hz.
+    9 Nov 2026: --MuonBackSSTOnly = keep events with any real hit (not "muon reaches SST"): FairShip not a lower limit.
+    FairShip's 8 Hz "K0" entry is a 0.61 GeV pi from a K_L hadronic interaction in the cavern concrete, not a decay:
+    FairShip has 0 MS7 K0-decay tracks (< 18 Hz 90 % CL); chain with the cuts expects 6.3 MC entries (G4 10.7), 18 (P6).
     Forced chain in the last 50 cm of MS7: K_L decays in the vessel ~4.9 kHz, (6.73 +- 0.59)e7 per 15 y
     after DOCA < 1 cm, fiducial, IP < 2.5 m (docs/shield_iron_dis.md).
       - plain Geant4 (bin/shield_natural_check.py) gives 0.52 +- 0.15 of the chain's K_L; the excess is the
@@ -458,6 +470,17 @@ D3. MS7 shield DIS -> K_L: chain disagrees with FairShip
       at 20 / 100 GeV vs 9.55 / 16.5 for the crossover mix (the soft photonuclear part, Geant4, is dropped), so the
       shield interaction rate falls by x 5 - 8 while the K_L (90 % from the Pythia part) fall much less. Confirmed by
       Guglielmo (5 Nov): keep the DIS part only, D3 stays a MAJOR open issue.
+      6 Nov re-run (2e6 interactions, Pythia only, bent parents, results/shield_dis/shield_muon_fs2026.*): 1.78e5
+      interactions / spill (was 1.04e6), but K_L decays in the vessel 5 604 / spill (was 4 885), K_S 36 (94), Lambda 14
+      (36): Pythia 6 makes the K_L and now also models the soft (low-nu) interactions Geant4 had -> the disagreement
+      with FairShip (no shield K_L at the SST) GROWS. Geant4 transport after the plane: 79 980 of 2.18e6 interactions
+      pre-selected, 662 109 charged at SST1 (shield_muon_fs2026_g4.npz).
+      6 Nov (night) generator comparison (docs/shield_iron_dis.md "DIS generator comparison"): K_L decays in the vessel
+      per spill: Pythia 6 5 604, crossover 5 170, Geant4 11.2 only 2 140, Geant4 10.7 (FairShip's) only 2 260;
+      K0-decay tracks at SST1 340 / 307 / 122 / 123 Hz vs FairShip 8 Hz (1 MC). Generator explains ~x2.6, not the
+      FairShip gap. 86 % of the Pythia 6 K_L from Q2 < 1 (98 % Geant4), W 5-10 GeV. Hard part only (Q2 > 1):
+      Pythia 8.230 / Pythia 6 = 1/6 in K_L. To check: FairShip --MuonBackSSTOnly (sample may miss most MS7
+      interactions); Q2 of the K_L surviving the selection (needs int_nu/int_W + K_L-enriched draws).
 
 D4. MS7 shield DIS chain: simplifications
     STATUS: IN PROGRESS (5 Nov 2026: solution accepted, code done, runs pending)
@@ -508,7 +531,14 @@ D6. Interaction-library approximations
       - nu_tau: build a nu_tau library with bin/nu_library.py (GENIE, --nus 16 -16), ~1 % of the flux.
 
 D7. Interactions upstream of z = 30.6 m not simulated
-    STATUS: DECIDED (5 Nov 2026), to implement
+    STATUS: IN PROGRESS (9 Nov 2026: air DONE 5 Nov; cavern walls / rock implemented by Shah Rukh, PR #13)
+    9 Nov 2026: cavern-wall DIS in PR #13 (docs/STATUS.md 2026-11-07/08, docs/full_sim_inventory.md): bin/rock_hits.py
+      (1.5e9 mu / spill into the -x wall, 8.9e7 into the floor, ~1.2e5 come back), cpp/g4rock.cc (concrete half-space,
+      forced muonNuclear; charged hadrons escape from the top ~30 cm, n / gamma from ~1 m), bin/rock_library.py (Geant4
+      below nu_x + the Pythia 6 part of mu_library.npz, so the D3 generator systematic applies), bin/rock_apply.py
+      (preliminary: 1.6e7 interactions / spill in the top 3 m, ~9e3 charged p > 1 GeV / spill at SST1). Next (decided
+      8 Nov): forced Geant4 from the stored 30.6 m states in the real cavern (wall + floor, forced K_L decays in the
+      vessel). No +x wall in the model (dropped for now: the mu- going to +x never meet rock -> lower bound).
     Apart from the last 50 cm of MS7, interactions in the shield, cavern walls and rock are not simulated.
     The FairShip origin breakdown (/disk/users/gfrise/fairship_sst1_origin) shows pi / p at SST1 come
     mostly from the cavern concrete and the vessel walls / SBT.
@@ -550,3 +580,33 @@ D11. Bugs found and fixed (record)
         1.05e7 / spill); excluded (docs/SUMMARY_2026-10-20.md).
       - shield_dis: muon final states sampled twice per interaction; fixed (docs/shield_iron_dis.md).
       - shah_study "straight" category replaced by the BOUNCE_CUT definition (C9).
+
+D12. EM debris implemented twice (with B2)
+    STATUS: OPEN (9 Nov 2026)
+    PR #13 bin/debris_maps.py adds e + 0.05 x gamma (P_GAMMA placeholder) straight into ubt_hist / fin_maps of the rate
+    maps; ours (B2, run_reco --em-debris) adds em_* maps in reco.plane_rate_map. Using both counts the debris twice.
+    His: muons back-projected straight to an iron box at 29.89 m (upper bound), 0.5 m iron library without field,
+    straight lines downstream. Ours: MS7 iron + field (g4shield), Geant4 to the planes (g4vessel), gamma conversion per
+    technology, but parents from the old 506M one-run sample. Proposal: ours in the main chain, debris_maps.py writes
+    em_* keys instead; his g4slab library for debris made in the veto planes / vessel walls; feed g4shield with the
+    current dataset's muons.
+
+D13. Protons per spill: one convention
+    STATUS: DONE (9 Nov 2026: config.POT_PER_SPILL = 4e13, legacy inputs rescaled when read, CHANGELOG 2026-11-09)
+    Was mixed: Nov-4 pool (build_pool_v5 --pot 4e13), rock_apply SPILLS = 1.5e7 vs config.py pot_spill, interactions /
+    shield_dis / muon_dis_apply / nu_dis_apply / fastveto.neutrinos SPILLS_15Y = 6e20 / 5e13 and older pools (5e13).
+    15-year totals agree; per-spill rates differ by 0.8.
+
+D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_inventory.md, moved here 9 Nov 2026)
+    STATUS: OPEN (PRIORITY C unless noted)
+      - Neutrino flux: 2018 FairShip flux only, p > 10 GeV, no nu_tau; new neutrino sample at the target / shield
+        (decided), then nu DIS in the cavern walls and in MS7 with it (nu_e library missing).
+      - EM debris from the cavern walls (bounce points), the vessel walls (Mylar) and the veto planes (delta rays):
+        libraries exist (g4slab), not applied to the hits. Shield-end debris only as accidental maps, not in time
+        with its muon.
+      - New muons made in the shield (pi / K decays, gamma -> mu mu): parked as rare (~1e-3, ~2e-5).
+      - K_L decays in the fastveto path: K_L stable there.
+      - Spectrometer + straws + GenFit exist but are not used in the veto chain.
+      - Cosmic muons: not looked at (one-line estimate).
+      - Source model: our Pythia 6 + Geant4 source has 1.36-1.57x the 2018 file's flux at 30-150 GeV, not explained by
+        Pythia, physics list, target layout or Geant4 version (Shah Rukh, 31 Oct); see D5.

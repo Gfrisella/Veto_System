@@ -28,9 +28,11 @@ from pathlib import Path
 import numpy as np
 
 from veto import paths
+from fastveto.dis import rotate_to   # the same frame rotation as the muon-DIS library
+SHARED = os.environ.get("VETO_SHARED", "/disk/lhcb_data/sqasim")   # Shah Rukh's shared data (read only)
 
-OUT = Path(os.environ.get("ROCK_LIB", "/disk/lhcb_data/sqasim/rock_dis/library"))    # /disk/lhcb_data = /disk/gfs_lhcb (the
-MU_LIB = Path(os.environ.get("ROCK_MU_LIB", "/disk/lhcb_data/sqasim/workspace/uzh/Veto_System/veto/data/interactions/dis/mu_library.npz"))
+OUT = Path(os.environ.get("ROCK_LIB", f"{SHARED}/rock_dis/library"))    # /disk/lhcb_data = /disk/gfs_lhcb (the
+MU_LIB = Path(os.environ.get("ROCK_MU_LIB", paths.mu_library()))   # only its Pythia 6 part is used (same in every copy)
 #                                                            Geant4 container mounts only the first name)
 IE_LIB = list(range(10, 50, 3))                    # mu_library grid indices: 2.05, 3.13, ... 327.6 GeV (x 1.52)
 ALPHA = np.geomspace(0.003, 0.6, 8)                # rad
@@ -82,15 +84,6 @@ def prepare(a):
              ev_tgt=tgt[ev].astype(np.int8), ev_nu=nu[ev], ev_n=n.astype(np.int32), ev_start=(np.cumsum(n) - n).astype(np.int64),
              pdg=z["p6_pdg"][rows], p=z["p6_p"][rows], v=z["p6_v"][rows], beam=z["p6_beam"][rows])
     print(f"Pythia subset: {len(ev):,} events above nu_x at {len(IE_LIB)} energies, {len(rows):,} particles -> {OUT / 'p6_subset.npz'}")
-
-
-def rotate_to(v, u, phi):
-    c, s = np.cos(phi), np.sin(phi)
-    x, y = c * v[:, 0] - s * v[:, 1], s * v[:, 0] + c * v[:, 1]
-    a = np.where(np.abs(u[:, 2:3]) < 0.9, np.array([[0, 0, 1.0]]), np.array([[1.0, 0, 0]]))
-    e1 = np.cross(u, a); e1 /= np.linalg.norm(e1, axis=1, keepdims=True)
-    e2 = np.cross(u, e1)
-    return x[:, None] * e1 + y[:, None] * e2 + v[:, 2:3] * u
 
 
 def task(a):

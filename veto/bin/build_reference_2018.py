@@ -22,6 +22,8 @@ from multiprocessing import Pool
 from pathlib import Path
 
 import numpy as np
+import os
+SHARED = os.environ.get("VETO_SHARED", "/disk/lhcb_data/sqasim")   # Shah Rukh's shared data (read only)
 
 H5_POT = 5e13 / 768.75                         # p.o.t. the h5's weights assume
 BR = ["MCTrack/MCTrack.fPdgCode", "MCTrack/MCTrack.fMotherId", "MCTrack/MCTrack.fPx", "MCTrack/MCTrack.fPy",
@@ -83,8 +85,8 @@ def one(args):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--src", default="/disk/lhcb_data/sqasim/fairship2018")
-    ap.add_argument("--out", default="/disk/lhcb_data/sqasim/reference-2018-fairship-506M")
+    ap.add_argument("--src", default=f"{SHARED}/fairship2018")
+    ap.add_argument("--out", default=f"{SHARED}/reference-2018-fairship-506M")
     ap.add_argument("--workers", type=int, default=32)
     a = ap.parse_args()
     t0 = time.time()

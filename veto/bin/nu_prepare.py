@@ -78,7 +78,8 @@ def main():
             np.save(out / f"{k}.npy", np.ascontiguousarray(v))
         json.dump({"n": n, "columns": list(cols), "flavour": int(pdg), "max_xy": a.max_xy,
                    "weight": "neutrinos per spill" + (" (4e13 p.o.t.)" if a.production else " (fastveto.neutrinos)"),
-                   "source": a.production or "fastveto.neutrinos.load"},
+                   "source": a.production or "fastveto.neutrinos.load",
+                   "pot_per_spill": 4e13 if a.production else neutrinos.POT_PER_SPILL},
                   open(out / "meta.json", "w"), indent=1)
         print(f"nu {int(pdg)}: {n:,} of {int(m.sum()):,} rows, {cols['weight'].sum():.4g} per spill -> {out}")
 

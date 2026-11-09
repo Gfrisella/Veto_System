@@ -23,7 +23,7 @@ from veto import paths
 from fastveto import dis
 
 CHARGED = (11, 13, 211, 321, 2212, 3112, 3222, 3312, 3334)
-SPILLS_15Y = 6e20 / 5e13
+from veto.config import SPILLS_15Y  # noqa: E402  (6e20 / 4e13 p.o.t.)
 M_MU = 0.10566
 
 

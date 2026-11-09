@@ -48,7 +48,8 @@ from veto import paths
 from veto import shield_iron as si
 
 CODE_SHIELD, CODE_SHIELD_V0 = 3, 4             # veto.interactions.CODE_NAMES
-SPILLS_15Y = 6e20 / 5e13
+from veto.config import POT_PER_SPILL, SPILLS_15Y  # noqa: E402  (6e20 / 4e13 p.o.t.)
+from veto import weights  # noqa: E402
 UB = 1e-34                                    # microbarn -> m^2
 V0 = {130: 15.34, 310: 0.026844, 3122: 0.0789, -3122: 0.0789, 3322: 0.0871, -3322: 0.0871}   # c tau [m]
 MASS = {130: 0.497611, 310: 0.497611, 3122: 1.115683, 3322: 1.31486}
@@ -74,7 +75,7 @@ def prepare(a):
     z = z + si.MUON_Z_SHIFT
     p = np.sqrt(px ** 2 + py ** 2 + pz ** 2)
     L, s_in, s_out = si.iron_chord(x, y, z, px / p, py / p, pz / p)
-    w = np.asarray(d["weight"], np.float64)
+    w = weights.to_spill(np.asarray(d["weight"], np.float64), weights.source_pot(path=si.MUON_FILE))   # D13: per 4e13
     keep = (L > 0) & (pz > 0) & (w > 0)
     print(f"{len(x):,} muons ({w.sum():.4g} per spill), {keep.sum():,} cross the iron ({w[keep].sum():.4g} per spill), "
           f"z plane {np.median(z):.3f} m, {time.time() - t0:.0f} s")
@@ -83,7 +84,8 @@ def prepare(a):
              q=np.asarray(d["pdg"])[keep].astype(np.int8), weight=w[keep], evt_n=np.asarray(d["evt_n"])[keep],
              L=L[keep], s_in=s_in[keep], s_out=s_out[keep],
              meta=np.array(json.dumps(dict(source=str(si.MUON_FILE), z_shift=si.MUON_Z_SHIFT, n_all=len(x),
-                                           w_all=float(w.sum()), iron=[si.Z_IRON0, si.Z_SHIELD_END, si.HALF_X, si.HALF_Y]))))
+                                           w_all=float(w.sum()), iron=[si.Z_IRON0, si.Z_SHIELD_END, si.HALF_X, si.HALF_Y],
+                                           pot_per_spill=POT_PER_SPILL))))
     print(f"wrote {PREPARED}")
 
 
@@ -91,10 +93,11 @@ def parents(kind):
     """Lines through the iron: dict(x, y, z, u (n,3), p, L, s_in, s_out, weight, evt_n, pdg)."""
     if kind == "muon":
         f = np.load(PREPARED)
+        fs = POT_PER_SPILL / weights.source_pot(json.loads(str(f["meta"])), PREPARED)   # D13: legacy file 5e13 -> 4e13
         pv = np.stack([f["px"], f["py"], f["pz"]], 1)
         p = np.linalg.norm(pv, axis=1)
         return dict(x=f["x"], y=f["y"], z=f["z"], u=pv / p[:, None], p=p, L=f["L"], s_in=f["s_in"], s_out=f["s_out"],
-                    weight=f["weight"], evt_n=f["evt_n"], pdg=-13 * f["q"].astype(np.int64))
+                    weight=f["weight"] * fs, evt_n=f["evt_n"], pdg=-13 * f["q"].astype(np.int64))
     out = []
     have = set(np.load(NU_LIB)["nus"].tolist()) if Path(NU_LIB).exists() else {14, -14}
     for fl in NU_FLAVOURS:
@@ -117,12 +120,12 @@ def parents(kind):
 
 
 # ------------------------------------------------------------------ 2. forced interactions
-def draw(kind, par, n, rng, per_track=False, mu_lib=None):
+def draw(kind, par, n, rng, per_track=False, mu_lib=None, mu_split=None):
     """N interactions among the parents, probability proportional to w P (each S / N); per_track: one interaction on
     every parent instead, weight w_i P_i (every track contributes once). Returns (inter, part, summary)."""
     from fastveto import dis, nudis
     if kind == "muon":
-        lib = dis.MuonLibrary(str(mu_lib or MU_LIB), split=MU_SPLIT)
+        lib = dis.MuonLibrary(str(mu_lib or MU_LIB), split=mu_split or MU_SPLIT)
         E_mid = par["p"] - si.DEDX_MU * 0.5 * (par["s_in"] + par["s_out"])
         sig = np.where(E_mid > 0.5, lib.sigma("iron", np.maximum(E_mid, 0.5)), 0.0)        # microbarn per nucleon
         P = si.nucleons_per_m3() * sig * UB * par["L"]
@@ -279,7 +282,7 @@ def force_v0(inter, part, rng, copies=1):
 
 
 def exit_summary(inter, part):
-    """What leaves the shield per spill (kHz at 5e13 PoT/s = per spill / 1e3), by species, p > 1 GeV."""
+    """What leaves the shield per spill (kHz at 4e13 PoT/s = per spill / 1e3), by species, p > 1 GeV."""
     w = inter["weight"][part["int"]]
     pm = np.linalg.norm(part["p"][:, :3], axis=1)
     out = {}
@@ -296,8 +299,9 @@ def generate(a):
     par = parents(a.kind)
     print(f"{a.kind}: {len(par['p']):,} parents cross the iron ({par['weight'].sum():.4g} per spill), {time.time() - t0:.0f} s",
           flush=True)
-    inter, part, summ = draw(a.kind, par, a.n, rng, a.per_track, a.mu_lib)
+    inter, part, summ = draw(a.kind, par, a.n, rng, a.per_track, a.mu_lib, a.mu_split)
     summ["mu_library"] = str(a.mu_lib or MU_LIB)
+    summ["mu_split"] = a.mu_split or MU_SPLIT
     print(f"  {summ['interactions_per_spill']:.4g} interactions per spill ({summ['interactions_15y']:.4g} in 15 years); "
           f"{len(part['pdg']):,} final-state particles, {time.time() - t0:.0f} s", flush=True)
     g = transport(part, len(inter["weight"]), a.workers, a.chunk, a.seed)
@@ -333,6 +337,8 @@ def main():
     g.add_argument("--seed", type=int, default=1)
     g.add_argument("--tag", default="")
     g.add_argument("--per-track", action="store_true", help="one interaction per parent track, weight w P (--n ignored)")
+    g.add_argument("--mu-split", choices=["pythia", "geant4", "crossover", "w2"], default=None,
+                   help=f"which generator of the muon library (default {MU_SPLIT!r}, D3); geant4 = Geant4 muonNuclear only")
     g.add_argument("--v0-copies", type=int, default=1, help="forced vessel decays per V0 at the plane (weight / copies)")
     g.add_argument("--mu-lib", help="muon DIS library (default data/interactions/dis/mu_library_iron.npz; "
                    "mu_library_iron_v0stable.npz keeps K_S, Lambda for Geant4 to transport and decay)")

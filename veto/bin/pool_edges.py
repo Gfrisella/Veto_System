@@ -17,6 +17,8 @@ import numpy as np
 from veto import paths
 
 import build_pool as bp
+import os
+SHARED = os.environ.get("VETO_SHARED", "/disk/lhcb_data/sqasim")   # Shah Rukh's shared data (read only)
 
 EDGES = np.concatenate([np.arange(10, 60, 2.5), np.arange(60, 130, 10), np.arange(130, 180, 5), np.arange(180, 420, 40)])
 NAMES = ("tail", "min. bias", "dimuon", "charm", "other")
@@ -32,7 +34,7 @@ def flux(px, py, pz, w, comp):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--pool", default="/disk/lhcb_data/sqasim/pool_v1")
+    ap.add_argument("--pool", default=f"{SHARED}/pool_v1")
     a = ap.parse_args()
     with h5py.File(paths.enriched_input_h5(), "r") as f:
         comp = bp.components(f["weight"][:], f["source"][:])

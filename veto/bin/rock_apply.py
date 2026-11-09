@@ -34,7 +34,7 @@ from veto import muon_types as mt
 XW, YF = geo.CAVERN_X_WALL, geo.CAVERN_Y_FLOOR
 DEDX = 0.5                                                     # GeV / m in the rock
 D_EDGES = np.array([0, 0.05, 0.1, 0.2, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0])
-SPILLS = 1.5e7
+from veto.config import SPILLS_15Y as SPILLS  # noqa: E402  (1.5e7)
 C = 0.299792458
 CHARGED = (11, 13, 211, 321, 2212, 3222, 3112, 3312, 3334)
 CHARGE = {11: -1, 13: -1, 211: 1, 321: 1, 2212: 1, 3222: 1, 3112: -1, 3312: -1, 3334: -1}
@@ -47,11 +47,7 @@ def charge_of(pdg):
     return q
 
 
-def in_vessel(x, y, z):
-    t = np.clip((z - geo.Z_VESSEL_MIN) / (geo.Z_VESSEL_MAX - geo.Z_VESSEL_MIN), 0, 1)
-    hx = geo.VESSEL_X_IN + t * (geo.VESSEL_X_OUT - geo.VESSEL_X_IN)
-    hy = geo.VESSEL_Y_IN + t * (geo.VESSEL_Y_OUT - geo.VESSEL_Y_IN)
-    return (z > geo.Z_VESSEL_MIN) & (z < geo.Z_VESSEL_MAX) & (np.abs(x) < hx) & (np.abs(y) < hy)
+in_vessel = geo.inside_vessel
 
 
 class Library:

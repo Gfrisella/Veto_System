@@ -25,7 +25,7 @@ from fastveto import targets as tg
 from veto import design as vdesign
 
 DATASET = "design-optimization-dataset-gamma-2026-10-17"           # the muon dataset (--dataset or --store)
-SPILLS_15Y = 6e20 / 5e13
+from veto.config import SPILLS_15Y  # noqa: E402  (6e20 / 4e13 p.o.t.)
 
 
 def main():

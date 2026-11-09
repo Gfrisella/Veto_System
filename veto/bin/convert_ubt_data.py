@@ -20,7 +20,7 @@ from pathlib import Path
 
 import numpy as np
 
-from veto import io, paths
+from veto import io, paths, weights
 
 COLUMNS = ("x", "y", "z", "px", "py", "pz", "pdg", "weight")
 
@@ -38,6 +38,7 @@ def main():
     print(f"Loaded {args.input} in {time.time() - start:.0f} s")
     columns = {key: np.asarray(raw[key], dtype=np.float32) for key in COLUMNS}
     del raw
+    columns["weight"] = weights.to_spill(columns["weight"], weights.source_pot(path=args.input)).astype(np.float32)  # D13
 
     n = len(columns["x"])
     w = columns["weight"]

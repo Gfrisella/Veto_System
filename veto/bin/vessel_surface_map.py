@@ -32,8 +32,7 @@ N_CELLS = N_SIDE + 2 * NE * NE
 
 
 def vhalf(z, xp=np):
-    t = xp.clip((z - V0) / (V1 - V0), 0, 1) if xp is np else torch.clamp((z - V0) / (V1 - V0), 0, 1)
-    return geo.VESSEL_X_IN + t * (geo.VESSEL_X_OUT - geo.VESSEL_X_IN), geo.VESSEL_Y_IN + t * (geo.VESSEL_Y_OUT - geo.VESSEL_Y_IN)
+    return geo.vessel_half_widths(z, clip=True)
 
 
 def vessel_crossings(a, k, b):

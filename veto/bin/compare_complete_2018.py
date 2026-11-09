@@ -18,9 +18,11 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import os
+SHARED = os.environ.get("VETO_SHARED", "/disk/lhcb_data/sqasim")   # Shah Rukh's shared data (read only)
 
 H5 = "/disk/users/gfrise/MuonsAndMatter/data/muons/full_sample_after_target.h5"
-REF = "/disk/lhcb_data/sqasim/reference-2018-fairship-506M/reference_2018.h5"
+REF = f"{SHARED}/reference-2018-fairship-506M/reference_2018.h5"
 PE = np.geomspace(10, 400, 33)
 TE = np.linspace(0, 4, 21)
 CLASSES = {"minbias": 768.75, "dimuon": 7.6875}
@@ -201,9 +203,9 @@ def main():
     ap.add_argument("--compute", choices=["ours", "refs"])
     ap.add_argument("--refs")
     ap.add_argument("--labels", nargs="*")
-    ap.add_argument("--src", default="/disk/lhcb_data/sqasim/complete_validation/tail")
+    ap.add_argument("--src", default=f"{SHARED}/complete_validation/tail")
     ap.add_argument("--tag", default="cv_complete")
-    ap.add_argument("--out", default="/disk/lhcb_data/sqasim/complete_validation")
+    ap.add_argument("--out", default=f"{SHARED}/complete_validation")
     a = ap.parse_args()
     if a.compute == "ours":
         compute_ours(a)
