@@ -752,6 +752,23 @@ D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_invento
       the straw station z (and the spectrometer field position) agree with our frame (z_FS - 2.14, geometry.Z_SST /
       Z_MAGNET) and that nothing of FairShip's shield / cavern enters the ACTS tracking geometry or its material.
       Alternative B (straw surfaces built in Python from straws.py, no FairShip file) not pursued.
+    9-10 Nov 2026 (ACTS option A): the SHiP slc9 release 26.10 is NOT usable for ACTS here: besides host-library gaps
+      (libtiff 5, EL9 libicu 67 / libnsl 3), its ACTSReco / convertToACTS chain is broken (no gGeoManager, straw ids
+      that do not exist, removed builder arguments, no SHiPTrackWriter, ACTS-fork StrawtubeBuilder layers facing the
+      wrong way, field map scrambled by rotateAxis, digi config that fits no track). A patched local build got it
+      running but is superseded and was removed. 26.10 vs ours: straw config identical, spectrometer 15 cm upstream
+      (SST 84.07 / 86.07 / 93.07 / 95.07, magnet 89.57 m FS -> z_26.10 = z_veto + 1.99 m), field map 2025_02_12 MgB2.
+    10 Nov 2026, Guglielmo: take it from FairShip PR #1545 (fix(reco): ACTS straw material from the geometry). FairShip
+      main has its own ACTS module (ActsTracking/: free StrawSurfaces keyed by the strawtubes detector ID, Kalman with
+      DirectNavigator on drift radii, field = any TVirtualMagField, Truth / Segments pattern recognition), built in
+      the FairShip PIXI environment 26.10 on CVMFS (ACTS 48.2, ROOT 6.40, Geant4 11.4), which runs on this host as
+      is. Only ActsStrawGeometry.cpp differs from the PR: external/fairship_acts (src from PR head 786b361, build.sh,
+      README), bin/fairship_env.sh loads our libShipActsTracking first. Validation (data/acts/pixi2610_pg, 500 mu
+      10 GeV, ShipReco --trackFitter acts --patRec Truth): 499 tracks, 32 hits, p median 9.992 GeV, core sigma(p)/p
+      0.94 %, chi2/ndf 0.92. The geometry file is used for the straws only (ActsStrawGeometry takes only "straw"
+      volumes: FairShip's TRY_2026 shield is not in the fit).
+      Next: our straw hits (straws.digitize detIDs + drift radii, z + 1.99 m) and OUR field map as a TVirtualMagField
+      -> ActsStrawTracker.FitCandidate per track -> resolution / efficiency parametrisation for reco.measure.
 
 D15. CVMFS library loading under load (shield_dis / shield_natural workers)
     STATUS: OPEN (9 Nov 2026, decided: retry + count check)

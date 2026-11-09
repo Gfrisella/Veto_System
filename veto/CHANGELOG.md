@@ -4,6 +4,17 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-10 — ACTS straw tracking: FairShip pixi environment + PR #1545 (branch `veto-shield-dis`)
+
+- New `bin/fairship_env.sh`: runs a command in the FairShip pixi environment 26.10 on CVMFS (ROOT 6.40, Geant4 11.4,
+  ACTS 48.2; works on this host without workarounds) with our `libShipActsTracking` first.
+- New `external/fairship_acts/` (force-added, the rest of `external/` stays ignored): FairShip `ActsTracking/` from PR
+  #1545 head 786b361 (straw material from the TGeo straw volumes), `build.sh` rebuilds the library in that
+  environment, README with provenance and the validation (499 / 500 muons of 10 GeV fitted, p median 9.992 GeV, core
+  sigma(p)/p 0.94 %, chi2/ndf 0.92).
+- `bin/shipenv.sh`: comment points to `bin/fairship_env.sh` for ACTS. The attempt on the slc9 release 26.10 (patched
+  ACTS-fork library, own ACTS-examples chain, EL9 compatibility libraries) was dropped; findings in ISSUES D14.
+
 ## 2026-11-09 (night) — D5 momentum-convention check (results only, no code change)
 
 - `results/d5_convention/` (scripts, json, plots, README): the tail rows of the enriched input carry the production momentum
