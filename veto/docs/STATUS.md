@@ -710,3 +710,15 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
     before the veto, and the veto sees nothing for a K_L-only event. Needs a targeted run to become a number.
   - GAP: neutrons (and K_L hadronic interactions) from the rock interacting in the helium are in no chain: the rock store
     propagates neutrals straight, no Geant4 downstream for rock. (MS7 / vessel stores have it via g4_vessel_transport.)
+- Hole 2, neutral hadrons interacting in the helium (new: cpp/g4hadlib, bin/neutral_library.py -> /disk/lhcb_data/sqasim/
+  neutral_lib/neutral_he.npz, 3 species x 24 E x 20k, lambda_I(n-He) 3.7-4.1 km; bin/evstore_neutral.py, code 7):
+  rock store 5.4e8 interactions / 15 y in the helium (5 524 n, 30 nbar, 236 K_L roots > 2 GeV), 289k copies: 0 selected,
+  0 all-but-IP (soft: median 2.6 GeV; the 2.5k copies with 2 tracks in SST1 have vertices at z 77-81 m).
+- Hole 1, targeted rock draws (rock_apply --region corner: floor z < 70 m, wall z < 52 m; 1.71 M draws, floor 317k = x12):
+  K_L > 2 GeV 3-4e-5 per interaction (x10 below the wall-z60 assumption), none from the floor heads to the vessel; with
+  klmap: floor < 0.02 / 15 y (<= 0.2 with linear IP scaling), upstream wall ~0.002. Neutrals in the helium from the corner
+  9.6e6 / 15 y, 0 selected, 0 all-but-IP. CLOSED.
+- Neutron map (klmap --species 2112 --window, 3.3e6 synthetic n, library interactions): 0 selected, IP < 1 m 14 MC, < 0.25 m
+  1. P(IP < 1 m | interaction) 8e-6 (floor z 30) ... 5e-7 (wall z 55), 0 at z >= 60 (where most rock neutrons come from).
+  Folded: 5.4e8 x <= 5e-7 x 1/100 (IP^2 to 0.1 m) x 0.02 (real spectrum: 99 % < 4.9 GeV; two tracks > 1 GeV need ~5 GeV+)
+  -> rock neutrons ~0.05 per 15 y (0.01-0.5); 2.7 if the spectrum softness is ignored (upper end). No veto for these.

@@ -342,8 +342,15 @@ def klmap(a):
     from evstore_eval import ip_tail
     rng = np.random.default_rng(23)
     cfg = reco.RecoConfig(seed=1, multiple_scattering=True, ip_max=vsel.IP_CUTS["full"])
+    neutron = a.species != 130
+    if neutron:                       # interactions in the helium from the library (bin/evstore_neutral.py)
+        from evstore_neutral import Library, MASS as NMASS
+        from fastveto.dis import rotate_to
+        nlib = Library(a.library)
     src = [("floor", x, G.CAVERN_Y_FLOOR, z) for z in (30, 40, 50, 60, 70) for x in (-2.0, 0.0, 2.0)] + \
-          [("wall", G.CAVERN_X_WALL, y, z) for z in (30, 40, 50) for y in (-1.5, 0.0, 1.5)]
+          [("wall", G.CAVERN_X_WALL, y, z) for z in ((30, 40, 50, 55, 60, 65, 70) if neutron else (30, 40, 50))
+           for y in (-1.5, 0.0, 1.5)]
+    kick = 0.6 if neutron else 0.229
     pb = np.array([2, 3, 4, 6, 10, 20.0])
     out = []
     m_kl = dc.MASS[130]
@@ -363,7 +370,7 @@ def klmap(a):
         if a.window:
             dT = tgt - np.array([0, 0, G.Z_TARGET]); dT /= np.linalg.norm(dT, axis=1, keepdims=True)
             ang = np.arccos(np.clip((u * dT).sum(1), -1, 1))
-            keep = ang < 0.229 / np.maximum(pm - 0.229, 1e-3) + 0.025
+            keep = ang < kick / np.maximum(pm - kick, 1e-3) + 0.025
             idx = np.nonzero(keep)[0][:n]
             u, pm = u[idx], pm[idx]
             f_acc = keep.sum() / nprop
@@ -377,15 +384,35 @@ def klmap(a):
         n_aim = len(pm)
         u, pm, l_in, l_out = u[ok], pm[ok], l_in[ok], l_out[ok]
         k = len(pm)
-        lam = pm / m_kl * NEUTRAL_DECAY[130]
-        e1, e2 = np.exp(-l_in / lam), np.exp(-l_out / lam)
-        d = -lam * np.log(e1 - rng.random(k) * (e1 - e2))
-        vdec = R + u * d[:, None]
-        p3 = u * pm[:, None]
-        p4 = np.concatenate([p3, np.sqrt(pm ** 2 + m_kl ** 2)[:, None]], 1)
-        ev_d, pdg_d, p_d, _ = dc.force_decay(np.arange(k), np.full(k, 130), p4, vdec, rng)
-        t = es.propagate(ev_d, pdg_d, vdec[ev_d], p_d[:, :3], np.zeros(len(ev_d)), rng)
-        E = dict(event=np.arange(k), weight=(e1 - e2) / k, code=np.zeros(k, int), parent_row=np.arange(k),
+        if not neutron:
+            lam = pm / m_kl * NEUTRAL_DECAY[130]
+            e1, e2 = np.exp(-l_in / lam), np.exp(-l_out / lam)
+            d = -lam * np.log(e1 - rng.random(k) * (e1 - e2))
+            vdec = R + u * d[:, None]
+            p3 = u * pm[:, None]
+            p4 = np.concatenate([p3, np.sqrt(pm ** 2 + m_kl ** 2)[:, None]], 1)
+            ev_d, pdg_d, p_d, _ = dc.force_decay(np.arange(k), np.full(k, 130), p4, vdec, rng)
+            p_d = p_d[:, :3]
+            wdec = e1 - e2
+        else:
+            En = np.sqrt(pm ** 2 + NMASS[a.species] ** 2)
+            wdec = nlib.sigma(a.species, En) * (l_out - l_in)                 # P(interaction inside), first order
+            d = l_in + rng.random(k) * (l_out - l_in)
+            vdec = R + u * d[:, None]
+            ie = nlib.ie(En)
+            pick = np.empty(k, np.int64)
+            for b_ in np.unique(ie):
+                m_ = ie == b_; cell = nlib.cells[(a.species, int(b_))]
+                pick[m_] = cell[rng.integers(0, len(cell), m_.sum())]
+            cnt = nlib.ev["n"][pick]; first = nlib.ev["first"][pick]
+            ev_d = np.repeat(np.arange(k), cnt)
+            rows = np.repeat(first, cnt) + (np.arange(cnt.sum()) - np.repeat(np.cumsum(cnt) - cnt, cnt))
+            sc = (pm / np.sqrt(nlib.E[ie] ** 2 - NMASS[a.species] ** 2))[ev_d]
+            pl = np.stack([nlib.x["px"][rows], nlib.x["py"][rows], nlib.x["pz"][rows]], 1) * sc[:, None]
+            p_d = rotate_to(pl, u[ev_d], rng.uniform(0, 2 * np.pi, k)[ev_d])
+            pdg_d = nlib.x["pdg"][rows].astype(np.int64)
+        t = es.propagate(ev_d, pdg_d, vdec[ev_d], p_d, np.zeros(len(ev_d)), rng)
+        E = dict(event=np.arange(k), weight=wdec / k, code=np.zeros(k, int), parent_row=np.arange(k),
                  x=vdec[:, 0], y=vdec[:, 1], z=vdec[:, 2])
         inter, part = es.to_fastveto(E, t)
         trk = ix.charged_tracks(part)
@@ -394,7 +421,6 @@ def klmap(a):
         lo, _, _ = ix.select(trk, k, cfg=None)
         loose = np.zeros(k, bool); loose[lo] = True
         ib = np.clip(np.digitize(pm, pb) - 1, 0, len(pb) - 2)
-        wdec = e1 - e2
         sc = f_acc / n_aim                                  # per K_L proposed (uniform aim into the vessel)
         w_ip = wdec * sc
         tail = ip_tail(dict(inter, weight=w_ip / SPILLS_15Y), part, cfg)
@@ -418,7 +444,7 @@ def main():
     ap.add_argument("--kind", choices=("vessel", "ms7", "rock"), default="vessel")
     ap.add_argument("--library", default=None); ap.add_argument("--seeds", type=int, default=300)
     ap.add_argument("--out", default=None); ap.add_argument("--n", type=int, default=100)
-    ap.add_argument("--window", action="store_true"); ap.add_argument("--window-factor", type=int, default=50)
+    ap.add_argument("--species", type=int, default=130); ap.add_argument("--window", action="store_true"); ap.add_argument("--window-factor", type=int, default=50)
     a = ap.parse_args()
     res = dict(store=store, rockflux=rockflux, shell=shell, rockforce=rockforce, klmap=klmap)[a.mode](a)
     if a.out:
