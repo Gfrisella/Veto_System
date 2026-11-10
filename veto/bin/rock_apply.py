@@ -137,9 +137,12 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--em-out", default=None, help="also write every e+- / gamma leaving the rock (first --em-seeds seeds) here")
     ap.add_argument("--em-seeds", type=int, default=30)
+    ap.add_argument("--store-out", default=None, help="every particle out of the rock for every draw (bin/evstore_build.py rock)")
     a = ap.parse_args()
     em_rows = {k: [] for k in ("seed", "w", "surf", "vx", "vy", "vz", "pdg", "x", "y", "z", "px", "py", "pz", "ekin", "t")}
     n_em = 0
+    st_rows = {k: [] for k in ("seed", "draw", "w", "surf", "vx", "vy", "vz", "mu_row", "t_mu", "E_mu", "pdg", "x", "y", "z",
+                               "px", "py", "pz", "t", "beam")}
     rng = np.random.default_rng(a.seed)
     lib = Library(a.library)
     des = dmod.load(f"designs/modules/{a.design}.json")
@@ -204,6 +207,13 @@ def main():
         charged = (q != 0) & ~beam
         notbeam = ~beam
         T["out"] += wd * notbeam.sum(); T["out_charged"] += wd * charged.sum()
+        if a.store_out:                                             # the design-independent store: every exit
+            for k_, v_ in (("seed", np.full(tot, n)), ("draw", owner + n_draw_tot), ("w", np.full(tot, wd)),
+                           ("surf", (~wall[i])[owner].astype(np.int8)), ("vx", surf0[owner, 0]), ("vy", surf0[owner, 1]),
+                           ("vz", surf0[owner, 2]), ("mu_row", r[i][owner]), ("t_mu", t_mu[owner]), ("E_mu", Ed[owner]),
+                           ("pdg", pdg), ("x", pos[:, 0]), ("y", pos[:, 1]), ("z", pos[:, 2]), ("px", mom[:, 0]),
+                           ("py", mom[:, 1]), ("pz", mom[:, 2]), ("t", tt), ("beam", beam)):
+                st_rows[k_].append(v_)
         if a.em_out and n_em < a.em_seeds:                         # every e+- / gamma out of the rock, for the debris page
             km = notbeam & np.isin(pdg, (22, 11, -11))
             for k_, v_ in (("seed", np.full(km.sum(), n)), ("w", np.full(km.sum(), wd)), ("surf", (~wall[i])[owner][km].astype(np.int8)),
@@ -281,6 +291,10 @@ def main():
     json.dump(out, open(a.out + ".json", "w"), indent=1)
     np.savez(a.out + "_draws.npz", **{k: np.concatenate(v) if v else np.zeros(0) for k, v in keep_rows.items()})
     print(f"-> {a.out}.json, {a.out}_draws.npz ({time.time() - t0:.0f} s)")
+    if a.store_out:
+        np.savez(a.store_out, n_seeds=S, pot_per_spill=POT_PER_SPILL, design=a.design,
+                 **{k: np.concatenate(v) if v else np.zeros(0) for k, v in st_rows.items()})
+        print(f"-> {a.store_out}: {sum(len(v) for v in st_rows['pdg']):,} particles out of the rock")
     if a.em_out:                                                    # weight per spill = w / n_seeds
         np.savez(a.em_out, n_seeds=n_em, pot_per_spill=POT_PER_SPILL, design=a.design,
                  **{k: np.concatenate(v) if v else np.zeros(0) for k, v in em_rows.items()})

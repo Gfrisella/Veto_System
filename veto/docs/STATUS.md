@@ -624,3 +624,19 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   IP < 2 / 1 / 0.5 / 0.25 / 0.1 m: 8.1e6 / 2.1e6 / 3.8e5 / 7.6e4 / 1.8e4 (356 / 98 / 18 / 3 / 1 copies). ~IP^2 near 0 ->
   **~1.5e4 per 15 y (range 1-2e4)**, not vetoable (bin/shield_ip_tail.py). Geant4 10.7.3 (FairShip's) run: 0 selected,
   consistent. Selection step segfaults in the batch container (external/pylib + torch): run it with exec_cudabear.
+
+## 2026-11-10 Event store (lib/veto/evstore.py) and MS7 on the Nov-4 muons
+- Design-independent stores, one directory per process: events (weight / spill, code, parent row, vertex, time, forced-copy
+  link) + tracks (tree: parent track, pdg, start, momentum, end, end reason, creator, beam). Downstream model: straight
+  lines, decays in flight (pi+-, K+-, K_L, K_S, Lambda, Sigma, Xi, pi0) until the cavern wall / z = 95 m; state at SST1.
+  bin/evstore_build.py (shield / apply / rock), bin/evstore_eval.py (any design, --ip-tail), rock_apply --store-out.
+  Stores in /disk/lhcb_data/sqasim/evstore/: ms7_muon_g4v112 (20.5 M events), ms7_muon_g4v112_nov4, ms7_nu2026,
+  vessel_nu2026_D6_straw_mod_nu{14,-14,12,-12,16,-16}, rock_muon (300 spills, every exit, 2.2 M events).
+- Checks vs the old path (D6_straw_mod, per 15 y): MS7 muon tail identical within statistics; MS7 nu 2.2 (was 2.4); vessel nu
+  3.0 (was 3.3: pi / K now decay before SST1); rock 0 (0).
+- MS7 parents from our own transport (bin/cpu_transport.py run --planes 29.2 30.6 --keep-box 2 1.6 on GPU 0 of farm-gpu3,
+  Nov-4 pool train_000-003, 8 s per chunk, MuonsAndMatter container) -> shield_dis prepare --from-transport -> 
+  /disk/lhcb_data/sqasim/ms7_parents/muons_iron_nov4.npz: 3.95e7 rows, 4.62e8 / spill through the iron vs Guglielmo's 2018
+  one-run file 3.89e8 (x1.19 in every p bin < 100 GeV, x0.96 > 200 GeV; same footprint and chord; D5 source difference).
+- MS7 chain on them (Slurm 2036253, 10 x 2e6, Geant4 11.2): V0 decays in the vessel 2.69e10 / 15 y; passing all but IP 1.95e7;
+  IP < 2 / 1 / 0.5 / 0.25 / 0.1 m: 1.1e7 / 2.2e6 / 3.7e5 / 6.1e4 / 0 -> ~1.5e4 per 15 y (1-2e4) by IP^2: the stored number.
