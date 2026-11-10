@@ -3,7 +3,8 @@
 
     bin/lcg.sh python3 bin/genie_splines.py
 
-Nuclei: H1, He4, C12, N14, O16, Si28, Cl35, Cl37, Ar40 (helium, PVC, Mylar, polystyrene, PVT, silicon, air), Fe56 (shield).
+Nuclei: H1, He4, C12, N14, O16, Si28, Cl35, Cl37, Ar40 (helium, PVC, Mylar, polystyrene, PVT, silicon, air), Fe56 (shield),
+Na23, Mg24, Al27, K39, Ca40 (with H, C, O, Si, Fe: the cavern concrete, G4_CONCRETE).
 Output: data/genie/gxspl-fvs.xml and data/genie/xsec_tot.npz: E grid, sigma_tot [cm^2 per nucleus] per
 (neutrino, nucleus) = sum of every process spline (CC, NC, QE, RES, DIS, COH, MEC, nu-e) of that pair.
 """
@@ -18,7 +19,8 @@ from veto import paths
 
 SRC = paths.interactions_data() / "genie/genie_xsec/v3_06_00/NULL/G1802a00000-k250-e1000/data/gxspl-NUsmall.xml"
 NUCLEI = [1000010010, 1000020040, 1000060120, 1000070140, 1000080160, 1000140280, 1000170350, 1000170370, 1000180400,
-          1000260560]                                  # Fe56: the muon shield (veto.shield_iron)
+          1000260560,                                  # Fe56: the muon shield (veto.shield_iron)
+          1000110230, 1000120240, 1000130270, 1000190390, 1000200400]  # Na23 Mg24 Al27 K39 Ca40: concrete (G4_CONCRETE)
 NUS = [14, -14, 12, -12, 16, -16]
 
 

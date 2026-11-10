@@ -552,6 +552,53 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   G4BOptrForceCollision, forced K_L / neutral decays in the vessel), storing design-independent trees to SST1, mapped onto
   designs afterwards (straight lines or ParticleShaker). The library stays as the quick estimate and cross-check.
 
+## 2026-11-09 Neutrino production with the new target (DONE)
+- Data: /disk/lhcb_data/sqasim/nu_prod/tail/ — nuMB_nu_600000-600499 (500 x 2e4 p, 3.3 GB), charmc_nu_30000-30999
+  (1000 x 1e4 p, charm hadrons > 1 GeV, keep 0.5, 1.7 GB), beautyc_nu_21000-21399 (400 x 2.5e4 p from the Nov-4 beauty
+  hadrons, keep 0.05, 210 MB), charmc_had_* (soft charm hadrons, 5.7 GB), nu_flux_summary.npz ((E, theta) histograms per
+  proton per component and flavour). Per proton = sum w_decay / (events x rep), per component; drop hf > 0 rows in nuMB.
+  Cuts: E >= 1 GeV, theta <= 0.3 rad, made upstream of z = -0.0045 m. Summary: bin/nu_flux.py <dir> [--had-old <nov4 dir>].
+- Per proton (per spill 4e13): nu_mu 5.50e-3 (2.2e11; charm 4.6 %), anti nu_mu 3.94e-3 (1.6e11), nu_e 5.55e-4 (2.2e10;
+  charm 46 %), anti nu_e 5.29e-4 (2.1e10; charm 52 %), nu_tau 3.90e-5 and anti nu_tau 3.95e-5 (1.6e9 each, all charm, D_s);
+  beauty ~5e-8 per flavour. Min-bias nu_e: K+- 1.3e-4, K_L 9.8e-5, K_S 6.7e-5. Made at z -2.2 .. -1.4 m.
+- Soft charm vs Nov-4 > 10 GeV set above 10 GeV: ratio 1.0000 (pull -0.17; D0, D+, Ds, Lambda_c all 1.000); the soft part adds
+  x1.16 to the charm hadron weight.
+- Fixes during the run: charm_cascade Pythia 6 scratch files now on node-local /tmp (112 slices on GFS stalled in D state);
+  nu_prod.sbatch charm step skips charm_cascade if charmc_had exists.
+- Next: GENIE / neutrino interactions in the detector and surroundings from nu_flux_summary.npz or the row files.
+
+### 2026-11-09 Neutrino DIS apply on the 2026 flux + flux validation
+- Apply done (library v2, one process per flavour): D6_straw_mod, 15 y, all flavours: helium 2.87e4, air 6.57e4, PVC 5.77e4,
+  UBT + fins 5.8e3 (`data/interactions/genie/apply2026_D6_straw_mod_nu*.json`). D6_straw nu_mu / anti-nu_mu also done.
+- vs 2018 flux: x3.7 (helium) to x31 (fins). Not a bug: the 2018 sample (neutrinos from Guglielmo's `_mu` files) only kept
+  neutrinos with p > 10 GeV whose sister muon was stored, and that muon has p >= 15 GeV (5 % quantile 21 GeV). Above 10 GeV
+  pion-parent nu_mu agree (new/old 0.94, 1.01 at 10-20 GeV); K+- (x6.5, x9.8 at 10-20 GeV falling to x1.1 > 100 GeV) and
+  charm (x3.7-5.5) are what the muon cut removed. Plus: no E < 10 GeV (65 % of the sigma-weighted new flux), off-axis spread.
+- Independent check vs SHiP 2025 (arXiv 2504.06692, Table 1, CC DIS in 3 t W, 15 y): 2026 flux folded on a 40-50 cm W block at
+  z = 26-30 m gives nu_mu 3.8-5.2e6 (SHiP 5.8e6), anti-nu_mu 1.1-1.5e6 (1.3e6), nu_e 1.6-2.2e6 (2.0e6), anti-nu_e 4.3-5.7e5
+  (4.0e5), nu_tau ~1e5 (5.9e4; no tau threshold suppression in the estimate). The 2018 sample gives nu_mu 2.0-2.9e6, nu_tau 4e3.
+  Scripts: /disk/lhcb_data/sqasim/nu_lib/{cmp,par,snd}.py.
+- Selection + veto (bin/run_interactions.py --kind nu, new --pot-spill 4e13; current RecoConfig) on the 2026 samples, per 15 y,
+  after veto level b: D6_straw_mod nu_mu 1.02, anti-nu_mu 0.51, nu_e 1.37, anti-nu_e 0.39, nu_tau 0.02, anti-nu_tau 0.02 ->
+  total 3.3 (selected 3.9), all but ~0.07 from helium (not vetoable: a ~ b ~ selected). Air / PVC: 0-1 selected draws each
+  (upper limit ~0.1-0.2 per flavour). Like for like: the 2018 sample through today's code gives 1.03 selected / 0.89 after veto
+  (the 469 in results/interactions/D6_straw_nu.json is from the pre-Oct-21 selection, stale). New D6_straw nu_mu + anti: 1.58.
+  So the neutrino background is x1.8 (muon flavours) and x3.7 with nu_e, not x4-30. Outputs:
+  /disk/lhcb_data/sqasim/workspace/uzh/Veto_System/veto/results/interactions/*_nu2026_nu*.json, D6_straw_nu2018_rerun.json.
+  Run with EXEC="... exec_cudabear... env VETO_RESULTS=/disk/lhcb_data/.../results VETO_INTERACTIONS=..." (gfs not mounted).
+- Cavern rock through the same selection (new bin/rock_select.py: rock_apply / nu_rock draws -> interactions.evaluate, cut flow):
+  D6_straw_mod, 0 selected for both. Neutrino rock: 3.2e3 / 15 y with >= 2 good tracks (84 draws), best-pair measured IP
+  >= 6.8 m. Muon rock: 4.6e9 / 15 y with >= 2 good tracks (64 draws, 7e7 each), IP >= 12.6 m. Vertices are killed by geometry.
+  BUT single tracks: the muon rock puts 1.84e4 good tracks (p > 1 GeV, SST1 + timing acceptance) per spill into SST1, mostly
+  hadrons / electrons (muons 300), vs ~3e4 direct muons -> feeds the combinatorial background (rate^2), not included yet.
+  Neutrino rock: 0.024 per spill (negligible).
+- Rock tracks in the combinatorial term (bin/rock_combinatorial.py, D6_straw_mod, dataset c, inputs_c_s, cone 0, 2M-muon
+  subsample x scale): per 15 y, candidates / IP < 10 cm / after veto: mu x mu 852 / 405 / 51 (legs explained 0.74 / 0.64);
+  mu x rock 8190 / 2927 / 0.023 (662 MC; rock leg explained 0.9999: rock tracks cross the walls / planes on the way in);
+  rock x rock 5e-7 / 0 / 0. Rock raises the candidates x8 but adds ~nothing after the veto. NOTE mu x mu after veto = 51 for
+  D6_straw_mod vs ~1e-4 for D6_tile2 / E3 / E4 (e2e_c): this straw design leaves 26-36 % of pair legs unexplained - check.
+  Run time 48 min (pairing 1.3e6 x 6.4e3 rows on farm-gpu3). Full dataset c (262 M SST1 rows) is too big to load: subsample.
+
 ## 2026-11-09: GSimple 2026 final-target neutrino flux
 - Converted A. Iuliano's GSimple flux (EOS, 16.1 M rows, 1.46e9 PoT) to h5 in the veto frame (FS z - 2.14), per-spill weights:
   `Study_on_Veto_System/Neutrino_flux_gsimple2026/` (README there). Compared with Shah Rukh's Nov-9 production and fastveto.neutrinos (2018):
@@ -566,3 +613,80 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   of the D5 convention check and of the re-run batch (after D5 / D3), which neutrino flux to adopt.
 - Questions for the detector colleagues: docs/detector_questions.md (to send).
 - D3 deck to update with the natural-Geant4 result.
+- Neutrino DIS in MS7 (last 50 cm) with the 2026 flux + GENIE v2, all 6 flavours (bin/shield_dis.py generate --kind nu
+  --n 500000 --v0-copies 100 --nu-stores .../neutrinos/store2026; new options --nu-lib / --nu-stores, defaults v2 + 6 flavours):
+  1.34 interactions / spill (2.0e7 / 15 y), V0 decays in the vessel 2.1e5 / 15 y; D6_straw_mod selected 3.9 +- 0.5, after veto
+  b 2.4 +- 0.4 per 15 y (108 MC copies; 1 copy: 9.2 / 5.4 from 2 MC). ~1e-4 of the muon MS7 K_L, comparable to nu in helium.
+- MS7 muon DIS -> K_L with Geant4 (2026-11-10, chosen default; Pythia 6 ~x2.7 higher noted as the generator spread):
+  Slurm 2035587, 10 x 2e6 interactions, Geant4 11.2.2 library (Guglielmo's mu_library_iron.npz, split geant4), his MS7
+  parents, 5 copies / V0 (results/shield_dis/shield_muon_g4v112_s101-110.npz). V0 decays in the vessel 2.33e10 / 15 y
+  (K_L 1540 / spill). D6_straw_mod full selection: 0 in each file. Passing everything but the IP cut 1.4e7 / 15 y; measured
+  IP < 2 / 1 / 0.5 / 0.25 / 0.1 m: 8.1e6 / 2.1e6 / 3.8e5 / 7.6e4 / 1.8e4 (356 / 98 / 18 / 3 / 1 copies). ~IP^2 near 0 ->
+  **~1.5e4 per 15 y (range 1-2e4)**, not vetoable (bin/shield_ip_tail.py). Geant4 10.7.3 (FairShip's) run: 0 selected,
+  consistent. Selection step segfaults in the batch container (external/pylib + torch): run it with exec_cudabear.
+
+## 2026-11-10 Event store (lib/veto/evstore.py) and MS7 on the Nov-4 muons
+- Design-independent stores, one directory per process: events (weight / spill, code, parent row, vertex, time, forced-copy
+  link) + tracks (tree: parent track, pdg, start, momentum, end, end reason, creator, beam). Downstream model: straight
+  lines, decays in flight (pi+-, K+-, K_L, K_S, Lambda, Sigma, Xi, pi0) until the cavern wall / z = 95 m; state at SST1.
+  bin/evstore_build.py (shield / apply / rock), bin/evstore_eval.py (any design, --ip-tail), rock_apply --store-out.
+  Stores in /disk/lhcb_data/sqasim/evstore/: ms7_muon_g4v112 (20.5 M events), ms7_muon_g4v112_nov4, ms7_nu2026,
+  vessel_nu2026_D6_straw_mod_nu{14,-14,12,-12,16,-16}, rock_muon (300 spills, every exit, 2.2 M events).
+- Checks vs the old path (D6_straw_mod, per 15 y): MS7 muon tail identical within statistics; MS7 nu 2.2 (was 2.4); vessel nu
+  3.0 (was 3.3: pi / K now decay before SST1); rock 0 (0).
+- MS7 parents from our own transport (bin/cpu_transport.py run --planes 29.2 30.6 --keep-box 2 1.6 on GPU 0 of farm-gpu3,
+  Nov-4 pool train_000-003, 8 s per chunk, MuonsAndMatter container) -> shield_dis prepare --from-transport -> 
+  /disk/lhcb_data/sqasim/ms7_parents/muons_iron_nov4.npz: 3.95e7 rows, 4.62e8 / spill through the iron vs Guglielmo's 2018
+  one-run file 3.89e8 (x1.19 in every p bin < 100 GeV, x0.96 > 200 GeV; same footprint and chord; D5 source difference).
+- MS7 chain on them (Slurm 2036253, 10 x 2e6, Geant4 11.2): V0 decays in the vessel 2.69e10 / 15 y; passing all but IP 1.95e7;
+  IP < 2 / 1 / 0.5 / 0.25 / 0.1 m: 1.1e7 / 2.2e6 / 3.7e5 / 6.1e4 / 0 -> ~1.5e4 per 15 y (1-2e4) by IP^2: the stored number.
+- 2026-11-10 night, remaining compute (farm-gpu3, /disk/lhcb_data/sqasim/evstore/remaining.log, logs/):
+  - Nov-4 dataset store (bin/shell_to_store.py, 300 shell seeds): design-optimization-dataset-nov4-shell-300seeds-2026-11-10,
+    7.17e7 rows, 4.72e10 muons / spill (pool 4.69e10). Pair inputs from it: results/reco/inputs_nov4.npz (21 097 candidates,
+    5 739 pairs / spill before the time coincidence).
+  - **Correction**: muon DIS in the HELIUM is NOT small. D6_straw_mod on Nov-4 (run_interactions --kind muon): helium 1.82e3
+    selected -> 472 after veto b (673 at truth level c: the parent crossed no plane), walls 176 -> 44 per 15 y; e2e_c
+    (dataset c) had 210-250 (helium) for D6_tile2 / E3 / E4 / E5. Second background after MS7 K_L; side-entry coverage gap.
+    Store: vessel_mu_nov4_D6_straw_mod (7.0e6 events).
+  - MS7 K_L direct count (bin/evstore_redecay.py, 100 re-decays of the 14 168 pre-selected V0 = 68 % of the all-but-IP
+    weight): 1.39e4 selected (13 MC), 9.7e3 after veto; all but IP: IP < 0.1 / 0.5 / 1 m 2.1e4 / 4.2e5 / 1.8e6 (17 / 328 /
+    1458 MC). Confirms the IP^2 extrapolation (~1.5e4).
+  - Geant4 downstream (g4vessel on the stores' roots, g4_vessel_transport + evstore_eval --g4): MS7 muon all-but-IP 1.44e7
+    (straight 1.95e7), IP < 1 m 2.0e6; MS7 nu 1.0 after veto (straight 2.2); vessel nu after veto: anti-nu_mu 0.16 (0.43),
+    nu_e 0.59 (1.30), anti-nu_e 0.15 (0.37) + walls 0.03-0.10; nu_mu, nu_tau, anti-nu_tau rerunning (2 particles produced
+    beyond z = 94 m made g4vessel stop: now skipped, bin/g4_vessel_transport.py).
+  - EM debris test on the Nov-4 parents (em_debris.py --n 2000 --tag _nov4_test): 10 s for 2000 muons (16 workers), 1.23e9
+    e / gamma per spill at the exit plane -> a 2e5-muon run ~ 20 min, 2e6 ~ 3 h: a few core-hours, not tens.
+  - Neutrino-rock store rock_nu2026 (412k events).
+  - Geant4 downstream, all 6 vessel-nu flavours done (2-3 particles produced beyond z = 94 m are now removed before g4vessel):
+    after veto b, helium / walls: nu_mu 0.42 / 0.06, anti-nu_mu 0.16 / 0.10, nu_e 0.59 / 0.02, anti-nu_e 0.15 / 0.03, nu_tau 0.005
+    / 0.006, anti-nu_tau 0.001 / 0.001 -> 1.3 + 0.2 = **1.5 per 15 y** (straight lines 3.0). With MS7 nu (1.0): neutrinos ~2.5.
+  - EM debris on the Nov-4 parents (2e5 muons, 30 s): 1.19e9 e / gamma per spill out of MS7, UBT 5.2e6 e + 2.5e7 gamma per
+    spill; maps results/em_debris/em_maps.npz. run_reco D6_straw_mod on inputs_nov4: combinatorial 2.86 -> 0.014 (0.003 with
+    debris), signal lost 6.4 % -> 7.5 % with debris. CHECK: inputs_nov4 has x140 fewer pair candidates than inputs_c_s (2.86
+    vs 405 / 15 y); the "51" of rock_combinatorial on dataset c is probably an old-layout (pre-5-Nov) vs fairship-2026 design
+    mismatch. Not resolved.
+    RESOLVED (2026-11-10 day): not the layout. Dataset c has 3-4x more SST1 muons above 30-100 GeV near the axis (source
+    pool, D5); the pair rate goes as the square, times the pointing preference, times the old 5e13 normalisation of
+    inputs_c_s. Reclassifying c with the new layout raises its selected class. Which tail is right: compare the pool
+    v2/v3 and Nov-4 input spectra > 100 GeV by component (open).
+- Neutrino DIS in MS7 (last 50 cm) with the 2026 flux + GENIE v2, all 6 flavours (bin/shield_dis.py generate --kind nu
+  --n 500000 --v0-copies 100 --nu-stores .../neutrinos/store2026; new options --nu-lib / --nu-stores, defaults v2 + 6 flavours):
+  1.34 interactions / spill (2.0e7 / 15 y), V0 decays in the vessel 2.1e5 / 15 y; D6_straw_mod selected 3.9, after veto b 2.4
+  per 15 y (108 MC copies; 1 copy: 9.2 / 5.4 from 2 MC). ~1e-4 of the muon MS7 K_L, but comparable to nu in helium (3.3).
+
+## 2026-11-10 (day): statistics, storage, rare corners
+- Statistics for a 15-year design number (D6_straw_mod): MS7 K_L lacking (13 MC selected, ~1e3 per MC event: K_L-enriched
+  generation needed); walls lacking (22 per MC event, cheap); helium OK now (x20 later); neutrinos sufficient; combinatorial
+  limited by the muon production (spills), not by transport, but enough for the budget.
+- Storage: evstore 71 GB (Geant4 files 19 GB), shell seeds 106 GB, Nov-4 pool h5 145 GB, dataset c 60 GB, Nov-4 store 8.3 GB,
+  rock apply 15.7 GB, MS7 parents 10.8 GB; MS7 shield_dis 5.7 GB / 10 files, debris 0.4 GB.
+- Tail extension (answer, nothing run): tail_produce --mode complete with a high EMIN + an energy split in build_pool_v5,
+  ~1-2 days of work + 1-5 k core-h; first decide which tail is right (above).
+- Rare corners (user: rare places where more statistics blindly does not help): step 1 = worst-case bounds from the
+  stores, bin/coverage_bound.py (store --kind vessel|ms7|rock: per region of the interaction point, MC count, selected /
+  loose, 2.3 x mean weight limits for regions with none selected; rock: neutral-pointing proxy; rockflux: rock patches from
+  the muons; shell: analog counts per shell cell). Note: the rock "0" is 2.2 M draws for 1.57e14 interactions / 15 y,
+  ~7e7 per MC event: statistically only < 1.6e8; it rests on geometry (a vertex must point back within 0.1 m). Running.
+  Later steps if a corner is not bounded: splitting / weight windows in the shield transport (splitting_proto exists on
+  lhcb_data), forced neutral chains for rock and walls.

@@ -46,6 +46,19 @@
 //       3 gamma -> mu mu, 4 e+ e- -> mu mu, 5 muon of the Pythia event, 6 other process; parent (pdg); hf (a charm / beauty hadron among the ancestors).
 //   ANALOG MODE (mode="analog"): the same set-up without any forcing (natural decays, muons kept at weight 1, factors
 //       1): the unbiased reference for the complete mode.
+//   NEUTRINO MODE (initialize(..., neutrino=True), with mode complete or analog): the neutrinos instead of the muons,
+//       recorded where they are made (no transport), if E_nu >= nu_emin, angle to the beam <= nu_theta and made upstream
+//       of z = Z_PLANE (beyond it the shield's iron absorbs the hadrons: not modelled, tracks killed there):
+//         long-lived species with a neutrino channel (pi, K+-, K_L, K_S, Lambda, Sigma, Xi, Omega): complete mode: every
+//           step forces one decay from the channels with a neutrino (Geant4's channels and kinematics where Geant4 has
+//           >= 90 % of Pythia's neutrino BR, else Pythia's), weight (track weight) BR_nu step / lambda_dec (with the L0
+//           roulette); Geant4's own decays of these species are dropped (no double counting)
+//         prompt species: decayed by Pythia with all channels as before; their neutrinos recorded at the decay's weight
+//         any other neutrino (Pythia event, other decays): recorded as is
+//       muons, e+- and photons are killed (no neutrinos from muon decays: c tau 659 m); no resonance boost.
+//       Neutrinos get proc: 1 forced decay of a long-lived species, 2 / 7 prompt decay (Pythia event / cascade),
+//       5 Pythia event, 6 other (unforced decay in the complete mode, any decay in the analog mode: 1).
+//       set_nu_cuts(emin, theta_max); cascade() then also returns "nu": ev, pdg, parent, proc, hf, w, x, y, z, px, py, pz.
 //   inelastic_xs_per_m(pdg, E, material)   material "W", "Fe", "water": inelastic cross section [1/m]
 //   target_layout()                         list of (z_start, z_end, material) [m]
 
@@ -363,13 +376,23 @@ class PrimInfo : public G4VUserPrimaryParticleInformation {   // primaries made 
 int gMode = 0;                                 // 0 legacy, 1 complete (forced, weighted), 2 analog
 double gEpFactor = 100.0;                      // e+ e- -> mu mu cross-section factor
 constexpr double E_POSITRON_MIN = 43.7;        // GeV: threshold of e+ e- -> mu mu on electrons at rest
-struct Species { double brmu; double brmu_bar; double tau0_mm; bool prompt; };   // BR to muonic channels: particle, antiparticle
+struct Species { double brmu; double brmu_bar; double tau0_mm; bool prompt; double brnu = 0; double brnu_bar = 0; };   // BR to muonic
+                                                                                // (neutrino) channels: particle, antiparticle
 std::unordered_map<int, Species> gSpec;        // |pdg| -> muonic branching ratios, Pythia tau0, prompt or long-lived
 double br_mu(const Species& sp, int pdg) { return pdg < 0 ? sp.brmu_bar : sp.brmu; }
+double br_nu(const Species& sp, int pdg) { return pdg < 0 ? sp.brnu_bar : sp.brnu; }
+bool is_nu(int pdg) { const int a = std::abs(pdg); return a == 12 || a == 14 || a == 16; }
+// neutrino mode
+bool gNu = false;
+double gNuEmin = 1.0, gNuTheta = 0.3;          // GeV, rad
+struct NuOut { std::vector<int> ev, pdg, parent, proc, hf; std::vector<double> w, x, y, z, px, py, pz; } gNuOut;
+int gEvId = 0;                                 // event being made / tracked (set in GeneratePrimaries: the run manager's
+                                               // current event does not exist yet while the generator decays primaries)
 // Geant4's own muonic decay channels of a long-lived species (used for the forced decays where Geant4 has them: its
 // kinematics, e.g. K_l3 form factors; Pythia's only for channels missing in Geant4: K_S, hyperons)
 struct G4Mu { double br = 0; std::vector<std::pair<double, G4VDecayChannel*>> ch; bool done = false; };
 std::unordered_map<int, G4Mu> gG4Mu;           // keyed by signed pdg
+std::unordered_map<int, G4Mu> gG4Nu;           // the same for the channels with a neutrino (neutrino mode)
 struct Tag { int pdg; int hf; };
 std::unordered_map<int, Tag> gTags;            // per event: track id -> pdg, heavy-flavour ancestry
 std::unordered_set<int> gTaken;                // per event: tracks decayed by us (their Geant4 products are dropped)
@@ -393,6 +416,15 @@ struct Outputs { std::vector<int> ok; std::vector<double> x, y, z, px, py, pz; }
 
 // A particle made by our decays: muons (muon = true: proc, parent) or products to track.
 struct Item { int pdg; G4ThreeVector p; G4ThreeVector pos; double t; double w; int proc; int parent; int hf; bool muon; int ch = -1; };
+
+// neutrino mode: one neutrino where it is made (p in GeV, pos in Geant4 units), if it passes the cuts
+void record_nu(int pdg, const G4ThreeVector& p, const G4ThreeVector& pos, double w, int proc, int parent, int hf) {
+  if (p.mag() < gNuEmin || p.theta() > gNuTheta || pos.z() / m >= Z_PLANE || !(w > 0)) return;
+  gNuOut.ev.push_back(gEvId);
+  gNuOut.pdg.push_back(pdg); gNuOut.parent.push_back(parent); gNuOut.proc.push_back(proc); gNuOut.hf.push_back(hf);
+  gNuOut.w.push_back(w); gNuOut.x.push_back(pos.x() / m); gNuOut.y.push_back(pos.y() / m); gNuOut.z.push_back(pos.z() / m);
+  gNuOut.px.push_back(p.x()); gNuOut.py.push_back(p.y()); gNuOut.pz.push_back(p.z());
+}
 
 #ifdef TT_WITH_PYTHIA
 struct PyProd { int id; G4ThreeVector p; double m; };
@@ -454,9 +486,12 @@ void prompt_decay(int id, const G4ThreeVector& p, double mass, const G4ThreeVect
     const int ch = extra(prod);
     for (const PyProd& q : prod) {
       const int aq = std::abs(q.id);
-      if (aq == 12 || aq == 14 || aq == 16) continue;
+      if (aq == 12 || aq == 14 || aq == 16) {
+        if (gNu) record_nu(q.id, q.p, x, w, proc, id, hf);
+        continue;
+      }
       if (aq == 13) {
-        if (gMode == 2) out.push_back(Item{q.id, q.p, x, tt, w, proc, id, hf, true, ch});
+        if (gMode == 2 && !gNu) out.push_back(Item{q.id, q.p, x, tt, w, proc, id, hf, true, ch});
         continue;
       }
       auto it = gSpec.find(aq);
@@ -468,7 +503,7 @@ void prompt_decay(int id, const G4ThreeVector& p, double mass, const G4ThreeVect
     }
   }
   const double bm = br_mu(sp, id);
-  if (gMode == 1 && bm > 0) {
+  if (gMode == 1 && bm > 0 && !gNu) {
     for (int k = 0; k < gSplit; ++k) {                            // decay splitting: gSplit muonic decays, weight / gSplit
       prod.clear();
       if (py_decay(gPyMu, id, p, mass, prod)) {
@@ -513,6 +548,7 @@ class Generator : public G4VUserPrimaryGeneratorAction {
  public:
   Generator() : gun_(std::make_unique<G4ParticleGun>(1)) {}
   void GeneratePrimaries(G4Event* ev) override {
+    gEvId = ev->GetEventID();
     if (gCascade && gMode != 0) {             // complete / analog: primaries with weights, prompt species decayed here
       gTags.clear();
       gTaken.clear();
@@ -733,6 +769,68 @@ void forced_longlived(const G4Step* step, G4Track* tr, int pdg, const Species& s
   }
   push_items(tr, items);
 }
+
+// neutrino mode: the forced decay of a long-lived species into a channel with a neutrino in this step (weight
+// BR_nu step / lambda_dec); its neutrinos are recorded at once
+void forced_nu(const G4Step* step, G4Track* tr, int pdg, const Species& sp, int hf) {
+  const G4StepPoint* pre = step->GetPreStepPoint();
+  const G4StepPoint* post = step->GetPostStepPoint();
+  if (pre->GetTotalEnergy() < gECut * GeV) return;
+  const double len = step->GetStepLength() / m;
+  if (len <= 0) return;
+  const G4ParticleDefinition* def = tr->GetDefinition();
+  const double mass = def->GetPDGMass() / GeV;
+  double ctau = def->GetPDGLifeTime() * c_light / m;
+  if (!(ctau > 0)) ctau = sp.tau0_mm / 1000.0;
+  const G4ThreeVector pv = pre->GetMomentum() / GeV;
+  G4Mu& g = gG4Nu[pdg];
+  if (!g.done) {                                                     // Geant4's channels with a neutrino
+    g.done = true;
+    G4DecayTable* dt = def->GetDecayTable();
+    double tot = 0;
+    for (int i = 0; dt && i < dt->entries(); ++i) {
+      G4VDecayChannel* c = dt->GetDecayChannel(i);
+      tot += c->GetBR();
+      bool nu = false;
+      for (int j = 0; j < c->GetNumberOfDaughters(); ++j) nu = nu || is_nu(c->GetDaughter(j)->GetPDGEncoding());
+      if (nu) { g.br += c->GetBR(); g.ch.emplace_back(c->GetBR(), c); }
+    }
+    if (tot > 0) g.br /= tot;
+    if (g.br < 0.9 * br_nu(sp, pdg)) { g.br = 0; g.ch.clear(); }   // Geant4 lacks channels: Pythia's instead
+    std::printf("tailtransport neutrino mode: %d forced with %s channels, BR_nu %.4g (Pythia %.4g)\n", pdg,
+                g.br > 0 ? "Geant4" : "Pythia", g.br > 0 ? g.br : br_nu(sp, pdg), br_nu(sp, pdg));
+  }
+  const double bn = g.br > 0 ? g.br : br_nu(sp, pdg);
+  if (!(bn > 0)) return;
+  double w = tr->GetWeight() * bn * len / (pv.mag() / mass * ctau);
+  if (gL0 > 0 && len < gL0) {
+    const double q = len / gL0;
+    if (G4UniformRand() > q) return;
+    w /= q;
+  }
+  const double f = G4UniformRand();
+  const G4ThreeVector pos = pre->GetPosition() + f * (post->GetPosition() - pre->GetPosition());
+  if (g.br > 0) {
+    double sum = 0;
+    for (auto& c : g.ch) sum += c.first;
+    double r = G4UniformRand() * sum;
+    G4VDecayChannel* pick = g.ch.back().second;
+    for (auto& c : g.ch) { if (r < c.first) { pick = c.second; break; } r -= c.first; }
+    G4DecayProducts* dp = pick->DecayIt(def->GetPDGMass());
+    dp->Boost(std::sqrt(pre->GetMomentum().mag2() + def->GetPDGMass() * def->GetPDGMass()), pre->GetMomentumDirection());
+    for (int i = 0; i < dp->entries(); ++i) {
+      const G4DynamicParticle* d = (*dp)[i];
+      const int q = d->GetDefinition()->GetPDGEncoding();
+      if (is_nu(q)) record_nu(q, d->GetMomentum() / GeV, pos, w, 1, pdg, hf);
+    }
+    delete dp;
+  } else {
+    std::vector<PyProd> prod;
+    if (!py_decay(gPyMu, pdg, pv, mass, prod)) return;               // gPyMu: the neutrino channels in this mode
+    for (const PyProd& q : prod)
+      if (is_nu(q.id)) record_nu(q.id, q.p, pos, w, 1, pdg, hf);
+  }
+}
 #endif
 
 // complete / analog mode stepping
@@ -752,6 +850,7 @@ void complete_step(const G4Step* step, G4Track* tr) {
     }
     gTags[tr->GetTrackID()] = Tag{pdg, hf || is_hf(pdg)};
   }
+  if (gNu && (a == 13 || gMuTag.count(tr->GetDefinition()))) { tr->SetTrackStatus(fStopAndKill); return; }
   if (a == 13) { record_muon(step, tr, pdg); return; }
   auto mt = gMuTag.find(tr->GetDefinition());
   if (mt != gMuTag.end()) {                                        // tagged muon of a resonance decayed inside a model
@@ -782,6 +881,11 @@ void complete_step(const G4Step* step, G4Track* tr) {
     return;
   }
 #ifdef TT_WITH_PYTHIA
+  if (gNu) {
+    if (gMode == 1 && sp != gSpec.end() && br_nu(sp->second, pdg) > 0) forced_nu(step, tr, pdg, sp->second, gTags[tr->GetTrackID()].hf);
+    if (step->GetPostStepPoint()->GetPosition().z() / m >= Z_PLANE) tr->SetTrackStatus(fStopAndKill);   // into the shield
+    return;
+  }
   if (gMode == 1 && sp != gSpec.end() && br_mu(sp->second, pdg) > 0) forced_longlived(step, tr, pdg, sp->second, gTags[tr->GetTrackID()].hf);
 #endif
 }
@@ -889,6 +993,23 @@ G4ClassificationOfNewTrack classify_complete(const G4Track* t) {
                  (par && t->GetParentID() != 0) ? par->GetTotalEnergy() / GeV : 0.0, par ? par->GetTrackID() : -1);
   }
   const G4VUserTrackInformation* ui = t->GetUserInformation();
+  if (gNu) {
+    if (t->GetParentID() != 0 && ui == nullptr && gTaken.count(t->GetParentID())) return fKill;   // decayed by us already
+    if (is_nu(pdg)) {
+      const G4PrimaryParticle* pp = t->GetParentID() == 0 ? t->GetDynamicParticle()->GetPrimaryParticle() : nullptr;
+      if (pp) { record_nu(pdg, t->GetMomentum() / GeV, t->GetPosition(), pp->GetWeight(), 5, 0, 0); return fKill; }
+      auto it = gTags.find(t->GetParentID());
+      const int par = it != gTags.end() ? it->second.pdg : 0, hf = it != gTags.end() ? it->second.hf : 0;
+      const G4VProcess* cp = t->GetCreatorProcess();
+      const bool decay = cp && cp->GetProcessType() == fDecay;
+      auto sp = gSpec.find(std::abs(par));
+      const bool forced = sp != gSpec.end() && !sp->second.prompt && br_nu(sp->second, par) > 0;
+      if (gMode == 1 && decay && forced) return fKill;              // made by the forced decays instead
+      record_nu(pdg, t->GetMomentum() / GeV, t->GetPosition(), t->GetWeight(), decay ? (gMode == 2 ? 1 : 6) : 6, par, hf);
+      return fKill;
+    }
+    if (a == 13 || a == 11 || a == 22) return fKill;
+  }
   if (t->GetParentID() == 0) {                                     // primaries: weight and muon bookkeeping
     const G4PrimaryParticle* pp = t->GetDynamicParticle()->GetPrimaryParticle();
     auto* pi = pp ? dynamic_cast<PrimInfo*>(pp->GetUserInformation()) : nullptr;
@@ -1103,26 +1224,28 @@ void init_pythia(long seed) {
     auto e = pd.particleDataEntryPtr(id);
     if (!(e->isHadron() || id == 15)) continue;
     // onMode 1: on, 2: particle only, 3: antiparticle only (Pythia lists many B / D channels twice that way)
-    double bt[2] = {0, 0}, bm[2] = {0, 0};
+    double bt[2] = {0, 0}, bm[2] = {0, 0}, bn[2] = {0, 0};
     for (int i = 0; i < e->sizeChannels(); ++i) {
       Pythia8::DecayChannel& c = e->channel(i);
-      bool mu = false;
-      for (int j = 0; j < c.multiplicity(); ++j) mu = mu || std::abs(c.product(j)) == 13;
+      bool mu = false, nu = false;
+      for (int j = 0; j < c.multiplicity(); ++j) { mu = mu || std::abs(c.product(j)) == 13; nu = nu || is_nu(c.product(j)); }
       for (int s = 0; s < 2; ++s) {
         const bool on = c.onMode() == 1 || c.onMode() == (s == 0 ? 2 : 3);
         if (!on) continue;
         bt[s] += c.bRatio();
         if (mu) bm[s] += c.bRatio();
+        if (nu) bn[s] += c.bRatio();
       }
     }
-    if (bm[0] <= 0 && bm[1] <= 0) continue;
-    gSpec[id] = Species{bt[0] > 0 ? bm[0] / bt[0] : 0, bt[1] > 0 ? bm[1] / bt[1] : 0, e->tau0(), e->tau0() <= 10.0};
-    auto em = gPyMu->particleData.particleDataEntryPtr(id);           // muonic decayer: non-muonic channels off
-    for (int i = 0; i < em->sizeChannels(); ++i) {
+    if (bm[0] <= 0 && bm[1] <= 0 && !(gNu && (bn[0] > 0 || bn[1] > 0))) continue;
+    gSpec[id] = Species{bt[0] > 0 ? bm[0] / bt[0] : 0, bt[1] > 0 ? bm[1] / bt[1] : 0, e->tau0(), e->tau0() <= 10.0,
+                        bt[0] > 0 ? bn[0] / bt[0] : 0, bt[1] > 0 ? bn[1] / bt[1] : 0};
+    auto em = gPyMu->particleData.particleDataEntryPtr(id);           // forced decayer: muonic (neutrino mode: neutrino)
+    for (int i = 0; i < em->sizeChannels(); ++i) {                    // channels only
       Pythia8::DecayChannel& c = em->channel(i);
-      bool mu = false;
-      for (int j = 0; j < c.multiplicity(); ++j) mu = mu || std::abs(c.product(j)) == 13;
-      if (!mu) c.onMode(0);
+      bool keep = false;
+      for (int j = 0; j < c.multiplicity(); ++j) keep = keep || (gNu ? is_nu(c.product(j)) : std::abs(c.product(j)) == 13);
+      if (!keep) c.onMode(0);
     }
   }
   for (auto* py : {gPyAll, gPyMu}) {
@@ -1189,12 +1312,14 @@ void supplement_g4_tables() {
 #endif
 
 void initialize(long seed, const std::string& target, const std::string& physics, bool dimuon, double gamma_factor,
-                const std::string& mode, double ep_factor) {
+                const std::string& mode, double ep_factor, bool neutrino) {
   if (gRun) throw std::runtime_error("already initialized");
+  gNu = neutrino;
   if (mode == "complete") gMode = 1;
   else if (mode == "analog") gMode = 2;
   else if (mode != "legacy") throw std::runtime_error("mode must be legacy, complete or analog");
   if (gMode != 0 && dimuon) throw std::runtime_error("dimuon is a legacy option: complete / analog include it");
+  if (gNu && gMode == 0) throw std::runtime_error("neutrino mode needs mode complete or analog");
 #ifndef TT_WITH_PYTHIA
   if (gMode != 0) throw std::runtime_error("complete / analog mode need the Pythia build (TT_WITH_PYTHIA)");
 #endif
@@ -1231,7 +1356,7 @@ void initialize(long seed, const std::string& target, const std::string& physics
   if (gMode != 0) {
     gGammaFactor = gMode == 1 ? gamma_factor : 1.0;
     gEpFactor = gMode == 1 ? ep_factor : 1.0;
-    gResBoost = gMode == 1 ? 100.0 : 1.0;
+    gResBoost = gMode == 1 && !gNu ? 100.0 : 1.0;
     if (std::getenv("TT_RESBOOST")) gResBoost = std::atof(std::getenv("TT_RESBOOST"));       // tests
     if (std::getenv("TT_NO_REPLACE")) gResBoost = -1;                                         // tests: keep Geant4's tables
     plist->RegisterPhysics(new ExtraMuPairs(gGammaFactor, gEpFactor));
@@ -1275,7 +1400,7 @@ void initialize(long seed, const std::string& target, const std::string& physics
         c.ch = new G4PhaseSpaceDecayChannel(names.at(pdg), 1.0, int(c.d.size()), c.d[0], c.d[1], c.d.size() > 2 ? c.d[2] : "");
   }
 #ifdef TT_WITH_PYTHIA
-  if (gMode != 0) { supplement_g4_tables(); if (gResBoost > 0) replace_resonance_tables(); else gResBoost = 1.0; }
+  if (gMode != 0) { supplement_g4_tables(); if (gResBoost > 0 && !gNu) replace_resonance_tables(); else gResBoost = 1.0; }
 #endif
   gRun->BeamOn(0);
 }
@@ -1312,6 +1437,7 @@ py::dict cascade(std::vector<long> offsets, std::vector<int> pdg, std::vector<do
   if (!gW.empty() && gW.size() != gIn.pdg.size()) throw std::runtime_error("w: one weight per particle");
   if (!gE.empty() && gE.size() != gIn.pdg.size()) throw std::runtime_error("e: one energy per particle");
   gMu = MuOut();
+  gNuOut = NuOut();
   gDiag = Diag();
   gInt = IntOut();
   {
@@ -1338,6 +1464,13 @@ py::dict cascade(std::vector<long> offsets, std::vector<int> pdg, std::vector<do
   it["x"] = arr(gInt.x); it["y"] = arr(gInt.y); it["z"] = arr(gInt.z);
   it["px"] = arr(gInt.px); it["py"] = arr(gInt.py); it["pz"] = arr(gInt.pz);
   o["interactions"] = it;
+  if (gNu) {
+    py::dict nu;
+    nu["ev"] = arr(gNuOut.ev); nu["pdg"] = arr(gNuOut.pdg); nu["parent"] = arr(gNuOut.parent); nu["proc"] = arr(gNuOut.proc);
+    nu["hf"] = arr(gNuOut.hf); nu["w"] = arr(gNuOut.w); nu["x"] = arr(gNuOut.x); nu["y"] = arr(gNuOut.y); nu["z"] = arr(gNuOut.z);
+    nu["px"] = arr(gNuOut.px); nu["py"] = arr(gNuOut.py); nu["pz"] = arr(gNuOut.pz);
+    o["nu"] = nu;
+  }
   return o;
 }
 
@@ -1362,7 +1495,10 @@ double inelastic_xs_per_m(int pdg, double E, const std::string& material) {
 
 PYBIND11_MODULE(tailtransport, mod) {
   mod.def("initialize", &initialize, py::arg("seed") = 1, py::arg("target") = "W", py::arg("physics") = "FTFP_BERT",
-          py::arg("dimuon") = false, py::arg("gamma_factor") = 500.0, py::arg("mode") = "legacy", py::arg("ep_factor") = 100.0);
+          py::arg("dimuon") = false, py::arg("gamma_factor") = 500.0, py::arg("mode") = "legacy", py::arg("ep_factor") = 100.0,
+          py::arg("neutrino") = false);
+  mod.def("set_nu_cuts", [](double emin, double theta_max) { gNuEmin = emin; gNuTheta = theta_max; },
+          "neutrino mode: neutrinos recorded with E >= emin [GeV] and angle to the beam <= theta_max [rad]");
   mod.def("set_pik", [](bool b) { gPiK = b; }, "forced pi / K -> mu nu on (default) or off");
   mod.def("set_vm_fairship", [](bool b) { gVmFairShip = b; }, "dimuon forcing restricted as the old FairShip production");
   mod.def("set_log_interactions", [](bool b, double emin) { gLogInt = b; gLogEmin = emin; },
@@ -1401,7 +1537,8 @@ PYBIND11_MODULE(tailtransport, mod) {
   }, "importance sampling of the cascade's new tracks: q = min(1, max(qmin, (E/e1)^n) max(1, (pT/pt0)^2)), weight / q; qmin <= 0: off");
   mod.def("muonic_species", []() {
     py::dict d;
-    for (const auto& kv : gSpec) d[py::int_(kv.first)] = py::make_tuple(kv.second.brmu, kv.second.brmu_bar, kv.second.tau0_mm, kv.second.prompt);
+    for (const auto& kv : gSpec) d[py::int_(kv.first)] = py::make_tuple(kv.second.brmu, kv.second.brmu_bar, kv.second.tau0_mm, kv.second.prompt,
+                                                                       kv.second.brnu, kv.second.brnu_bar);
     return d;
   }, "complete / analog mode: |pdg| -> (BR to muonic channels: particle, antiparticle; Pythia tau0 [mm]; prompt)");
   mod.def("inelastic_xs_per_m", &inelastic_xs_per_m);

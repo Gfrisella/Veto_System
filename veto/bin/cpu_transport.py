@@ -86,7 +86,8 @@ def run(a):
         P, M, Q = P.cuda(), M.cuda(), Q.cuda()
     out = {"weight": w, "x0": pos[:, 0], "y0": pos[:, 1], "pz0": mom[:, 2]}
     times = []
-    for i, z in enumerate(PLANES):
+    planes = tuple(a.planes) if a.planes else PLANES
+    for i, z in enumerate(planes):
         t0 = time.time()
         fn(P, M, Q, env["material_histograms_cuda"], env["arb8_corners"], env["cells_arb8"], env["hashed_arb8"],
            *env["field_args"], env["cavern_params"], True, z - PLANE_DZ / 2, 0.18, N_STEPS, env["step_length"], a.seed + i)
@@ -99,7 +100,14 @@ def run(a):
         print(f"plane {z} m: {times[-1]:.2f} s, {n / times[-1]:.3g} muons/s", flush=True)
     if a.timing_only:
         out = {}
-    np.savez(a.out, times=np.array(times), n=n, device=a.device, seed=a.seed, **out)
+    if a.keep_box and out:          # only the muons reaching the first plane inside the box |x| < X, |y| < Y (e.g. the MS7 iron)
+        z0 = f"{planes[0]:g}"
+        X, Y = a.keep_box
+        m = (out[f"z_{z0}"] >= planes[0] - PLANE_DZ) & (np.abs(out[f"x_{z0}"]) < X) & (np.abs(out[f"y_{z0}"]) < Y) & (out[f"pz_{z0}"] > 0)
+        out = {k: v[m] for k, v in out.items()}
+        out["row"] = np.nonzero(m)[0]; out["q"] = q[m].astype(np.int8)
+        print(f"kept {m.sum():,} of {n:,} muons in the box at z = {planes[0]} m ({w[m].sum():.4g} of {w.sum():.4g} weight)", flush=True)
+    np.savez(a.out, times=np.array(times), n=n, device=a.device, seed=a.seed, planes=np.array(planes), w_input=float(w.sum()), **out)
     print(f"{n:,} muons, {sum(times):.2f} s total -> {a.out}")
 
 
@@ -138,7 +146,8 @@ def main():
     r = sub.add_parser("run")
     for k, kw in (("--env", dict(required=True)), ("--input", dict(required=True)), ("--out", dict(required=True)),
                   ("--n", dict(type=int, default=0)), ("--device", dict(default="cpu")), ("--seed", dict(type=int, default=0)),
-                  ("--build", dict(default=None)), ("--timing-only", dict(action="store_true")), ("--mm-dir", dict(default=str(MM_DIR)))):
+                  ("--build", dict(default=None)), ("--timing-only", dict(action="store_true")), ("--mm-dir", dict(default=str(MM_DIR))),
+                  ("--planes", dict(type=float, nargs="+", default=None)), ("--keep-box", dict(type=float, nargs=2, default=None))):
         r.add_argument(k, **kw)
     c = sub.add_parser("compare"); c.add_argument("files", nargs="+")
     a = ap.parse_args()

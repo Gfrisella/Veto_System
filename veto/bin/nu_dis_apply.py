@@ -37,6 +37,7 @@ def main():
     for g, v in (("helium", 5e5), ("pvc", 5e5), ("air", 2e5), ("planes", 1e5)):
         ap.add_argument(f"--{g}", type=float, default=v, help=f"draws per flavour for {g} (planes: each plane)")
     ap.add_argument("--workers", type=int, default=32)
+    ap.add_argument("--chunk", type=int, default=2_000_000, help="rows per worker chunk (memory ~ workers x chunk)")
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
@@ -52,16 +53,17 @@ def main():
         cols, meta = io.open_store(store)                 # legacy stores (5e13) rescaled to 4e13 per spill (D13)
         cols = {k: np.asarray(v) if isinstance(v, io.ScaledColumn) else v for k, v in cols.items()}
         lib = nudis.NuLibrary(a.lib, flavour=fl)
-        inter, part, totals = dis.run(cols, design, lib, draws, rng, workers=a.workers)
+        inter, part, totals = dis.run(cols, design, lib, draws, rng, chunk=a.chunk, workers=a.workers)
         inter["flavour"] = np.full(len(inter["E"]), fl, np.int32)
         part["int"] = part["int"] + n_int
         n_int += len(inter["E"])
         I.append(inter); P.append(part)
         cc = {tg.target_name(int(c), design): float(np.mean(inter["component"][inter["code"] == c] == 0))
               for c in np.unique(inter["code"])}
-        summary["flavours"][str(fl)] = {"rows": int(meta["n"]), "interactions_per_spill": totals,
-                                        "interactions_15y": {k: v * SPILLS_15Y for k, v in totals.items()}, "cc_fraction": cc}
-        print(f"nu {fl}: " + ", ".join(f"{k} {v * SPILLS_15Y:.3g}" for k, v in totals.items()) + " per 15 years", flush=True)
+        S15 = SPILLS_15Y
+        summary["flavours"][str(fl)] = {"rows": int(meta["n"]), "interactions_per_spill": totals, "spills_15y": S15,
+                                        "interactions_15y": {k: v * S15 for k, v in totals.items()}, "cc_fraction": cc}
+        print(f"nu {fl}: " + ", ".join(f"{k} {v * S15:.3g}" for k, v in totals.items()) + " per 15 years", flush=True)
     inter = {k: np.concatenate([x[k] for x in I]) for k in I[0]}
     part = {k: np.concatenate([x[k] for x in P]) for k in P[0]}
     out = Path(a.out or paths.interactions_data() / f"genie/apply_{design.name}.npz")

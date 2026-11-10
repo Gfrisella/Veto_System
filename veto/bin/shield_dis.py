@@ -35,6 +35,7 @@ shield exit are not part of the event), and shield_<kind>.json (rates per spill,
 
 import _bootstrap  # noqa: F401
 import argparse
+import glob
 import json
 import multiprocessing as mp
 import pickle
@@ -56,16 +57,51 @@ MASS = {130: 0.497611, 310: 0.497611, 3122: 1.115683, 3322: 1.31486}
 OUT = paths.results_dir() / "shield_dis"
 PREPARED = paths.PROJECT_DIR / "data" / "shield_dis" / "muons_iron.npz"
 NU_STORES = paths.interactions_data() / "neutrinos2026"      # Shah Rukh 2026-11-09 flux (bin/nu_prepare.py); 2018 flux discarded
-MU_SPLIT = "pythia"                           # D3 (Guglielmo 2026-11-05): Pythia 6 part only of the iron library
+MU_SPLIT = "geant4"                           # D3 (decided 2026-11-09): Geant4 muonNuclear (natural-validated); pythia = systematic
 BEND_PARENT = True                            # D4: parent muon bent by the MS7 field (si.curved_points)
-NU_FLAVOURS = (14, -14, 12, -12)              # D4: nu_e added where a store and the iron library have it
+NU_FLAVOURS = (14, -14, 12, -12, 16, -16)     # D4: every flavour that has a store and an iron library entry
 MU_LIB = paths.PROJECT_DIR / "data/interactions/dis/mu_library_iron.npz"
-NU_LIB = paths.PROJECT_DIR / "data/interactions/genie/nu_library_iron.npz"
+NU_LIB = paths.interactions_data() / "genie/nu_library_v2.npz"   # GENIE v2 (Shah Rukh 2026-11-09): Fe56, all 6 flavours
+NU_STORE_PREFIX = NU_STORES / "store"         # stores <prefix>_nu<pdg> (bin/nu_prepare.py)
 
 
 # ------------------------------------------------------------------ 1. parents
+def prepare_transport(a):
+    """MS7 parents from our own transport (bin/cpu_transport.py run --planes 29.2 ... --keep-box 2 1.6, one pass of a
+    muon pool, any number of chunk files): state at the first plane, chord through the iron, weights per spill."""
+    t0 = time.time()
+    files = sorted(glob.glob(a.from_transport))
+    cols = {k: [] for k in ("x", "y", "z", "px", "py", "pz", "q", "weight", "evt_n")}
+    zt = None
+    for k, f in enumerate(files):
+        d = np.load(f)
+        zt = float(d["planes"][0]); t = f"{zt:g}"
+        for c in ("x", "y", "z", "px", "py", "pz"):
+            cols[c].append(d[f"{c}_{t}"].astype(np.float64))
+        cols["q"].append(np.asarray(d["q"], np.int8)); cols["weight"].append(np.asarray(d["weight"], np.float64))
+        cols["evt_n"].append(np.asarray(d["row"], np.int64) + k * 1_000_000_000)
+    c = {k: np.concatenate(v) for k, v in cols.items()}
+    w_in = sum(float(np.load(f)["w_input"]) for f in files)
+    scale = a.pool_flux / w_in if a.pool_flux else 1.0              # the chunks used carry w_in of the pool's flux
+    p = np.sqrt(c["px"] ** 2 + c["py"] ** 2 + c["pz"] ** 2)
+    L, s_in, s_out = si.iron_chord(c["x"], c["y"], c["z"], c["px"] / p, c["py"] / p, c["pz"] / p)
+    keep = (L > 0) & (c["pz"] > 0) & (c["weight"] > 0)
+    w = c["weight"] * scale
+    print(f"{len(p):,} muons at z = {zt} m in the box ({w.sum():.4g} per spill), {keep.sum():,} cross the iron "
+          f"({w[keep].sum():.4g} per spill), {time.time() - t0:.0f} s")
+    out = Path(a.out) if a.out else PREPARED
+    out.parent.mkdir(parents=True, exist_ok=True)
+    np.savez(out, **{k: c[k][keep] for k in ("x", "y", "z", "px", "py", "pz", "evt_n")},
+             q=c["q"][keep], weight=w[keep], L=L[keep], s_in=s_in[keep], s_out=s_out[keep],
+             meta=np.array(json.dumps(dict(source=a.from_transport, files=files, z_plane=zt, weight_scale=scale,
+                                           iron=[si.Z_IRON0, si.Z_SHIELD_END, si.HALF_X, si.HALF_Y], pot_per_spill=POT_PER_SPILL))))
+    print(f"wrote {out}")
+
+
 def prepare(a):
     """Muons of the pickle whose straight line crosses the iron target: state at the true plane, chord."""
+    if getattr(a, "from_transport", None):
+        return prepare_transport(a)
     t0 = time.time()
     d = pickle.load(open(si.MUON_FILE, "rb"))
     pl = d["planes"].item() if hasattr(d["planes"], "item") else d["planes"]
@@ -101,7 +137,7 @@ def parents(kind):
     out = []
     have = set(np.load(NU_LIB)["nus"].tolist()) if Path(NU_LIB).exists() else {14, -14}
     for fl in NU_FLAVOURS:
-        st = NU_STORES / f"store_nu{fl}"
+        st = Path(f"{NU_STORE_PREFIX}_nu{fl}")
         if fl not in have or not st.exists():
             print(f"  nu {fl}: {'no library entry' if fl not in have else 'no flux store'} ({st}), skipped "
                   "(nu_e: rebuild the iron library with bin/nu_library.py --nuclei 1000260560 --nus 14 -14 12 -12)")
@@ -294,6 +330,10 @@ def exit_summary(inter, part):
 
 
 def generate(a):
+    global NU_LIB, NU_STORE_PREFIX, PREPARED
+    PREPARED = Path(a.prepared) if a.prepared else PREPARED
+    NU_LIB = Path(a.nu_lib) if a.nu_lib else NU_LIB
+    NU_STORE_PREFIX = Path(a.nu_stores) if a.nu_stores else NU_STORE_PREFIX
     t0 = time.time()
     rng = np.random.default_rng(a.seed)
     par = parents(a.kind)
@@ -328,7 +368,10 @@ def generate(a):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("prepare")
+    pp = sub.add_parser("prepare")
+    pp.add_argument("--from-transport", default=None, help="glob of bin/cpu_transport.py run outputs (--planes 29.2 ... --keep-box)")
+    pp.add_argument("--pool-flux", type=float, default=None, help="muons per spill of the whole pool (pool.json flux_per_spill sum)")
+    pp.add_argument("--out", default=None)
     g = sub.add_parser("generate")
     g.add_argument("--kind", choices=["muon", "nu"], required=True)
     g.add_argument("--n", type=int, default=200000, help="forced interactions")
@@ -339,6 +382,9 @@ def main():
     g.add_argument("--per-track", action="store_true", help="one interaction per parent track, weight w P (--n ignored)")
     g.add_argument("--mu-split", choices=["pythia", "geant4", "crossover", "w2"], default=None,
                    help=f"which generator of the muon library (default {MU_SPLIT!r}, D3); geant4 = Geant4 muonNuclear only")
+    g.add_argument("--prepared", default=None, help=f"muons through the iron from prepare (default {PREPARED})")
+    g.add_argument("--nu-lib", default=None, help=f"neutrino library (default {NU_LIB})")
+    g.add_argument("--nu-stores", default=None, help=f"neutrino flux store prefix, <prefix>_nu<pdg> (default {NU_STORE_PREFIX})")
     g.add_argument("--v0-copies", type=int, default=1, help="forced vessel decays per V0 at the plane (weight / copies)")
     g.add_argument("--mu-lib", help="muon DIS library (default data/interactions/dis/mu_library_iron.npz; "
                    "mu_library_iron_v0stable.npz keeps K_S, Lambda for Geant4 to transport and decay)")

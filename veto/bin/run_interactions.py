@@ -23,6 +23,7 @@ from run_reco import load_inputs
 from veto import design as dsg
 from veto import interactions as ix
 from veto import io, paths, reco
+from veto.config import POT_PER_SPILL
 
 DATASET = "design-optimization-dataset-gamma-2026-10-17"
 
@@ -63,6 +64,8 @@ def main():
     ap.add_argument("--g4", default=None, help="Geant4 transport of the helium products (bin/g4_vessel_transport.py)")
     ap.add_argument("--air-margin", type=float, default=0.4,
                     help="air interactions only within this distance [m] of the vessel and the fins (ISSUES C7); < 0 = all the air")
+    ap.add_argument("--pot-spill", type=float, default=POT_PER_SPILL,
+                    help="protons per spill of the --interactions weights (legacy apply files made before 2026-11-09: 5e13)")
     ap.add_argument("--tag", default="", help="suffix of the saved interaction npz (results/interactions/<design>_muon_interactions<tag>.npz)")
     args = ap.parse_args()
     from fastveto import targets as _tg
@@ -85,6 +88,8 @@ def main():
         save = paths.results_dir() / "interactions" / f"{design.name}_muon_interactions{args.tag}.npz"
         save.parent.mkdir(parents=True, exist_ok=True)
         np.savez(save, **{f"int_{k}": v for k, v in inter.items()}, **{f"part_{k}": v for k, v in part.items()})
+    if args.pot_spill != POT_PER_SPILL:
+        inter["weight"] = inter["weight"] * (POT_PER_SPILL / args.pot_spill)
     print(f"{len(inter['weight']):,} interactions, {len(part['pdg']):,} particles ({source}), {time.time() - t0:.0f} s", flush=True)
 
     muons = None

@@ -3,8 +3,9 @@
     bin/lcg.sh python3 bin/nu_library.py [--jobs 300] [--n 2000] [--out data/genie/nu_library.npz]
 
 GENIE (bin/genie.sh: cpp/genie/build_genie.sh, Pythia 6, default configuration + charm and tau decays) at fixed
-energies (grid 1 .. 500 GeV) along +z for nu_mu, anti-nu_mu, nu_e, anti-nu_e on the nuclei of our materials (H1, He4,
-C12, N14, O16, Si28, Cl35, Cl37, Ar40): gevgen -> gntpc (gst). All processes (QE, MEC, RES, DIS, COH, CC + NC),
+energies (grid 1 .. 500 GeV) along +z for nu_mu, nu_e, nu_tau and their antineutrinos on the nuclei of our materials (H1,
+He4, C12, N14, O16, Si28, Cl35, Cl37, Ar40, Fe56; Na23, Mg24, Al27, K39, Ca40 for the concrete; nu_tau CC: the tau
+decayed by GENIE, its entry dropped): gevgen -> gntpc (gst). All processes (QE, MEC, RES, DIS, COH, CC + NC),
 nuclear model and final-state interactions as in the tune. Per event the final state after FSI (gst "f" particles)
 plus the primary lepton (flag `beam`); K0 / anti-K0 -> K_S or K_L (50 / 50); K_S, Lambda, Sigma, Xi, Omega, pi0,
 eta decayed by fastveto.decay (displaced decay points); nuclear remnants / ions dropped; neutral particles below
@@ -31,9 +32,10 @@ GENIE = str(paths.PROJECT_DIR / "bin/genie.sh")
 SPL = paths.interactions_data() / "genie/gxspl-fvs.xml"
 TUNE = "G18_02a_00_000"
 E_GRID = np.round(np.geomspace(1.0, 500.0, 36), 4)
-NUS = [14, -14, 12, -12]
+NUS = [14, -14, 12, -12, 16, -16]
 NUCLEI = [1000010010, 1000020040, 1000060120, 1000070140, 1000080160, 1000140280, 1000170350, 1000170370, 1000180400,
-          1000260560]                                  # Fe56: the muon shield (veto.shield_iron)
+          1000260560,                                  # Fe56: the muon shield (veto.shield_iron)
+          1000110230, 1000120240, 1000130270, 1000190390, 1000200400]  # Na23 Mg24 Al27 K39 Ca40: concrete (G4_CONCRETE)
 KEEP_NEUTRAL_EMIN = 0.01
 NEUTRAL = [22, 111, 130, 310, 2112, 3122, 12, 14, 16]
 
@@ -92,6 +94,11 @@ def read_point(path, nu, rng):
     allpdg = np.concatenate([lepton_pdg(nu, cc), pdg])
     allv = np.concatenate([np.zeros((n, 3)), v])
     beam = np.concatenate([np.ones(n, bool), np.zeros(len(pdg), bool)])
+    # nu_tau CC: the tau is decayed by GENIE (cpp/genie/config), its products are among the final-state particles; the
+    # primary lepton entry (the tau itself) is dropped so nothing is counted twice
+    if abs(nu) == 16:
+        drop = np.zeros(len(evs), bool); drop[:n] = np.abs(allpdg[:n]) == 15
+        evs, allp, allpdg, allv, beam = evs[~drop], allp[~drop], allpdg[~drop], allv[~drop], beam[~drop]
     order = np.argsort(evs, kind="stable")
     return dict(cc=cc, proc=proc, charm=ak.to_numpy(a.charm).astype(np.int8), W=ak.to_numpy(a.W), Q2=ak.to_numpy(a.Q2),
                 y=ak.to_numpy(a.y), ev=evs[order], pdg=allpdg[order], p=allp[order], v=allv[order], beam=beam[order])
