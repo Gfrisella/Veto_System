@@ -690,3 +690,23 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   ~7e7 per MC event: statistically only < 1.6e8; it rests on geometry (a vertex must point back within 0.1 m). Running.
   Later steps if a corner is not bounded: splitting / weight windows in the shield transport (splitting_proto exists on
   lhcb_data), forced neutral chains for rock and walls.
+- Rare-corner bounds, results (D6_straw_mod, per 15 y, /disk/lhcb_data/sqasim/coverage/*.json; selection = pre-veto):
+  - Muon flux around the vessel (shell_hist, 3 220 spills): every side cell < 82 m has >= 635 MC muons; the 8 empty cap
+    cells are outside the ellipse. Rock patches from the muons (rockflux): every reachable patch has muons, an empty one
+    < 0.02 interactions. -> the flux has no holes; the weak points are draws and responses.
+  - Helium: 279 / 800 regions with a selected event, joint limit of the rest 2.9, IP-extrapolated share 125 (vs 1.78e3
+    observed). OK. Vessel walls: 12 / 384 regions (13 MC), IP-extrapolated share of the empty ones ~200 vs 286 observed:
+    under-sampled. MS7 K_L (redecay100): 9 / 73 regions, empty ones ~0.9e4 by IP -> MS7 1.4-2.3e4.
+  - Air, plane interactions: large statistical limits (1e2-1e6) but bounded by physics (products enter through the SBT;
+    plane interactions vetoed by the parent's hit).
+  - Rock: the "0" is geometric. K_L the draws make (631 with p > 2 GeV, wall z 55-75 m) are >= 134 mrad off any
+    target-pointing line; the visible pair of K_L -> pi l nu with both tracks > 1 GeV turns by <= ~120 mrad: closed.
+    Geometry map (no data): the window is OPEN from the floor (44-90 mrad up to z ~ 70 m) and the wall upstream of
+    z ~ 52 m, for K_L of 2-6 GeV, where the draws have almost nothing (floor 25.6k draws, 3 K_L).
+    Synthetic K_L there (klmap --window, 2.0e6 aimed into the pointing window, real selection): IP < 1 m 17 MC,
+    < 0.25 m 1, < 0.1 m 0; per K_L into the vessel P(IP < 1 m) ~ 1.6e-6 (floor z 30, x 0) falling to ~5e-8 at z 50.
+    Folded (K_L p > 2 GeV yield 2.9e-4 per interaction, ~0.5 into the vessel, floor interactions z 30-60 m 6.5e11 with
+    exits, spectrum factor 2, IP^2 below 1 m): floor ~0.25 per 15 y (0.1-3 with linear IP scaling), upstream wall ~0.1;
+    before the veto, and the veto sees nothing for a K_L-only event. Needs a targeted run to become a number.
+  - GAP: neutrons (and K_L hadronic interactions) from the rock interacting in the helium are in no chain: the rock store
+    propagates neutrals straight, no Geant4 downstream for rock. (MS7 / vessel stores have it via g4_vessel_transport.)
