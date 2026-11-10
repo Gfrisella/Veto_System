@@ -658,3 +658,11 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   - EM debris test on the Nov-4 parents (em_debris.py --n 2000 --tag _nov4_test): 10 s for 2000 muons (16 workers), 1.23e9
     e / gamma per spill at the exit plane -> a 2e5-muon run ~ 20 min, 2e6 ~ 3 h: a few core-hours, not tens.
   - Neutrino-rock store rock_nu2026 (412k events).
+  - Geant4 downstream, all 6 vessel-nu flavours done (2-3 particles produced beyond z = 94 m are now removed before g4vessel):
+    after veto b, helium / walls: nu_mu 0.42 / 0.06, anti-nu_mu 0.16 / 0.10, nu_e 0.59 / 0.02, anti-nu_e 0.15 / 0.03, nu_tau 0.005
+    / 0.006, anti-nu_tau 0.001 / 0.001 -> 1.3 + 0.2 = **1.5 per 15 y** (straight lines 3.0). With MS7 nu (1.0): neutrinos ~2.5.
+  - EM debris on the Nov-4 parents (2e5 muons, 30 s): 1.19e9 e / gamma per spill out of MS7, UBT 5.2e6 e + 2.5e7 gamma per
+    spill; maps results/em_debris/em_maps.npz. run_reco D6_straw_mod on inputs_nov4: combinatorial 2.86 -> 0.014 (0.003 with
+    debris), signal lost 6.4 % -> 7.5 % with debris. CHECK: inputs_nov4 has x140 fewer pair candidates than inputs_c_s (2.86
+    vs 405 / 15 y); the "51" of rock_combinatorial on dataset c is probably an old-layout (pre-5-Nov) vs fairship-2026 design
+    mismatch. Not resolved.

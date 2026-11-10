@@ -84,8 +84,8 @@ def main():
         part = dict(part, pdg=np.where(v0, 0, part["pdg"]))        # pdg 0: skipped by g4vessel (unknown particle)
         print(f"{int(v0.sum()):,} V0s not transported (forced-decay copies cover them)")
     outside = (part["v"][:, 2] < G.Z_WORLD[0]) | (part["v"][:, 2] > G.PLANES[-1])   # g4vessel refuses them: skip (pdg 0)
-    if outside.any():
-        part = dict(part, pdg=np.where(outside, 0, part["pdg"]))
+    if outside.any():                                   # removed: g4vessel checks every production point
+        part = {k: v[~outside] for k, v in part.items()}
         print(f"{int(outside.sum()):,} particles produced outside z {G.Z_WORLD[0]:.2f} .. {G.PLANES[-1]:.2f} m not transported")
     sel, n_code = preselect(inter, part, args.codes, args.p_min, args.margin)
     print(f"{n_code:,} interactions with codes {args.codes}, {len(sel):,} pre-selected for Geant4", flush=True)
