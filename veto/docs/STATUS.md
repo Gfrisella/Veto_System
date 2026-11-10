@@ -666,3 +666,7 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
     debris), signal lost 6.4 % -> 7.5 % with debris. CHECK: inputs_nov4 has x140 fewer pair candidates than inputs_c_s (2.86
     vs 405 / 15 y); the "51" of rock_combinatorial on dataset c is probably an old-layout (pre-5-Nov) vs fairship-2026 design
     mismatch. Not resolved.
+- Neutrino DIS in MS7 (last 50 cm) with the 2026 flux + GENIE v2, all 6 flavours (bin/shield_dis.py generate --kind nu
+  --n 500000 --v0-copies 100 --nu-stores .../neutrinos/store2026; new options --nu-lib / --nu-stores, defaults v2 + 6 flavours):
+  1.34 interactions / spill (2.0e7 / 15 y), V0 decays in the vessel 2.1e5 / 15 y; D6_straw_mod selected 3.9, after veto b 2.4
+  per 15 y (108 MC copies; 1 copy: 9.2 / 5.4 from 2 MC). ~1e-4 of the muon MS7 K_L, but comparable to nu in helium (3.3).
