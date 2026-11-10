@@ -666,7 +666,27 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
     debris), signal lost 6.4 % -> 7.5 % with debris. CHECK: inputs_nov4 has x140 fewer pair candidates than inputs_c_s (2.86
     vs 405 / 15 y); the "51" of rock_combinatorial on dataset c is probably an old-layout (pre-5-Nov) vs fairship-2026 design
     mismatch. Not resolved.
+    RESOLVED (2026-11-10 day): not the layout. Dataset c has 3-4x more SST1 muons above 30-100 GeV near the axis (source
+    pool, D5); the pair rate goes as the square, times the pointing preference, times the old 5e13 normalisation of
+    inputs_c_s. Reclassifying c with the new layout raises its selected class. Which tail is right: compare the pool
+    v2/v3 and Nov-4 input spectra > 100 GeV by component (open).
 - Neutrino DIS in MS7 (last 50 cm) with the 2026 flux + GENIE v2, all 6 flavours (bin/shield_dis.py generate --kind nu
   --n 500000 --v0-copies 100 --nu-stores .../neutrinos/store2026; new options --nu-lib / --nu-stores, defaults v2 + 6 flavours):
   1.34 interactions / spill (2.0e7 / 15 y), V0 decays in the vessel 2.1e5 / 15 y; D6_straw_mod selected 3.9, after veto b 2.4
   per 15 y (108 MC copies; 1 copy: 9.2 / 5.4 from 2 MC). ~1e-4 of the muon MS7 K_L, but comparable to nu in helium (3.3).
+
+## 2026-11-10 (day): statistics, storage, rare corners
+- Statistics for a 15-year design number (D6_straw_mod): MS7 K_L lacking (13 MC selected, ~1e3 per MC event: K_L-enriched
+  generation needed); walls lacking (22 per MC event, cheap); helium OK now (x20 later); neutrinos sufficient; combinatorial
+  limited by the muon production (spills), not by transport, but enough for the budget.
+- Storage: evstore 71 GB (Geant4 files 19 GB), shell seeds 106 GB, Nov-4 pool h5 145 GB, dataset c 60 GB, Nov-4 store 8.3 GB,
+  rock apply 15.7 GB, MS7 parents 10.8 GB; MS7 shield_dis 5.7 GB / 10 files, debris 0.4 GB.
+- Tail extension (answer, nothing run): tail_produce --mode complete with a high EMIN + an energy split in build_pool_v5,
+  ~1-2 days of work + 1-5 k core-h; first decide which tail is right (above).
+- Rare corners (user: rare places where more statistics blindly does not help): step 1 = worst-case bounds from the
+  stores, bin/coverage_bound.py (store --kind vessel|ms7|rock: per region of the interaction point, MC count, selected /
+  loose, 2.3 x mean weight limits for regions with none selected; rock: neutral-pointing proxy; rockflux: rock patches from
+  the muons; shell: analog counts per shell cell). Note: the rock "0" is 2.2 M draws for 1.57e14 interactions / 15 y,
+  ~7e7 per MC event: statistically only < 1.6e8; it rests on geometry (a vertex must point back within 0.1 m). Running.
+  Later steps if a corner is not bounded: splitting / weight windows in the shield transport (splitting_proto exists on
+  lhcb_data), forced neutral chains for rock and walls.
