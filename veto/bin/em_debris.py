@@ -72,9 +72,12 @@ def main():
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--depth", type=float, default=em.DEPTH_X0, help="iron simulated in Geant4, radiation lengths")
     ap.add_argument("--inputs", default="inputs.npz", help="results/reco file whose map binning is used")
+    ap.add_argument("--parents", default=None, help="MS7 parent muons (shield_dis.py prepare output; default data/shield_dis/muons_iron.npz)")
+    ap.add_argument("--tag", default="", help="suffix of the output files")
     a = ap.parse_args()
     t0 = time.time()
-    f = np.load(paths.PROJECT_DIR / "data" / "shield_dis" / "muons_iron.npz")    # shield_dis.py prepare
+    parents = a.parents or (paths.PROJECT_DIR / "data" / "shield_dis" / "muons_iron.npz")     # shield_dis.py prepare
+    f = np.load(parents)
     w = f["weight"].astype(np.float64) * (POT_PER_SPILL / weights.source_pot(json.loads(str(f["meta"])), "muons_iron"))  # D13
     rng = np.random.default_rng(a.seed)
     idx = rng.choice(len(w), a.n, p=w / w.sum())
@@ -99,6 +102,9 @@ def main():
     em_ = np.isin(s1["pdg"], [11, -11, 22])
     print(f"stage 1: {len(s1['pdg']):,} particles at z = {si.Z_PLANE} m, {em_.sum():,} e / gamma "
           f"({(w_mu[s1['ev'][em_]]).sum():.4g} per spill), {time.time() - t0:.0f} s", flush=True)
+    OUT.mkdir(parents=True, exist_ok=True)                      # stage 1 e / gamma at the exit plane, linked to the parent rows
+    np.savez(OUT / f"em_exit_n{a.n}_d{a.depth:g}{a.tag}.npz", w_mu=w_mu, parent_row=idx, parents=str(parents),
+             **{k: np.asarray(v)[em_] for k, v in s1.items()})
     ev = s1["ev"][em_]
     o = np.argsort(ev, kind="stable")
     p1 = np.stack([s1["px"], s1["py"], s1["pz"]], 1)[em_][o]
@@ -106,15 +112,15 @@ def main():
     s2 = pool_run(_init_vessel, a.seed + 1, list(chunks(ev[o], s1["pdg"][em_][o], p1, v1, a.n, a.chunk)), a.workers)
     print(f"stage 2: {len(s2.get('pdg', [])):,} plane crossings, {time.time() - t0:.0f} s", flush=True)
     OUT.mkdir(parents=True, exist_ok=True)                      # raw crossings: maps can be rebinned for new inputs
-    np.savez(OUT / f"em_raw_n{a.n}_d{a.depth:g}.npz", w_mu=w_mu, **{k: v for k, v in s2.items()})
+    np.savez(OUT / f"em_raw_n{a.n}_d{a.depth:g}{a.tag}.npz", w_mu=w_mu, **{k: v for k, v in s2.items()})
     inp = np.load(paths.results_dir() / "reco" / a.inputs)
     maps = em.make_maps(s2, w_mu, {k: inp[k] for k in ("u_bins", "y_bins", "z_slices", "ubt_y_bins")})
     OUT.mkdir(parents=True, exist_ok=True)
-    np.savez(OUT / em.EM_FILE, **maps, n_muons=a.n, muons_per_spill=float(w.sum()), e_cut=em.E_CUT, depth_x0=a.depth)
+    np.savez(OUT / em.EM_FILE.replace(".npz", f"{a.tag}.npz"), **maps, n_muons=a.n, muons_per_spill=float(w.sum()), e_cut=em.E_CUT, depth_x0=a.depth)
     for k in ("e", "g"):
         print(f"  {'electrons' if k == 'e' else 'photons':9s}: UBT {maps[f'em_ubt_{k}'].sum():.4g} / spill; fins at z = "
               + ", ".join(f"{z:.2f}: {maps[f'em_fin_{k}'][:, i].sum():.3g}" for i, z in enumerate(inp['z_slices'][:4])))
-    print(f"wrote {OUT / em.EM_FILE}, {time.time() - t0:.0f} s")
+    print(f"wrote {OUT / em.EM_FILE.replace('.npz', a.tag + '.npz')}, {time.time() - t0:.0f} s")
 
 
 if __name__ == "__main__":

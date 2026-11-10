@@ -57,7 +57,7 @@ MASS = {130: 0.497611, 310: 0.497611, 3122: 1.115683, 3322: 1.31486}
 OUT = paths.results_dir() / "shield_dis"
 PREPARED = paths.PROJECT_DIR / "data" / "shield_dis" / "muons_iron.npz"
 NU_STORES = paths.interactions_data() / "neutrinos2026"      # Shah Rukh 2026-11-09 flux (bin/nu_prepare.py); 2018 flux discarded
-MU_SPLIT = "pythia"                           # D3 (Guglielmo 2026-11-05): Pythia 6 part only of the iron library
+MU_SPLIT = "geant4"                           # D3 (decided 2026-11-09): Geant4 muonNuclear (natural-validated); pythia = systematic
 BEND_PARENT = True                            # D4: parent muon bent by the MS7 field (si.curved_points)
 NU_FLAVOURS = (14, -14, 12, -12, 16, -16)     # D4: every flavour that has a store and an iron library entry
 MU_LIB = paths.PROJECT_DIR / "data/interactions/dis/mu_library_iron.npz"

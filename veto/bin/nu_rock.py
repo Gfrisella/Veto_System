@@ -327,6 +327,13 @@ def combine(a):
             wd[m] *= m.sum() / done[m].sum()
     wd[~done] = 0
     ow = X["draw"]
+    if getattr(a, "store_out", None):              # every particle out of the rock, for bin/evstore_build.py rock
+        reg = D["region"][ow].astype(np.int64)
+        np.savez(a.store_out, n_seeds=1, pot_per_spill=4e13, design=des.name, draw=ow, w=wd[ow], surf=(reg == 2).astype(np.int8),
+                 region=reg, vx=D["vx"][ow], vy=D["vy"][ow], vz=D["vz"][ow], mu_row=np.full(len(ow), -1),
+                 t_mu=(D["vz"][ow] - geo.Z_TARGET) / 0.299792458, E_mu=D["E"][ow], flav=D["flav"][ow],
+                 **{k: X[k] for k in ("pdg", "x", "y", "z", "px", "py", "pz", "t", "beam")})
+        print(f"-> {a.store_out}: {len(ow):,} particles out of the rock")
     pdg = X["pdg"].astype(np.int64)
     q = charge_of(pdg)
     pos = np.stack([X["x"], X["y"], X["z"]], 1)
@@ -399,7 +406,7 @@ def main():
     p.add_argument("--seed", type=int, default=3); p.add_argument("--out", required=True)
     t = sub.add_parser("task"); t.add_argument("--index", type=int, required=True); t.add_argument("--ntasks", type=int, required=True)
     t.add_argument("--lib", required=True); t.add_argument("--out", required=True)
-    c = sub.add_parser("combine"); c.add_argument("--design", required=True); c.add_argument("--out", required=True)
+    c = sub.add_parser("combine"); c.add_argument("--design", required=True); c.add_argument("--out", required=True); c.add_argument("--store-out", default=None)
     a = ap.parse_args()
     {"prepare": prepare, "task": task, "combine": combine}[a.cmd](a)
 

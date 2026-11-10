@@ -204,3 +204,18 @@ def to_fastveto(ev, tr):
     part = dict(int=row[keep], pdg=np.asarray(tr["pdg"])[keep], p=np.concatenate([p, E[:, None]], 1)[keep],
                 v=np.stack([tr["x0"], tr["y0"], tr["z0"]], 1).astype(float)[keep], beam=np.asarray(tr["beam"], bool)[keep])
     return inter, part
+
+
+def roots_to_fastveto(ev, tr):
+    """inter / part for a downstream Geant4 transport (bin/g4_vessel_transport.py): the particles at the reference surface
+    (parent == -1, except the V0 whose simulated decay is stored) plus the products of the simulated (forced) V0 decays,
+    each at its own start point. Geant4 then does every decay, conversion and interaction after them."""
+    inter, _ = to_fastveto(ev, tr)
+    idx = {int(e): i for i, e in enumerate(ev["event"])}
+    keep = ((tr["parent"] < 0) & (tr["end"] != END_FORCED)) | (tr["proc"] == PROC_FORCED)
+    row = np.array([idx[int(e)] for e in tr["event"][keep]]) if keep.any() else np.zeros(0, int)
+    p = np.stack([tr["px"], tr["py"], tr["pz"]], 1).astype(float)[keep]
+    E = np.sqrt((p ** 2).sum(1) + mass(tr["pdg"][keep]) ** 2)
+    part = dict(int=row, pdg=np.asarray(tr["pdg"])[keep], p=np.concatenate([p, E[:, None]], 1),
+                v=np.stack([tr["x0"], tr["y0"], tr["z0"]], 1).astype(float)[keep], beam=np.asarray(tr["beam"], bool)[keep])
+    return inter, part
