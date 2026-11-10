@@ -640,3 +640,21 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   one-run file 3.89e8 (x1.19 in every p bin < 100 GeV, x0.96 > 200 GeV; same footprint and chord; D5 source difference).
 - MS7 chain on them (Slurm 2036253, 10 x 2e6, Geant4 11.2): V0 decays in the vessel 2.69e10 / 15 y; passing all but IP 1.95e7;
   IP < 2 / 1 / 0.5 / 0.25 / 0.1 m: 1.1e7 / 2.2e6 / 3.7e5 / 6.1e4 / 0 -> ~1.5e4 per 15 y (1-2e4) by IP^2: the stored number.
+- 2026-11-10 night, remaining compute (farm-gpu3, /disk/lhcb_data/sqasim/evstore/remaining.log, logs/):
+  - Nov-4 dataset store (bin/shell_to_store.py, 300 shell seeds): design-optimization-dataset-nov4-shell-300seeds-2026-11-10,
+    7.17e7 rows, 4.72e10 muons / spill (pool 4.69e10). Pair inputs from it: results/reco/inputs_nov4.npz (21 097 candidates,
+    5 739 pairs / spill before the time coincidence).
+  - **Correction**: muon DIS in the HELIUM is NOT small. D6_straw_mod on Nov-4 (run_interactions --kind muon): helium 1.82e3
+    selected -> 472 after veto b (673 at truth level c: the parent crossed no plane), walls 176 -> 44 per 15 y; e2e_c
+    (dataset c) had 210-250 (helium) for D6_tile2 / E3 / E4 / E5. Second background after MS7 K_L; side-entry coverage gap.
+    Store: vessel_mu_nov4_D6_straw_mod (7.0e6 events).
+  - MS7 K_L direct count (bin/evstore_redecay.py, 100 re-decays of the 14 168 pre-selected V0 = 68 % of the all-but-IP
+    weight): 1.39e4 selected (13 MC), 9.7e3 after veto; all but IP: IP < 0.1 / 0.5 / 1 m 2.1e4 / 4.2e5 / 1.8e6 (17 / 328 /
+    1458 MC). Confirms the IP^2 extrapolation (~1.5e4).
+  - Geant4 downstream (g4vessel on the stores' roots, g4_vessel_transport + evstore_eval --g4): MS7 muon all-but-IP 1.44e7
+    (straight 1.95e7), IP < 1 m 2.0e6; MS7 nu 1.0 after veto (straight 2.2); vessel nu after veto: anti-nu_mu 0.16 (0.43),
+    nu_e 0.59 (1.30), anti-nu_e 0.15 (0.37) + walls 0.03-0.10; nu_mu, nu_tau, anti-nu_tau rerunning (2 particles produced
+    beyond z = 94 m made g4vessel stop: now skipped, bin/g4_vessel_transport.py).
+  - EM debris test on the Nov-4 parents (em_debris.py --n 2000 --tag _nov4_test): 10 s for 2000 muons (16 workers), 1.23e9
+    e / gamma per spill at the exit plane -> a 2e5-muon run ~ 20 min, 2e6 ~ 3 h: a few core-hours, not tens.
+  - Neutrino-rock store rock_nu2026 (412k events).
