@@ -4,6 +4,24 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-10 — event store, MS7 on the Nov-4 muons with Geant4, debris and event viewers (branch `veto-neutrino-2026`)
+
+- `lib/veto/evstore.py`: design-independent event stores, events + track trees (parent links, end reasons, times) from each
+  source's reference surface to SST1; propagator with decays in flight (pi+-, K+-, K_L, K_S, Lambda, ...); `to_fastveto` /
+  `roots_to_fastveto` feed `interactions.evaluate` (and `g4_vessel_transport.py`). `bin/evstore_build.py` (shield / apply /
+  rock), `bin/evstore_eval.py` (any design, `--ip-tail`, `--export-roots`, `--g4`), `bin/evstore_redecay.py` (more forced
+  decays per stored V0: the IP tail without new Geant4), `bin/shell_to_store.py` (shell seeds -> dataset store).
+- MS7 parents from our own transport, as the 2018 one-run file was made: `bin/cpu_transport.py run --planes 29.2 30.6
+  --keep-box 2 1.6` (Nov-4 pool, 8 s per chunk on one GPU) -> `shield_dis.py prepare --from-transport`. 4.62e8 / spill
+  through the iron (x1.19 the 2018 file, same shape). `shield_dis.py`: `--prepared`, `--nu-lib`, `--nu-stores`, neutrino
+  defaults GENIE v2 + 6 flavours, **`MU_SPLIT` default "geant4"** (the 9 Nov D3 decision; was still "pythia" in the code).
+- MS7 K_L with Geant4 11.2 (10 x 2e6, 5 copies): ~1.5e4 per 15 y after selection (IP-tail extrapolation,
+  `bin/shield_ip_tail.py`), on both the 2018 and the Nov-4 parents.
+- `em_debris.py --parents --tag` and stage-1 exit states saved; `rock_apply.py --em-out / --store-out`; `nu_rock.py combine
+  --store-out`; `interactions.CODE_NAMES` 5 / 6 = rock wall / floor.
+- Viewers' data: `bin/em_viz_data.py`, `bin/em_viz_rock_data.py` (EM debris page), `bin/ms7_events_viz.py`,
+  `bin/ms7_event_chains.py` (MS7 event-by-event page).
+
 ## 2026-11-10 — neutrinos with the 2026 target: production, GENIE v2, vessel / rock backgrounds (branch `veto-neutrino-2026`)
 
 - Production: `bin/nu_prod.sbatch` (min bias, charm, beauty), `tailtransport.cc` / `tail_produce.py` neutrino mode,
