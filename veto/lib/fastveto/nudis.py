@@ -11,6 +11,7 @@ drawn with probability n_i sigma_i(E); the event from the neighbouring grid ener
 rotated to the neutrino direction with a random azimuth.
 """
 import json
+import os
 
 import numpy as np
 
@@ -38,6 +39,18 @@ COMPOSITION = {
 def mass_number(code):
     return (code % 10000) // 10
 
+
+
+def rescale_to_energy(p4, owner_E, owner_Elib):
+    """ISSUES D6 (11 Nov 2026): final-state momenta of a library event made at E_lib, scaled to the interaction's true
+    energy E (p -> p E / E_lib, directions kept, energy from each particle's own mass). Off unless VETO_LIB_RESCALE=1."""
+    f = (owner_E / owner_Elib)[:, None]
+    p3 = p4[:, :3] * f
+    m2 = np.maximum(p4[:, 3] ** 2 - (p4[:, :3] ** 2).sum(1), 0.0)
+    return np.concatenate([p3, np.sqrt((p3 ** 2).sum(1) + m2)[:, None]], 1)
+
+
+RESCALE = os.environ.get("VETO_LIB_RESCALE") == "1"
 
 class NuLibrary:
     def __init__(self, path, flavour=14):
@@ -94,8 +107,11 @@ class NuLibrary:
         phi = rng.uniform(0, 2 * np.pi, n)[owner]
         p3 = rotate_to(t["p"][rows, :3].astype(np.float64), u[owner], phi)
         v3 = rotate_to(t["v"][rows].astype(np.float64), u[owner], phi) + vertex[owner]
+        p4 = np.concatenate([p3, t["p"][rows, 3:4].astype(np.float64)], 1)
+        if RESCALE:                                     # D6: from the grid energy to the true one
+            p4 = rescale_to_energy(p4, np.asarray(E, float)[owner], self.E[ie][owner])
         return {"int": owner, "pdg": t["pdg"][rows].copy(), "beam": t["beam"][rows],
-                "p": np.concatenate([p3, t["p"][rows, 3:4].astype(np.float64)], 1), "v": v3,
+                "p": p4, "v": v3,
                 "component": (1 - t["ev_cc"][ev]).astype(np.int8),          # 0 CC, 1 NC
                 "E_lib": self.E[ie], "nucleus": np.array(self.nuclei)[tgt], "proc": t["ev_proc"][ev],
                 "charm": t["ev_charm"][ev]}

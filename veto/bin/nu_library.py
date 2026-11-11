@@ -16,6 +16,7 @@ splines, bin/genie_splines.py -> data/genie/xsec_tot.npz), interpolated to the g
 import _bootstrap  # noqa: F401
 import argparse
 import json
+import os
 import multiprocessing as mp
 import subprocess
 import time
@@ -31,7 +32,9 @@ from fastveto import decay
 GENIE = str(paths.PROJECT_DIR / "bin/genie.sh")
 SPL = paths.interactions_data() / "genie/gxspl-fvs.xml"
 TUNE = "G18_02a_00_000"
-E_GRID = np.round(np.geomspace(1.0, 500.0, 36), 4)
+# ISSUES D6 (11 Nov 2026): 1 - 400 GeV in 5 % steps (was 1 - 500 GeV, 36 points = 19 %)
+_EMAX, _STEP = float(os.environ.get("VETO_LIB_EMAX", 400.0)), float(os.environ.get("VETO_LIB_STEP", 0.05))
+E_GRID = np.round(np.geomspace(1.0, _EMAX, int(np.ceil(np.log(_EMAX) / np.log1p(_STEP))) + 1), 4)
 NUS = [14, -14, 12, -12, 16, -16]
 NUCLEI = [1000010010, 1000020040, 1000060120, 1000070140, 1000080160, 1000140280, 1000170350, 1000170370, 1000180400,
           1000260560,                                  # Fe56: the muon shield (veto.shield_iron)

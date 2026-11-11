@@ -14,6 +14,7 @@ neighbouring grid energies (chosen at random, linear in log E), rotated to the m
 azimuth; its beam muon gets the sign of the real muon. No rescaling to the exact energy (grid steps of 15 %).
 """
 import json
+import os
 
 import numpy as np
 
@@ -44,6 +45,18 @@ def rotate_to(v, u, phi):
     e2 = np.cross(u, e1)
     return x[:, None] * e1 + y[:, None] * e2 + v[:, 2:3] * u
 
+
+
+def rescale_to_energy(p4, owner_E, owner_Elib):
+    """ISSUES D6 (11 Nov 2026): final-state momenta of a library event made at E_lib, scaled to the interaction's true
+    energy E (p -> p E / E_lib, directions kept, energy from each particle's own mass). Off unless VETO_LIB_RESCALE=1."""
+    f = (owner_E / owner_Elib)[:, None]
+    p3 = p4[:, :3] * f
+    m2 = np.maximum(p4[:, 3] ** 2 - (p4[:, :3] ** 2).sum(1), 0.0)
+    return np.concatenate([p3, np.sqrt((p3 ** 2).sum(1) + m2)[:, None]], 1)
+
+
+RESCALE = os.environ.get("VETO_LIB_RESCALE") == "1"
 
 class MuonLibrary:
     """split: "crossover" (Geant4 for nu < nu_x(E), Pythia above; default), "w2" (Geant4 W < 2 GeV, Pythia W > 2)
@@ -161,6 +174,8 @@ class MuonLibrary:
         out = {kk: v[order] for kk, v in out.items()}
         out["component"] = comp
         out["E_lib"] = self.E[ie]
+        if RESCALE:                                     # D6: from the grid energy to the true one
+            out["p"] = rescale_to_energy(out["p"], np.asarray(E, float)[out["int"]], out["E_lib"][out["int"]])
         return out
 
 

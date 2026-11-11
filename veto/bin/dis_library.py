@@ -50,7 +50,9 @@ G4_STABLE = ()                      # |pdg| not decayed after Geant4 (--stable-v
 V0_STABLE = (310, 3122)
 N_A = 6.02214076e23
 M_N, M_MU = 0.9389, 0.10566
-E_GRID = np.round(np.geomspace(0.5, 500.0, 50), 4)        # Geant4 at all; Pythia from E_P6_MIN
+# ISSUES D6 (11 Nov 2026): 0.5 - 400 GeV (nothing above the 400 GeV beam) in 5 % steps (was 0.5 - 500 GeV, 50 points = 15 %)
+_EMIN, _EMAX, _STEP = 0.5, float(os.environ.get("VETO_LIB_EMAX", 400.0)), float(os.environ.get("VETO_LIB_STEP", 0.05))
+E_GRID = np.round(np.geomspace(_EMIN, _EMAX, int(np.ceil(np.log(_EMAX / _EMIN) / np.log1p(_STEP))) + 1), 4)   # Geant4 at all; Pythia from E_P6_MIN
 E_P6_MIN = 2.0
 NU_X_MIN = 2.0
 # Geant4 materials of fastveto.materials (name -> NIST name, density g/cm^3)
