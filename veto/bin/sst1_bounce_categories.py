@@ -27,6 +27,7 @@ import torch
 
 from veto import geometry as geo
 from veto import io, weights
+from veto import muon_types as mt
 from veto import muon_types_torch as mtt
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -95,7 +96,7 @@ def main():
     n_st = np.zeros(n, np.int8)
     pos = np.stack([np.asarray(st[c][:n])[cand] for c in ("x2", "y2", "z2")], 1).astype(float)
     mom = np.stack([np.asarray(st[c][:n])[cand] for c in ("px2", "py2", "pz2")], 1).astype(float)
-    q = -np.sign(np.asarray(st["pdg"][:n])[cand]).astype(float)
+    q = mt.charge_from_pdg_column(np.asarray(st["pdg"][:n])[cand])
     step = 200_000 if a.device == "cpu" else 2_000_000
     jobs = [(pos[i:i + step], mom[i:i + step], q[i:i + step], i, a.device) for i in range(0, len(cand), step)]
     if a.device == "cpu":

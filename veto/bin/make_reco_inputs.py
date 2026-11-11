@@ -65,7 +65,7 @@ def main():
     good = (p > 1) & (d["bpz"] > 0)
     gg = np.nonzero(good)[0]              # timing detector through the spectrometer field (ISSUES A6)
     good[gg] = mt.timing_ok(np.stack([d["bx"][gg], d["by"][gg], d["bz"][gg]], 1),
-                            np.stack([d["bpx"][gg], d["bpy"][gg], d["bpz"][gg]], 1), -np.sign(d["pdg"][gg]))
+                            np.stack([d["bpx"][gg], d["bpy"][gg], d["bpz"][gg]], 1), mt.charge_from_pdg_column(d["pdg"][gg]))
     g = np.where(good)[0]
     pair_factor = 1.0
     if args.pair_runs and args.pair_runs < n_runs:     # pairs from the first N runs only (each run is a spill):

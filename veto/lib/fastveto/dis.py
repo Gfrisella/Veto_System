@@ -151,7 +151,9 @@ class MuonLibrary:
             v3 = rotate_to(t["v"][rows].astype(np.float64), u[k], phi) + vertex[k]
             pdg = t["pdg"][rows].copy()
             beam = t["beam"][rows]
-            pdg[beam] = np.where(pdg_mu[k][beam] < 0, -13, 13)
+            pm_ = np.asarray(pdg_mu[k][beam])               # the dataset's column: PDG id (+-13) or charge sign (+-1)
+            q_ = np.where(np.abs(pm_) > 1.5, -np.sign(pm_), np.sign(pm_))
+            pdg[beam] = np.where(q_ > 0, -13, 13)
             parts["int"].append(k); parts["pdg"].append(pdg); parts["beam"].append(beam)
             parts["p"].append(np.concatenate([p3, t["p"][rows, 3:4].astype(np.float64)], 1)); parts["v"].append(v3)
         out = {kk: np.concatenate(v) for kk, v in parts.items()}

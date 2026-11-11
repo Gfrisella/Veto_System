@@ -93,7 +93,7 @@ def classify(d):
     g = np.nonzero(good)[0]                # timing detector through the spectrometer field (ISSUES A6)
     if "pdg" in d and len(g):
         good[g] = mt.timing_ok(np.stack([d["x1"][g], d["y1"][g], d["z1"][g]], 1),
-                               np.stack([d["px1"][g], d["py1"][g], d["pz1"][g]], 1), -np.sign(d["pdg"][g]))
+                               np.stack([d["px1"][g], d["py1"][g], d["pz1"][g]], 1), mt.charge_from_pdg_column(d["pdg"][g]))
     elif len(g):
         raise KeyError("visualize_full_dataset.classify: needs 'pdg' for the spectrometer field (ISSUES A6)")
     off = np.hypot(d["x0"] + d["px0"] * t - d["x1"], d["y0"] + d["py0"] * t - d["y1"])

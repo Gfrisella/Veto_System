@@ -76,11 +76,19 @@ def segment_walls(p, q):
     return bits
 
 
+def charge_from_pdg_column(v):
+    """Muon charge from a muon dataset's "pdg" column, either convention: +-13 is a PDG id (13 = mu-, -13 = mu+), +-1 is the
+    charge sign (+1 = mu+), which is what every stored dataset holds (bin/generate_muon_study.py writes sign(charge); checked
+    2026-11-11 against the Nov-4 source pool, and by the side of the shield each sign leaves on in alpha .. nov4)."""
+    v = np.asarray(v)
+    return np.where(np.abs(v) > 1.5, -np.sign(v), np.sign(v)).astype(np.float64)
+
+
 def muon_charge(d, idx=slice(None)):
-    """Charge of the muons (rows idx) from the pdg column (13 = mu-, -13 = mu+)."""
+    """Charge of the muons (rows idx) from the pdg column (charge_from_pdg_column: PDG ids or charge signs)."""
     if "pdg" not in d:
         raise KeyError("muon_types: a 'pdg' column is needed for the charge (spectrometer field, ISSUES A6)")
-    return -np.sign(np.asarray(d["pdg"])[idx]).astype(np.float64)
+    return charge_from_pdg_column(np.asarray(d["pdg"])[idx])
 
 
 def timing_ok(b, pb, q):

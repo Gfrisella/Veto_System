@@ -101,7 +101,7 @@ def _classify_chunk(d, device):
     good = acc & (p_b > 1) & fwd
     g = torch.nonzero(good).squeeze(1)
     if len(g):                                      # timing detector through the spectrometer field (A6)
-        q = -np.sign(np.asarray(d["pdg"])[g.cpu().numpy()]).astype(np.float64) if "pdg" in d else None
+        q = mt.charge_from_pdg_column(np.asarray(d["pdg"])[g.cpu().numpy()]) if "pdg" in d else None
         if q is None:
             raise KeyError("muon_types_torch: a 'pdg' column is needed for the charge (ISSUES A6)")
         from . import spectrometer
