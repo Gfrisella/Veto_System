@@ -4,6 +4,26 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-11 (afternoon) — issue-review code (branch `veto-nov4-source`; D6 on `veto-d6-energy-rescale`)
+- C5: `bin/shell_to_store.py --stream` (column by column, memory-mapped; identical to the in-memory path on 20 seeds);
+  store `design-optimization-dataset-nov4-shell-3220seeds-2026-11-11` built (7.70e8 rows, 84 GB, per-type rates = summary.txt),
+  `paths.MUON_DATASET_FULL` (default switch in the re-run batch, with new pair inputs).
+- D15: Geant4 modules imported in the parent, workers forked, import retry, completeness checks (shield_dis, em_debris,
+  g4_vessel_transport); `VETO_G4_SPAWN=1` = old behaviour.
+- D8: target group `wall` (old key `pvc` accepted); CLI `--wall` (alias `--pvc`).
+- D4: range cut in `shield_dis.draw` (`E_MIN_INT`); rate change 0.04 %.
+- C1: analytic ghost hits of strip planes (`reco.ghost_tiles / ghost_mean / ghost_tile_means`, `RecoConfig.ghost_hits`,
+  `run_reco --no-ghosts`).
+- C9: `docs/patches/C9_categorize_muons.patch` for MuonsAndMatter (to apply by Guglielmo) + README.
+- C7: `bin/evstore_redecay.py --natural` (forced K_L decays for ordinary stores).
+- B4: `evolve/evaluate_designs.py --signal eventcalc` (default), evolve on `paths.RECO_INPUTS`, `VETO_SIGNAL_STORE`,
+  `bin/eventcalc_b4.sh` (regeneration with dcdcfc1 + import; not run).
+- A2: `RecoConfig.bounce_r0`, design knobs `detector.bounce_r_slope / bounce_r0` (clamped), `bin/scan_bounce.py`.
+- D9: `bin/dis_combinatorial.py` (DIS track x muon from event stores, single-track events, V0 products of MS7 originals
+  dropped, veto; bound printed).
+- D2: `bin/d2_selfveto.py` (self-veto of nu-He events by their own products on the planes, and its signal cost).
+- D6 (branch `veto-d6-energy-rescale`): libraries 0.5/1 - 400 GeV in 5 % steps, `VETO_LIB_RESCALE`, `bin/d6_compare_libraries.py`.
+
 ## 2026-11-11 — merge of main (PR #16) into `veto-nov4-source`; charge fix completed
 - Merged origin/main 34cb244 (PR #16: charge-sign fix, rare corners, neutral hadrons in the helium, evolution / SBT plan).
   Only conflict: docs/STATUS.md (both appended): both kept, Shah Rukh's rare-corner bullets back under 2026-11-10 (day).
