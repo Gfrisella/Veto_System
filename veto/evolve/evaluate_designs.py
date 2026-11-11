@@ -42,9 +42,9 @@ _STATE = {}
 CONE_MAX_MRAD = 50.0
 
 
-def _init(n_signal, seed, inputs="inputs.npz", prep_tag=""):
+def _init(n_signal, seed, inputs=paths.RECO_INPUTS, prep_tag="", signal="eventcalc"):
     _STATE["tr"], _STATE["inp"] = load_inputs(inputs)
-    _STATE["n_signal"], _STATE["seed"] = n_signal, seed
+    _STATE["n_signal"], _STATE["seed"], _STATE["signal"] = n_signal, seed, signal
     _STATE["prep"] = {}
     for kind in ("muon", "nu"):                  # bin/prepare_interactions.py: selected events, ready for the veto
         f = paths.results_dir() / "interactions" / f"prepared_{kind}{prep_tag}.npz"
@@ -59,7 +59,7 @@ def report(raw):
         design = dsg.from_dict(raw)
         cone = float(min(max((raw.get("detector") or {}).get("cone_mrad", 0.0), 0.0), CONE_MAX_MRAD))
         cfg = reco.RecoConfig(seed=_STATE["seed"], multiple_scattering=True, cone=cone * 1e-3)
-        r = evaluate(design, _STATE["tr"], _STATE["inp"], cfg, _STATE["n_signal"], DEFAULT_CONFIG["time_window"], "target")
+        r = evaluate(design, _STATE["tr"], _STATE["inp"], cfg, _STATE["n_signal"], DEFAULT_CONFIG["time_window"], _STATE["signal"])
         r["cone_mrad"] = cone
         r["interactions"] = {kind: ix.veto(prep, design, _STATE["inp"], cfg, np.random.default_rng(_STATE["seed"] + 7))
                              for kind, prep in _STATE["prep"].items()}
@@ -79,11 +79,13 @@ def main():
     ap.add_argument("--workers", type=int, default=16)
     ap.add_argument("--n-signal", type=int, default=40_000)
     ap.add_argument("--seed", type=int, default=1, help="same seed for every design: common random numbers")
-    ap.add_argument("--inputs", default="inputs.npz", help="results/reco file: inputs.npz or inputs_xrun.npz")
+    ap.add_argument("--inputs", default=paths.RECO_INPUTS, help="results/reco file (Nov-4, charge-fixed; *_xrun for cross-run pairs)")
+    ap.add_argument("--signal", choices=("eventcalc", "target"), default="eventcalc",
+                    help="ISSUES B4 (11 Nov 2026): the equal-weight EventCalc benchmark set (default) or the old toy (target)")
     ap.add_argument("--prep-tag", default="", help="interaction caches results/interactions/prepared_<kind><tag>.npz")
     args = ap.parse_args()
     designs = json.load(sys.stdin if args.input == "-" else open(args.input))
-    with Pool(min(args.workers, len(designs)), initializer=_init, initargs=(args.n_signal, args.seed, args.inputs, args.prep_tag)) as pool:
+    with Pool(min(args.workers, len(designs)), initializer=_init, initargs=(args.n_signal, args.seed, args.inputs, args.prep_tag, args.signal)) as pool:
         reports = pool.map(report, designs)
     print(json.dumps(reports, default=lambda o: None if o != o else float(o)))
 

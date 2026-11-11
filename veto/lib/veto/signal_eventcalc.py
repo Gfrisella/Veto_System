@@ -16,6 +16,7 @@ sum(weight) per benchmark = EventCalc's N_ev_tot. For efficiencies use weight (o
 """
 
 import json
+import os
 from pathlib import Path
 
 import numpy as np
@@ -23,7 +24,9 @@ import numpy as np
 from . import paths
 from .io import open_store
 
-STORE = paths.PROJECT_DIR / "data" / "signal" / "eventcalc"
+STORE = Path(os.environ.get("VETO_SIGNAL_STORE", paths.PROJECT_DIR / "data" / "signal" / "eventcalc"))
+# ISSUES B4 (11 Nov 2026): the regenerated set (EventCalc dcdcfc1, decay volume = FairShip vessel, LLP from the target)
+# is imported to data/signal/eventcalc_dcdcfc1 by bin/eventcalc_b4.sh; set VETO_SIGNAL_STORE there (or move it here).
 
 
 def store_dir() -> Path:
@@ -126,7 +129,7 @@ def production_point():
 
 # ---------------------------------------------------------------- B4: the signal model of the optimisation (2026-11-05)
 BENCHMARK_SET = {"HNL-mu_m1_ct100": 1.0, "Dark-photons_m0.9_ct100": 1.0, "Scalar-mixing_m2_ct100": 1.0,
-                 "ALP-fermion_m1_ct100": 1.0}   # name: weight of its signal loss in the average (Guglielmo: weighted set)
+                 "ALP-fermion_m1_ct100": 1.0}   # name: weight of its signal loss in the average; EQUAL weights (Guglielmo, ISSUES B4, 11 Nov 2026)
 
 
 def selected_signal(name, cfg, rng, n_max=None):

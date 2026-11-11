@@ -74,7 +74,7 @@ DIRECTIVES = {
 # ------------------------------------------------------------------ problem context for the LLM
 def flux_summary():
     """Muons per spill crossing fin planes, per side, z and band of distance from the vessel wall."""
-    f = np.load(paths.results_dir() / "reco" / "inputs.npz")
+    f = np.load(paths.results_dir() / "reco" / paths.RECO_INPUTS)
     maps, zs, ub, yb = f["fin_maps"], f["z_slices"], f["u_bins"], f["y_bins"]
     uc, yc = 0.5 * (ub[1:] + ub[:-1]), 0.5 * (yb[1:] + yb[:-1])
     bands = [(0, 0.5), (0.5, 1), (1, 2), (2, 3), (3, 5)]
@@ -377,7 +377,7 @@ class OpenRouter:
 
 
 # ------------------------------------------------------------------ evaluation on the cluster
-EVAL_DATA = dict(inputs="inputs.npz", prep_tag="")   # which reco inputs / interaction caches (--inputs, --prep-tag)
+EVAL_DATA = dict(inputs=paths.RECO_INPUTS, prep_tag="")   # which reco inputs / interaction caches (--inputs, --prep-tag)
 
 
 def evaluate_remote(designs, proxy_port, host, workers, n_signal, seed=1):
@@ -438,7 +438,7 @@ def main():
     ap.add_argument("--proxy-port", default=os.environ.get("PROXY_PORT", "2226"))
     ap.add_argument("--host", default="farm-gpu3", help='cluster node, or "local" to evaluate on this machine')
     ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--inputs", default="inputs.npz", help="results/reco file (inputs_delta.npz: the enriched dataset); "
+    ap.add_argument("--inputs", default=paths.RECO_INPUTS, help="results/reco file (inputs_delta.npz: the enriched dataset); "
                                                          "needed here too, for the pair statistics of the objective")
     ap.add_argument("--prep-tag", default="", help="interaction caches prepared_<kind><tag>.npz (_delta: enriched)")
     args = ap.parse_args()
