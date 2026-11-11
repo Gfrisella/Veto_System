@@ -1,0 +1,56 @@
+--- a/muons_and_matter/cuda_muons_ship.py
++++ b/muons_and_matter/cuda_muons_ship.py
+@@ -148,7 +148,7 @@
+ 
+     return valid & inside_z0 & inside_z1
+ 
+-def categorize_muons(position, momenta, position_at_UBT=None):
++def categorize_muons(position, momenta, position_at_UBT=None, momenta_at_UBT=None, bounce_cut=0.5):
+     """Categorize muons into torch.positive and negative based on their PDG ID.
+     bounce in the floor (-3.36) or wall (-4.56)
+     SST1 z=82.0, abs(x)=2.0, abs(y)=3.0
+@@ -177,6 +177,25 @@
+     if position_at_UBT is None:
+         position_at_UBT = muons_at_UBT[:, :3]
+     mask_entered_vessel = (np.abs(position_at_UBT[:, 0]) <= entrance_x) & (np.abs(position_at_UBT[:, 1]) <= entrance_y)
++    if momenta_at_UBT is not None and position_at_UBT is not None:
++        # Veto definition (Veto_System muon_types.classify, ISSUES C9, 2026-11-11): a muon is bounced / scattered when
++        # its state at z = 82 m is more than bounce_cut [m] off the straight line of its REAL state at z = 30.6 m.
++        # (Before: the line from the last plane extrapolated back to 30.6 m, which flagged straight muons as bounced.)
++        a, pa = np.asarray(position_at_UBT, dtype=np.float64), np.asarray(momenta_at_UBT, dtype=np.float64)
++        with np.errstate(divide="ignore", invalid="ignore"):
++            t = (position[:, 2] - a[:, 2]) / pa[:, 2]
++            off = np.hypot(a[:, 0] + pa[:, 0] * t - position[:, 0], a[:, 1] + pa[:, 1] * t - position[:, 1])
++        off = np.where((pa[:, 2] > 0) & np.isfinite(off), off, np.inf)
++        mask_bounced = off > bounce_cut
++        straight = ~mask_bounced
++        return {
++            "straight_past_vessel": (position[:, 2] >= 82.0) & (~mask_SST1_acceptance) & straight,
++            "bounced_no_come_back": (position[:, 2] >= 82.0) & (~mask_SST1_acceptance) & mask_bounced,
++            "SBT_miss": (~mask_UBT_miss) & (~mask_SST1_acceptance),
++            "SST1_miss": (mask_entered_vessel) & (~mask_SST1_acceptance),
++            "SST1_acceptance": mask_SST1_acceptance,
++            "bounced_back": mask_bounced & mask_SST1_acceptance,
++            }
+     return {
+         "straight_past_vessel": (position[:, 2] >= 82.0) & (~mask_in_vessel),
+         "bounced_no_come_back": (mask_bounced) & (~mask_SST1_acceptance),
+@@ -431,6 +450,7 @@
+         ubt_plane = next((j for j, plane in enumerate(planes)
+                           if j in plane_outputs and abs(plane['position'] - 30.6) < 0.01), None)
+         position_at_UBT = None
++        momenta_at_UBT = None
+         if ubt_plane is None:
+             print("WARNING: no sensitive plane at z = 30.6 m: the vessel entrance is found by straight-line "
+                   "extrapolation from the last plane (muons that bounced are missed). Add 30.6 to -sens_plane.")
+@@ -438,8 +458,9 @@
+             # every muon of the last plane went through this plane, and evt_n is sorted in both
+             in_last = torch.isin(plane_outputs[ubt_plane]["evt_n"], last_ids)
+             position_at_UBT = plane_outputs[ubt_plane]["position"][in_last].detach().cpu().numpy()
++            momenta_at_UBT = plane_outputs[ubt_plane]["momenta"][in_last].detach().cpu().numpy()
+         categories = categorize_muons(plane_outputs[last_plane]["position"].detach().cpu().numpy(), plane_outputs[last_plane]["momenta"].detach().cpu().numpy(),
+-                                      position_at_UBT=position_at_UBT)
++                                      position_at_UBT=position_at_UBT, momenta_at_UBT=momenta_at_UBT)
+         if weights is None:
+             weights = torch.ones(len(last_ids), dtype=torch.float32, device=last_ids.device)
+         # A muon can be in several categories
