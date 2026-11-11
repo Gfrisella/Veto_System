@@ -735,3 +735,6 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   signal lost 6.37 -> 6.36 % (debris 7.46 -> 7.30 %); muon DIS helium selected 1.82e3 -> 1.73e3, after veto 472 -> 520,
   truth 673 -> 657; walls after veto 44 -> 22 (8 MC selected: statistics). New store evstore/vessel_mu_nov4q_D6_straw_mod,
   inputs results/reco/inputs_nov4_q.npz, reco_nov4q_D6_straw_mod(_em).json. Older datasets: same bug, rerun if reused.
+- Regression check bin/check_charge_convention.py (helper, seed rows vs the source pool by pool_index, stores by the side
+  each charge leaves on): Nov-4 seed_0 239 470 rows 0 mismatches; Nov-4, c, gamma stores OK. Convention now also in the
+  metadata of new seed files and stores (pdg_convention).
