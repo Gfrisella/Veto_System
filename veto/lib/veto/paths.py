@@ -67,6 +67,10 @@ SQ = Path(os.environ.get("VETO_SQ_DATA", "/disk/lhcb_data/sqasim"))
 SQ_VETO = SQ / "workspace" / "uzh" / "Veto_System" / "veto"
 MUON_DATASET = "design-optimization-dataset-nov4-shell-300seeds-2026-11-10"
 MUON_DATASET_DIR = SQ_VETO / "data" / "store" / MUON_DATASET   # design-optimisation store (300 shell seeds)
+# ISSUES C5 (11 Nov 2026): the same production from ALL 3220 train spills (bin/shell_to_store.py --stream, 7.70e8 rows,
+# 84 GB, our store dir). Becomes MUON_DATASET in the re-run batch, together with pair inputs rebuilt from it (the current
+# RECO_INPUTS index the 300-seed store).
+MUON_DATASET_FULL = "design-optimization-dataset-nov4-shell-3220seeds-2026-11-11"
 NOV4_POOL_DIR = Path(os.environ.get("VETO_NOV4_POOL", SQ / "nov4_pool"))   # source muons (PDG +-13) at the target
 NOV4_POOL_TRAIN_CHUNKS = 23                       # train_000 - train_022
 NOV4_POOL_HIDDEN_CHUNKS = 4                       # hidden_000 - hidden_003 (kept aside)
