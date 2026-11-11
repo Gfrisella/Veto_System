@@ -34,7 +34,7 @@ TYPE_NAMES = {0: "SST1 bounced", 1: "SST1 p>1 GeV & timing", 2: "SST1 other"}
 from veto.config import SPILLS_15Y  # noqa: E402
 
 
-def load_inputs(name="inputs.npz"):
+def load_inputs(name=paths.RECO_INPUTS):
     """Tracks and candidates of results/reco/<name> (inputs.npz; inputs_xrun.npz: cross-run pairs)."""
     f = np.load(paths.results_dir() / "reco" / name)
     tr = {k[3:]: f[k].astype(np.float64) for k in f.files if k.startswith("tr_")}
@@ -238,7 +238,7 @@ def main():
     parser.add_argument("--ip-cut", choices=("full", "partial"), default="full",
                         help="measured-IP selection: full (fully reconstructed, IP < 10 cm) | partial (IP < 2.5 m) (ISSUES C8)")
     parser.add_argument("--out", default=None, help="output file name in results/reco (default: results[_tw..][_oldsignal].json)")
-    parser.add_argument("--inputs", default="inputs.npz", help="results/reco file from make_reco_inputs.py")
+    parser.add_argument("--inputs", default=paths.RECO_INPUTS, help="results/reco file from make_reco_inputs.py")
     parser.add_argument("--em-debris", action="store_true",
                         help="B2: add the EM debris maps (results/em_debris/em_maps.npz, bin/em_debris.py) to the accidentals")
     args = parser.parse_args()

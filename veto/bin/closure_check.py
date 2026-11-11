@@ -71,7 +71,7 @@ def check(design, tr, inp, cfg, rng):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("designs", nargs="+")
-    ap.add_argument("--inputs", nargs="+", default=["inputs.npz", "inputs_xrun.npz"])
+    ap.add_argument("--inputs", nargs="+", default=[paths.RECO_INPUTS, paths.RECO_INPUTS.replace(".npz", "_xrun.npz")])
     ap.add_argument("--out", default="closure.json")
     ap.add_argument("--seed", type=int, default=1)
     a = ap.parse_args()

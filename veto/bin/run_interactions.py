@@ -25,7 +25,7 @@ from veto import interactions as ix
 from veto import io, paths, reco
 from veto.config import POT_PER_SPILL
 
-DATASET = "design-optimization-dataset-gamma-2026-10-17"
+DATASET = paths.MUON_DATASET                     # Nov-4 production (2026-11-11)
 
 
 def load_npz(path):
@@ -55,6 +55,7 @@ def main():
     ap.add_argument("--draws", type=float, nargs=4, default=[1e6, 1e6, 2e5, 2e5], help="helium pvc air planes")
     ap.add_argument("--workers", type=int, default=40)
     ap.add_argument("--dataset", default=DATASET)
+    ap.add_argument("--nu-pdg", type=int, default=None, help="--kind nu: one flavour of the 2026 GENIE files (paths.nu_apply_2026)")
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--out", default=None)
     ap.add_argument("--ip-cut", choices=("full", "partial"), default="full",
@@ -75,7 +76,8 @@ def main():
     design = dsg.load(p if p.exists() else args.design)
     store = paths.store_dir(args.dataset)
     # muons: generated fresh by default (the older cached apply files predate the exact PVC chords)
-    npz = Path(args.interactions) if args.interactions else (None if args.kind == "muon" else paths.apply_file("nu", design.name))
+    npz = Path(args.interactions) if args.interactions else (None if args.kind == "muon" else
+           paths.nu_apply_2026(design.name, args.nu_pdg) if args.nu_pdg is not None else paths.apply_file("nu", design.name))
     if npz is not None and npz.exists():
         inter, part = load_npz(npz)
         source = str(npz)

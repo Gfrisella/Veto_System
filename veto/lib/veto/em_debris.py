@@ -1,7 +1,7 @@
 """EM debris from the end of the muon shield (ISSUES B2, decided 2026-11-05: our own Geant4, host build).
 
 Two Geant4 stages (separate processes: one G4RunManager per process), driven by bin/em_debris.py:
-  1. shield   the muons crossing the last 50 cm of MS7 iron (data/shield_dis/muons_iron.npz, state at z = 29.20 m),
+  1. shield   the muons crossing the last 50 cm of MS7 iron (paths.ms7_parents(): Nov-4 transport, state at z = 29.20 m),
               carried to the last DEPTH_X0 radiation lengths (shield_iron.curved_points: field, mean dE/dx) and through
               that slab with Geant4 (cpp/g4shield, FTFP_BERT incl. EM, field); every e+-, gamma above E_CUT at the plane
               z = 29.90 m is kept.

@@ -71,7 +71,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "lib"))
 
 from veto import muon_types as mt  # noqa: E402
-from veto import weights  # noqa: E402
+from veto import paths, weights  # noqa: E402
 from veto.config import POT_PER_SPILL  # noqa: E402
 
 MM_DIR = Path("/disk/users/gfrise/MuonsAndMatter")       # = /home/hep/gfrise/work_dir/MuonsAndMatter
@@ -485,8 +485,9 @@ def main():
     ap.add_argument("--alpha-rows-per-seed", type=float, default=10_000, help="alpha: rows of types 4-6 per seed steered by the cells")
     ap.add_argument("--alpha-floor", type=float, default=500, help="alpha: uniform rows per seed of each of types 4-7")
     ap.add_argument("--chunk-start", type=int, default=0, help="with --n-chunks: work through the chunks from this one on")
-    ap.add_argument("--n-chunks", type=int, default=1, help="with --input '.../chunk_{chunk:03d}.h5': seed s uses chunk s %% n")
-    ap.add_argument("--input", default=None, help="input muon h5 (default: MuonsAndMatter's full_sample_after_target.h5; the enriched one: paths.enriched_input_h5())")
+    ap.add_argument("--n-chunks", type=int, default=paths.NOV4_POOL_TRAIN_CHUNKS, help="with --input '.../chunk_{chunk:03d}.h5': seed s uses chunk s %% n")
+    ap.add_argument("--input", default=paths.nov4_pool_pattern(), help="input muon h5 (default: the Nov-4 pool chunks, 2026-11-11; "
+                    "legacy: MuonsAndMatter's full_sample_after_target.h5 or paths.enriched_input_h5(), with --n-chunks 1)")
     args = ap.parse_args()
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)

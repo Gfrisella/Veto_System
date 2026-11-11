@@ -32,7 +32,7 @@ from veto import interactions as ix
 from veto import io, objective, paths, reco
 from veto.config import DEFAULT_CONFIG
 
-DATASET = "design-optimization-dataset-delta-enriched-2026-10-19"
+DATASET = paths.MUON_DATASET                     # Nov-4 production (2026-11-11)
 OUT = paths.results_dir() / "end_to_end"
 _S = {}
 
@@ -114,7 +114,7 @@ def main():
     ap.add_argument("--designs", nargs="+", required=True)
     ap.add_argument("--cones", type=float, nargs="+", default=[0, 10, 20], help="mrad")
     ap.add_argument("--dataset", default=DATASET)
-    ap.add_argument("--inputs", default="inputs_delta_s.npz")
+    ap.add_argument("--inputs", default=paths.RECO_INPUTS)
     ap.add_argument("--draws", type=float, nargs=4, default=[5e6, 5e6, 1e6, 1e6], help="helium pvc air planes (each)")
     ap.add_argument("--n-signal", type=int, default=100_000)
     ap.add_argument("--workers", type=int, default=40)

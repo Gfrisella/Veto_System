@@ -32,8 +32,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--design", default="D6_straw")
     ap.add_argument("--lib", default=str(paths.interactions_data() / "genie/nu_library.npz"))
-    ap.add_argument("--store", default=str(paths.interactions_data() / "neutrinos2026/store"))
-    ap.add_argument("--flavours", default="14,-14")
+    ap.add_argument("--store", default=str(paths.NU_FLUX_PREFIX))   # 2026 flux, <prefix>_nu<pdg>
+    ap.add_argument("--flavours", default=",".join(map(str, paths.NU_FLAVOURS)))
     for g, v in (("helium", 5e5), ("pvc", 5e5), ("air", 2e5), ("planes", 1e5)):
         ap.add_argument(f"--{g}", type=float, default=v, help=f"draws per flavour for {g} (planes: each plane)")
     ap.add_argument("--workers", type=int, default=32)

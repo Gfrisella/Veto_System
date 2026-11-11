@@ -702,3 +702,27 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   made per spill (half in the shower), exit K_L 37 % shower; K_S / Lambda kept at the vertex: vessel decays x8-30 but none
   passes the selection (< 1e5 / 15 y each before IP vs 1.7e7 K_L). Low W: Geant4 >= x2-3 low but only ~8 % of the relevant
   K_L -> +8-15 %. K_L -> pi+ pi- added. docs/v0_production.md slides 4-6, ISSUES D16.
+
+## 2026-11-11 (Guglielmo) Nov-4 production for everything (branch veto-nov4-source)
+- Decision: the Nov-4 complete target production is the muon source for every study, D5 included (ISSUES D5 note 11 Nov).
+  No enriched tail -> D5's convention / angle mismatch gone; "which tail is right" (dataset c vs Nov-4) -> Nov-4.
+- Code defaults switched via lib/veto/paths.py (MUON_DATASET, RECO_INPUTS, RATE_MAPS, ms7_parents, nov4_pool_pattern), see
+  CHANGELOG 2026-11-11. Checked: store 4.72e10 mu / spill, 3.22e4 / spill reaching SST1 (types 0-2), MS7 parents 3.95e7 rows
+  4.62e8 / spill, both recorded at 4e13 (no rescale). Nothing run.
+- Branch veto-nov4-source (worktree .claude/worktrees/nov4-source): commit 48a0f36 = the V0 work staged on veto-v0-production,
+  then the switch. The main checkout is unchanged except the store symlink and the inputs_nov4.npz copy.
+- Data locations (Guglielmo's list, 11 Nov; all in lib/veto/paths.py, all checked to exist):
+  Muons: source (PDG +-13) /disk/lhcb_data/sqasim/nov4_pool/train_000-022.h5 + hidden_000-003.h5 (nov4_pool_pattern("train" |
+  "hidden")); after the shield transport, one file per spill: nov4_pool/shell/train/ (3221 files) + shell/hidden/ (561) +
+  shell/summary.txt (NOV4_SHELL_DIR); design-optimisation store /disk/lhcb_data/sqasim/workspace/uzh/Veto_System/veto/data/
+  store/design-optimization-dataset-nov4-shell-300seeds-2026-11-10 (MUON_DATASET_DIR, store_dir(MUON_DATASET) reads it there;
+  identical to the /disk/users/sqasim copy); through the shield end /disk/lhcb_data/sqasim/ms7_parents/muons_iron_nov4.npz.
+  Neutrinos: flux stores .../veto/data/interactions/neutrinos/store2026_nu{12,-12,14,-14,16,-16} (NU_FLUX_PREFIX; per spill at
+  4e13: nu_mu 1.33e11, anti-nu_mu 1.06e11, nu_e 1.52e10, anti-nu_e 1.51e10, nu_tau / anti 1.28e9; same production as our
+  data/interactions/neutrinos2026 copy, plus E / comp columns); raw /disk/lhcb_data/sqasim/nu_prod/tail/ (NU_PROD_RAW); GENIE in
+  the vessel .../veto/data/interactions/genie/apply2026_<design>_nu<pdg>.npz (nu_apply_2026; run_interactions --kind nu --nu-pdg).
+  Event stores: /disk/lhcb_data/sqasim/evstore/<process> (EVSTORE_DIR; evstore_eval --store accepts bare names).
+  Defaults now: shield_dis and nu_dis_apply read the store2026 flux, nu_dis_apply runs all 6 flavours.
+- Next (re-run batch, needs approval): rate maps sample_nov4 (make_design_explorer) and peak maps from the store (make_peak_maps
+  to adapt), then the step-3 code items (D15, D9, C1, C7, A2, D12, B4, D14) and the batch of action list step 5.
+

@@ -24,7 +24,7 @@ from fastveto import dis
 from fastveto import targets as tg
 from veto import design as vdesign
 
-DATASET = "design-optimization-dataset-gamma-2026-10-17"           # the muon dataset (--dataset or --store)
+DATASET = paths.MUON_DATASET                     # the muon dataset, Nov-4 production (2026-11-11) (--dataset or --store)
 from veto.config import SPILLS_15Y  # noqa: E402  (6e20 / 4e13 p.o.t.)
 
 

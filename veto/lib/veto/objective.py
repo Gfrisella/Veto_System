@@ -117,7 +117,7 @@ def wilson_sigma(p, n):
 def sample_stats(inp=None):
     """Design-independent statistics of the reco inputs: pair composition f_kl, effective sample sizes."""
     if inp is None:
-        inp = np.load(paths.results_dir() / "reco" / "inputs.npz")
+        inp = np.load(paths.results_dir() / "reco" / paths.RECO_INPUTS)
     t = inp["tr_type"][inp["cand"]].astype(int)
     w = inp["cand_w"]
     f = np.zeros((3, 3))

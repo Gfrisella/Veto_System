@@ -4,6 +4,23 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-11 — Nov-4 production as the muon source for everything (branch `veto-nov4-source`, base 4904c4f + V0 commit 48a0f36)
+- Guglielmo's decision (ISSUES D5, 11 Nov): every study uses the Nov-4 complete target production; older sources on request only.
+- `lib/veto/paths.py`: `MUON_DATASET` (design-optimization-dataset-nov4-shell-300seeds-2026-11-10), `RECO_INPUTS` (inputs_nov4.npz),
+  `RATE_MAPS` (sample_nov4.npz), `ms7_parents()` (/disk/lhcb_data/sqasim/ms7_parents/muons_iron_nov4.npz, env VETO_MS7_PARENTS),
+  `nov4_pool_pattern()` + `NOV4_POOL_TRAIN_CHUNKS` = 23 (env VETO_NOV4_POOL).
+- Defaults switched to them: make_reco_inputs, make_design_explorer (also `--html` reads `--out`), end_to_end, run_interactions,
+  muon_dis_apply, rock_combinatorial, run_reco, check_peak_rates, closure_check, make_crossrun_pairs (n_runs from meta "seeds",
+  writes inputs_nov4_xrun.npz), em_debris, shield_dis (generate reads the Nov-4 parents; legacy prepare writes
+  data/shield_dis/muons_iron.npz as LEGACY_PREPARED), generate_muon_study (`--input` Nov-4 pool chunks, `--n-chunks` 23), objective.
+- Data (not in git): symlink data/store/<Nov-4 store> -> Shah Rukh's store; copy of results/reco/inputs_nov4.npz (md5 4437741b...).
+- Every location of Guglielmo's 11 Nov list in paths.py: SQ / SQ_VETO, MUON_DATASET_DIR (store_dir reads the Nov-4 store on
+  /disk/lhcb_data), nov4_pool_pattern(part) + NOV4_POOL_HIDDEN_CHUNKS, NOV4_SHELL_DIR, NU_FLUX_PREFIX (store2026, 6 flavours,
+  NU_FLAVOURS), NU_PROD_RAW, GENIE_APPLY_DIR + nu_apply_2026(design, pdg), EVSTORE_DIR + evstore(name). shield_dis NU_STORE_PREFIX
+  and nu_dis_apply --store / --flavours (all 6) follow; run_interactions --nu-pdg; evstore_eval --store takes bare process names.
+- Not switched yet: make_peak_maps.py (one-run Full_dataset pickle), build_dis_parent_store.py (gamma + zeta).
+- The V0-production work staged on `veto-v0-production` is commit 48a0f36 on this branch.
+
 ## 2026-11-10 — V0 tally in g4shield, V0-stable MS7 chain, low-W data, K_L -> pi+ pi- (branch `veto-v0-production`)
 
 - `cpp/g4shield.cc`: `v0_tally()` (every K_L / K_S / Lambda / Xi0 created: creator process, vertex, p, fate below cut /

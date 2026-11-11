@@ -127,8 +127,8 @@ def veto_term(tr, cand, cand_w, cand_v, design, inp, cfg, rng):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--design", required=True)
-    ap.add_argument("--dataset", default="design-optimization-dataset-c-pool-v3-6000seeds-2026-10-31")
-    ap.add_argument("--inputs", default="inputs_c_s.npz")
+    ap.add_argument("--dataset", default=paths.MUON_DATASET)
+    ap.add_argument("--inputs", default=paths.RECO_INPUTS)
     ap.add_argument("--rock-mu", required=True); ap.add_argument("--seeds", type=int, default=300)
     ap.add_argument("--rock-nu", default=None)
     ap.add_argument("--block", type=int, default=4096)

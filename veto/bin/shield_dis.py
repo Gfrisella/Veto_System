@@ -55,14 +55,15 @@ UB = 1e-34                                    # microbarn -> m^2
 V0 = {130: 15.34, 310: 0.026844, 3122: 0.0789, -3122: 0.0789, 3322: 0.0871, -3322: 0.0871}   # c tau [m]
 MASS = {130: 0.497611, 310: 0.497611, 3122: 1.115683, 3322: 1.31486}
 OUT = paths.results_dir() / "shield_dis"
-PREPARED = paths.PROJECT_DIR / "data" / "shield_dis" / "muons_iron.npz"
+PREPARED = paths.ms7_parents()                   # Nov-4 parents (2026-11-11); prepare --from-transport writes it
+LEGACY_PREPARED = paths.PROJECT_DIR / "data" / "shield_dis" / "muons_iron.npz"   # 2018 one-run pickle (prepare without --from-transport)
 NU_STORES = paths.interactions_data() / "neutrinos2026"      # Shah Rukh 2026-11-09 flux (bin/nu_prepare.py); 2018 flux discarded
 MU_SPLIT = "geant4"                           # D3 (decided 2026-11-09): Geant4 muonNuclear (natural-validated); pythia = systematic
 BEND_PARENT = True                            # D4: parent muon bent by the MS7 field (si.curved_points)
 NU_FLAVOURS = (14, -14, 12, -12, 16, -16)     # D4: every flavour that has a store and an iron library entry
 MU_LIB = paths.PROJECT_DIR / "data/interactions/dis/mu_library_iron.npz"
 NU_LIB = paths.interactions_data() / "genie/nu_library_v2.npz"   # GENIE v2 (Shah Rukh 2026-11-09): Fe56, all 6 flavours
-NU_STORE_PREFIX = NU_STORES / "store"         # stores <prefix>_nu<pdg> (bin/nu_prepare.py)
+NU_STORE_PREFIX = paths.NU_FLUX_PREFIX          # stores <prefix>_nu<pdg>: Shah Rukh's 2026 flux (2026-11-11)
 
 
 # ------------------------------------------------------------------ 1. parents
@@ -115,14 +116,14 @@ def prepare(a):
     keep = (L > 0) & (pz > 0) & (w > 0)
     print(f"{len(x):,} muons ({w.sum():.4g} per spill), {keep.sum():,} cross the iron ({w[keep].sum():.4g} per spill), "
           f"z plane {np.median(z):.3f} m, {time.time() - t0:.0f} s")
-    PREPARED.parent.mkdir(parents=True, exist_ok=True)
-    np.savez(PREPARED, x=x[keep], y=y[keep], z=z[keep], px=px[keep], py=py[keep], pz=pz[keep],
+    LEGACY_PREPARED.parent.mkdir(parents=True, exist_ok=True)
+    np.savez(LEGACY_PREPARED, x=x[keep], y=y[keep], z=z[keep], px=px[keep], py=py[keep], pz=pz[keep],
              q=np.asarray(d["pdg"])[keep].astype(np.int8), weight=w[keep], evt_n=np.asarray(d["evt_n"])[keep],
              L=L[keep], s_in=s_in[keep], s_out=s_out[keep],
              meta=np.array(json.dumps(dict(source=str(si.MUON_FILE), z_shift=si.MUON_Z_SHIFT, n_all=len(x),
                                            w_all=float(w.sum()), iron=[si.Z_IRON0, si.Z_SHIELD_END, si.HALF_X, si.HALF_Y],
                                            pot_per_spill=POT_PER_SPILL))))
-    print(f"wrote {PREPARED}")
+    print(f"wrote {LEGACY_PREPARED} (legacy source; use with generate --prepared)")
 
 
 def parents(kind):

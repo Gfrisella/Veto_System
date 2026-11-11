@@ -18,6 +18,7 @@ from run_reco import load_inputs
 from veto import design as dsg
 from veto import evstore as es
 from veto import interactions as ix
+from veto import paths
 from veto import reco
 from veto import vertex_selection as vsel
 
@@ -46,6 +47,7 @@ def main():
     ap.add_argument("--export-roots", default=None, help="write the store's roots as an int_/part_ npz (for bin/g4_vessel_transport.py) and stop")
     ap.add_argument("--g4", default=None, help="bin/g4_vessel_transport.py output for the (single) store: evaluate with the Geant4 tracks")
     a = ap.parse_args()
+    a.store = [str(paths.evstore(s)) for s in a.store]   # bare process names resolve under paths.EVSTORE_DIR
     if a.export_roots:
         meta, ev, tr = es.read(a.store[0])
         inter, part = es.roots_to_fastveto(ev, tr)
