@@ -973,6 +973,24 @@ D17. Muon charge flipped: the stores' "pdg" column is the charge sign (+1 = mu+)
       numbers before this fix are same-sign pairs: rerun. The out-of-repo Presentation_Combinatorial/scripts/dis_comb_pairs*.py
       (old D9 class A, 3.8e4 / spill) have the same inversion: those numbers are void; D9 is redone in the re-run batch.
 
+D18. Search window not aware of the material crossed
+    STATUS: OPEN (PRIORITY C, minor; logged 11 Nov 2026 by Guglielmo)
+    reco.predictions extrapolates the measured SST1 state back as a straight line and uses one cone for every track and
+    plane: r = r0 + (r_slope + r_ms / p) x L (r0 5 cm, r_slope 0.5 mrad, r_ms 6 mrad GeV), L = path length to the plane.
+    The simulated tracks scatter in the real materials (scattering.py: Mylar windows / walls with exact chords, helium
+    and air in 1 m slices, UBT and fins, tails). The true displacement at a plane is ~ sum of theta_i (z_i - z_plane) over
+    the scatterers between the plane and SST1: an exit-window kink has the whole vessel as lever arm, an entrance-window
+    kink almost none at the UBT; tracks leaving through a side wall into air (X0 304 m vs helium 5671 m) see much more.
+    The single cone is too wide on clean helium paths (random hits -> signal loss, now larger with ghosts, C1) and may be
+    narrow on wall + air paths. Geometry-aware already: bounce search (A2), vertex limit, per-plane time window / cells.
+    Possible solution (not scheduled): sigma(plane) = sqrt(sum_i theta0_i^2 (z_i - z_plane)^2) from the material chords
+    between the plane and SST1 along the line (scattering.py chord code), r = r0 + r_slope L + k sigma / p with one factor
+    k (~3) instead of r_ms; compare with the cone on D6_straw / D6_fiber (signal loss, bounced / SST1 veto). Would also
+    replace B1's check that r_ms covers the true scatter.
+    Note for the BT report (sec. 2.8.2, "rho_ms / p about 3.8 x Highland"): Highland for 50 m helium + two 350 um Mylar
+    windows is ~1.2 mrad GeV -> r_ms = 6 is ~5x; with the 0.95 m of air before SST1 ~1.37 -> ~4.4x. Check which
+    material sum the report uses.
+
 D16. V0 production in the MS7 muon chain: checked against data (10 Nov 2026, branch veto-v0-production)
     STATUS: IN PROGRESS (PRIORITY B)
     Analysis: bin/v0_production.py (existing files only) -> docs/v0_production.md (figures docs/figures/v0_production/).
