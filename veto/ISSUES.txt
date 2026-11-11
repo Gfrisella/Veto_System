@@ -543,7 +543,7 @@ D1. Objective exploitable: signal term saturates
     nu DIS in air / walls / planes / shield counts like the muons (w_src_muon = 1). "bkg_events_15y" and "sensitivity" stay physical.
 
 D2. Neutrino DIS in helium: irreducible for an upstream veto
-    STATUS: DECIDED (11 Nov 2026): per-event self-veto study (lateral products on the veto planes) vs signal loss
+    STATUS: IN PROGRESS (11 Nov 2026: self-veto removes 39 % of nu-He after veto, signal cost 0.02 %)
     9 Nov 2026 (Shah Rukh, new flux + GENIE v2, D6_straw_mod, bin/nu_activity.py): 3.6 selected nu-He events / 15 y
       (all flavours; 3.3 after veto b). 77 % have >= 1 product leaving through the vessel side walls (charged p > 0.1 GeV
       75 %, photon E > 0.1 GeV 53 %, straight lines from the vertex); none has an extra charged track at SST1. Left 0.8:
@@ -555,6 +555,12 @@ D2. Neutrino DIS in helium: irreducible for an upstream veto
     11 Nov 2026, Guglielmo (option a): per nu-He DIS event (2026 flux, Geant4 downstream: ~1.5 / 15 y after veto, ~2.5 with
       the MS7 nu), the hits of ALL its charged products on the veto planes (fins / UBT) -> veto fraction, against the
       signal loss of the equal-weight benchmark set (B4) on the same planes. From the existing vessel_nu2026 stores.
+    11 Nov 2026 (bin/d2_selfveto.py, D6_straw_mod, 2026 nu stores straight-line propagation, results/interactions/
+      d2_selfveto_D6_straw_mod.json): nu DIS in the helium after veto b 2.93 per 15 y -> 1.78 with the self-veto (own charged
+      products p > 0.1 GeV crossing an active plane, plane efficiency) = 39 % removed (lower bound: no conversions).
+      Signal lost to the same rule (equal-weight B4 set): 0.02 % (HNL-mu 0.00, DP 0.00, scalar 0.05, ALP 0.03 %).
+      To do: the same on the Geant4-downstream stores (absolute numbers there 1.3 before the self-veto); then decide whether
+      the self-veto becomes part of the veto definition (reco: own hits of all products of a vertex event).
 
 D3. MS7 shield DIS -> K_L: chain disagrees with FairShip
     STATUS: OPEN (PRIORITY C, minor since 11 Nov 2026: Geant4 default validated by natural Geant4 + V0 data, D16)
