@@ -182,6 +182,10 @@ OBJECTIVE (the reward; higher is better):
 r0 + cone x (distance from the vertex to the plane) on every plane upstream, which catches the parents of muon
 interactions (bent by a few mrad at the vertex) but picks up random hits, so it costs signal on busy planes:
 on the small-fin designs ~0.9 % signal at 10 mrad, ~3.7 % at 20 mrad, much more with large tile fins.
+"detector": {{"bounce_r_slope": .., "bounce_r0": ..}} tune the second search window for muons that bounced off the cavern
+wall / floor (ISSUES A2): mirrored line from the bounce point, radius bounce_r0 (m; default the track's own window) +
+bounce_r_slope x distance from the bounce point. Wider catches more bounced muons but more random hits (signal).
+Values are clamped to the range of bin/scan_bounce.py around its best start value; omit them to use the start.
 "stations": 2 (or 3) in the "ubt" or a fin entry: identical layers behind each other read out as an OR, plane
 inefficiency 1e-3 -> 1e-6, n x channels, cost and material; rates and random hits as one station.
 A fin may also give "cell_u"/"cell_y" (readout cell size, m) to read a technology out more coarsely: this only
@@ -224,6 +228,7 @@ def compact(report):
         "false_vertices_15y_by_source": {k: f"{v:.2g} +- {e:.1g}" for k, (v, e) in sc["bkg_by_source"].items()},
         "combinatorial_factorised_vs_direct": f"{bg['FN_factorised'] * bg['events_15y_before']:.2g} / {bg['FN_direct'] * bg['events_15y_before']:.2g}",
         "cone_mrad": r.get("cone_mrad", 0.0),
+        "bounce_r_slope": r.get("bounce_r_slope"), "bounce_r0": r.get("bounce_r0"),
         "surviving_pairs_counted": f"{bg['n_survive_direct']} of {bg['n_candidates']}",
         "signal_efficiency_pct": f"{100 * sg['efficiency']:.2f} +- {100 * sg['efficiency_err']:.2f}",
         "signal_decays_simulated": sg["n"],

@@ -49,6 +49,7 @@ class RecoConfig:
     ghost_hits: bool = True            # C1 (2026-11-11): analytic ghost hits of strip planes (ghost_mean)
     bounce_search: bool = True         # A2 (2026-11-05): second window for tracks whose backward line meets the cavern
     bounce_r_slope: float = 0.21       # wall / floor upstream: mirrored line from that point W, radius r + slope x |W - plane|
+    bounce_r0: float = None            # A2 (2026-11-11): base radius of the bounce query [m] (None = the track's own radius r)
                                        # (0.21 = 68 % of bounced SST1 muons at z = 30.6; the bounce is not specular)
     straw_cuts: str = None             # A6b: None = accept every track (as before); "acts" = straw fit quality cuts (ACTS, pending: GenFit discarded 2026-11-09)
                                        # (straws.py) on the vertex tracks: converged, ndf > 25, chi2/ndf < 5, fitted p > 1
@@ -421,7 +422,8 @@ def predictions(meas, event, z_limit, design, cfg):
             dW = zW[b] - plane.z
             xb, yb = xW - txm * dW, yW - tym * dW
             dist_b = dist[b] + 0.0                       # path length ~ the straight one (time window)
-            rb = r[b] + cfg.bounce_r_slope * dW * np.sqrt(1 + txm ** 2 + tym ** 2)
+            r_base = r[b] if getattr(cfg, "bounce_r0", None) is None else np.full(len(b), float(cfg.bounce_r0))
+            rb = r_base + cfg.bounce_r_slope * dW * np.sqrt(1 + txm ** 2 + tym ** 2)
             ub = plane.to_local(xb)
             rch = ((ub >= -rb - plane.cell_u) & (ub <= plane.u_max + rb + plane.cell_u)
                    & (yb >= plane.y_lo - rb - plane.cell_y) & (yb <= plane.y_hi + rb + plane.cell_y))

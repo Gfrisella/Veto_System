@@ -40,6 +40,28 @@ _STATE = {}
 
 
 CONE_MAX_MRAD = 50.0
+# ISSUES A2 (11 Nov 2026): the bounce search is a design knob ("detector": {"bounce_r_slope", "bounce_r0"}), kept inside
+# a range around the start value of bin/scan_bounce.py (results/reco/bounce_scan.json); defaults if no scan yet.
+BOUNCE_DEFAULT = dict(bounce_r_slope=dict(start=0.21, lo=0.05, hi=0.5), bounce_r0=dict(start=None, lo=0.02, hi=0.5))
+
+
+def bounce_ranges():
+    f = paths.results_dir() / "reco" / "bounce_scan.json"
+    try:
+        return json.load(open(f))["ranges"]
+    except (OSError, KeyError, ValueError):
+        return BOUNCE_DEFAULT
+
+
+def bounce_knobs(raw):
+    """(bounce_r_slope, bounce_r0) of a design: its "detector" values clamped to the scan range, else the scan start."""
+    det, rg = raw.get("detector") or {}, bounce_ranges()
+    out = []
+    for k in ("bounce_r_slope", "bounce_r0"):
+        r = rg.get(k, BOUNCE_DEFAULT[k])
+        v = det.get(k, r["start"])
+        out.append(None if v is None else float(min(max(float(v), r["lo"]), r["hi"])))
+    return out
 
 
 def _init(n_signal, seed, inputs=paths.RECO_INPUTS, prep_tag="", signal="eventcalc"):
@@ -58,9 +80,11 @@ def report(raw):
     try:
         design = dsg.from_dict(raw)
         cone = float(min(max((raw.get("detector") or {}).get("cone_mrad", 0.0), 0.0), CONE_MAX_MRAD))
-        cfg = reco.RecoConfig(seed=_STATE["seed"], multiple_scattering=True, cone=cone * 1e-3)
+        slope, r0 = bounce_knobs(raw)
+        cfg = reco.RecoConfig(seed=_STATE["seed"], multiple_scattering=True, cone=cone * 1e-3, bounce_r_slope=slope, bounce_r0=r0)
         r = evaluate(design, _STATE["tr"], _STATE["inp"], cfg, _STATE["n_signal"], DEFAULT_CONFIG["time_window"], _STATE["signal"])
         r["cone_mrad"] = cone
+        r["bounce_r_slope"], r["bounce_r0"] = slope, r0
         r["interactions"] = {kind: ix.veto(prep, design, _STATE["inp"], cfg, np.random.default_rng(_STATE["seed"] + 7))
                              for kind, prep in _STATE["prep"].items()}
     except Exception as e:  # noqa: BLE001  (an invalid design is a normal outcome here)
