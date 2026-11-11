@@ -722,3 +722,16 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   1. P(IP < 1 m | interaction) 8e-6 (floor z 30) ... 5e-7 (wall z 55), 0 at z >= 60 (where most rock neutrons come from).
   Folded: 5.4e8 x <= 5e-7 x 1/100 (IP^2 to 0.1 m) x 0.02 (real spectrum: 99 % < 4.9 GeV; two tracks > 1 GeV need ~5 GeV+)
   -> rock neutrons ~0.05 per 15 y (0.01-0.5); 2.7 if the spectrum softness is ignored (upper end). No veto for these.
+
+## 2026-11-11 Muon charge-sign fix
+- BUG: every stored muon dataset (alpha .. nov4, sst1/ubt_TRY6) has pdg = charge sign (+1 = mu+; generate_muon_study writes
+  sign(charge); verified on Nov-4 seed_0 against the pool by pool_index: all +1 rows are -13, and in every store -1 sits at
+  +x, +1 at -x). muon_types.muon_charge, muon_types_torch, selection, make_reco_inputs, make_crossrun_pairs, rock_combinatorial,
+  visualize_full_dataset, sst1_bounce_categories read it as PDG (q = -sign) and fastveto.dis gave the scattered muon the
+  opposite charge -> timing acceptance with the wrong bending, wrong scattered-muon charge. Fix: muon_types.charge_from_pdg_column
+  (+-13 PDG, +-1 charge sign) everywhere. Not affected: rock_apply, em_debris, shield_dis / MS7 (true q), neutrinos, cuda-muons.
+- Rerun on Nov-4, D6_straw_mod (evstore/fixq.sh, logs/q_*.log), old -> new:
+  pair candidates 5 739 -> 6 005 / spill; combinatorial 0.014 +- 0.010 -> 0.0038 +- 0.0009 (with debris 0.0028 -> 0.0031);
+  signal lost 6.37 -> 6.36 % (debris 7.46 -> 7.30 %); muon DIS helium selected 1.82e3 -> 1.73e3, after veto 472 -> 520,
+  truth 673 -> 657; walls after veto 44 -> 22 (8 MC selected: statistics). New store evstore/vessel_mu_nov4q_D6_straw_mod,
+  inputs results/reco/inputs_nov4_q.npz, reco_nov4q_D6_straw_mod(_em).json. Older datasets: same bug, rerun if reused.
