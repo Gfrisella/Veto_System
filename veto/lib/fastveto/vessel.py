@@ -43,7 +43,7 @@ MEDIA = {
     "mylar":  {"X0": 0.2854, "density": 1400.0, "Z": None, "A": None},    # C10H8O4, X0 39.95 g/cm^2 (PDG)
 }
 # Vessel wall (entrance / exit windows and lateral walls). Was 0.3 mm PVC until 2026-11-04.
-# The target group keeps its historical key "pvc" (draws, include, CODE_NAMES, saved files); its material is WALL_MATERIAL.
+# The target group is "wall" since ISSUES D8 (11 Nov 2026; "pvc" still accepted as the old key); its material is WALL_MATERIAL.
 WALL_MATERIAL = "mylar"   # fastveto.materials name
 WALL_THICKNESS = 350e-6    # m
 PVC_THICKNESS = WALL_THICKNESS   # old name, kept so older scripts still import

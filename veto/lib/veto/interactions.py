@@ -1,7 +1,7 @@
 """Backgrounds from particle interactions after the muon shield (lib/fastveto) through our selection and veto.
 
 fastveto (fastveto.dis for muons, fastveto.nudis for neutrinos) forces interactions in the vessel helium, the
-air (z = 30.6 - 82 m), the vessel walls (350 um Mylar; target key 'pvc' kept) and every plane of a design, with a weight (interactions per spill) and the
+air (z = 30.6 - 82 m), the vessel walls (350 um Mylar; target key 'wall', was 'pvc' until ISSUES D8) and every plane of a design, with a weight (interactions per spill) and the
 final-state particles (pdg, momentum, production point, beam = the scattered muon / outgoing lepton). Here:
 
   tracks     charged particles are straight lines from their production point (no field before the
@@ -19,7 +19,7 @@ final-state particles (pdg, momentum, production point, beam = the scattered muo
                   muon, if it is not a vertex track, is followed back past the vertex to its parent's hits
                c  truth bound: the parent muon crossed a plane upstream of the interaction (no efficiency,
                   no reconstruction): the best any algorithm can do. Neutrinos have no parent.
-Results per target (helium, air, wall ('pvc'), each plane): interactions, selected, surviving a / b / c, per 15 years,
+Results per target (helium, air, wall (was 'pvc'), each plane): interactions, selected, surviving a / b / c, per 15 years,
 with errors from a bootstrap over input muons (evt_n: rows of one input muon are not independent).
 """
 
@@ -32,7 +32,7 @@ from . import reco
 from .config import SPILLS_15Y  # noqa: E402  (4e13 p.o.t. per spill)
 CHARGE = {11: -1, 13: -1, 15: -1, 211: 1, 321: 1, 2212: 1, 3222: 1, 3112: -1, 3312: -1, 3334: -1, 411: 1, 431: 1,
           4122: 1, 521: 1}
-CODE_NAMES = {0: "helium", 1: "air", 2: "pvc", 3: "shield_iron", 4: "shield_iron_v0", 5: "rock_wall", 6: "rock_floor", 7: "neutral_he"}   # bin/shield_dis.py: last 50 cm of
+CODE_NAMES = {0: "helium", 1: "air", 2: "wall", 3: "shield_iron", 4: "shield_iron_v0", 5: "rock_wall", 6: "rock_floor", 7: "neutral_he"}   # bin/shield_dis.py: last 50 cm of
 # MS7; 4 = copies of those interactions with a K_L / K_S / Lambda forced to decay in the vessel (weight x P(decay))
 
 

@@ -41,7 +41,7 @@ def generate_muon_interactions(design, store, args):
     lib = dis.MuonLibrary(str(paths.mu_library()), split=args.split)
     meta = json.load(open(store / "meta.json"))
     cols = {k: np.load(store / f"{k}.npy", mmap_mode="r") for k in meta["columns"]}
-    draws = {"helium": args.draws[0], "pvc": args.draws[1], "air": args.draws[2], "planes": args.draws[3]}
+    draws = {"helium": args.draws[0], "wall": args.draws[1], "air": args.draws[2], "planes": args.draws[3]}
     inter, part, _ = dis.run(cols, design, lib, draws, np.random.default_rng(args.seed), workers=args.workers)
     return inter, part
 
