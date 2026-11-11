@@ -515,7 +515,7 @@ D1. Objective exploitable: signal term saturates
     nu DIS in air / walls / planes / shield counts like the muons (w_src_muon = 1). "bkg_events_15y" and "sensitivity" stay physical.
 
 D2. Neutrino DIS in helium: irreducible for an upstream veto
-    STATUS: IN PROGRESS (9 Nov 2026: study the veto from lateral tracks of the same event, with the signal loss)
+    STATUS: DECIDED (11 Nov 2026): per-event self-veto study (lateral products on the veto planes) vs signal loss
     9 Nov 2026 (Shah Rukh, new flux + GENIE v2, D6_straw_mod, bin/nu_activity.py): 3.6 selected nu-He events / 15 y
       (all flavours; 3.3 after veto b). 77 % have >= 1 product leaving through the vessel side walls (charged p > 0.1 GeV
       75 %, photon E > 0.1 GeV 53 %, straight lines from the vertex); none has an extra charged track at SST1. Left 0.8:
@@ -524,6 +524,9 @@ D2. Neutrino DIS in helium: irreducible for an upstream veto
       the veto planes (fins / UBT) can veto it. Must be studied together with the signal loss (signal daughters /
       accidentals hitting the same planes). Study: per nu-He DIS event, own hits of all its charged products on the
       veto planes -> veto fraction vs signal loss for the benchmark set.
+    11 Nov 2026, Guglielmo (option a): per nu-He DIS event (2026 flux, Geant4 downstream: ~1.5 / 15 y after veto, ~2.5 with
+      the MS7 nu), the hits of ALL its charged products on the veto planes (fins / UBT) -> veto fraction, against the
+      signal loss of the equal-weight benchmark set (B4) on the same planes. From the existing vessel_nu2026 stores.
 
 D3. MS7 shield DIS -> K_L: chain disagrees with FairShip
     STATUS: OPEN (PRIORITY C, minor since 11 Nov 2026: Geant4 default validated by natural Geant4 + V0 data, D16)
@@ -668,7 +671,7 @@ D5. Muon source: enriched input disagrees with the old sample
       the MS7 K_L tail needs K_L-enriched generation (10 Nov). Not switched yet: make_peak_maps.py (reads the one-run
       Full_dataset pickle; to be fed from the store) and build_dis_parent_store.py (gamma + zeta) -> in the re-run batch.
 D6. Interaction-library approximations
-    STATUS: DECIDED (9 Nov 2026): energy rescaling on a branch
+    STATUS: DECIDED (11 Nov 2026): finer libraries up to 400 GeV (5 % steps) + rescaling to the exact energy, on a branch
     Final states not rescaled to the exact muon energy (15 % grid); no nuclear effects (Fermi motion,
     shadowing, re-interactions) in the Pythia part; no tau library (~1 % nu_tau in the flux)
     (docs/fastveto_physics.md "Open").
@@ -685,9 +688,15 @@ D6. Interaction-library approximations
       - nu_tau: build a nu_tau library with bin/nu_library.py (GENIE, --nus 16 -16), ~1 % of the flux.
     9 Nov 2026, Guglielmo: do the energy rescaling only (branch veto-d6-energy-rescale, compare V0 yield / multiplicity
       with the current library); nuclear effects and nu_tau stay documented systematics.
+    11 Nov 2026, Guglielmo: the 500 GeV upper edge has no physics reason (beam 400 GeV, the Nov-4 pool drops p >= 400 GeV);
+      points 434 / 500 (mu) and 419 / 500 (nu) are wasted. Option c "with the energy correct": rebuild the grids
+      mu 0.5 - 400 GeV (139 points) and nu 1 - 400 GeV (124 points) in 5 % steps (nearest-point error 7.3 / 9.3 % -> 2.5 %),
+      then rescale each final state to the exact energy (E / E_grid, angles kept). Build cost minutes (mu 2 min, nu 4.5 min
+      on 300 cores now; one energy point per Slurm array task possible); size x2.8 (iron mu library ~6 GB). Compare V0
+      yield / multiplicity with the current library on branch veto-d6-energy-rescale before switching.
 
 D7. Interactions upstream of z = 30.6 m not simulated
-    STATUS: IN PROGRESS (9 Nov 2026: air DONE 5 Nov; cavern walls / rock implemented by Shah Rukh, PR #13)
+    STATUS: DECIDED (11 Nov 2026): close after the mu x rock combinatorial is redone with the fixed charge
     9 Nov 2026 (Shah Rukh): selection + veto of the cavern-rock products (bin/rock_select.py, the same
       interactions.evaluate): muon rock 0 selected (4.6e9 / 15 y with >= 2 good tracks, best-pair IP >= 12.6 m), neutrino
       rock (bin/nu_rock.py: GENIE v2 on concrete, g4rock, walls / floor / ceiling / face) 0 selected (3.2e3 with >= 2
@@ -713,6 +722,10 @@ D7. Interactions upstream of z = 30.6 m not simulated
       2.47e28 weighted nucleons/m^2 (helium and wall unchanged).
     9 Nov 2026, Guglielmo: go ahead with the forced Geant4 from the 30.6 m states in the real cavern (wall + floor, forced
       K_L decays in the vessel), with the Geant4 default generator (D3). No +x wall: it is far away, not relevant.
+    11 Nov 2026, Guglielmo (option a): rock covered (muon / nu rock 0 selected by geometry; PR #16 rare corners: floor /
+      wall K_L < 0.02, rock neutrons in the helium ~0.05 per 15 y). The mu x rock 0.023 / 15 y was computed with the
+      inverted charge test (D17 b, same-sign pairs): redo it in the re-run batch, then close D7. The forced Geant4 from
+      the 30.6 m states in the real cavern only if the redone mu x rock is not negligible.
 
 D8. Results computed with the old PVC vessel wall
     STATUS: DECIDED (11 Nov 2026): re-run batch regenerates with Mylar; rename the target key pvc -> wall
@@ -859,6 +872,16 @@ D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_invento
       Guglielmo (10 Nov): keep our UBT on the vessel window.
       Next: our straw hits (straws.digitize detIDs + drift radii, z + 2.14 m) and OUR field map as a TVirtualMagField
       -> ActsStrawTracker.FitCandidate per track -> resolution / efficiency parametrisation for reco.measure.
+    11 Nov 2026 status: DONE since 9 Nov: neutrino flux 2026 (all flavours, > 1 GeV), iron GENIE library with nu_e / nu_tau
+      (v2), muon source = Nov-4 (D5). Moved: K_L decays in the vessel -> C7. Ignored by decision: cosmics.
+      Guglielmo (11 Nov), the two remaining items, with the Slurm farm (hep partition; submitted by Guglielmo from
+      farm-gpu3/4/5, this session cannot reach Slurm; we write the .sbatch):
+      1. debris in time: first (c) shield-end debris attached in time to its parent muon (em_debris already stores the
+         parent row of each e / gamma); (a) delta rays in the planes and (b) cavern-wall debris at the bounce points only
+         if (c) changes the veto efficiency noticeably; + the one-off cross-check of debris_maps vs em_debris (from D12).
+         Geant4 stage as a Slurm array (2e6 parents ~3 h on 16 workers -> ~10-15 min).
+      2. ACTS parametrisation: our straw hits + our field map -> resolution / efficiency vs p, angle for reco.measure;
+         particle-gun scan as a Slurm array in the FairShip pixi environment 26.10.
 
 D15. CVMFS library loading under load (shield_dis / shield_natural workers)
     STATUS: DECIDED (11 Nov 2026): Geant4 loaded in the parent before forking + chunk-count assert
