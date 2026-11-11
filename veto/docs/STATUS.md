@@ -690,3 +690,15 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   ~7e7 per MC event: statistically only < 1.6e8; it rests on geometry (a vertex must point back within 0.1 m). Running.
   Later steps if a corner is not bounded: splitting / weight windows in the shield transport (splitting_proto exists on
   lhcb_data), forced neutral chains for rock and walls.
+
+## 2026-11-10 (Guglielmo) V0 production in the MS7 muon chain vs data (branch veto-v0-production)
+- bin/v0_production.py -> results/v0_production/README.md. Made at the vertex (Geant4 muonNuclear, V0-stable library, PR #15
+  vertex spectrum): per spill K_L 7.9e3, K_S 7.8e3, Lambda 5.4e3, anti-Lambda 260 (~1 % per interaction: median W 1.3 GeV).
+- Data check at W = 6.2 GeV (gamma p 20 GeV, SLAC SHF): K0_S 0.087 vs 0.082 +- 0.003, Lambda 0.051 vs 0.049 +- 0.002;
+  Pythia 6 x1.9 high -> supports Geant4 as default (D3); the Pythia "x2.7" spread looks one-sided.
+- Exit plane: K_L 2.9e3 / spill = 0.40 of made; primaries alone give 0.25-0.31 -> 25-35 % cascade secondaries. K_S / Lambda
+  at the plane all from the cascade (vertex ones decayed, D9). Not done: full V0 tally in the iron (needs g4shield change + run).
+- 10 Nov (later): V0 tally in g4shield + V0-stable chain (Geant4 11.4.2 pixi; 11.4 = 11.2 within 1-3 % for K_L): 1.5e4 K_L
+  made per spill (half in the shower), exit K_L 37 % shower; K_S / Lambda kept at the vertex: vessel decays x8-30 but none
+  passes the selection (< 1e5 / 15 y each before IP vs 1.7e7 K_L). Low W: Geant4 >= x2-3 low but only ~8 % of the relevant
+  K_L -> +8-15 %. K_L -> pi+ pi- added. docs/v0_production.md slides 4-6, ISSUES D16.

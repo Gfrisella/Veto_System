@@ -114,6 +114,9 @@ def init_g4shield(seed, e_cut=0.5, field=True, z_iron0=None, natural=None):
     from . import paths
     sys.path.insert(0, str(paths.cpp_build()))
     sys.path.insert(0, str(paths.PROJECT_DIR / "cpp" / "build_ship"))   # host build (bin/g4ship.sh), other python
+    import os
+    if os.environ.get("G4SHIELD_BUILD"):                                  # e.g. bin/g4pixi.sh (Geant4 11.4.2, CVMFS)
+        sys.path.insert(0, os.environ["G4SHIELD_BUILD"])
     if natural:
         import g4shieldnat as g4shield
     else:

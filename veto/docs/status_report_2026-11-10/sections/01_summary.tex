@@ -1,0 +1,48 @@
+\section{Executive summary}
+
+\begin{table}[h]
+\centering\small
+\caption{Background budget for \texttt{D6\_straw\_mod}, per 15 years, after the full selection and the veto
+(level b = reconstructed veto; level c = truth). ``Straight'' = products as straight lines after the source,
+``G4'' = products through Geant4 (\texttt{g4vessel}) downstream.}
+\label{tab:budget}
+\begin{tabularx}{\linewidth}{@{}l r X l@{}}
+\toprule
+Source & after veto / 15\,y & Comment & Tag\\
+\midrule
+MS7 muon DIS $\to K_L$ (last 50\,cm of iron) & $\sim1.5\times10^{4}$ & range $1$--$2\times10^4$ from the IP$^2$ extrapolation; direct re-decay count $1.39\times10^4$ selected, $9.7\times10^3$ after veto (13 MC events). Not vetoable (decay tracks have no upstream hits). FairShip sees none (D3). & \est, \open\\
+Muon DIS in the helium & 472 & 1.82e3 selected; 673 at truth level c (parent crossed no plane: side-entry coverage gap). & \est\\
+Muon DIS in the vessel walls & 44 & 176 selected. & \est\\
+Neutrino DIS in the vessel (He + walls) & 1.5 & 1.3 He + 0.2 walls (G4); 3.0--3.3 with straight lines. & \solid\\
+Neutrino DIS in MS7 & 1.0 & 2.2--2.4 with straight lines. & \solid\\
+Muon combinatorial ($\mu\times\mu$) & 0.014 & Nov-4 inputs (0.003 with EM debris); dataset c gives 51: source-tail question open. & \open\\
+$\mu\times$rock tracks & 0.023 & rock leg vetoed 99.99\,\%. & \est\\
+Muon / neutrino DIS in the cavern rock & 0 & 0 selected; muon rock bounded statistically only at $<1.6\times10^8$, the zero rests on geometry (IP $\ge 12.6$\,m). & \est\\
+\midrule
+EM debris (shield end) & -- & enters as accidental hits: signal loss $6.4\,\% \to 7.5\,\%$. & \est\\
+\bottomrule
+\end{tabularx}\\[2pt]
+{\footnotesize Sources: \path{docs/STATUS.md} (sections 2026-11-09 evening, 2026-11-10 event store, night runs),
+\path{docs/neutrinos_2026.md}, \path{ISSUES.txt} D2, D3, D7, D14.}
+\end{table}
+
+\paragraph{Messages.}
+\begin{enumerate}
+\item \textbf{The MS7 $K_L$ dominates by $\times30$} over the next source. Production in the iron is validated by
+natural Geant4 (Sec.~\ref{sec:ms7}) and the $K^0_S$/$\Lambda$ yields of the Geant4 generator agree with
+$\gamma p$ data at $W\simeq6$\,GeV within $\sim6\,\%$, while Pythia~6 is $\times1.9$ high. What is \emph{not}
+understood is why FairShip sees zero MS7 $K^0$-decay tracks where the chain expects 7.9 entries ($P=4\times10^{-4}$).
+The number rests on 13 MC events after the selection: a $K_L$-enriched generation is needed.
+\item \textbf{Muon DIS in the helium is not small} (correction of 10 Nov): 472 after the veto, a side-entry coverage
+gap of the straw design.
+\item \textbf{Neutrinos} with the 2026 flux and GENIE v2: $\sim2.5$ per 15\,y in total (vessel 1.5 + MS7 1.0, Geant4
+downstream), irreducible for an upstream veto; a lateral-track veto could remove up to 77\,\% of the helium ones (D2).
+\item \textbf{Combinatorial} pairs: 0.014 on the Nov-4 inputs vs 51 on dataset c for the same design. Explained by a
+$\times3$--4 harder near-axis source tail in dataset c (rate $\propto$ square); which tail is right is open (D5).
+\item \textbf{Cavern rock} adds 8$\times$ the combinatorial candidates but nothing after the veto.
+\end{enumerate}
+
+\note{\textbf{What is solid:} neutrino flux (validated vs GSimple 2026 and SHiP 2025 SND rates), K$_L$ production in the
+MS7 iron (natural Geant4), V0 multiplicities vs data at $W\simeq6$\,GeV, forced-decay tables (PDG).
+\textbf{What is not:} the FairShip MS7 gap (D3), the muon source tail (D5, enters the combinatorial as a square),
+the 13-MC-event MS7 selected number, the helium coverage gap, the rock zero (geometric argument).}

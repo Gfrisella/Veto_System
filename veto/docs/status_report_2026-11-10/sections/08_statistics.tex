@@ -1,0 +1,29 @@
+\section{Statistics and rare corners}
+
+\begin{table}[h]
+\centering\small
+\caption{Is the statistics enough for a 15-year design number (\texttt{D6\_straw\_mod})?
+\src{docs/STATUS.md (2026-11-10 day)}}
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+Source & State\\
+\midrule
+MS7 $K_L$ & lacking: 13 MC events selected, $\sim10^3$ per MC event $\Rightarrow$ $K_L$-enriched generation needed\\
+vessel walls & lacking: 22 per MC event (cheap to fix)\\
+helium & OK now ($\times20$ later)\\
+neutrinos & sufficient\\
+combinatorial & limited by the muon production (spills), not by transport; enough for the budget\\
+cavern rock & $\sim7\times10^7$ per MC event: bound only by geometry\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{itemize}
+\item Rare corners: step 1 = worst-case bounds from the stores per region of the interaction point
+(\path{bin/coverage_bound.py}: MC count, selected / loose, $2.3\times$ mean-weight limit where none is selected).
+First version, running. Later, where a corner is not bounded: splitting / weight windows in the shield transport,
+forced neutral chains for rock and walls.
+\item Storage: event stores 71\,GB, shell seeds 106\,GB, Nov-4 pool 145\,GB, dataset c 60\,GB, MS7 parents 10.8\,GB.
+\item Tail extension (not run): \texttt{tail\_produce --mode complete} with a high threshold, $\sim$1--2 days + 1--5\,k
+core-h; first decide which source tail is right (D5).
+\end{itemize}

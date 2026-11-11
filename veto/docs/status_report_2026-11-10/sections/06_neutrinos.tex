@@ -1,0 +1,37 @@
+\section{Neutrinos}
+
+\paragraph{Flux.} New production with the 2026 target (\texttt{nu\_prod.sbatch}): per proton $\nu_\mu$
+$5.50\times10^{-3}$ ($2.2\times10^{11}$/spill), $\bar\nu_\mu$ $3.94\times10^{-3}$, $\nu_e$ $5.55\times10^{-4}$ (46\,\%
+charm), $\bar\nu_e$ $5.29\times10^{-4}$, $\nu_\tau$/$\bar\nu_\tau$ $3.9\times10^{-5}$ each. Validated \solid: $\nu_\mu$
+within 1--4\,\% of the GSimple 2026 flux; folded on a 3\,t W block it gives the SHiP 2025 SND CC rates
+\cite{ship2025} within 20--30\,\% per flavour. The 2018 flux was $\times2$--2.7 low ($\nu$ kept only with a stored
+sister muon $>15$\,GeV, no $E<10$\,GeV, no $\nu_e$/$\nu_\tau$). \src{docs/neutrinos_2026.md}
+
+\paragraph{Interactions.} GENIE 3.06.02 library v2 (6 flavours $\times$ 15 nuclei incl.\ Fe56 and concrete).
+
+\begin{table}[h]
+\centering\small
+\caption{\texttt{D6\_straw\_mod}, per 15 years. Straight lines after the vertex vs Geant4 downstream.
+\src{docs/neutrinos_2026.md, docs/STATUS.md (2026-11-10 night)}}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+ & interactions & selected & after veto b (straight) & after veto b (G4)\\
+\midrule
+$\nu_\mu$ & $8.5\times10^4$ & 1.25 & 1.02 & 0.42 + 0.06\\
+$\bar\nu_\mu$ & $3.2\times10^4$ & 0.57 & 0.51 & 0.16 + 0.10\\
+$\nu_e$ & $2.6\times10^4$ & 1.57 & 1.37 & 0.59 + 0.02\\
+$\bar\nu_e$ & $1.2\times10^4$ & 0.43 & 0.39 & 0.15 + 0.03\\
+$\nu_\tau+\bar\nu_\tau$ & $2.8\times10^3$ & 0.05 & 0.04 & 0.01\\
+\textbf{vessel total} & $1.58\times10^5$ & 3.9 & 3.3 & \textbf{1.5}\\
+MS7 iron (last 50\,cm) & $2.0\times10^7$ & 3.9 & 2.4 & \textbf{1.0}\\
+\bottomrule
+\end{tabular}\\[2pt]
+{\footnotesize G4 column: helium + walls. MS7 with the event store: 2.2 (straight).}
+\end{table}
+
+\begin{itemize}
+\item All vessel survivors but $\sim0.07$ are in the helium: irreducible for an upstream veto. 77\,\% of the selected
+helium events send a charged particle or photon ($>0.1$\,GeV) through the side walls: a lateral veto could leave
+$\sim0.8$ (mostly $\bar\nu$ QE-like), before signal loss (D2, \open).
+\item Neutrinos in total: $\sim2.5$ per 15\,y (Geant4 downstream).
+\end{itemize}

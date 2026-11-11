@@ -1,0 +1,28 @@
+\section{Open issues and next steps}
+
+From the issue review of 9 Nov 2026 (action list at the top of \path{ISSUES.txt}) plus D16 (10 Nov). Re-runs need
+approval.
+
+\begin{enumerate}
+\item \textbf{D5} source tail: momentum convention ($\times0.905$) and tail angles ($\times0.56$) documented; enriched
+sample kept as is, $+40\,\%$ source systematic on the SST1-selected rate. Decide which tail is right (also drives the
+combinatorial $\times140$).
+\item \textbf{D3} MS7 $K_L$ vs FairShip (priority A): chain default Geant4; small FairShip run on lxplus with our MS7
+parents (like-for-like $K_L$ count at the iron exit and at SST1); D4: cut chords at the muon range.
+\item \textbf{D16 / D9} V0: MS7 chain on the V0-stable library ($K_S$/$\Lambda$ $3\times$ low now); V0 tally in
+\texttt{cpp/g4shield} (creator, vertex, fate: primary vs shower, total made); low-$W$ data check; add
+$K_L\to\pi^+\pi^-$, $\gamma\gamma$ to the forced-decay table; multi-vertex rejection in the DIS$\times\mu$ pairs.
+\item Code before the re-runs: D12 (\texttt{debris\_maps.py} $\to$ cross-check), C7 (forced $K_L$ decays in fastveto),
+C1 (ghost hits), B4 (EventCalc re-import, benchmark set in the objective), A2 (bounce parameters free), D15 (import
+retry + chunk check), D14 debris in time.
+\item Neutrinos: 2026 flux adopted (done); D2 lateral-track veto with the signal loss.
+\item Re-run batch in the FairShip layout at $4\times10^{13}$: stores / maps / inputs (C8, D8 Mylar), \texttt{run\_reco}
+with both IP cuts, muon interactions with air margin, forced cavern Geant4, extra seeds (C5, A2), cross-run closure
+(A1), EM debris (B2), DIS$\times\mu$ pairs (D9); B1 multiple-scattering check.
+\item Statistics: $K_L$-enriched MS7 generation; more wall draws; coverage bounds (Sec.~8).
+\item Tracking: ACTS (FairShip pixi 26.10, PR \#1545) resolution into \texttt{reco.measure}.
+\item After the first optimum: FairShip validation of the optimised design (C3).
+\end{enumerate}
+
+\note{Questions to the detector colleagues: \path{docs/detector_questions.md}. Decided / closed: flat spill (A5),
+cosmics ignored, $+x$ cavern wall not needed, parked shield muons accepted.}

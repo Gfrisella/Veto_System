@@ -28,6 +28,7 @@ Action list, in order (re-runs need approval, see the end):
   7. side branches: D6 energy rescaling (veto-d6-energy-rescale); D2 lateral-track veto study with the signal loss;
           C9 MuonsAndMatter categorize_muons patch.
   8. after the first optimum: C3 FairShip validation of the optimised design.
+  10 Nov: D16 V0 production vs data (Geant4 agrees, Pythia x1.9): V0 tally in g4shield, MS7 chain on the V0-stable library.
   Questions to the detector colleagues (C2, C6): docs/detector_questions.md. Decided / closed: A5 flat spill, cosmics
   ignored, +x cavern wall not needed, parked shield muons accepted.
 
@@ -681,6 +682,9 @@ D9. DIS x mu pairs not redone with the V0-stable library
     9 Nov 2026, Guglielmo: redo on the V0-stable sample in the re-run batch, AND reject a combination when it has more
       than one vertex in the same time window (several tracks pointing to one vertex are fine; two vertices in the
       same window are rare and are not a signal topology).
+    10 Nov 2026: the PR #15 MS7 runs (g4v112, Geant4 default) still use the default library; see D16 a.
+    10 Nov 2026: V0-stable chain run (D16 a): K_S / Lambda vertices add nothing to the selected MS7 background (< 1e5
+      / 15 y before the IP cut); the DIS x mu combinatorial part of D9 stays open.
 
 D10. Geant4 built-in neutrino physics unusable
     STATUS: DONE
@@ -802,3 +806,43 @@ D15. CVMFS library loading under load (shield_dis / shield_natural workers)
     88 MB) and are restarted; all 2e6 interactions came back, but a silent loss is possible.
     Guglielmo (9 Nov): import retried with backoff and logged once per worker; at the end assert that every chunk came
     back (fail loudly otherwise); workers capped at ~48.
+
+D16. V0 production in the MS7 muon chain: checked against data (10 Nov 2026, branch veto-v0-production)
+    STATUS: IN PROGRESS (PRIORITY B)
+    Analysis: bin/v0_production.py (existing files only) -> docs/v0_production.md (figures docs/figures/v0_production/).
+    Found (per spill at 4e13): made at the vertex (Geant4 muonNuclear, V0-stable library, PR #15 vertex spectrum)
+      K_L 7.9e3, K_S 7.8e3, Lambda 5.4e3, anti-Lambda 260 (~1 % per interaction, median W 1.3 GeV); at the exit plane
+      K_L 3.1e3 (2.9e3 with p > 1 GeV), of which ~20-35 % made by secondaries of the shower in the iron; 1540 decay in
+      the vessel (0.49 of the exit K_L) = the 2.33e10 / 15 y of PR #15.
+      Data at W = 6.2 GeV (gamma p 20 GeV, SLAC SHF): K0_S 0.082 +- 0.003 vs Geant4 0.087 vs Pythia 6 0.153; Lambda 0.049
+      +- 0.002 vs 0.051 vs 0.090. Geant4 within ~6 %, Pythia 6 x1.9 high.
+    Issues found:
+      a. The PR #15 MS7 runs (shield_muon_g4v112_*) still use mu_library_iron.npz: K_S / Lambda decayed at the vertex
+         (D9), so K_S / Lambda at the exit (473 / 262 per spill) are cascade-only, low by ~x3.
+      b. No record of the V0 made inside the iron by the shower (secondaries) nor of the absorbed ones: g4shield only
+         writes the exit plane. The 20-35 % secondary share is an estimate (absorption length assumed 17-22 cm).
+      c. Low W (1.6 - 3 GeV), where most Geant4 events are, not compared with data yet.
+      d. fastveto KL_CHANNELS lack K_L -> pi+ pi- (BR 2.0e-3, a 2-track vertex: ~5e7 / 15 y in the vessel) and
+         K_L -> gamma gamma (C7).
+      e. Geant4 eta' (331) left undecayed in the library (8.8e-3 per event): minor.
+    10 Nov 2026 (Guglielmo approved 1-3 + the pi pi channel; done, docs/v0_production.md slides 4-6):
+      a. V0-stable chain run (Geant4 11.4.2 pixi, bin/g4pixi.sh; 2e6, seed 402) vs default (seed 401) vs PR #15 (11.2):
+         11.4 = 11.2 within 1-3 % for K_L. K_S / Lambda at exit x3.3 / x3.7, vessel decays K_S 51, Lambda 22, anti-L 11
+         per spill (default 6 / 0.7 / 0.9), but they decay right behind the window (median z 31.25 m): 0 of 18 250 K_S /
+         8 385 Lambda copies pass all-but-IP -> < 1e5 / 15 y each (90 % CL) vs K_L 1.7e7. MS7 V0 background stays K_L.
+      b. V0 tally (cpp/g4shield v0_tally, shield_dis --v0-tally, bin/v0_fate.py): per spill 1.5e4 K_L made (7.8e3 vertex
+         + 7.6e3 shower), K_S 1.5e4, Lambda 1.1e4; exit K_L 3.2e3 = 63 % vertex + 37 % shower; vertex K_L above cut
+         32 % survive the iron. Shower V0 from pi+- (45 %), K+ (20 %), K_L (19 %), K_S (11 %) inelastic.
+      c. Low W (bin/v0_lowW.py, data/reference/lowW_strangeness_photoproduction.json): Geant4 >= x2 low at W < 2.2 GeV
+         (below the exclusive K Y channels), >= x2.5-3 at 2.5-3 GeV (SLAC visible-decay limit); Pythia 6 x3-5 high.
+         Only 7.6 % of the relevant K_L (T > 0.5 GeV) come from W < 3.5 GeV -> +8-15 %. W 3.5-5 GeV (14 %) unchecked.
+      d. K_L -> pi+ pi- (1.967e-3) added to KL_CHANNELS (lib/fastveto/decay.py; evstore picks it up).
+      4 (explained to Guglielmo, not applied): Pythia spread one-sided, data-based band ~ +20 % on the MS7 K_L, pending OK.
+    STATUS of D16: a-d DONE; open: W 3.5-5 GeV, eta', K_L tail statistics.
+    Next steps (re-runs need approval):
+      1. MS7 chain on mu_library_iron_v0stable.npz (with D9 in the re-run batch).
+      2. V0 tally in cpp/g4shield: every K_L / K_S / Lambda created in the iron (creator process, vertex, p, fate:
+         decayed / absorbed / exit) -> primary vs secondary, total made; small run (1e5 interactions).
+      3. Low-W check: exclusive gamma p -> K+ Lambda / K+ Sigma0 / K0 Sigma+ (CLAS, SAPHIR) and gamma A -> K0 X; A-dependence.
+      4. D3: treat the Pythia 6 spread as one-sided (data favour Geant4).
+      5. Add K_L -> pi+ pi- and gamma gamma to KL_CHANNELS (with C7).

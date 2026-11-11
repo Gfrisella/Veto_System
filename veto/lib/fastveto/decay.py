@@ -148,7 +148,8 @@ def decay_all(ev, pdg, p, v, rng, max_rounds=4, stable=()):
 
 # K_L (stable in decay_all, as in Pythia's defaults): main channels, PDG 2024 (Ke3, Kmu3 split by charge)
 KL_CHANNELS = {130: [(0.2028, (211, 11, -12)), (0.2028, (-211, -11, 12)), (0.1352, (211, 13, -14)),
-                     (0.1352, (-211, -13, 14)), (0.1952, (111, 111, 111)), (0.1254, (211, -211, 111))]}
+                     (0.1352, (-211, -13, 14)), (0.1952, (111, 111, 111)), (0.1254, (211, -211, 111)),
+                     (0.001967, (211, -211))]}   # CP-violating K_L -> pi+ pi- (PDG 1.967e-3; ISSUES D16, 2026-11-10)
 
 
 def force_decay(ev, pdg, p, v, rng):

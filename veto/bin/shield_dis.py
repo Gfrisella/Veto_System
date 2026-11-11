@@ -219,12 +219,14 @@ def draw(kind, par, n, rng, per_track=False, mu_lib=None, mu_split=None):
 
 # ------------------------------------------------------------------ 3. Geant4 transport
 _G4 = None
+_TALLY = False
 
 
-def _worker_init(seed, natural=None):
+def _worker_init(seed, natural=None, tally=False):
     import os
-    global _G4
+    global _G4, _TALLY
     _G4 = si.init_g4shield(seed=seed * 1000003 + os.getpid(), natural=natural)   # a different stream in every worker
+    _TALLY = tally
 
 
 def _transport_chunk(args):
@@ -232,10 +234,18 @@ def _transport_chunk(args):
     r = _G4.transport(off, pdg, p[:, 0], p[:, 1], p[:, 2], v[:, 0], v[:, 1], v[:, 2])
     r = {k: np.asarray(x) for k, x in r.items()}
     r["ev"] = r["ev"] + ev0
+    if _TALLY:                                   # D16: every V0 made in the iron (cpp/g4shield v0_tally)
+        t = _G4.v0_tally()
+        names = list(t.pop("processes"))
+        t = {k: np.asarray(x) for k, x in t.items()}
+        t["ev"] = t["ev"] + ev0
+        for k, none in (("creator", "primary"), ("end_process", "below_cut")):   # indices -> names (per worker)
+            t[k] = np.array([names[i] if i >= 0 else none for i in t[k]], dtype=object)
+        r["_v0"] = t
     return r
 
 
-def transport(part, n_inter, workers, chunk=2000, seed=1, natural=None):
+def transport(part, n_inter, workers, chunk=2000, seed=1, natural=None, tally=False):
     """Every final state through the iron with Geant4, in chunks of interactions over forked workers."""
     starts = np.searchsorted(part["int"], np.arange(n_inter + 1))
     jobs = []
@@ -246,14 +256,20 @@ def transport(part, n_inter, workers, chunk=2000, seed=1, natural=None):
                      part["p"][a:b, :3].astype(np.float64), part["v"][a:b].astype(np.float64)))
     ctx = mp.get_context("spawn")
     res = []
-    with ctx.Pool(workers, initializer=_worker_init, initargs=(seed, natural)) as pool:
+    with ctx.Pool(workers, initializer=_worker_init, initargs=(seed, natural, tally)) as pool:
         for i, r in enumerate(pool.imap_unordered(_transport_chunk, jobs)):
             res.append(r)
             if (i + 1) % max(1, len(jobs) // 20) == 0:
                 print(f"  transport {i + 1}/{len(jobs)} chunks", flush=True)
+    v0 = [r.pop("_v0") for r in res] if tally else None
     out = {k: np.concatenate([r[k] for r in res]) for k in res[0]}
     order = np.argsort(out["ev"], kind="stable")
-    return {k: v[order] for k, v in out.items()}
+    out = {k: v[order] for k, v in out.items()}
+    if tally:
+        t = {k: np.concatenate([x[k] for x in v0]) for k in v0[0]}
+        o = np.argsort(t["ev"], kind="stable")
+        out["_v0"] = {k: v[o] for k, v in t.items()}
+    return out
 
 
 # ------------------------------------------------------------------ 4. forced decays in the vessel
@@ -344,7 +360,14 @@ def generate(a):
     summ["mu_split"] = a.mu_split or MU_SPLIT
     print(f"  {summ['interactions_per_spill']:.4g} interactions per spill ({summ['interactions_15y']:.4g} in 15 years); "
           f"{len(part['pdg']):,} final-state particles, {time.time() - t0:.0f} s", flush=True)
-    g = transport(part, len(inter["weight"]), a.workers, a.chunk, a.seed)
+    g = transport(part, len(inter["weight"]), a.workers, a.chunk, a.seed, tally=a.v0_tally)
+    if a.v0_tally:
+        OUT.mkdir(parents=True, exist_ok=True)
+        t = g.pop("_v0")
+        tout = OUT / f"shield_{a.kind}{a.tag}_v0tally.npz"
+        np.savez(tout, **{k: (v.astype(str) if v.dtype == object else v) for k, v in t.items()},
+                 int_weight=inter["weight"], int_z=inter["z"], int_E=inter["E"])
+        print(f"  V0 tally: {len(t['pdg']):,} V0 created -> {tout}", flush=True)
     plane = plane_particles(g)
     plane["primary"] = g["primary"].astype(bool)
     print(f"  Geant4: {len(plane['pdg']):,} particles at z = {si.Z_PLANE:.2f} m, {time.time() - t0:.0f} s", flush=True)
@@ -385,6 +408,8 @@ def main():
     g.add_argument("--prepared", default=None, help=f"muons through the iron from prepare (default {PREPARED})")
     g.add_argument("--nu-lib", default=None, help=f"neutrino library (default {NU_LIB})")
     g.add_argument("--nu-stores", default=None, help=f"neutrino flux store prefix, <prefix>_nu<pdg> (default {NU_STORE_PREFIX})")
+    g.add_argument("--v0-tally", action="store_true", help="record every V0 created in the iron (cpp/g4shield v0_tally, "
+                   "D16) -> shield_<kind><tag>_v0tally.npz")
     g.add_argument("--v0-copies", type=int, default=1, help="forced vessel decays per V0 at the plane (weight / copies)")
     g.add_argument("--mu-lib", help="muon DIS library (default data/interactions/dis/mu_library_iron.npz; "
                    "mu_library_iron_v0stable.npz keeps K_S, Lambda for Geant4 to transport and decay)")

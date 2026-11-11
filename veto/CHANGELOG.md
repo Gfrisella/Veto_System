@@ -4,6 +4,32 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-10 — V0 tally in g4shield, V0-stable MS7 chain, low-W data, K_L -> pi+ pi- (branch `veto-v0-production`)
+
+- `cpp/g4shield.cc`: `v0_tally()` (every K_L / K_S / Lambda / Xi0 created: creator process, vertex, p, fate below cut /
+  decayed / absorbed / exit); additive, the transport output is unchanged. `bin/shield_dis.py generate --v0-tally`
+  (-> shield_<kind><tag>_v0tally.npz). `lib/veto/shield_iron.py`: `G4SHIELD_BUILD` overrides the module path.
+- `bin/g4pixi.sh`: Geant4 11.4.2 from the FairShip pixi env 26.10 (CVMFS), build + run without the container.
+- `bin/v0_fate.py` (tally analysis), `bin/v0_lowW.py` + `data/reference/lowW_strangeness_photoproduction.json`
+  (SAPHIR / CLAS / ABBHHM / SLAC, sigma_tot), `bin/shield_ip_tail.py` split by V0 species.
+- `lib/fastveto/decay.py`: K_L -> pi+ pi- (1.967e-3) in KL_CHANNELS.
+- Runs: results/shield_dis/shield_muon_g4v114_{default_s401,v0stable_s402}(.npz, _v0tally.npz). Results:
+  docs/v0_production.md slides 4-6, ISSUES D16.
+
+## 2026-11-10 — status-quo report (branch `veto-v0-production`)
+
+- New `docs/status_report_2026-11-10/`: Overleaf-ready LaTeX article (main.tex, sections/, refs.bib, figures/, logos/,
+  README.md), 9 pages: background budget for D6_straw_mod per source, setup, combinatorial, muon DIS, MS7 K_L incl. the
+  V0-vs-data check, neutrinos, rock / EM debris, statistics, open issues. Numbers from docs only, nothing re-run.
+
+## 2026-11-10 — V0 production in the MS7 muon DIS chain vs data (branch `veto-v0-production`, base 4904c4f)
+
+- New `bin/v0_production.py` (host python, existing files only): every V0 made at the MS7 vertex (V0-stable library
+  folded with the PR #15 vertex-energy spectrum), V0 vs W against gamma p 20 GeV (SLAC SHF) and NOMAD yields, V0 at the
+  exit plane vs vertex depth. Results in `results/v0_production/README.md`: Geant4 K0_S / Lambda at W ~ 6 GeV within
+  ~6 % of the gamma p data, Pythia 6 ~x1.9 high; per spill 7.9e3 K_L, 7.8e3 K_S, 5.4e3 Lambda made, 2.9e3 K_L at the
+  exit (21-37 % of them made by the shower in the iron); write-up docs/v0_production.md.
+
 ## 2026-11-10 — event store, MS7 on the Nov-4 muons with Geant4, debris and event viewers (branch `veto-neutrino-2026`)
 
 - `lib/veto/evstore.py`: design-independent event stores, events + track trees (parent links, end reasons, times) from each
