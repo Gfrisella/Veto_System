@@ -795,7 +795,7 @@ D13. Protons per spill: one convention
     15-year totals agree; per-spill rates differ by 0.8.
 
 D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_inventory.md, moved here 9 Nov 2026)
-    STATUS: OPEN (PRIORITY C unless noted)
+    STATUS: DECIDED (11 Nov 2026): debris in time (shield-end first) + ACTS parametrisation, both on Slurm
     9 Nov 2026 (Shah Rukh): neutrino DIS in the vessel with the 2026 flux + GENIE v2, D6_straw_mod, per 15 y:
       interactions helium 2.9e4, air 6.6e4, wall 5.8e4, planes 5.8e3; after selection + veto 3.3 (nu_e 1.37, nu_mu 1.02,
       anti-nu_mu 0.51, anti-nu_e 0.39, nu_tau 0.04), all but ~0.07 in helium; air / wall < 0.1 - 0.2 per flavour.

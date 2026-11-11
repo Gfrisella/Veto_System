@@ -782,3 +782,14 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   (D8, D15, D9, C1 pending; then C7, A2, D12, B4, D4, C9). C5 store rebuild from 3220 spills: coordinate the new store
   name with Shah Rukh (his plan uses the 300-seed store).
 
+## 2026-11-11 (Guglielmo) issue review complete
+- Every item of ISSUES.txt now has a decision (dated 11 Nov notes): D8, D15, D9, C1, C7, A2, D12 (closed), B4, D4, C9,
+  D2, D6, D7, D14; earlier today C5, D3 (minor), D16.4, B2 (closed), D5 (closed), D17 (done).
+- Code to write (no runs): D15 parent-loaded Geant4 + count check; D8 pvc -> wall; C1 analytic ghosts; D9 DIS x mu class
+  in evstore_eval (bound first); C7 bound; A2 slope scan + bounded genome; B4 EventCalc dcdcfc1 re-import, equal-weight
+  set in the objective; D4 range cut; C9 MuonsAndMatter categorize_muons patch (Guglielmo reviews); D2 self-veto study;
+  D6 libraries 0.5/1 - 400 GeV in 5 % + rescaling (branch veto-d6-energy-rescale); D14 shield-end debris in time + ACTS
+  parametrisation (Slurm arrays, Guglielmo submits).
+- Pending: approval of the re-run batch (step 5 of the action list), the C5 store rebuild (3220 spills; name to agree with
+  Shah Rukh), the 5 questions of docs/plan_evolution_sbt_shieldend.md.
+
