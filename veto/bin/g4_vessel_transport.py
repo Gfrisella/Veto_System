@@ -91,11 +91,14 @@ def main():
     print(f"{n_code:,} interactions with codes {args.codes}, {len(sel):,} pre-selected for Geant4", flush=True)
     jobs = [sel[i:i + args.chunk] for i in range(0, len(sel), args.chunk)]
     res = []
+    G.module()                                   # ISSUES D15: Geant4 libraries loaded once here, inherited by the forks
     with mp.get_context("fork").Pool(args.workers, initializer=_init, initargs=(args.seed, part)) as pool:
         for i, r in enumerate(pool.imap_unordered(_run, jobs)):
             res.append(r)
             if (i + 1) % max(1, len(jobs) // 20) == 0:
                 print(f"  {i + 1}/{len(jobs)} chunks, {time.time() - t0:.0f} s", flush=True)
+    if len(res) != len(jobs):                    # ISSUES D15: never a silent loss
+        raise RuntimeError(f"g4_vessel_transport: {len(res)} of {len(jobs)} chunks came back")
     keys = ("inter", "row", "plane", "pdg", "track", "x", "y", "px", "py", "pz", "t")
     out = {k: np.concatenate([r[k] for r in res]) if res else np.zeros(0) for k in keys}
     order = np.lexsort((out["track"], out["inter"])) if len(out["inter"]) else np.zeros(0, int)

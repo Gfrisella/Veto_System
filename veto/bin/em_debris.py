@@ -47,10 +47,20 @@ def _run(job):
 
 
 def pool_run(init, seed, jobs, workers, extra=None):
+    """ISSUES D15: the Geant4 module of this stage is imported here (libraries loaded once) and the workers are FORKED
+    (they inherit it; each initialises its own run manager and seed); every job must come back."""
+    jobs = list(jobs)
+    if init is _init_shield:
+        si.g4shield_module()
+    else:
+        from veto import g4vessel
+        g4vessel.module()
     res = []
-    with mp.get_context("spawn").Pool(workers, initializer=init, initargs=(seed, extra)) as pool:
+    with mp.get_context("fork").Pool(workers, initializer=init, initargs=(seed, extra)) as pool:
         for r in pool.imap_unordered(_run, jobs):
             res.append(r)
+    if len(res) != len(jobs):
+        raise RuntimeError(f"em_debris: {len(res)} of {len(jobs)} Geant4 jobs came back")
     return {k: np.concatenate([r[k] for r in res]) for k in res[0]} if res else {}
 
 

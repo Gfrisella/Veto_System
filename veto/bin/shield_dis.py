@@ -235,6 +235,7 @@ def _transport_chunk(args):
     r = _G4.transport(off, pdg, p[:, 0], p[:, 1], p[:, 2], v[:, 0], v[:, 1], v[:, 2])
     r = {k: np.asarray(x) for k, x in r.items()}
     r["ev"] = r["ev"] + ev0
+    r["_e0"] = np.int64(ev0)                     # ISSUES D15: which chunk this is (completeness check in transport)
     if _TALLY:                                   # D16: every V0 made in the iron (cpp/g4shield v0_tally)
         t = _G4.v0_tally()
         names = list(t.pop("processes"))
@@ -255,13 +256,27 @@ def transport(part, n_inter, workers, chunk=2000, seed=1, natural=None, tally=Fa
         a, b = starts[e0], starts[e1]
         jobs.append((e0, (starts[e0:e1 + 1] - a).astype(np.int64), part["pdg"][a:b].astype(np.int32),
                      part["p"][a:b, :3].astype(np.float64), part["v"][a:b].astype(np.float64)))
-    ctx = mp.get_context("spawn")
+    # ISSUES D15: load the Geant4 libraries once here and FORK the workers (they inherit them; each still initialises its
+    # own run manager with its own seed in _worker_init). VETO_G4_SPAWN=1: the old spawn pool (every worker imports).
+    import os
+    spawn = os.environ.get("VETO_G4_SPAWN") == "1"
+    if not spawn:
+        si.g4shield_module(natural)
+    ctx = mp.get_context("spawn" if spawn else "fork")
     res = []
     with ctx.Pool(workers, initializer=_worker_init, initargs=(seed, natural, tally)) as pool:
         for i, r in enumerate(pool.imap_unordered(_transport_chunk, jobs)):
             res.append(r)
             if (i + 1) % max(1, len(jobs) // 20) == 0:
                 print(f"  transport {i + 1}/{len(jobs)} chunks", flush=True)
+    # ISSUES D15: every chunk must come back, and every interaction of it (fail loudly, never a silent loss)
+    got = sorted(int(r["_e0"]) for r in res)
+    want = [j[0] for j in jobs]
+    if got != sorted(want):
+        missing = sorted(set(want) - set(got))
+        raise RuntimeError(f"Geant4 transport: {len(res)} of {len(jobs)} chunks came back; missing chunk starts {missing[:10]}")
+    for r in res:
+        r.pop("_e0")
     v0 = [r.pop("_v0") for r in res] if tally else None
     out = {k: np.concatenate([r[k] for r in res]) for k in res[0]}
     order = np.argsort(out["ev"], kind="stable")
