@@ -4,6 +4,14 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-11 — merge of main (PR #16) into `veto-nov4-source`; charge fix completed
+- Merged origin/main 34cb244 (PR #16: charge-sign fix, rare corners, neutral hadrons in the helium, evolution / SBT plan).
+  Only conflict: docs/STATUS.md (both appended): both kept, Shah Rukh's rare-corner bullets back under 2026-11-10 (day).
+- `bin/rock_combinatorial.py` cross_pairs: opposite-charge test on charges (muon_types.charge_from_pdg_column on both sides);
+  before, store muons (+-1) vs rock tracks (-13 q) kept the same-sign pairs (ISSUES D17 b).
+- `paths.RECO_INPUTS` = inputs_nov4_q.npz (charge-fixed pair inputs from PR #16); results/reco copy replaced (data, not in git).
+- ISSUES D17 -> DONE with the PR #16 numbers.
+
 ## 2026-11-11 — Nov-4 production as the muon source for everything (branch `veto-nov4-source`, base 4904c4f + V0 commit 48a0f36)
 - Guglielmo's decision (ISSUES D5, 11 Nov): every study uses the Nov-4 complete target production; older sources on request only.
 - `lib/veto/paths.py`: `MUON_DATASET` (design-optimization-dataset-nov4-shell-300seeds-2026-11-10), `RECO_INPUTS` (inputs_nov4.npz),

@@ -836,7 +836,7 @@ D15. CVMFS library loading under load (shield_dis / shield_natural workers)
     back (fail loudly otherwise); workers capped at ~48.
 
 D17. Muon charge flipped: the stores' "pdg" column is the charge sign (+1 = mu+), the code reads it as a PDG id
-    STATUS: OPEN (PRIORITY A, found 11 Nov 2026 by Guglielmo; solution to decide)
+    STATUS: DONE (11 Nov 2026: fixed in PR #16 (61aebc1) + mu x rock pairing on veto-nov4-source; old D9 numbers void)
     Every muon store (alpha, gamma, delta, c, Nov-4) writes pdg = sign(charge) (bin/generate_muon_study.py:541,
     shell_to_store, make_design_dataset: "muon charge sign"): +1 = mu+. Checked on the Nov-4 store against the source
     h5 (real PDG; pi+ / K+ parents give -13): 500 000 rows, store +1 <-> source -13 (mu+) 274 161, store -1 <-> +13
@@ -858,6 +858,17 @@ D17. Muon charge flipped: the stores' "pdg" column is the charge sign (+1 = mu+)
     Not affected: mu x mu pairs of one store (both flipped: product unchanged); the muon types in the stores (the
       transport classifies with -13 x charge = real PDG); the MS7 chain and the EM debris (cpu_transport q = pdg / -13,
       shield_dis / em_debris use -13 q: correct); signal (EventCalc real PDG); neutrino stores (separate path, to check).
+    11 Nov 2026: FIXED in PR #16 (Shah Rukh, 61aebc1, merged in main): muon_types.charge_from_pdg_column (+-13 PDG id, +-1
+      charge sign) in every reader of a + c (muon_types, muon_types_torch, selection, make_reco_inputs, make_crossrun_pairs,
+      rock_combinatorial timing, visualize_full_dataset, sst1_bounce_categories, fastveto.dis scattered muon); stores keep
+      +-1 with pdg_convention in the metadata (no PDG rewrite: one documented convention); regression check
+      bin/check_charge_convention.py. Reruns on Nov-4, D6_straw_mod, per 15 y: pair candidates 5 739 -> 6 005 / spill,
+      combinatorial 0.014 -> 0.0038 (debris 0.0028 -> 0.0031), helium mu DIS after veto 472 -> 520, walls 44 -> 22,
+      signal lost (debris) 7.46 -> 7.30 %. New: inputs_nov4_q.npz (paths.RECO_INPUTS), evstore vessel_mu_nov4q_D6_straw_mod.
+      b was left in PR #16: rock_combinatorial cross_pairs compared the muons' +-1 with the rock tracks' -13 q -> fixed on
+      veto-nov4-source (both sides through charge_from_pdg_column; old test kept exactly the same-sign pairs). "mu x rock"
+      numbers before this fix are same-sign pairs: rerun. The out-of-repo Presentation_Combinatorial/scripts/dis_comb_pairs*.py
+      (old D9 class A, 3.8e4 / spill) have the same inversion: those numbers are void; D9 is redone in the re-run batch.
 
 D16. V0 production in the MS7 muon chain: checked against data (10 Nov 2026, branch veto-v0-production)
     STATUS: IN PROGRESS (PRIORITY B)

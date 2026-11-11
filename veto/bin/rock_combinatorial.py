@@ -76,7 +76,8 @@ def cross_pairs(A, B, dev, block, same=False):
     def tens(d):
         return (torch.as_tensor(np.stack([d["bx"], d["by"], d["bz"]], 1), device=dev),
                 torch.as_tensor(np.stack([d["bpx"], d["bpy"], d["bpz"]], 1), device=dev),
-                torch.as_tensor(d["pdg"], device=dev), torch.as_tensor(d["draw"], device=dev))
+                torch.as_tensor(mt.charge_from_pdg_column(d["pdg"]), device=dev),   # charges: muons +-1 (charge sign),
+                torch.as_tensor(d["draw"], device=dev))                            # rock tracks +-13 (PDG) -> ISSUES D17
     rA, pA, qA, dA = tens(A)
     rB, pB, qB, dB = tens(B)
     nA, nB = len(rA), len(rB)

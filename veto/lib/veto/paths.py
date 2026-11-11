@@ -76,7 +76,8 @@ NU_FLAVOURS = (12, -12, 14, -14, 16, -16)
 NU_PROD_RAW = SQ / "nu_prod" / "tail"             # raw neutrino production
 GENIE_APPLY_DIR = SQ_VETO / "data" / "interactions" / "genie"   # GENIE interactions in the vessel, apply2026_<design>_nu<pdg>.npz
 EVSTORE_DIR = Path(os.environ.get("VETO_EVSTORE", SQ / "evstore"))   # downstream event stores, one subdirectory per process
-RECO_INPUTS = "inputs_nov4.npz"                   # results/reco pair inputs built from MUON_DATASET
+RECO_INPUTS = "inputs_nov4_q.npz"                 # results/reco pair inputs from MUON_DATASET, charge-sign fix (PR #16;
+                                                  # inputs_nov4.npz was built with the flipped charge, ISSUES D17)
 RATE_MAPS = "sample_nov4.npz"                     # results/design_explorer rate maps built from MUON_DATASET
 
 

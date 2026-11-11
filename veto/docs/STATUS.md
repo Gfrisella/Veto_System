@@ -773,3 +773,12 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
 - Regression check bin/check_charge_convention.py (helper, seed rows vs the source pool by pool_index, stores by the side
   each charge leaves on): Nov-4 seed_0 239 470 rows 0 mismatches; Nov-4, c, gamma stores OK. Convention now also in the
   metadata of new seed files and stores (pdg_convention).
+
+## 2026-11-11 (Guglielmo) merge of PR #16 into veto-nov4-source
+- origin/main (PR #16) merged; overlap with our work = the charge fix (our ISSUES D17, found in parallel): theirs kept.
+  Completed on our side: rock_combinatorial "mu x rock" opposite-charge test (was same-sign), paths.RECO_INPUTS ->
+  inputs_nov4_q.npz. Old D9 (dis_comb_pairs*, out of repo) numbers void (same inversion).
+- Still to decide with Guglielmo: the 5 questions of docs/plan_evolution_sbt_shieldend.md; issue review continues
+  (D8, D15, D9, C1 pending; then C7, A2, D12, B4, D4, C9). C5 store rebuild from 3220 spills: coordinate the new store
+  name with Shah Rukh (his plan uses the 300-seed store).
+
