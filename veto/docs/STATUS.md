@@ -690,3 +690,51 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   ~7e7 per MC event: statistically only < 1.6e8; it rests on geometry (a vertex must point back within 0.1 m). Running.
   Later steps if a corner is not bounded: splitting / weight windows in the shield transport (splitting_proto exists on
   lhcb_data), forced neutral chains for rock and walls.
+- Rare-corner bounds, results (D6_straw_mod, per 15 y, /disk/lhcb_data/sqasim/coverage/*.json; selection = pre-veto):
+  - Muon flux around the vessel (shell_hist, 3 220 spills): every side cell < 82 m has >= 635 MC muons; the 8 empty cap
+    cells are outside the ellipse. Rock patches from the muons (rockflux): every reachable patch has muons, an empty one
+    < 0.02 interactions. -> the flux has no holes; the weak points are draws and responses.
+  - Helium: 279 / 800 regions with a selected event, joint limit of the rest 2.9, IP-extrapolated share 125 (vs 1.78e3
+    observed). OK. Vessel walls: 12 / 384 regions (13 MC), IP-extrapolated share of the empty ones ~200 vs 286 observed:
+    under-sampled. MS7 K_L (redecay100): 9 / 73 regions, empty ones ~0.9e4 by IP -> MS7 1.4-2.3e4.
+  - Air, plane interactions: large statistical limits (1e2-1e6) but bounded by physics (products enter through the SBT;
+    plane interactions vetoed by the parent's hit).
+  - Rock: the "0" is geometric. K_L the draws make (631 with p > 2 GeV, wall z 55-75 m) are >= 134 mrad off any
+    target-pointing line; the visible pair of K_L -> pi l nu with both tracks > 1 GeV turns by <= ~120 mrad: closed.
+    Geometry map (no data): the window is OPEN from the floor (44-90 mrad up to z ~ 70 m) and the wall upstream of
+    z ~ 52 m, for K_L of 2-6 GeV, where the draws have almost nothing (floor 25.6k draws, 3 K_L).
+    Synthetic K_L there (klmap --window, 2.0e6 aimed into the pointing window, real selection): IP < 1 m 17 MC,
+    < 0.25 m 1, < 0.1 m 0; per K_L into the vessel P(IP < 1 m) ~ 1.6e-6 (floor z 30, x 0) falling to ~5e-8 at z 50.
+    Folded (K_L p > 2 GeV yield 2.9e-4 per interaction, ~0.5 into the vessel, floor interactions z 30-60 m 6.5e11 with
+    exits, spectrum factor 2, IP^2 below 1 m): floor ~0.25 per 15 y (0.1-3 with linear IP scaling), upstream wall ~0.1;
+    before the veto, and the veto sees nothing for a K_L-only event. Needs a targeted run to become a number.
+  - GAP: neutrons (and K_L hadronic interactions) from the rock interacting in the helium are in no chain: the rock store
+    propagates neutrals straight, no Geant4 downstream for rock. (MS7 / vessel stores have it via g4_vessel_transport.)
+- Hole 2, neutral hadrons interacting in the helium (new: cpp/g4hadlib, bin/neutral_library.py -> /disk/lhcb_data/sqasim/
+  neutral_lib/neutral_he.npz, 3 species x 24 E x 20k, lambda_I(n-He) 3.7-4.1 km; bin/evstore_neutral.py, code 7):
+  rock store 5.4e8 interactions / 15 y in the helium (5 524 n, 30 nbar, 236 K_L roots > 2 GeV), 289k copies: 0 selected,
+  0 all-but-IP (soft: median 2.6 GeV; the 2.5k copies with 2 tracks in SST1 have vertices at z 77-81 m).
+- Hole 1, targeted rock draws (rock_apply --region corner: floor z < 70 m, wall z < 52 m; 1.71 M draws, floor 317k = x12):
+  K_L > 2 GeV 3-4e-5 per interaction (x10 below the wall-z60 assumption), none from the floor heads to the vessel; with
+  klmap: floor < 0.02 / 15 y (<= 0.2 with linear IP scaling), upstream wall ~0.002. Neutrals in the helium from the corner
+  9.6e6 / 15 y, 0 selected, 0 all-but-IP. CLOSED.
+- Neutron map (klmap --species 2112 --window, 3.3e6 synthetic n, library interactions): 0 selected, IP < 1 m 14 MC, < 0.25 m
+  1. P(IP < 1 m | interaction) 8e-6 (floor z 30) ... 5e-7 (wall z 55), 0 at z >= 60 (where most rock neutrons come from).
+  Folded: 5.4e8 x <= 5e-7 x 1/100 (IP^2 to 0.1 m) x 0.02 (real spectrum: 99 % < 4.9 GeV; two tracks > 1 GeV need ~5 GeV+)
+  -> rock neutrons ~0.05 per 15 y (0.01-0.5); 2.7 if the spectrum softness is ignored (upper end). No veto for these.
+
+## 2026-11-11 Muon charge-sign fix
+- BUG: every stored muon dataset (alpha .. nov4, sst1/ubt_TRY6) has pdg = charge sign (+1 = mu+; generate_muon_study writes
+  sign(charge); verified on Nov-4 seed_0 against the pool by pool_index: all +1 rows are -13, and in every store -1 sits at
+  +x, +1 at -x). muon_types.muon_charge, muon_types_torch, selection, make_reco_inputs, make_crossrun_pairs, rock_combinatorial,
+  visualize_full_dataset, sst1_bounce_categories read it as PDG (q = -sign) and fastveto.dis gave the scattered muon the
+  opposite charge -> timing acceptance with the wrong bending, wrong scattered-muon charge. Fix: muon_types.charge_from_pdg_column
+  (+-13 PDG, +-1 charge sign) everywhere. Not affected: rock_apply, em_debris, shield_dis / MS7 (true q), neutrinos, cuda-muons.
+- Rerun on Nov-4, D6_straw_mod (evstore/fixq.sh, logs/q_*.log), old -> new:
+  pair candidates 5 739 -> 6 005 / spill; combinatorial 0.014 +- 0.010 -> 0.0038 +- 0.0009 (with debris 0.0028 -> 0.0031);
+  signal lost 6.37 -> 6.36 % (debris 7.46 -> 7.30 %); muon DIS helium selected 1.82e3 -> 1.73e3, after veto 472 -> 520,
+  truth 673 -> 657; walls after veto 44 -> 22 (8 MC selected: statistics). New store evstore/vessel_mu_nov4q_D6_straw_mod,
+  inputs results/reco/inputs_nov4_q.npz, reco_nov4q_D6_straw_mod(_em).json. Older datasets: same bug, rerun if reused.
+- Regression check bin/check_charge_convention.py (helper, seed rows vs the source pool by pool_index, stores by the side
+  each charge leaves on): Nov-4 seed_0 239 470 rows 0 mismatches; Nov-4, c, gamma stores OK. Convention now also in the
+  metadata of new seed files and stores (pdg_convention).

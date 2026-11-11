@@ -542,6 +542,7 @@ def main():
             rows["evt_n"] = sim.pool_index[rows["evt_n"]].astype(np.int64)
         del cols
         meta = dict(seed=seed, rank=rank, budget=args.budget, min_seeds=args.min_seeds, rates=RATES.tolist(),
+                    pdg_convention="charge sign: +1 = mu+, -1 = mu- (read with muon_types.charge_from_pdg_column)",
                     n_input=int(len(typ)), params=args.params, mm_dir=args.mm_dir, input=sim.input_file, planes=PLANES,
                     types=mt.TYPES, created=time.strftime("%Y-%m-%d %H:%M:%S"),
                     settings="TRY6, diluted iron, NI from B, cavern, field simulated, n_steps 5000, every muon to every plane",

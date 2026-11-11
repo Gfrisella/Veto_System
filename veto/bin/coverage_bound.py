@@ -20,6 +20,16 @@ whether a patch without draws is empty or under-drawn. shell: the analog muon co
     python3 bin/coverage_bound.py store <store dir> --kind vessel|ms7|rock [--design ...] [--out f.json]
     python3 bin/coverage_bound.py rockflux <seed dir> --library rock_library.npz --seeds 300
     python3 bin/coverage_bound.py shell <seed dir> [--seeds N]
+    python3 bin/coverage_bound.py rockforce <rock store> [--n 100]
+    python3 bin/coverage_bound.py klmap - [--n 20000]
+klmap: synthetic K_L from a grid of points on the floor and the upstream wall (where the geometry leaves a pointing window),
+aimed at uniform points of the vessel, p log-uniform 2-20 GeV, decayed inside the vessel (weight P(decay inside)), real
+selection: P(selected | K_L from that point heading into the vessel) per p bin, and all-but-IP. Folded with the rock K_L
+yield and interaction rates elsewhere (docs/STATUS.md).
+rockforce: the forced chain for the rock neutrals: every K_L / K_S / Lambda / Xi0 root with p > 2 GeV whose line crosses the
+vessel and passes within 2 m of the SST1 window is decayed --n times inside the vessel (truncated exponential along its line,
+weight x P(decay inside) / n) and its products alone go through the real selection (the rest of the event is dropped: it
+could only add tracks / veto hits, so this is conservative). Prints selected, loose and the IP tail per face and species.
 """
 import _bootstrap  # noqa: F401
 import argparse
@@ -243,14 +253,200 @@ def shell(a):
     return dict(seeds=S, counts=cnt.tolist(), sumw=sw.tolist(), names=[str(n) for n in names])
 
 
+def rockforce(a):
+    from fastveto import decay as dc
+    from veto import reco
+    from veto import vertex_selection as vsel
+    from evstore_eval import ip_tail
+    t0 = time.time()
+    rng = np.random.default_rng(17)
+    meta, ev, tr = es.read(a.dir)
+    evrow = {int(e): i for i, e in enumerate(ev["event"])}
+    pdg = np.asarray(tr["pdg"]).astype(np.int64)
+    p = np.stack([tr["px"], tr["py"], tr["pz"]], 1).astype(float)
+    pm = np.linalg.norm(p, axis=1)
+    c = np.nonzero((tr["parent"] < 0) & np.isin(pdg, list(NEUTRAL_DECAY)) & (pm > 2) & (p[:, 2] > 0))[0]
+    u = p[c] / pm[c, None]
+    x0 = np.stack([tr["x0"][c], tr["y0"][c], tr["z0"][c]], 1).astype(float)
+    zs = np.arange(G.Z_VESSEL_MIN + 0.05, G.Z_VESSEL_MAX, 0.1)
+    ell = (zs[None] - x0[:, 2:3]) / u[:, 2:3]
+    X = x0[:, 0:1] + u[:, 0:1] * ell; Y = x0[:, 1:2] + u[:, 1:2] * ell
+    ins = (ell > 0) & G.inside_vessel(X, Y, np.broadcast_to(zs[None], X.shape))
+    has = ins.any(1)
+    l_in = np.where(has, np.where(ins, ell, np.inf).min(1), 0); l_out = np.where(has, np.where(ins, ell, -np.inf).max(1), 0)
+    xs = x0[:, 0] + u[:, 0] * (G.Z_SST1 - x0[:, 2]) / u[:, 2]; ys = x0[:, 1] + u[:, 1] * (G.Z_SST1 - x0[:, 2]) / u[:, 2]
+    pre = has & (np.abs(xs) < G.SST1_HALF_X + 2) & (np.abs(ys) < G.SST1_HALF_Y + 2)
+    # geometry: smallest angle (over its points in the vessel) between the root's line and the line to the target, vs the
+    # largest kick of the visible pair (missing neutrino, p*_max 0.229 GeV for K_L -> pi l nu; 2-body decays: none)
+    D = np.stack([X, Y, np.broadcast_to(zs[None], X.shape) - G.Z_TARGET], -1)
+    ang = np.arccos(np.clip((D * u[:, None, :]).sum(-1) / np.linalg.norm(D, axis=-1), -1, 1))
+    amin = np.where(ins, ang, np.inf).min(1)
+    kick = np.where(np.isin(pdg[c], (130,)), 0.229, 0.0) / (pm[c] - 0.229) + 0.005
+    wr = np.asarray(ev["weight"], float)[[evrow[int(e)] for e in tr["event"][c]]]
+    for name, m in (("all crossing the vessel", has), ("toward SST1", pre)):
+        if m.any():
+            ok = m & (amin < kick)
+            print(f"  geometry, {name}: {m.sum():,} roots, smallest angle to the target line min / median "
+                  f"{amin[m].min() * 1e3:.0f} / {np.median(amin[m]) * 1e3:.0f} mrad; within the kick: {ok.sum()} roots "
+                  f"({(wr * ok).sum() * SPILLS_15Y:.3g} / 15 y before the decay probability)", flush=True)
+    c, u, x0, l_in, l_out = c[pre], u[pre], x0[pre], l_in[pre], l_out[pre]
+    erow = np.array([evrow[int(e)] for e in tr["event"][c]])
+    code = np.asarray(ev["code"])[erow]
+    w = np.asarray(ev["weight"], float)[erow]
+    q = pdg[c]
+    mass = np.array([dc.MASS[abs(int(k))] for k in q]); lam = pm[c] / mass * np.array([NEUTRAL_DECAY[int(k)] for k in q])
+    e1, e2 = np.exp(-l_in / lam), np.exp(-l_out / lam)
+    print(f"{len(c):,} neutral roots (p > 2 GeV) crossing the vessel toward SST1 (+2 m); expected decays inside "
+          f"{(w * (e1 - e2)).sum() * SPILLS_15Y:.3g} / 15 y ({time.time() - t0:.0f} s)", flush=True)
+    n = a.n
+    rep = np.repeat(np.arange(len(c)), n)
+    d = -lam[rep] * np.log(e1[rep] - rng.random(len(rep)) * (e1[rep] - e2[rep]))
+    vdec = x0[rep] + u[rep] * d[:, None]
+    pp = p[c][rep]
+    p4 = np.concatenate([pp, np.sqrt((pp ** 2).sum(1) + mass[rep] ** 2)[:, None]], 1)
+    ev_d, pdg_d, p_d, _ = dc.force_decay(np.arange(len(rep)), q[rep], p4, vdec, rng)
+    t = es.propagate(ev_d, pdg_d, vdec[ev_d], p_d[:, :3], np.zeros(len(ev_d)), rng)
+    E = dict(event=np.arange(len(rep)), weight=w[rep] * (e1 - e2)[rep] / n, code=code[rep], parent_row=rep,
+             x=vdec[:, 0], y=vdec[:, 1], z=vdec[:, 2])
+    inter, part = es.to_fastveto(E, t)
+    cfg = reco.RecoConfig(seed=1, multiple_scattering=True, ip_max=vsel.IP_CUTS["full"])
+    trk = ix.charged_tracks(part)
+    s, _, _ = ix.select(trk, len(rep), cfg=cfg)
+    sel = np.zeros(len(rep), bool); sel[s] = True
+    w15 = inter["weight"] * SPILLS_15Y
+    res = {}
+    for cd in (5, 6):
+        for sp in sorted(set(np.abs(q).tolist())):
+            m = (inter["code"] == cd) & (np.abs(q[rep]) == sp)
+            if not m.any():
+                continue
+            sub = {k: v[m] for k, v in inter.items()}
+            idx = np.nonzero(m)[0]; remap = np.full(len(rep), -1); remap[idx] = np.arange(len(idx))
+            pk = np.isin(part["int"], idx)
+            subp = {k: v[pk] for k, v in part.items()}; subp["int"] = remap[subp["int"]]
+            tail = ip_tail(sub, subp, cfg)
+            key = f"{ix.CODE_NAMES[cd]} {sp}"
+            res[key] = dict(decays15=float(w15[m].sum()), selected15=float(w15[m & sel].sum()), n_selected=int((m & sel).sum()),
+                            roots=int(len(np.unique(rep[m]))), ip_tail={str(k): v for k, v in tail.items()})
+            print(f"  {key:<16} roots {res[key]['roots']:>7,}  decays in vessel {res[key]['decays15']:9.3g} / 15 y  selected "
+                  f"{res[key]['selected15']:9.3g} ({res[key]['n_selected']})  all but IP: " +
+                  ", ".join(f"IP<{k}: {v[0]:.3g} ({v[1]})" for k, v in tail.items()), flush=True)
+    print(f"({time.time() - t0:.0f} s)")
+    return res
+
+
+def klmap(a):
+    from fastveto import decay as dc
+    from veto import reco
+    from veto import vertex_selection as vsel
+    from evstore_eval import ip_tail
+    rng = np.random.default_rng(23)
+    cfg = reco.RecoConfig(seed=1, multiple_scattering=True, ip_max=vsel.IP_CUTS["full"])
+    neutron = a.species != 130
+    if neutron:                       # interactions in the helium from the library (bin/evstore_neutral.py)
+        from evstore_neutral import Library, MASS as NMASS
+        from fastveto.dis import rotate_to
+        nlib = Library(a.library)
+    src = [("floor", x, G.CAVERN_Y_FLOOR, z) for z in (30, 40, 50, 60, 70) for x in (-2.0, 0.0, 2.0)] + \
+          [("wall", G.CAVERN_X_WALL, y, z) for z in ((30, 40, 50, 55, 60, 65, 70) if neutron else (30, 40, 50))
+           for y in (-1.5, 0.0, 1.5)]
+    kick = 0.6 if neutron else 0.229
+    pb = np.array([2, 3, 4, 6, 10, 20.0])
+    out = []
+    m_kl = dc.MASS[130]
+    for name, sx, sy, sz in src:
+        n = a.n
+        R = np.array([sx, sy, sz], float)
+        # proposals (uniform aim into the vessel, p log-uniform 2-20 GeV); --window keeps only those that can point back:
+        # angle to the target line at the aimed point < 0.229 / (p - 0.229) + 5 mrad (+20 mrad margin for the line's other
+        # points); f_acc = kept / proposed scales the result back to 'per K_L into the vessel'
+        nprop = n * (a.window_factor if a.window else 1)
+        zt = rng.uniform(max(sz, G.Z_VESSEL_MIN), G.Z_VESSEL_MAX, nprop)
+        hx, hy = G.vessel_half_widths(zt, clip=True)
+        tgt = np.stack([rng.uniform(-1, 1, nprop) * hx, rng.uniform(-1, 1, nprop) * hy, zt], 1)
+        u = tgt - R; u /= np.linalg.norm(u, axis=1, keepdims=True)
+        pm = np.exp(rng.uniform(np.log(pb[0]), np.log(pb[-1]), nprop))
+        f_acc = 1.0
+        if a.window:
+            dT = tgt - np.array([0, 0, G.Z_TARGET]); dT /= np.linalg.norm(dT, axis=1, keepdims=True)
+            ang = np.arccos(np.clip((u * dT).sum(1), -1, 1))
+            keep = ang < kick / np.maximum(pm - kick, 1e-3) + 0.025
+            idx = np.nonzero(keep)[0][:n]
+            u, pm = u[idx], pm[idx]
+            f_acc = keep.sum() / nprop
+            print(f"    window: {keep.sum():,} of {nprop:,} proposals ({f_acc:.3g}), using {len(idx):,}", flush=True)
+        zs = np.arange(G.Z_VESSEL_MIN + 0.05, G.Z_VESSEL_MAX, 0.1)
+        ell = (zs[None] - sz) / u[:, 2:3]
+        X = sx + u[:, 0:1] * ell; Y = sy + u[:, 1:2] * ell
+        ins = (ell > 0) & G.inside_vessel(X, Y, np.broadcast_to(zs[None], X.shape))
+        ok = ins.any(1)
+        l_in = np.where(ins, ell, np.inf).min(1); l_out = np.where(ins, ell, -np.inf).max(1)
+        n_aim = len(pm)
+        u, pm, l_in, l_out = u[ok], pm[ok], l_in[ok], l_out[ok]
+        k = len(pm)
+        if not neutron:
+            lam = pm / m_kl * NEUTRAL_DECAY[130]
+            e1, e2 = np.exp(-l_in / lam), np.exp(-l_out / lam)
+            d = -lam * np.log(e1 - rng.random(k) * (e1 - e2))
+            vdec = R + u * d[:, None]
+            p3 = u * pm[:, None]
+            p4 = np.concatenate([p3, np.sqrt(pm ** 2 + m_kl ** 2)[:, None]], 1)
+            ev_d, pdg_d, p_d, _ = dc.force_decay(np.arange(k), np.full(k, 130), p4, vdec, rng)
+            p_d = p_d[:, :3]
+            wdec = e1 - e2
+        else:
+            En = np.sqrt(pm ** 2 + NMASS[a.species] ** 2)
+            wdec = nlib.sigma(a.species, En) * (l_out - l_in)                 # P(interaction inside), first order
+            d = l_in + rng.random(k) * (l_out - l_in)
+            vdec = R + u * d[:, None]
+            ie = nlib.ie(En)
+            pick = np.empty(k, np.int64)
+            for b_ in np.unique(ie):
+                m_ = ie == b_; cell = nlib.cells[(a.species, int(b_))]
+                pick[m_] = cell[rng.integers(0, len(cell), m_.sum())]
+            cnt = nlib.ev["n"][pick]; first = nlib.ev["first"][pick]
+            ev_d = np.repeat(np.arange(k), cnt)
+            rows = np.repeat(first, cnt) + (np.arange(cnt.sum()) - np.repeat(np.cumsum(cnt) - cnt, cnt))
+            sc = (pm / np.sqrt(nlib.E[ie] ** 2 - NMASS[a.species] ** 2))[ev_d]
+            pl = np.stack([nlib.x["px"][rows], nlib.x["py"][rows], nlib.x["pz"][rows]], 1) * sc[:, None]
+            p_d = rotate_to(pl, u[ev_d], rng.uniform(0, 2 * np.pi, k)[ev_d])
+            pdg_d = nlib.x["pdg"][rows].astype(np.int64)
+        t = es.propagate(ev_d, pdg_d, vdec[ev_d], p_d, np.zeros(len(ev_d)), rng)
+        E = dict(event=np.arange(k), weight=wdec / k, code=np.zeros(k, int), parent_row=np.arange(k),
+                 x=vdec[:, 0], y=vdec[:, 1], z=vdec[:, 2])
+        inter, part = es.to_fastveto(E, t)
+        trk = ix.charged_tracks(part)
+        sl, _, _ = ix.select(trk, k, cfg=cfg)
+        sel = np.zeros(k, bool); sel[sl] = True
+        lo, _, _ = ix.select(trk, k, cfg=None)
+        loose = np.zeros(k, bool); loose[lo] = True
+        ib = np.clip(np.digitize(pm, pb) - 1, 0, len(pb) - 2)
+        sc = f_acc / n_aim                                  # per K_L proposed (uniform aim into the vessel)
+        w_ip = wdec * sc
+        tail = ip_tail(dict(inter, weight=w_ip / SPILLS_15Y), part, cfg)
+        row = dict(surface=name, x=sx, y=sy, z=sz, n=k, f_window=float(f_acc), p_decay=float(wdec.mean()),
+                   p_sel=float((w_ip * sel).sum()), n_sel=int(sel.sum()), p_loose=float((w_ip * loose).sum()),
+                   ip_weighted={str(c): v[0] for c, v in tail.items()},
+                   n_loose=int(loose.sum()), ip_tail={str(c): v for c, v in ip_tail(inter, part, cfg).items()},
+                   p_sel_by_p=[float((wdec * sel * (ib == j)).sum() / max((ib == j).sum(), 1)) for j in range(len(pb) - 1)],
+                   n_sel_by_p=[int((sel & (ib == j)).sum()) for j in range(len(pb) - 1)])
+        out.append(row)
+        print(f"  {name:5} ({sx:+.1f}, {sy:+.1f}, {sz:.0f}): {k:,} K_L, P(decay inside) {row['p_decay']:.2f}, per K_L into the vessel: "
+              f"IP<1 {row['ip_weighted'].get('1.0', 0):.2e}, IP<0.25 {row['ip_weighted'].get('0.25', 0):.2e}; "
+              f"P(selected) {row['p_sel']:.2e} ({row['n_sel']}), all but IP {row['p_loose']:.2e} ({row['n_loose']}); IP<1 m "
+              f"{row['ip_tail']['1.0'][1]}, IP<0.25 {row['ip_tail']['0.25'][1]}; selected by p {row['n_sel_by_p']}", flush=True)
+    return dict(sources=out, p_bins=pb.tolist())
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("mode", choices=("store", "rockflux", "shell")); ap.add_argument("dir")
+    ap.add_argument("mode", choices=("store", "rockflux", "shell", "rockforce", "klmap")); ap.add_argument("dir")
     ap.add_argument("--kind", choices=("vessel", "ms7", "rock"), default="vessel")
     ap.add_argument("--library", default=None); ap.add_argument("--seeds", type=int, default=300)
-    ap.add_argument("--out", default=None)
+    ap.add_argument("--out", default=None); ap.add_argument("--n", type=int, default=100)
+    ap.add_argument("--species", type=int, default=130); ap.add_argument("--window", action="store_true"); ap.add_argument("--window-factor", type=int, default=50)
     a = ap.parse_args()
-    res = dict(store=store, rockflux=rockflux, shell=shell)[a.mode](a)
+    res = dict(store=store, rockflux=rockflux, shell=shell, rockforce=rockforce, klmap=klmap)[a.mode](a)
     if a.out:
         json.dump(res, open(a.out, "w"), indent=1, default=float)
         print(f"wrote {a.out}")

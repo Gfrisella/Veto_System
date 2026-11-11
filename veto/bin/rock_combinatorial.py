@@ -52,7 +52,7 @@ def muon_tracks(dataset, n_sample, seed=5):
     good = (p > 1) & (d["bpz"] > 0)
     g = np.nonzero(good)[0]
     good[g] = mt.timing_ok(np.stack([d["bx"][g], d["by"][g], d["bz"][g]], 1),
-                           np.stack([d["bpx"][g], d["bpy"][g], d["bpz"][g]], 1), -np.sign(d["pdg"][g]))
+                           np.stack([d["bpx"][g], d["bpy"][g], d["bpz"][g]], 1), mt.charge_from_pdg_column(d["pdg"][g]))
     d = {k: v[good] for k, v in d.items()}
     d["draw"] = np.full(len(d["ax"]), -1)
     return d

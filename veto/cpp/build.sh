@@ -9,4 +9,4 @@ mkdir -p build && cd build
 PYBIND11_DIR="${PYBIND11_DIR:-$(python3 -m pybind11 --cmakedir 2>/dev/null || echo "$(pwd)/../../external/pybind11_pkg/pybind11/share/cmake/pybind11")}"
 cmake -Dpybind11_DIR="$PYBIND11_DIR" -DPython_EXECUTABLE="$(which python3)" .. > cmake.log
 make -j"${JOBS:-16}" 2>&1 | grep -E "error|warning: unused|Built target" || true
-ls -la g4dis*.so g4shield*.so g4vessel*.so g4slab*.so g4rock*.so
+ls -la g4dis*.so g4shield*.so g4vessel*.so g4slab*.so g4rock*.so g4hadlib*.so

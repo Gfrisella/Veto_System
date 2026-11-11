@@ -45,7 +45,8 @@ def main():
     per_type = {mt.TYPES[t]: dict(seeds=S, rows=int((cols["type"] == t).sum()), per_spill=float(cols["weight"][cols["type"] == t].sum()))
                 for t in mt.TYPES}
     meta = dict(source=a.dir, seeds=S, files=[f.split("/")[-1] for f in files], storage="shell", per_type=per_type,
-                pot_per_spill=4e13, seed_meta=meta0[:2000], weight="per spill: seed weight / seeds")
+                pot_per_spill=4e13, seed_meta=meta0[:2000], weight="per spill: seed weight / seeds",
+                pdg_convention="charge sign: +1 = mu+, -1 = mu- (read with muon_types.charge_from_pdg_column)")
     io.write_store(paths.store_dir(a.name), cols, meta)
     print(f"{len(cols['weight']):,} rows from {S} seeds, {cols['weight'].sum():.4g} muons / spill, {time.time() - t0:.0f} s")
 

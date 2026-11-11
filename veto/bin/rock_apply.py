@@ -138,6 +138,9 @@ def main():
     ap.add_argument("--em-out", default=None, help="also write every e+- / gamma leaving the rock (first --em-seeds seeds) here")
     ap.add_argument("--em-seeds", type=int, default=30)
     ap.add_argument("--store-out", default=None, help="every particle out of the rock for every draw (bin/evstore_build.py rock)")
+    ap.add_argument("--region", choices=("all", "corner"), default="all",
+                    help="corner: draw only in the floor upstream of z = 70 m and the wall upstream of z = 52 m, where a neutral can "
+                         "still point back to the target (docs/STATUS.md 2026-11-10); weights stay per spill of that region")
     a = ap.parse_args()
     em_rows = {k: [] for k in ("seed", "w", "surf", "vx", "vy", "vz", "pdg", "x", "y", "z", "px", "py", "pz", "ekin", "t")}
     n_em = 0
@@ -159,6 +162,9 @@ def main():
     for n, f in enumerate(files):
         d = np.load(f)
         r, P_e, u, wall, alpha, E0 = rock_entries(d)
+        if a.region == "corner":
+            m_ = np.where(wall, P_e[:, 2] < 52.0, P_e[:, 2] < 70.0)
+            r, P_e, u, wall, alpha, E0 = r[m_], P_e[m_], u[m_], wall[m_], alpha[m_], E0[m_]
         if not len(r):
             continue
         w = d["weight"][r].astype(np.float64)
