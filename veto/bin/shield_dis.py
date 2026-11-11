@@ -157,15 +157,23 @@ def parents(kind):
 
 
 # ------------------------------------------------------------------ 2. forced interactions
+E_MIN_INT = 0.5                  # GeV, lowest muon energy of the interaction library (and of the range cut, D4)
+
+
 def draw(kind, par, n, rng, per_track=False, mu_lib=None, mu_split=None):
     """N interactions among the parents, probability proportional to w P (each S / N); per_track: one interaction on
     every parent instead, weight w_i P_i (every track contributes once). Returns (inter, part, summary)."""
     from fastveto import dis, nudis
+    s_end = par["s_out"]
     if kind == "muon":
         lib = dis.MuonLibrary(str(mu_lib or MU_LIB), split=mu_split or MU_SPLIT)
-        E_mid = par["p"] - si.DEDX_MU * 0.5 * (par["s_in"] + par["s_out"])
-        sig = np.where(E_mid > 0.5, lib.sigma("iron", np.maximum(E_mid, 0.5)), 0.0)        # microbarn per nucleon
-        P = si.nucleons_per_m3() * sig * UB * par["L"]
+        # ISSUES D4 (11 Nov 2026): range cut. The chord ends where the muon has E_MIN_INT left (mean dE/dx from the
+        # iron start): stoppers no longer get the path they do not travel, and their sigma is taken on the real piece.
+        s_end = np.minimum(par["s_out"], np.maximum(par["s_in"], (par["p"] - E_MIN_INT) / si.DEDX_MU))
+        L_eff = s_end - par["s_in"]
+        E_mid = par["p"] - si.DEDX_MU * 0.5 * (par["s_in"] + s_end)
+        sig = np.where((L_eff > 0) & (E_mid > E_MIN_INT), lib.sigma("iron", np.maximum(E_mid, E_MIN_INT)), 0.0)  # ub / nucleon
+        P = si.nucleons_per_m3() * sig * UB * L_eff
         libs = {None: lib}                     # one library for mu+ and mu- (sign from the parent)
     else:
         libs = {fl: nudis.NuLibrary(str(NU_LIB), flavour=fl) for fl in np.unique(par["pdg"]).tolist()}
@@ -183,7 +191,7 @@ def draw(kind, par, n, rng, per_track=False, mu_lib=None, mu_split=None):
         cdf = np.cumsum(wP)
         idx = np.minimum(np.searchsorted(cdf, rng.random(n) * cdf[-1], side="right"), len(cdf) - 1)
         w_int = np.full(n, S / n)
-    s = rng.uniform(par["s_in"][idx], par["s_out"][idx])
+    s = rng.uniform(par["s_in"][idx], s_end[idx])                  # D4: muons only up to their range
     u = par["u"][idx]
     start = np.stack([par["x"][idx], par["y"][idx], par["z"][idx]], 1)
     if kind == "muon" and BEND_PARENT:
@@ -193,7 +201,7 @@ def draw(kind, par, n, rng, per_track=False, mu_lib=None, mu_split=None):
     else:
         vtx = start + u * s[:, None]
     E = par["p"][idx] - (si.DEDX_MU * s if kind == "muon" else 0.0)
-    ok = E > 0.5
+    ok = E > E_MIN_INT
     inter = dict(parent_row=idx, evt_n=par["evt_n"][idx], pdg_parent=par["pdg"][idx], code=np.full(n, CODE_SHIELD, np.int8),
                  x=vtx[:, 0], y=vtx[:, 1], z=vtx[:, 2], E=E, ux=u[:, 0], uy=u[:, 1], uz=u[:, 2],
                  weight=np.where(ok, w_int, 0.0), p_int=P[idx], w_parent=par["weight"][idx], muon=np.full(n, -1, np.int64), type=np.zeros(n, np.int8))
