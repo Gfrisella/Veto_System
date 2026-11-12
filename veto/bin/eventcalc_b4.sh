@@ -29,5 +29,6 @@ mkdir -p "$R/logs"
 )
 echo "$(date '+%F %T') B4: 4 benchmarks regenerated with dcdcfc1 (bin/eventcalc_b4.sh, Veto_System)" >> "$R/README.md"
 cd "$VETO"
-python3 bin/import_eventcalc.py --src "$R/EventCalc_run/outputs" --out "$VETO/data/signal/eventcalc_dcdcfc1" --vessel-z0-eventcalc 32.4768
-echo "imported -> $VETO/data/signal/eventcalc_dcdcfc1 (use VETO_SIGNAL_STORE=$VETO/data/signal/eventcalc_dcdcfc1)"
+OUT=${VETO_SIGNAL_OUT:-$VETO/data/signal/eventcalc_dcdcfc1}
+python3 bin/import_eventcalc.py --src "$R/EventCalc_run/outputs" --out "$OUT" --vessel-z0-eventcalc 32.4768
+echo "imported -> $OUT (use VETO_SIGNAL_STORE=$OUT)"
