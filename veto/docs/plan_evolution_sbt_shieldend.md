@@ -107,3 +107,24 @@ decide the comparison more than the compute.
    5.7 % random-hit probability per window. UBT in the report = our default (4 x 4 m^2 tiles < 200 ps + six 1 x 3 m^2 straw
    layers). Also in the report: SciFi + 1 cm scintillator pads in the 3 cm gaps of MS6 (an in-shield detector concept).
 5. **Signal model**: yes, the B4 benchmark set (regenerated 12 Nov).
+
+## SBT and UBT from the official reports (12 Nov 2026)
+Sources: SPSC-SR-370 (BDF/SHiP Annual Report 2025, sec. 3.3.3) and SPSC-SR-389 (Annual Report 2026, CERN-SPSC-2026-035,
+sec. 4.2.2, 4.2.3, 5.4), both in Study_on_Veto_System/Optimization_Veto_System/; FairShip 26.10 geometry.
+- **SBT** (SR-370): cells of AlMg4.5 (EN AW-5083) filled with liquid scintillator (LAB + 2 g/l PPO), 20 cm thick (for neutral
+  products of helium interactions), mirror-polished walls; 80 cm along the beam everywhere, up to 150 cm across (test cell
+  110 x 80 x 20 cm); 2 WOMs per cell, 40 SiPMs in 8 groups; time resolution ~1 ns; crossing point from the WOM light ratio,
+  time difference and SiPM groups. Containers from 6 m sheets with separation walls, on I-beams (aluminium preferred, SR-389).
+  SR-389: thresholds 30-90 MeV by region (FairShip reco 45 MeV per segment), FastIC+ readout, 200 ns ToT window, TRY2026 cell
+  rate 966 MHz raw / 27 MHz above 30 MeV, 5.7 % random-hit probability per window; ten rings; Run-4 partial scenarios (side
+  walls only, first six or last five rings). FairShip 26.10: 0.8 cm Al inner / outer walls, 1.5 cm Al ribs, cells 82 cm in z.
+- **UBT** (SR-389 4.2.2): tile plane covering at least the MS7 exit face, avoiding most swept-out muons (extent being optimised;
+  abstract: 4 x 4 m^2); 40 x 40 mm tiles (< 120 ps), 20 x 20 mm in the muon flames (90 ps); 99.9 %; max 2.5 MHz per 20 x 20 tile
+  (TRY2026; ours on Nov-4: 2.8 MHz); tagging window +-200 ps. Straws: VERTICAL, 1 m long, 5 mm, three sections over the
+  decay-volume aperture, upstream of the tile plane; 100 um, 100 kHz readout; "six 1 x 3 m^2 layers"; purpose includes
+  reconstructing a vertex in the last part of the muon shield and K_S / Lambda decays before the UBT.
+- **Differences to our model, to decide**: (1) tile window +-200 ps (ours: +-1.5 ns -> ~7.5x more random hits on the tile
+  planes); (2) straw views: SR-389 vertical only (ours: 0 / +-15 deg stereo, colleague's October numbers).
+- SR-389 5.4: combinatorial 9e10 pairs / 15 y -> 36 after the +-200 ps timing coincidence; upstream tagging must reject ~1e2
+  (inefficiency ~1e-2); Table 7 = our SST1 categories; a tile plane of the MS7 exit-face size tags essentially all straight
+  muons. Next in SR-389: machine learning to combine the subdetectors.
