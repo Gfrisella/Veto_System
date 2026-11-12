@@ -81,10 +81,10 @@ STAGES=${STAGES:-"S1 S3 S4 S4b S2 S5 S6 S7"}
 want() { [[ " $STAGES " == *" $1 "* ]]; }
 j1=${J_S1:-}; j3=${J_S3:-}; j4=${J_S4:-}; j4b=${J_S4b:-}; j2=${J_S2:-}; j5=${J_S5:-}; j6=${J_S6:-}
 want S1 && j1=$(sub S1_maps "")
-want S3 && j3=$(sub S3_ms7 "")
+want S3 && j3=$(sub S3_ms7 "" --mem=128G)          # 16 Geant4 workers peak at 103 GB (12 Nov)
 want S4 && j4=$(sub S4_inputs "$j1" --mem=200G)
 want S4b && j4b=$(sub S4b_xrun "$j4" --mem=128G)
-want S2 && j2=$(sub S2_em "$j4" --cpus-per-task=32)
+want S2 && j2=$(sub S2_em "$j4" --cpus-per-task=32 --mem=160G)
 want S5 && j5=$(sub S5_interact "$j4" --mem=128G)
 want S6 && j6=$(sub S6_stores "$j3 $j5" --mem=96G)
 want S7 && j7=$(sub S7_eval "$j2 $j4b $j6" --mem=128G)
