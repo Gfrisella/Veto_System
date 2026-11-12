@@ -812,3 +812,12 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
 - Running locally: A2 bounce scan (bin/scan_bounce.py, 3 designs). D9 local test was killed (memory): it is in S7 with a
   300k muon sample.
 
+## 2026-11-12 (later) Slurm / GPU access for Claude; jobs submitted
+- Access: Slurm commands and nvidia-smi run outside the sandbox (per-command approval); Slurm = CPU nodes only (no GRES):
+  partitions standard (128-core / 256 GB nodes, 1 day), long, verylong, express; hep has one usable node (30 cores). GPUs:
+  4 x L40S on farm-gpu3 only (shared) -> S4 / S4b (pairing) run there with bin/batch/run_local_gpu.sh.
+- Submitted: D6 libraries 2051954 (array 0-2, logs veto/logs/slurm/d6_*.log); A2 bounce scan 2051957 (current inputs
+  inputs_nov4_q, logs/slurm/a2_scan_0.log, -> results/reco/bounce_scan.json); re-run batch S1 maps 2051958, S3 MS7 chains
+  2051959 (logs results_rerun/batch/logs). Next: S4 / S4b on the GPU after S1, then
+  `STAGES="S2 S5 S6 S7" J_S3=2051959 bash bin/batch/submit_rerun.sh` (S2 / S5 wait for S4 done locally).
+
