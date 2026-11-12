@@ -821,3 +821,25 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   2051959 (logs results_rerun/batch/logs). Next: S4 / S4b on the GPU after S1, then
   `STAGES="S2 S5 S6 S7" J_S3=2051959 bash bin/batch/submit_rerun.sh` (S2 / S5 wait for S4 done locally).
 
+
+## 2026-11-12 afternoon — node overload fixed, R1/R2 first numbers, D6 comparison
+
+- **Overload (mail from the farm admin):** farm-wn81 at load 1314 on 80 cores. Cause: no thread limit; each of the 32 Pool
+  workers of `scan_bounce.py` opened one OpenBLAS thread per node core. Fix `bin/batch/env.sh` (47516d4): reads the job's
+  CMDFILE line; `--workers`/`--jobs` commands get 1 BLAS/OpenMP thread per process, others `SLURM_CPUS_PER_TASK`.
+  Same in `d6_libraries.sbatch` (027096c). Jobs 2051957, 2052184_0, 2051959_0 requeued.
+- **Memory:** S3 (16 Geant4 workers) peaks at 103 GB -> S3 resubmitted with 128G (job 2052621), S2 now 160G.
+  A2 scan needed 257 GB with 32 workers -> resubmitted with 12 workers / 128G (job 2052643).
+- **run_reco bug:** EventCalc signal had no `hits_per_event` (KeyError after the evaluation) -> fixed (3a096ca).
+- **R1 vs R2** (300-seed store, `inputs_nov4_q`, EventCalc B4 signal, MS; `results_test/reco/reco_R*.json`, job 2052622):
+
+  | design | bkg pairs 15 y (2.65 before) | signal loss | SST1 muons tagged (bounced) | Punzi | channels | cost / budget |
+  |---|---|---|---|---|---|---|
+  | R1 UBT only | 1.8e-3 | 0.48 % | 48 % (14 %) | 0.645 | 18 100 | 25 % |
+  | R2 SBT+UBT pointing | 3e-6 | 0.51 % | 70 % (57 %) | 0.662 | 31 764 | 84 % |
+  | R2 SBT any-hit, SR-389 rate | 0 | 15.3 % | 99 % (97 %) | 0.565 | 31 764 | 84 % |
+
+  Flame tiles (2x2 cm) peak at 2.78 MHz / tile, above the 2.5 MHz SR-389 limit.
+- **D6 compare** (`results/d6_compare_{iron,helium}.json`): 5 % grid cuts the energy mismatch from 5.8 % to 2.0 % rms; V0 and
+  charged yields per interaction agree with the old library within ~1.5 sigma in every energy bin; rescaling has no visible
+  effect. Neutrino library (task 2) failed: one GENIE gevgen (nu_mu, Na-23, 1 GeV) hung past the 1 h timeout.
