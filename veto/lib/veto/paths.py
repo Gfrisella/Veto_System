@@ -53,7 +53,7 @@ def ubt_raw_pickle() -> Path:
 
 def store_dir(name: str) -> Path:
     """Our own converted datasets (never inside Guglielmo's directories); the Nov-4 store is read where it lives."""
-    if name == MUON_DATASET and "VETO_STORE" not in os.environ:
+    if name == "design-optimization-dataset-nov4-shell-300seeds-2026-11-10" and "VETO_STORE" not in os.environ:
         return MUON_DATASET_DIR
     return Path(os.environ.get("VETO_STORE", PROJECT_DIR / "data" / "store")) / name
 
@@ -65,7 +65,7 @@ def store_dir(name: str) -> Path:
 # Locations as given by Guglielmo (2026-11-11); Shah Rukh's production on /disk/lhcb_data/sqasim.
 SQ = Path(os.environ.get("VETO_SQ_DATA", "/disk/lhcb_data/sqasim"))
 SQ_VETO = SQ / "workspace" / "uzh" / "Veto_System" / "veto"
-MUON_DATASET = "design-optimization-dataset-nov4-shell-300seeds-2026-11-10"
+MUON_DATASET = os.environ.get("VETO_MUON_DATASET", "design-optimization-dataset-nov4-shell-300seeds-2026-11-10")
 MUON_DATASET_DIR = SQ_VETO / "data" / "store" / MUON_DATASET   # design-optimisation store (300 shell seeds)
 # ISSUES C5 (11 Nov 2026): the same production from ALL 3220 train spills (bin/shell_to_store.py --stream, 7.70e8 rows,
 # 84 GB, our store dir). Becomes MUON_DATASET in the re-run batch, together with pair inputs rebuilt from it (the current
@@ -80,9 +80,9 @@ NU_FLAVOURS = (12, -12, 14, -14, 16, -16)
 NU_PROD_RAW = SQ / "nu_prod" / "tail"             # raw neutrino production
 GENIE_APPLY_DIR = SQ_VETO / "data" / "interactions" / "genie"   # GENIE interactions in the vessel, apply2026_<design>_nu<pdg>.npz
 EVSTORE_DIR = Path(os.environ.get("VETO_EVSTORE", SQ / "evstore"))   # downstream event stores, one subdirectory per process
-RECO_INPUTS = "inputs_nov4_q.npz"                 # results/reco pair inputs from MUON_DATASET, charge-sign fix (PR #16;
+RECO_INPUTS = os.environ.get("VETO_RECO_INPUTS", "inputs_nov4_q.npz")                 # results/reco pair inputs from MUON_DATASET, charge-sign fix (PR #16;
                                                   # inputs_nov4.npz was built with the flipped charge, ISSUES D17)
-RATE_MAPS = "sample_nov4.npz"                     # results/design_explorer rate maps built from MUON_DATASET
+RATE_MAPS = os.environ.get("VETO_RATE_MAPS", "sample_nov4.npz")                     # results/design_explorer rate maps built from MUON_DATASET
 
 
 def nov4_pool_pattern(part: str = "train") -> str:
