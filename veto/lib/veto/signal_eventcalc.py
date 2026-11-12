@@ -24,7 +24,9 @@ import numpy as np
 from . import paths
 from .io import open_store
 
-STORE = Path(os.environ.get("VETO_SIGNAL_STORE", paths.PROJECT_DIR / "data" / "signal" / "eventcalc"))
+_SIG = paths.PROJECT_DIR / "data" / "signal"
+STORE = Path(os.environ.get("VETO_SIGNAL_STORE", _SIG / "eventcalc_dcdcfc1" if (_SIG / "eventcalc_dcdcfc1").exists()
+                            else _SIG / "eventcalc"))   # B4 done 12 Nov 2026: the regenerated set is the default
 # ISSUES B4 (11 Nov 2026): the regenerated set (EventCalc dcdcfc1, decay volume = FairShip vessel, LLP from the target)
 # is imported to data/signal/eventcalc_dcdcfc1 by bin/eventcalc_b4.sh; set VETO_SIGNAL_STORE there (or move it here).
 
