@@ -174,12 +174,22 @@ class Design:
         return sum(p.n_cells for p in self.planes)
 
     @property
+    def sbt(self):
+        """SBT settings (veto.sbt.config) or None: the Surrounding Background Tagger of the design (12 Nov 2026)."""
+        from . import sbt
+        return sbt.config(self.raw)
+
+    @property
     def n_channels(self):
-        return sum(p.n_channels for p in self.planes)
+        from . import sbt
+        s = self.sbt
+        return sum(p.n_channels for p in self.planes) + (sbt.n_cells(s) * sbt.CHANNELS_PER_CELL if s else 0)
 
     @property
     def cost(self):
-        return sum(p.cost for p in self.planes)
+        from . import sbt
+        s = self.sbt
+        return sum(p.cost for p in self.planes) + (sbt.cost_kchf(s, s["budget_kchf"]) if s else 0.0)
 
     @property
     def rel_cost(self):

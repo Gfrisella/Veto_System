@@ -548,11 +548,19 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
     explained = np.bincount(q["track"][found], minlength=len(event)) >= cfg.min_planes
     vetoed = np.zeros(n_events, bool)
     vetoed[event[explained]] = True
+    sbt_cfg = getattr(design, "sbt", None)
+    n_sbt = 0
+    if sbt_cfg:                                  # Surrounding Background Tagger (veto.sbt, 12 Nov 2026): OR with the planes
+        from . import sbt
+        sb = sbt.tag(tr_true, meas, event, z_limit, sbt_cfg, cfg, rng, n_events, with_own_hits=with_own_hits)
+        n_sbt = int((sb["vetoed"] & ~vetoed).sum())
+        explained |= sb["explained"]
+        vetoed |= sb["vetoed"]
     timing["reconstruct"] = time.perf_counter() - t0
     by_plane = np.bincount(q["plane"][found], minlength=len(design.planes))
     out = dict(vetoed=vetoed, explained=explained, by_plane=by_plane, timing=timing,
                n_hits=len(hits["event"]), n_own=len(own["event"]), n_queries=len(q["event"]),
-               n_compared=n_compared)
+               n_compared=n_compared, sbt_only=n_sbt)
     if details:   # for visualisation: every hit (own ones first), query, match and measured track
         out.update(hits=hits, queries=q, found=found, hit_of_query=hit_of_query, meas=meas)
     return out
