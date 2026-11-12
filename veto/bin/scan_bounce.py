@@ -37,7 +37,7 @@ def job(arg):
     r = evaluate(d, _S["tr"], _S["inp"], cfg, _S["n_signal"], DEFAULT_CONFIG["time_window"], _S["signal"])
     s = objective.score(r, _S["stats"])
     return dict(design=name, technologies=r.get("technologies"), bounce_r_slope=slope, bounce_r0=r0,
-                bounced_vetoed=r["single"].get("sst1_bounced"), sst1_vetoed=r["single"].get("all SST1"),
+                bounced_vetoed=r["single"].get("SST1 bounced"), sst1_vetoed=r["single"].get("all SST1"),
                 signal_lost=s["confusion"]["signal"]["FP"], signal_lost_err=s["confusion"]["signal"]["FP_err"],
                 combinatorial_15y=s["bkg_events_15y"], reward=s["reward"], reward_err=s.get("reward_err"))
 
