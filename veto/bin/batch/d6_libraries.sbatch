@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=d6_libs
-#SBATCH --partition=hep
+#SBATCH --partition=standard
 #SBATCH --cpus-per-task=64
-#SBATCH --mem=160G
+#SBATCH --mem=120G
 #SBATCH --time=12:00:00
 #SBATCH --array=0-2
 # ISSUES D6 (approved 12 Nov 2026), branch veto-d6-energy-rescale: interaction libraries on the 400 GeV / 5 % grid.
