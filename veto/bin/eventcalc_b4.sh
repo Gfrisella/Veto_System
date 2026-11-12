@@ -20,13 +20,16 @@ grep -q "32.4768" -r . --include=*.py || { echo "EventCalc_run does not have the
 if [ -d outputs ] && [ ! -d outputs_vessel6p2 ]; then mv outputs outputs_vessel6p2; echo "4 Nov samples kept in outputs_vessel6p2"; fi
 mkdir -p "$R/logs"
 (
+  set +eu                                          # the LCG setup reads unset variables
   source /cvmfs/sft.cern.ch/lcg/views/LCG_106/x86_64-el9-gcc13-opt/setup.sh >/dev/null 2>&1
+  python3 -c 'import numba, pythia8' || { echo 'LCG_106 view not usable (numba / pythia8)'; exit 1; }
   python3 run_batch.py --llp HNL --mixing 0 1 0 --masses 1.0 --ctaus 100 --nevents $N --exhad off > "$R/logs/b4_HNL_mu.log" 2>&1 &
   python3 run_batch.py --llp Dark-photons --uncertainty central --dp-production combined --masses 0.9 --ctaus 100 --nevents $N --exhad off > "$R/logs/b4_DP.log" 2>&1 &
   python3 run_batch.py --llp Scalar-mixing --masses 2.0 --ctaus 100 --nevents $N --exhad off > "$R/logs/b4_S.log" 2>&1 &
   python3 run_batch.py --llp ALP-fermion --masses 1.0 --ctaus 100 --nevents $N --exhad off > "$R/logs/b4_ALPf.log" 2>&1 &
   wait
 )
+n=$(find "$R/EventCalc_run/outputs" -name "*_data.dat" 2>/dev/null | wc -l); [ "$n" -ge 4 ] || { echo "only $n output files: see $R/logs/b4_*.log"; exit 1; }
 echo "$(date '+%F %T') B4: 4 benchmarks regenerated with dcdcfc1 (bin/eventcalc_b4.sh, Veto_System)" >> "$R/README.md"
 cd "$VETO"
 OUT=${VETO_SIGNAL_OUT:-$VETO/data/signal/eventcalc_dcdcfc1}
