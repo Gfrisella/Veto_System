@@ -793,3 +793,22 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
 - Pending: approval of the re-run batch (step 5 of the action list), the C5 store rebuild (3220 spills; name to agree with
   Shah Rukh), the 5 questions of docs/plan_evolution_sbt_shieldend.md.
 
+## 2026-11-12 (Guglielmo) re-run batch prepared; B4 done; default UBT
+- B4 DONE: EventCalc benchmarks regenerated (dcdcfc1) and imported -> data/signal/eventcalc_dcdcfc1 (default signal store).
+- Default UBT (Guglielmo 11-12 Nov): straws (window size) at 30.73 m + tile plane 4 x 4 m at 31.13 m, 2 x 2 cm tiles in the
+  flames (1 <= |x| <= 2 m, |y| <= 0.6 m), 4 x 4 cm elsewhere, no fins at the entrance z ("ubt_layout": "legacy" = old).
+  Nov-4: 1.28e9 mu / spill on the tile plane (1e4 in the window), 4x4 regions <= 0.67 MHz / channel, flame edges up to
+  2.8 MHz per 2x2 tile (0.15 m^2 above 1 MHz). EM debris maps on the tile plane (+7 % hits).
+- Code for the batch: make_peak_maps from the store, build_dis_parent_store from one store, tile EM maps, air upstream of the
+  vessel as its own target group (code 8, run_interactions --air-upstream-draws), paths overrides VETO_MUON_DATASET /
+  VETO_RECO_INPUTS / VETO_RATE_MAPS.
+- RE-RUN BATCH (to submit by Guglielmo from farm-gpu3/4/5): `bash bin/batch/submit_rerun.sh` on branch veto-nov4-source
+  (DRY=1 to only write the command files). 7 stages as Slurm arrays with dependencies, outputs in veto/results_rerun/
+  (nothing old overwritten): S1 maps (3220-spill store), S3 MS7 V0-stable muon (10 x 2e6) + nu, S4 pair inputs (+ S4b
+  cross-run), S2 EM debris 2e6, S5 interactions per design, S6 event stores + forced K_L, S7 run_reco full / partial with
+  debris and the B4 signal, evstore_eval, DIS x mu, D2 self-veto, closure, rock x mu. Designs: D6_straw, D6_fiber, D6_tile2,
+  D6_straw_mod (env DESIGNS). Not tested on the farm yet: first jobs may need path / memory tuning.
+- D6 libraries: branch veto-d6-energy-rescale, `sbatch --output=<dir>/d6_%a.log bin/batch/d6_libraries.sbatch`.
+- Running locally: A2 bounce scan (bin/scan_bounce.py, 3 designs). D9 local test was killed (memory): it is in S7 with a
+  300k muon sample.
+

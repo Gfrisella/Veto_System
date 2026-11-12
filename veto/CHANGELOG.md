@@ -4,6 +4,13 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-12 — default UBT, batch code, re-run batch scripts (branch `veto-nov4-source`)
+- Default UBT layout 2026-11-11 (design.apply_ubt_layout, plane kind `tiles`, ubt_tiles.regions with 2x2 cm flame blocks),
+  tile rate map from the store (reco.tile_rate_map), tile EM maps (em_debris), straw-UBT material at its own z.
+- make_peak_maps from a store; build_dis_parent_store from one store; air_upstream target group (code 8); paths env overrides.
+- B4: bin/eventcalc_b4.sh fixed (LCG setup, checks) and run; signal_eventcalc default store eventcalc_dcdcfc1.
+- bin/batch/{env.sh, task.sbatch, submit_rerun.sh}: the re-run batch; scan_bounce fixes.
+
 ## 2026-11-11 (afternoon) — issue-review code (branch `veto-nov4-source`; D6 on `veto-d6-energy-rescale`)
 - C5: `bin/shell_to_store.py --stream` (column by column, memory-mapped; identical to the in-memory path on 20 seeds);
   store `design-optimization-dataset-nov4-shell-3220seeds-2026-11-11` built (7.70e8 rows, 84 GB, per-type rates = summary.txt),

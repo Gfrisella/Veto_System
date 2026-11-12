@@ -334,7 +334,7 @@ B3. Neutrino and muon deep inelastic scattering
       planes, MS7 shield chain, Geant4 transport of the products); open points are tracked in C7, C8 and D2 - D9.
 
 B4. Signal model
-    STATUS: IN PROGRESS (11 Nov 2026: objective switched to the equal-weight set; regeneration script ready, needs approval)
+    STATUS: DONE (12 Nov 2026: 4 benchmarks regenerated with dcdcfc1 and imported; default signal store)
     Now: neutral particle decaying uniformly in the vessel volume, two daughters uniform over the
     SST1 acceptance, p uniform 1-50 GeV. Signal is lost only through accidental hits.
     Plan: use an HNL (and dark photon) model from the literature:
@@ -384,6 +384,10 @@ B4. Signal model
       equal weights in BENCHMARK_SET, VETO_SIGNAL_STORE; bin/eventcalc_b4.sh regenerates the 4 benchmarks (c tau 100 m,
       50k points, LCG_106, no exHad) with EventCalc_run (has dcdcfc1: 32.4768 m) after moving outputs -> outputs_vessel6p2,
       and imports them to data/signal/eventcalc_dcdcfc1 (--vessel-z0-eventcalc 32.4768). NOT RUN: generation needs OK.
+    12 Nov 2026 (approved, bin/eventcalc_b4.sh): HNL-mu 1 GeV, DP 0.9, scalar 2, ALP 1 GeV at c tau 100 m regenerated with
+      EventCalc_run on the dcdcfc1 volume (z_EC 32.48 - 82.48 m), 30-44 k decays each, imported to data/signal/
+      eventcalc_dcdcfc1 (production point z_veto = -1.347 m = target centre; was -0.87); signal_eventcalc uses it by default.
+      The 4 Nov samples are kept in EventCalc_run/outputs_vessel6p2.
 
 ----------------------------------------------------------------------------------------------
 C. DETECTOR AND BOOKKEEPING: second order
@@ -731,6 +735,9 @@ D6. Interaction-library approximations
       then rescale each final state to the exact energy (E / E_grid, angles kept). Build cost minutes (mu 2 min, nu 4.5 min
       on 300 cores now; one energy point per Slurm array task possible); size x2.8 (iron mu library ~6 GB). Compare V0
       yield / multiplicity with the current library on branch veto-d6-energy-rescale before switching.
+    12 Nov 2026 (approved): bin/batch/d6_libraries.sbatch on branch veto-d6-energy-rescale (3 tasks: muon all materials,
+      muon iron, neutrino GENIE; new names *_5pct.npz next to the current libraries), to submit on the farm; then
+      bin/d6_compare_libraries.py old vs new before switching.
 
 D7. Interactions upstream of z = 30.6 m not simulated
     STATUS: DECIDED (11 Nov 2026): close after the mu x rock combinatorial is redone with the fixed charge
