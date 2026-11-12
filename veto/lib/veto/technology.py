@@ -35,7 +35,7 @@ marks numbers that are not in the documents.
             plastic). Cost ~30 kCHF/m^2 (P-369, timing detector).
 
 Relative cost per channel (cost_channel, straw = 1): fibre 4 and pixel 20 (the user's table), tile 5
-(colleague). veto_window: fixed half width of the veto time window [s], instead of +- 3 sigma.
+(colleague). veto_window: fixed half width of the veto time window [s], instead of +- 3 sigma (tiles: +-200 ps, SPSC-SR-389, 12 Nov 2026).
 
 Readout: strip technologies have `views` (strip angles from vertical, deg) with `layers_per_view`
 layers each; pads (pixel, tile) measure both coordinates. A hit sits at the centre of a cell (u, y):
@@ -52,6 +52,14 @@ TECHNOLOGIES = {
                   time_window=50e-9, veto_window=None, efficiency=0.999, straw_efficiency=0.97,
                   max_length=1.0, max_rate=0.5e6, max_channel_rate=None, x0_per_layer=0.0002,
                   cost_m2_per_layer=6.0, cost_channel=1.0),
+    # UBT straw station of the official baseline (SPSC-SR-389, 4.2.2; Guglielmo 12 Nov 2026): straws VERTICAL only, six
+    # layers (1 x 3 m^2 each, three 1 m sections over the aperture), measuring x (the bending plane); y only to the 1 m
+    # section. 100 um, 100 kHz readout. Fins keep "straw" (0 / +-15 deg).
+    "straw_v": dict(name="Straw UBT (SR-389: vertical only, 6 layers)", readout="strip", views=(0.0,),
+                    layers_per_view=6, pitch=5e-3, diameter=5e-3, sigma_x=100e-6, sigma_t=None,
+                    time_window=50e-9, veto_window=None, efficiency=0.999, straw_efficiency=0.97,
+                    max_length=1.0, max_rate=0.5e6, max_channel_rate=None, x0_per_layer=0.0002,
+                    cost_m2_per_layer=6.0, cost_channel=1.0),
     "fiber": dict(name="Scintillating fibre (SCSF-78MJ mats)", readout="strip", views=(0.0, 90.0),
                   layers_per_view=1, pitch=250e-6, sigma_x=100e-6, sigma_t=0.5e-9, time_window=None,
                   veto_window=None, efficiency=0.999, max_length=3.0, max_rate=None, max_channel_rate=1e6,
@@ -61,11 +69,11 @@ TECHNOLOGIES = {
                   efficiency=0.999, max_length=None, max_rate=3.5e8, max_channel_rate=None,
                   x0_per_layer=0.005, cost_m2_per_layer=3800.0, cost_channel=20.0),   # cost: estimate, see above
     "tile": dict(name="Scintillating tile (4 x 4 cm, SiPM)", readout="pad", views=None, layers_per_view=1,
-                 pitch=0.04, sigma_x=0.04, sigma_t=0.12e-9, time_window=None, veto_window=1.5e-9,
+                 pitch=0.04, sigma_x=0.04, sigma_t=0.12e-9, time_window=None, veto_window=0.2e-9,
                  efficiency=0.999, max_length=None, max_rate=None, max_channel_rate=1e6,
                  x0_per_layer=0.024, cost_m2_per_layer=30.0, cost_channel=5.0),
     "tile2": dict(name="Scintillating tile (2 x 2 cm, SiPM)", readout="pad", views=None, layers_per_view=1,
-                  pitch=0.02, sigma_x=0.02, sigma_t=0.08e-9, time_window=None, veto_window=1.5e-9,
+                  pitch=0.02, sigma_x=0.02, sigma_t=0.08e-9, time_window=None, veto_window=0.2e-9,
                   efficiency=0.999, max_length=None, max_rate=None, max_channel_rate=1e6,
                   x0_per_layer=0.024, cost_m2_per_layer=30.0, cost_channel=5.0),
 }
@@ -139,6 +147,7 @@ def x0(tech):
 SLOT = 0.5
 MODULES = {
     "straw": dict(size=(1.0, 1.0), active=(1.0, 1.0), frame=0.03, frame_edges="all"),
+    "straw_v": dict(size=(1.0, 1.0), active=(1.0, 1.0), frame=0.03, frame_edges="all"),
     "tile2": dict(size=(0.5, 0.5), active=(0.5, 0.5), frame=0.01, frame_edges="all"),
     "tile":  dict(size=(0.5, 0.5), active=(0.48, 0.48), frame=0.01, frame_edges="all"),
     "fiber": dict(size=(0.5, 2.5), active=(0.5, 2.5), frame=0.02, frame_edges="y_hi"),

@@ -197,8 +197,10 @@ def validate_modules(raw):
     """Limits for module designs: straw UBT covering the window, fins inside the cavern (right: up to the wall) and
     above FIN_Y_MIN. Raises on violations (a module design is explicit: nothing is cut silently)."""
     u = raw["ubt"]
-    if any(tech.get(m["tech"])[0] != "straw" for m in u["modules"]):
+    if any(tech.get(m["tech"])[0] not in ("straw", "straw_v") for m in u["modules"]):
         raise ValueError("UBT modules must be straw")
+    for m in u["modules"]:                                 # the UBT straws are vertical only (SR-389, 12 Nov 2026)
+        m["tech"] = "straw_v"
     for f in raw["fins"]:
         if f.get("tilt", 0) != 0:
             raise NotImplementedError("tilted fins are not in the reconstruction yet")
@@ -277,9 +279,9 @@ def validate(raw):
     if u["y_lo"] > -geo.UBT_HALF_Y or u["y_hi"] < geo.UBT_HALF_Y:
         notes.append("UBT extended to cover the vessel entrance")
         u["y_lo"], u["y_hi"] = min(u["y_lo"], -geo.UBT_HALF_Y), max(u["y_hi"], geo.UBT_HALF_Y)
-    if tech.ALIASES.get(u.get("technology"), u.get("technology")) not in (None, "straw"):
-        notes.append(f"UBT is straw tubes only ({u['technology']} -> straw)")
-    u["technology"] = "straw"                             # Liverpool straws, vertical
+    if tech.ALIASES.get(u.get("technology"), u.get("technology")) not in (None, "straw", "straw_v"):
+        notes.append(f"UBT is straw tubes only ({u['technology']} -> straw_v)")
+    u["technology"] = "straw_v"                           # Liverpool straws, vertical only (SPSC-SR-389, 12 Nov 2026)
     for k in ("cell_x", "cell_y"):
         u.pop(k, None)
     if u["y_lo"] < mt.FIN_Y_MIN:
