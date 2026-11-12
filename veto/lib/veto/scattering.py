@@ -157,11 +157,12 @@ def scatterers(tr, design, media=None):
     # UBT and the vessel entrance window at z = Z_UBT (31.13 m since the FairShip layout; muons start at the
     # stored state A, 30.6 m, upstream of it)
     ubt = design.planes[0]
+    pu = _at_z(p, q, np.full(n, ubt.z))                           # straw UBT at its own z (30.73 m in the default layout)
+    in_ubt = np.isfinite(pu[:, 2]) & (np.abs(pu[:, 0]) < geo.UBT_HALF_X) & (pu[:, 1] >= ubt.y_lo) & (pu[:, 1] <= ubt.y_hi)
+    x_ubt = tech.x0(tech.TECHNOLOGIES[ubt.technology]) if ubt.technology else 0.0
+    zs.append(np.where(in_ubt, ubt.z, np.nan)); xs.append(np.where(in_ubt, x_ubt / cos_z, 0.0))
     pa = _at_z(p, q, np.full(n, geo.Z_UBT))
     near_a = np.isfinite(pa[:, 2])
-    in_ubt = near_a & (np.abs(pa[:, 0]) < geo.UBT_HALF_X) & (pa[:, 1] >= ubt.y_lo) & (pa[:, 1] <= ubt.y_hi)
-    x_ubt = tech.x0(tech.TECHNOLOGIES[ubt.technology]) if ubt.technology else 0.0
-    zs.append(np.where(in_ubt, geo.Z_UBT, np.nan)); xs.append(np.where(in_ubt, x_ubt / cos_z, 0.0))
     if not EXACT_CHORDS:
         in_win = near_a & (np.abs(pa[:, 0]) < geo.VESSEL_X_IN) & (np.abs(pa[:, 1]) < geo.VESSEL_Y_IN)
         zs.append(np.where(in_win, geo.Z_UBT, np.nan)); xs.append(np.where(in_win, WALL_THICKNESS / X0_WALL / cos_z, 0.0))

@@ -46,7 +46,7 @@ class Plane:
     """
     index: int
     name: str
-    kind: str            # "ubt" or "fin"
+    kind: str            # "ubt" (straw plane on / before the entrance window), "tiles" (UBT tile plane) or "fin"
     z: float
     sign: int            # fin side (+1 left, -1 right); 0 for the UBT
     u_max: float
@@ -70,6 +70,7 @@ class Plane:
     sub: float = None
     sub_dead: float = 0.0
     n_modules: int = 0
+    x_half: float = None        # "ubt" / "tiles": u = x + x_half - u_off (None: the window half width UBT_HALF_X)
 
     @property
     def area(self):
@@ -109,14 +110,18 @@ class Plane:
     def n_cells(self):
         return int(np.ceil(self.u_max / self.cell_u - 1e-9)) * int(np.ceil((self.y_hi - self.y_lo) / self.cell_y - 1e-9))
 
+    @property
+    def half_x(self):
+        return geo.UBT_HALF_X if self.x_half is None else self.x_half
+
     def to_local(self, x):
-        if self.kind == "ubt":
-            return x + geo.UBT_HALF_X - self.u_off
+        if self.kind in ("ubt", "tiles"):
+            return x + self.half_x - self.u_off
         return self.sign * x - mt.side_plane_x(self.z) - self.u_off
 
     def to_global(self, u):
-        if self.kind == "ubt":
-            return u + self.u_off - geo.UBT_HALF_X
+        if self.kind in ("ubt", "tiles"):
+            return u + self.u_off - self.half_x
         return self.sign * (u + self.u_off + mt.side_plane_x(self.z))
 
     def inside(self, u, y):
@@ -210,6 +215,38 @@ def validate_modules(raw):
     return []
 
 
+UBT_LAYOUT_DEFAULT = "2026-11-11"
+
+
+def apply_ubt_layout(raw):
+    """The UBT layout of a design ("ubt_layout"; default UBT_LAYOUT_DEFAULT, Guglielmo 11 Nov 2026): straw plane the size of
+    the window at Z_UBT_STRAW (30.73 m), a 4 x 4 m^2 plane of 4 x 4 cm^2 tiles ("ubt_tiles", technology tile) at Z_UBT_TILES
+    (31.13 m), and no fins at the entrance z (they are dropped, with a note). "legacy": the straw UBT on the window
+    (31.13 m), no tile plane, fins as given. "ubt_tiles": null in the design = no tile plane. Returns notes."""
+    notes = []
+    layout = raw.setdefault("ubt_layout", UBT_LAYOUT_DEFAULT)
+    if layout == "legacy":
+        raw["ubt"].setdefault("z", geo.Z_UBT)
+        raw["ubt_tiles"] = None
+        return notes
+    if layout != UBT_LAYOUT_DEFAULT:
+        raise ValueError(f"unknown ubt_layout {layout!r} (use {UBT_LAYOUT_DEFAULT!r} or 'legacy')")
+    raw["ubt"].setdefault("z", geo.Z_UBT_STRAW)
+    if "ubt_tiles" not in raw:
+        raw["ubt_tiles"] = {}
+    if raw["ubt_tiles"] is not None:
+        t = raw["ubt_tiles"]
+        t.setdefault("technology", "tile"); t.setdefault("z", geo.Z_UBT_TILES)
+        t.setdefault("half_x", geo.UBT_TILES_HALF_X)
+        t.setdefault("y_lo", -geo.UBT_TILES_HALF_Y); t.setdefault("y_hi", geo.UBT_TILES_HALF_Y)
+    entrance = [f for f in raw["fins"] if abs(f["z"] - geo.Z_VESSEL_MIN) < 0.05]
+    if entrance:
+        raw["fins"] = [f for f in raw["fins"] if abs(f["z"] - geo.Z_VESSEL_MIN) >= 0.05]
+        notes.append(f"UBT layout {layout}: {len(entrance)} fin(s) at the entrance z = {geo.Z_VESSEL_MIN:.2f} m dropped "
+                     f"(the 4 x 4 m tile plane covers that region)")
+    return notes
+
+
 def validate(raw):
     """Apply the physical limits: UBT of straw tubes covering at least the vessel entrance, nothing below y = -3.2 m,
     right fins stop at the cavern wall. Returns a list of what was changed."""
@@ -220,6 +257,7 @@ def validate(raw):
             f["z"] = round(f["z"] + geo.VESSEL_SHIFT, 6)
         notes.append(f"old-frame design: fins moved by {geo.VESSEL_SHIFT:+.2f} m with the vessel (FairShip layout)")
         raw["frame"] = FRAME
+    notes += apply_ubt_layout(raw)
     u = raw["ubt"]
     if "modules" in u:                                   # module design (A7): straw UBT, checked in validate_modules
         return notes + validate_modules(raw)
@@ -337,7 +375,7 @@ def from_dict(raw):
     det = raw.get("detector", {})
     base = detector_settings(det, dict(technology=None, efficiency=0.99, sigma_t=0.5e-9, time_window=None))
 
-    def plane(index, name, kind, z, sign, u_max, spec, cu_key):
+    def plane(index, name, kind, z, sign, u_max, spec, cu_key, x_half=None):
         s = detector_settings(spec, base)
         cu = cy = None
         if s["technology"]:
@@ -349,7 +387,7 @@ def from_dict(raw):
         if not 1 <= n <= 3:
             raise ValueError(f"{name}: stations must be 1, 2 or 3")
         return Plane(index, name, kind, z, sign, u_max, spec["y_lo"], spec["y_hi"], cu, cy,
-                     1 - (1 - s["efficiency"]) ** n, s["sigma_t"], s["technology"], s["time_window"], n)
+                     1 - (1 - s["efficiency"]) ** n, s["sigma_t"], s["technology"], s["time_window"], n, x_half=x_half)
 
     def module_planes(name, kind, z, sign, spec):
         out = []
@@ -371,10 +409,14 @@ def from_dict(raw):
         return out
 
     planes = []
+    z_ubt = raw["ubt"].get("z", geo.Z_UBT)
     if "modules" in raw["ubt"]:
-        planes += module_planes("UBT", "ubt", geo.Z_UBT, 0, raw["ubt"])
+        planes += module_planes("UBT", "ubt", z_ubt, 0, raw["ubt"])
     else:
-        planes.append(plane(0, "UBT", "ubt", geo.Z_UBT, 0, 2 * geo.UBT_HALF_X, raw["ubt"], "cell_x"))
+        planes.append(plane(0, "UBT", "ubt", z_ubt, 0, 2 * geo.UBT_HALF_X, raw["ubt"], "cell_x"))
+    if raw.get("ubt_tiles"):                           # default layout (11 Nov 2026): 4 x 4 m^2 tile plane on the window
+        t = raw["ubt_tiles"]
+        planes.append(plane(len(planes), "UBT tiles", "tiles", t["z"], 0, 2 * t["half_x"], t, "cell_x", x_half=t["half_x"]))
     for f in sorted(raw["fins"], key=lambda f: (f["z"], f["side"])):
         name = f"{f['side']} fin z={f['z']:.1f}"
         if "modules" in f:

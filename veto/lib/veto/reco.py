@@ -71,8 +71,8 @@ def true_crossing(tr, plane):
     b = np.stack([tr["bx"], tr["by"], tr["bz"]], 1)
     # every plane (the UBT too, at 31.13 m since the FairShip layout, downstream of the stored state A at 30.6 m)
     x, y, ok = mt.path_at_z(a, k, b, plane.z)
-    if plane.kind == "ubt":
-        ok &= (tr["apz"] > 0) & (a[:, 2] < geo.Z_UBT + mt.A_TOLERANCE)  # tracks starting further in never cross it
+    if plane.kind in ("ubt", "tiles"):
+        ok &= (tr["apz"] > 0) & (a[:, 2] < plane.z + mt.A_TOLERANCE)   # tracks starting further in never cross it
     p = np.stack([x, y, np.full(len(x), plane.z)], 1)
     u = plane.to_local(x)
     ok = ok & plane.inside(u, y)
@@ -93,9 +93,9 @@ def own_hits(tr, event, design, rng, tracks_mask=None):
         if kicks is not None:                   # multiple scattering upstream of this plane
             dx, dy = scattering.offset_at(kicks, plane.z)
             crossed = np.isfinite(u) & np.isfinite(y)
-            if plane.kind == "ubt":             # as true_crossing: only tracks starting upstream of the UBT cross it
-                crossed &= (tr["apz"] > 0) & (tr["az"] < geo.Z_UBT + mt.A_TOLERANCE)
-            u, y = u + (dx if plane.kind == "ubt" else plane.sign * dx), y + dy
+            if plane.kind in ("ubt", "tiles"):  # as true_crossing: only tracks starting upstream of the plane cross it
+                crossed &= (tr["apz"] > 0) & (tr["az"] < plane.z + mt.A_TOLERANCE)
+            u, y = u + (dx if plane.kind in ("ubt", "tiles") else plane.sign * dx), y + dy
             ok = crossed & plane.inside(u, y)
         ok &= sel & (rng.random(len(ok)) < plane.efficiency)
         uc, yc = plane.cell_centre(u[ok], y[ok])
@@ -110,8 +110,47 @@ def own_hits(tr, event, design, rng, tracks_mask=None):
 
 # ---------------------------------------------------------------- accidental hits from the rate maps
 
+TILE_BIN = 0.05                 # m, binning of the UBT tile-plane rate map
+
+
+def tile_rate_map(z, half_x, half_y, dataset=None):
+    """Muons per spill per (x, y) bin on a full transverse plane at z (the 4 x 4 m^2 UBT tile plane, 11 Nov 2026), from
+    the stored states at z = 30.6 m of the muon store, extrapolated straight (no field between the shield and the vessel).
+    Built once per store / plane and cached in results/rate_maps/. Returns (x_edges, y_edges, h)."""
+    from . import io
+    dataset = dataset or paths.MUON_DATASET
+    f = paths.results_dir() / "rate_maps" / f"tiles_{dataset}_z{z:.2f}_{half_x:g}x{half_y:g}.npz"
+    if f.exists():
+        d = np.load(f)
+        return d["x_edges"], d["y_edges"], d["h"]
+    c, meta = io.open_store(paths.store_dir(dataset))
+    xe = np.arange(-half_x, half_x + 1e-9, TILE_BIN); ye = np.arange(-half_y, half_y + 1e-9, TILE_BIN)
+    h = np.zeros((len(xe) - 1, len(ye) - 1))
+    n = len(c["weight"])
+    for s0 in range(0, n, 20_000_000):
+        sl = slice(s0, min(n, s0 + 20_000_000))
+        z0 = np.asarray(c["z_30"][sl], np.float64); pz = np.asarray(c["pz_30"][sl], np.float64)
+        ok = (z0 > mt.REACH_30) & (pz > 0) & (z0 < z)
+        t = (z - z0[ok]) / pz[ok]
+        x = np.asarray(c["x_30"][sl], np.float64)[ok] + np.asarray(c["px_30"][sl], np.float64)[ok] * t
+        y = np.asarray(c["y_30"][sl], np.float64)[ok] + np.asarray(c["py_30"][sl], np.float64)[ok] * t
+        h += np.histogram2d(x, y, (xe, ye), weights=np.asarray(c["weight"][sl], np.float64)[ok])[0]
+    f.parent.mkdir(parents=True, exist_ok=True)
+    np.savez(f, x_edges=xe, y_edges=ye, h=h, dataset=dataset, z=z)
+    return xe, ye, h
+
+
 def plane_rate_map(plane, maps):
     """Rate map of a plane: bin edges in u, y and muons per spill per bin, clipped to the plane."""
+    if plane.kind == "tiles":                                     # UBT tile plane (11 Nov 2026): its own (x, y) map
+        if "tile_hist" in maps:
+            xe, ye, h = maps["tile_x_edges"], maps["tile_y_edges"], maps["tile_hist"]
+        else:
+            xe, ye, h = tile_rate_map(plane.z, plane.half_x, max(abs(plane.y_lo), abs(plane.y_hi)))
+        ub = xe + plane.half_x - plane.u_off
+        uc, yc = 0.5 * (ub[1:] + ub[:-1]), 0.5 * (ye[1:] + ye[:-1])
+        keep = ((uc >= 0) & (uc <= plane.u_max))[:, None] & ((yc >= plane.y_lo) & (yc <= plane.y_hi))[None, :]
+        return ub, ye, np.where(keep, h, 0.0)                    # EM debris on this plane: not yet (em maps cover the window)
     em = "em_ubt_e" in maps                                       # B2: EM debris maps loaded (run_reco --em-debris)
     if em:
         from .em_debris import detection_probability
@@ -171,6 +210,8 @@ def _box_sum(a, k):
 def fine_peak(plane, pm, scale):
     """Peak muons per spill per m^2 over a scale x scale window [m] inside the plane, from the fine maps, and its
     1-sigma statistical error; None if the plane is outside the fine maps or no window has PEAK_MIN_NEFF muons."""
+    if plane.kind == "tiles":                    # no fine maps for the tile plane: the 5 cm map is fine already
+        return None
     yb = pm["y_bins"]
     b = float(yb[1] - yb[0])
     if plane.kind == "ubt":

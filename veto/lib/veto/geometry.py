@@ -54,6 +54,12 @@ SHIELD_END_HALF_X, SHIELD_END_HALF_Y = 1.71, 1.27
 
 # UBT aperture = vessel entrance window
 UBT_HALF_X, UBT_HALF_Y = VESSEL_X_IN, VESSEL_Y_IN
+# Default UBT layout since 11 Nov 2026 (Guglielmo): a straw plane the size of the entrance window 40 cm upstream of it
+# (the FairShip UpstreamTagger position) and a 4 x 4 m^2 plane of 4 x 4 cm^2 scintillating tiles on the window, covering
+# the window and the region around it; no fins at the entrance z. Z_UBT stays the window (muon classification).
+Z_UBT_STRAW = Z_VESSEL_MIN - 0.40     # 30.73
+Z_UBT_TILES = Z_VESSEL_MIN            # 31.13
+UBT_TILES_HALF_X = UBT_TILES_HALF_Y = 2.0
 
 # ------------------------------------------------------------
 # Cavern walls seen by "bouncing" muons (from Muon_Flames_rate.py / vessel dataset)
