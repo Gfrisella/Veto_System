@@ -26,7 +26,7 @@ _S = {}
 
 def _init(signal, n_signal):
     _S["tr"], _S["inp"] = load_inputs()
-    _S["stats"] = objective.sample_stats(_S["inp"])
+    _S["stats"] = objective.sample_stats()          # reads results/reco/<RECO_INPUTS> (the raw arrays)
     _S["signal"], _S["n_signal"] = signal, n_signal
 
 
