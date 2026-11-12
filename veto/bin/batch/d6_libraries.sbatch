@@ -16,6 +16,7 @@ R=${VETO_CODE:-$SLURM_SUBMIT_DIR}
 MAIN=${VETO_MAIN:-/disk/gfs_lhcb/gfrise/Study_on_Veto_System/Optimization_Veto_System/veto}
 LIB=$MAIN/data/interactions
 export VETO_LIB_EMAX=400 VETO_LIB_STEP=0.05 VETO_INTERACTIONS=$LIB
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 NUMBA_NUM_THREADS=1   # one thread per --jobs worker (12 Nov 2026, node overload)
 cd $R
 case $SLURM_ARRAY_TASK_ID in
   0|1)
