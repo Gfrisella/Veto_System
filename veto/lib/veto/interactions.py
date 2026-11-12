@@ -32,7 +32,7 @@ from . import reco
 from .config import SPILLS_15Y  # noqa: E402  (4e13 p.o.t. per spill)
 CHARGE = {11: -1, 13: -1, 15: -1, 211: 1, 321: 1, 2212: 1, 3222: 1, 3112: -1, 3312: -1, 3334: -1, 411: 1, 431: 1,
           4122: 1, 521: 1}
-CODE_NAMES = {0: "helium", 1: "air", 2: "wall", 3: "shield_iron", 4: "shield_iron_v0", 5: "rock_wall", 6: "rock_floor", 7: "neutral_he"}   # bin/shield_dis.py: last 50 cm of
+CODE_NAMES = {0: "helium", 1: "air", 2: "wall", 3: "shield_iron", 4: "shield_iron_v0", 5: "rock_wall", 6: "rock_floor", 7: "neutral_he", 8: "air_upstream"}   # bin/shield_dis.py: last 50 cm of
 # MS7; 4 = copies of those interactions with a K_L / K_S / Lambda forced to decay in the vessel (weight x P(decay))
 
 
@@ -242,7 +242,7 @@ def evaluate(inter, part, design, maps, cfg, rng, muons=None, levels=("a", "b"),
 
 
 # ---------------------------------------------------------------- cached, for the objective
-DESIGN_FREE_CODES = (0, 1, 2)   # helium, air, wall (Mylar): drawn from the muon dataset alone, the same for every design
+DESIGN_FREE_CODES = (0, 1, 2, 8)   # helium, air, wall (Mylar): drawn from the muon dataset alone, the same for every design
 
 
 def prepare(inter, part, cfg, muons=None, codes=DESIGN_FREE_CODES, g4=None):

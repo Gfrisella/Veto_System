@@ -165,7 +165,7 @@ class MuonLibrary:
 
 
 def group_of(code):
-    return np.where(code >= tg.TARGET_PLANE0, code, np.minimum(code, tg.TARGET_PVC))
+    return np.where((code >= tg.TARGET_PLANE0) | (code == tg.TARGET_AIR_UP), code, np.minimum(code, tg.TARGET_PVC))
 
 
 def group_label(g, design=None):
@@ -240,6 +240,7 @@ def run(columns, design, lib, draws, rng, chunk=2_000_000, include=("helium", "a
     import time
     t0 = time.time()
     draws = {("wall" if k == "pvc" else k): v for k, v in draws.items()}          # ISSUES D8: old key accepted
+    draws.setdefault("air_upstream", draws.get("air", 0))                          # C7 / D7: own group, default as air
     include = tuple("wall" if g == "pvc" else g for g in include)
     n = len(columns["weight"])
     _CTX.update(columns=columns, design=design, lib=lib, include=include,

@@ -42,6 +42,8 @@ def generate_muon_interactions(design, store, args):
     meta = json.load(open(store / "meta.json"))
     cols = {k: np.load(store / f"{k}.npy", mmap_mode="r") for k in meta["columns"]}
     draws = {"helium": args.draws[0], "wall": args.draws[1], "air": args.draws[2], "planes": args.draws[3]}
+    if getattr(args, "air_upstream_draws", None) is not None:
+        draws["air_upstream"] = args.air_upstream_draws          # C7 / D7: targeted draws in front of the vessel
     inter, part, _ = dis.run(cols, design, lib, draws, np.random.default_rng(args.seed), workers=args.workers)
     return inter, part
 
@@ -55,6 +57,8 @@ def main():
     ap.add_argument("--draws", type=float, nargs=4, default=[1e6, 1e6, 2e5, 2e5], help="helium pvc air planes")
     ap.add_argument("--workers", type=int, default=40)
     ap.add_argument("--dataset", default=DATASET)
+    ap.add_argument("--air-upstream-draws", type=float, default=None,
+                    help="C7 / D7: draws in the air between the shield end and the vessel (default: as the air)")
     ap.add_argument("--nu-pdg", type=int, default=None, help="--kind nu: one flavour of the 2026 GENIE files (paths.nu_apply_2026)")
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--out", default=None)
