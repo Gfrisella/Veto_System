@@ -60,6 +60,9 @@ UBT_HALF_X, UBT_HALF_Y = VESSEL_X_IN, VESSEL_Y_IN
 Z_UBT_STRAW = Z_VESSEL_MIN - 0.40     # 30.73
 Z_UBT_TILES = Z_VESSEL_MIN            # 31.13
 UBT_TILES_HALF_X = UBT_TILES_HALF_Y = 2.0
+# The muon flames on the tile plane (Nov-4: a band |y| < ~0.5 m at |x| > ~1.2 m, peak 0.69 MHz/cm^2): 2 x 2 cm^2 tiles
+# there (Guglielmo, 11 Nov 2026), 4 x 4 cm^2 elsewhere. Flame blocks: FLAME_X_IN <= |x| <= 2 m, |y| <= FLAME_Y.
+UBT_TILES_FLAME_X_IN, UBT_TILES_FLAME_Y = 1.0, 0.6
 
 # ------------------------------------------------------------
 # Cavern walls seen by "bouncing" muons (from Muon_Flames_rate.py / vessel dataset)

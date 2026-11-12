@@ -218,6 +218,18 @@ def validate_modules(raw):
 UBT_LAYOUT_DEFAULT = "2026-11-11"
 
 
+def default_tile_regions(hx, y_lo, y_hi, xin=None, fy=None, fine="tile2", coarse="tile"):
+    """Rectangles of the UBT tile plane (11 Nov 2026): 2 x 2 cm^2 tiles in the two flame blocks (xin <= |x| <= hx,
+    |y| <= fy), 4 x 4 cm^2 elsewhere. List of dicts x = [x0, x1], y = [y0, y1], technology."""
+    xin = geo.UBT_TILES_FLAME_X_IN if xin is None else xin
+    fy = geo.UBT_TILES_FLAME_Y if fy is None else fy
+    out = [dict(x=[-xin, xin], y=[y_lo, y_hi], technology=coarse)]
+    for x0, x1 in ((-hx, -xin), (xin, hx)):
+        out += [dict(x=[x0, x1], y=[y_lo, -fy], technology=coarse), dict(x=[x0, x1], y=[-fy, fy], technology=fine),
+                dict(x=[x0, x1], y=[fy, y_hi], technology=coarse)]
+    return out
+
+
 def apply_ubt_layout(raw):
     """The UBT layout of a design ("ubt_layout"; default UBT_LAYOUT_DEFAULT, Guglielmo 11 Nov 2026): straw plane the size of
     the window at Z_UBT_STRAW (30.73 m), a 4 x 4 m^2 plane of 4 x 4 cm^2 tiles ("ubt_tiles", technology tile) at Z_UBT_TILES
@@ -239,6 +251,7 @@ def apply_ubt_layout(raw):
         t.setdefault("technology", "tile"); t.setdefault("z", geo.Z_UBT_TILES)
         t.setdefault("half_x", geo.UBT_TILES_HALF_X)
         t.setdefault("y_lo", -geo.UBT_TILES_HALF_Y); t.setdefault("y_hi", geo.UBT_TILES_HALF_Y)
+        t.setdefault("regions", default_tile_regions(t["half_x"], t["y_lo"], t["y_hi"]))
     entrance = [f for f in raw["fins"] if abs(f["z"] - geo.Z_VESSEL_MIN) < 0.05]
     if entrance:
         raw["fins"] = [f for f in raw["fins"] if abs(f["z"] - geo.Z_VESSEL_MIN) >= 0.05]
@@ -416,7 +429,16 @@ def from_dict(raw):
         planes.append(plane(0, "UBT", "ubt", z_ubt, 0, 2 * geo.UBT_HALF_X, raw["ubt"], "cell_x"))
     if raw.get("ubt_tiles"):                           # default layout (11 Nov 2026): 4 x 4 m^2 tile plane on the window
         t = raw["ubt_tiles"]
-        planes.append(plane(len(planes), "UBT tiles", "tiles", t["z"], 0, 2 * t["half_x"], t, "cell_x", x_half=t["half_x"]))
+        hx = t["half_x"]
+        for rg in t.get("regions") or [dict(x=[-hx, hx], y=[t["y_lo"], t["y_hi"]], technology=t["technology"])]:
+            (x0, x1), (y0, y1) = rg["x"], rg["y"]
+            spec = dict(t, technology=rg["technology"], y_lo=y0, y_hi=y1)
+            spec.pop("regions", None)
+            tn = tech.get(rg["technology"])[0]
+            p = plane(len(planes), f"UBT tiles {tn} x{x0:+.1f}..{x1:+.1f} y{y0:+.1f}..{y1:+.1f}", "tiles", t["z"], 0, x1 - x0,
+                      spec, "cell_x", x_half=hx)
+            p.u_off = x0 + hx                          # u = x + hx - u_off: the rectangle starts at x0
+            planes.append(p)
     for f in sorted(raw["fins"], key=lambda f: (f["z"], f["side"])):
         name = f"{f['side']} fin z={f['z']:.1f}"
         if "modules" in f:

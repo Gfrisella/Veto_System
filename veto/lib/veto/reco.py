@@ -146,7 +146,7 @@ def plane_rate_map(plane, maps):
         if "tile_hist" in maps:
             xe, ye, h = maps["tile_x_edges"], maps["tile_y_edges"], maps["tile_hist"]
         else:
-            xe, ye, h = tile_rate_map(plane.z, plane.half_x, max(abs(plane.y_lo), abs(plane.y_hi)))
+            xe, ye, h = tile_rate_map(plane.z, plane.half_x, max(plane.half_x, geo.UBT_TILES_HALF_Y))   # the whole plane's map
         ub = xe + plane.half_x - plane.u_off
         uc, yc = 0.5 * (ub[1:] + ub[:-1]), 0.5 * (ye[1:] + ye[:-1])
         keep = ((uc >= 0) & (uc <= plane.u_max))[:, None] & ((yc >= plane.y_lo) & (yc <= plane.y_hi))[None, :]
