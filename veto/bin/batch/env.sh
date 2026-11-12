@@ -16,6 +16,18 @@ export MU_LIB_V0STABLE=${MU_LIB_V0STABLE:-$VETO_INTERACTIONS/dis/mu_library_iron
 export ROCK_MU=${ROCK_MU:-/disk/lhcb_data/sqasim/rock_dis/apply_D6_straw_mod_draws.npz}
 export DESIGNS=${DESIGNS:-"designs/R1_ubt_only.json"}   # reference designs (12 Nov 2026): R1 UBT only; R2 SBT + UBT once the SBT model exists
 export G4SHIELD_BUILD=${G4SHIELD_BUILD:-$VETO_MAIN/cpp/build_ship}
+# Thread limits (12 Nov 2026, farm-wn81 load 1300 on 80 cores: every numpy/OpenBLAS call opened one thread per node
+# core in each of the 32 Pool workers). Slurm does not pin cores here, so the job must stay inside its allocation itself:
+# a command that parallelises with processes (--workers / --jobs) gets 1 BLAS/OpenMP thread per process, any other
+# command gets the CPUs of the job (outside Slurm: 8). VETO_THREADS overrides. Read from the job's own CMDFILE line,
+# so requeued and pending jobs (which keep their submitted task.sbatch but source this file at start) are covered too.
+_veto_line=""
+[ -n "${CMDFILE:-}" ] && [ -r "$CMDFILE" ] && _veto_line=$(sed -n "$((${SLURM_ARRAY_TASK_ID:-0} + 1))p" "$CMDFILE")
+case "$_veto_line" in *--workers*|*--jobs*) _veto_t=1 ;; *) _veto_t=${SLURM_CPUS_PER_TASK:-8} ;; esac
+export VETO_THREADS=${VETO_THREADS:-$_veto_t}
+for _v in OMP_NUM_THREADS OPENBLAS_NUM_THREADS MKL_NUM_THREADS NUMEXPR_NUM_THREADS NUMEXPR_MAX_THREADS \
+          VECLIB_MAXIMUM_THREADS NUMBA_NUM_THREADS GOTO_NUM_THREADS; do export $_v=$VETO_THREADS; done
+unset _veto_line _veto_t _v
 mkdir -p "$VETO_RESULTS"/{reco,interactions,evstore,em_debris,shield_dis,rate_maps,logs}
 cvmfs_warm() {   # D15: read the Geant4 libraries once (first CVMFS access on a node can fail under load)
     cat /cvmfs/ship.cern.ch/25.09/sw/slc9_x86-64/GEANT4/v10.7.3-local1/lib64/*.so > /dev/null 2>&1 || true
