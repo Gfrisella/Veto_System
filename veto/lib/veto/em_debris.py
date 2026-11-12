@@ -61,4 +61,12 @@ def make_maps(rec, w_per_spill, maps):
                 s = side == sd
                 fin[sd, iz] = np.histogram2d(u[s], rec["y"][sel][s], [ub, yb], weights=w[sel][s])[0]
         out[f"em_fin_{k}"] = fin
+        # UBT tile plane (default layout 11 Nov 2026, at the first EM plane z = Z_UBT): 2D map over the whole plane, the
+        # binning of reco.tile_rate_map (TILE_BIN, half sizes UBT_TILES_HALF_X / _Y)
+        from .reco import TILE_BIN
+        xe = np.arange(-geo.UBT_TILES_HALF_X, geo.UBT_TILES_HALF_X + 1e-9, TILE_BIN)
+        ye = np.arange(-geo.UBT_TILES_HALF_Y, geo.UBT_TILES_HALF_Y + 1e-9, TILE_BIN)
+        at_t = m & (rec["plane"] == 0)
+        out[f"em_tile_{k}"] = np.histogram2d(rec["x"][at_t], rec["y"][at_t], [xe, ye], weights=w[at_t])[0]
+    out["em_tile_x_edges"], out["em_tile_y_edges"] = xe, ye
     return out

@@ -147,10 +147,14 @@ def plane_rate_map(plane, maps):
             xe, ye, h = maps["tile_x_edges"], maps["tile_y_edges"], maps["tile_hist"]
         else:
             xe, ye, h = tile_rate_map(plane.z, plane.half_x, max(plane.half_x, geo.UBT_TILES_HALF_Y))   # the whole plane's map
+        if "em_tile_e" in maps and np.allclose(maps["em_tile_x_edges"], xe) and np.allclose(maps["em_tile_y_edges"], ye):
+            from .em_debris import detection_probability     # B2 / tile plane: EM debris of the shield end, same binning
+            p_e, p_g = detection_probability(plane)
+            h = h + p_e * maps["em_tile_e"] + p_g * maps["em_tile_g"]
         ub = xe + plane.half_x - plane.u_off
         uc, yc = 0.5 * (ub[1:] + ub[:-1]), 0.5 * (ye[1:] + ye[:-1])
         keep = ((uc >= 0) & (uc <= plane.u_max))[:, None] & ((yc >= plane.y_lo) & (yc <= plane.y_hi))[None, :]
-        return ub, ye, np.where(keep, h, 0.0)                    # EM debris on this plane: not yet (em maps cover the window)
+        return ub, ye, np.where(keep, h, 0.0)
     em = "em_ubt_e" in maps                                       # B2: EM debris maps loaded (run_reco --em-debris)
     if em:
         from .em_debris import detection_probability
