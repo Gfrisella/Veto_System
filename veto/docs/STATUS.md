@@ -865,3 +865,10 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
 - **Decisions (Guglielmo, 14 Nov):** (1) bounce search: keep as is (start 0.21, optimiser knob), may switch off later.
   (2) tile2 as SR-389: 2.5 MHz per channel, 90 ps (was 1 MHz, 80 ps). Rate penalty R1/R2 31 800 -> 2 120 points (only the
   x < 0 flame block, 2.78 MHz, 11 % over). Applied before S7 (2064495) starts.
+- **R2 untagged single muons (`bin/diag_untagged.py`, page https://claude.ai/artifact/FnWCuP3xHpYcQewWnZ17U8,
+  data `results_test/reco/diag_untagged_R2.json`):** 26.8 % untagged by weight = 17.1 % SBT hit but pointing missed
+  + 9.4 % UBT hit but window missed + 0.3 % other. 98 % of the untagged weight passes through the SBT liquid. Missed ones
+  are soft (median p 0.3 GeV at SST1); their backward line meets the wall a median 3.7 m (z) from the hit cell vs 0.6 m for
+  matched ones; not grazing (79 vs 111 mrad). Likely cause: sbt.tag opens rings z +- r, but a lateral r moves the crossing
+  by r / sin(alpha) along z (~8 m at 80 mrad). Proposed fix (not applied): ring range +- r / sin(alpha). Statistics: the
+  200k singles have n_eff ~ 490 (1 000 heaviest carry 59 %), so shares are +- a few %.
