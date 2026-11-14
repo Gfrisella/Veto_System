@@ -856,3 +856,9 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   evaluation needs 0.37 GB, so `scan_bounce.py` now runs the first point of each design serially (builds missing caches once)
   before forking. Resubmitted on the reference designs R1 / R2 with 8 workers, 64 G (job 2064527).
 - **Open:** D6 neutrino library (GENIE hang at 1 GeV on Na-23) — not needed for the re-run, which uses Shah Rukh's v2.
+- **A2 result (job 2064527, 6 min, 8.8 GB; `results/reco/bounce_scan.json`):** bounce search off is best for R1 and R2 by
+  reward. R1: slope 0 -> 0.45 raises the bounced SST1 muons vetoed 0 -> 16.8 % (all SST1 43.0 -> 49.5 %) but the signal
+  loss 0.03 -> 0.75 %; combinatorial unchanged (0.12 / 15 y). R2: bounced 48.5 -> 58.4 %, signal loss 0.07 -> 0.76 %.
+  The script falls back to start 0.21 / range 0.105-0.42 when no design prefers a slope > 0 -> decision needed (off, or keep it as a knob).
+- **Rate penalty dominates the reward (-31 760 for both):** `technology.py` caps tile and tile2 at 1 MHz / channel;
+  SR-389 allows 2.5 MHz per 20 mm tile. Flame blocks peak 2.78 / 2.20 MHz. Proposed: tile2 limit 2.5 MHz (decision pending).
