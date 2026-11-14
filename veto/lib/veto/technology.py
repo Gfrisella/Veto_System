@@ -33,6 +33,7 @@ marks numbers that are not in the documents.
             depending on the configuration; veto window +-1.5 ns. SR-370: up to 10 MHz per 5 x 5 cm^2
             tile in the muon flames, < 1 MHz per channel wanted (max_channel_rate). ~2.4 % X0 (1 cm
             plastic). Cost ~30 kCHF/m^2 (P-369, timing detector).
+            SPSC-SR-389 (adopted 14 Nov 2026 for tile2): 2 x 2 cm tiles in the flames, 90 ps, max 2.5 MHz per tile.
 
 Relative cost per channel (cost_channel, straw = 1): fibre 4 and pixel 20 (the user's table), tile 5
 (colleague). veto_window: fixed half width of the veto time window [s], instead of +- 3 sigma (tiles: +-200 ps, SPSC-SR-389, 12 Nov 2026).
@@ -73,8 +74,8 @@ TECHNOLOGIES = {
                  efficiency=0.999, max_length=None, max_rate=None, max_channel_rate=1e6,
                  x0_per_layer=0.024, cost_m2_per_layer=30.0, cost_channel=5.0),
     "tile2": dict(name="Scintillating tile (2 x 2 cm, SiPM)", readout="pad", views=None, layers_per_view=1,
-                  pitch=0.02, sigma_x=0.02, sigma_t=0.08e-9, time_window=None, veto_window=0.2e-9,
-                  efficiency=0.999, max_length=None, max_rate=None, max_channel_rate=1e6,
+                  pitch=0.02, sigma_x=0.02, sigma_t=0.09e-9, time_window=None, veto_window=0.2e-9,
+                  efficiency=0.999, max_length=None, max_rate=None, max_channel_rate=2.5e6,   # SR-389 (14 Nov 2026)
                   x0_per_layer=0.024, cost_m2_per_layer=30.0, cost_channel=5.0),
 }
 # Rate limits of fibre (1 MHz per SiPM channel) and pixel (3.5 MHz/mm^2, Timepix4-like): placeholders set 2026-11-05

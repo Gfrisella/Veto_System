@@ -4,6 +4,12 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-14 — tile2 limits from SR-389, A2 scan memory fix (branch `veto-nov4-source`)
+
+- `lib/veto/technology.py`: tile2 (2 x 2 cm flame tiles) max 2.5 MHz per channel and 90 ps, as SPSC-SR-389 (was 1 MHz, 80 ps).
+- `bin/scan_bounce.py`: first point per design run serially before the worker pool (cache build; 256 GB OOM on 12 Nov).
+- `data/interactions/genie/nu_library_v2.npz` linked to Shah Rukh's GENIE v2 library (MS7 neutrino chain, S3).
+
 ## 2026-11-12 — default UBT, batch code, re-run batch scripts (branch `veto-nov4-source`)
 - Default UBT layout 2026-11-11 (design.apply_ubt_layout, plane kind `tiles`, ubt_tiles.regions with 2x2 cm flame blocks),
   tile rate map from the store (reco.tile_rate_map), tile EM maps (em_debris), straw-UBT material at its own z.

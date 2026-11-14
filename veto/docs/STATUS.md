@@ -862,3 +862,6 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   The script falls back to start 0.21 / range 0.105-0.42 when no design prefers a slope > 0 -> decision needed (off, or keep it as a knob).
 - **Rate penalty dominates the reward (-31 760 for both):** `technology.py` caps tile and tile2 at 1 MHz / channel;
   SR-389 allows 2.5 MHz per 20 mm tile. Flame blocks peak 2.78 / 2.20 MHz. Proposed: tile2 limit 2.5 MHz (decision pending).
+- **Decisions (Guglielmo, 14 Nov):** (1) bounce search: keep as is (start 0.21, optimiser knob), may switch off later.
+  (2) tile2 as SR-389: 2.5 MHz per channel, 90 ps (was 1 MHz, 80 ps). Rate penalty R1/R2 31 800 -> 2 120 points (only the
+  x < 0 flame block, 2.78 MHz, 11 % over). Applied before S7 (2064495) starts.
