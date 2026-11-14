@@ -1,7 +1,7 @@
 """EM debris from the end of the muon shield (ISSUES B2, decided 2026-11-05: our own Geant4, host build).
 
 Two Geant4 stages (separate processes: one G4RunManager per process), driven by bin/em_debris.py:
-  1. shield   the muons crossing the last 50 cm of MS7 iron (data/shield_dis/muons_iron.npz, state at z = 29.20 m),
+  1. shield   the muons crossing the last 50 cm of MS7 iron (paths.ms7_parents(): Nov-4 transport, state at z = 29.20 m),
               carried to the last DEPTH_X0 radiation lengths (shield_iron.curved_points: field, mean dE/dx) and through
               that slab with Geant4 (cpp/g4shield, FTFP_BERT incl. EM, field); every e+-, gamma above E_CUT at the plane
               z = 29.90 m is kept.
@@ -61,4 +61,12 @@ def make_maps(rec, w_per_spill, maps):
                 s = side == sd
                 fin[sd, iz] = np.histogram2d(u[s], rec["y"][sel][s], [ub, yb], weights=w[sel][s])[0]
         out[f"em_fin_{k}"] = fin
+        # UBT tile plane (default layout 11 Nov 2026, at the first EM plane z = Z_UBT): 2D map over the whole plane, the
+        # binning of reco.tile_rate_map (TILE_BIN, half sizes UBT_TILES_HALF_X / _Y)
+        from .reco import TILE_BIN
+        xe = np.arange(-geo.UBT_TILES_HALF_X, geo.UBT_TILES_HALF_X + 1e-9, TILE_BIN)
+        ye = np.arange(-geo.UBT_TILES_HALF_Y, geo.UBT_TILES_HALF_Y + 1e-9, TILE_BIN)
+        at_t = m & (rec["plane"] == 0)
+        out[f"em_tile_{k}"] = np.histogram2d(rec["x"][at_t], rec["y"][at_t], [xe, ye], weights=w[at_t])[0]
+    out["em_tile_x_edges"], out["em_tile_y_edges"] = xe, ye
     return out

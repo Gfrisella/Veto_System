@@ -1,0 +1,85 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[a4paper,margin=2.1cm,top=2.4cm,bottom=2.3cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\graphicspath{{figures/}{logos/}}
+\usepackage{booktabs,tabularx,longtable,multirow}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{caption}
+\usepackage{url}
+\usepackage{tcolorbox}\tcbuselibrary{breakable}
+\usepackage[colorlinks=true,linkcolor=cernblue,urlcolor=cernblue,citecolor=cernblue]{hyperref}
+
+\definecolor{cernblue}{HTML}{0053A1}
+\definecolor{shorange}{HTML}{D55E00}
+\definecolor{okgreen}{HTML}{1B7F3B}
+\definecolor{greytxt}{HTML}{555555}
+\definecolor{lightblue}{HTML}{EAF1F9}
+
+\setlist{itemsep=1pt,topsep=2pt,leftmargin=1.4em}
+\titleformat{\section}{\Large\bfseries\color{cernblue}}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\large\bfseries\color{cernblue}}{\thesubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{14pt}{6pt}
+\captionsetup{font=small,labelfont={bf,color=cernblue}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[L]{\color{greytxt}\footnotesize SHiP veto background study --- status on 10 November 2026}
+\fancyfoot[R]{\color{greytxt}\footnotesize \thepage}
+
+% tags
+\newcommand{\solid}{\textcolor{okgreen}{\textbf{solid}}}
+\newcommand{\est}{\textcolor{shorange}{\textbf{estimate}}}
+\newcommand{\open}{\textcolor{shorange}{\textbf{open}}}
+\newcommand{\src}[1]{{\color{greytxt}\footnotesize[\texttt{\detokenize{#1}}]}}
+\newcommand{\note}[1]{\begin{tcolorbox}[colback=lightblue,colframe=lightblue,arc=1mm,left=6pt,right=6pt,top=3pt,bottom=3pt]\small #1\end{tcolorbox}}
+\newcommand{\pot}{p.o.t.}
+
+\begin{document}
+\sloppy
+
+\thispagestyle{fancy}
+\begin{tcolorbox}[colback=cernblue,colframe=cernblue,arc=0mm,left=10pt,right=10pt,top=8pt,bottom=8pt]
+\color{white}
+\begin{minipage}[c]{0.74\linewidth}
+{\LARGE\bfseries Veto system background study}\\[3pt]
+{\Large Status quo}\\[6pt]
+{\normalsize \underline{G.~Frisella}$^{1,2}$, S.~R.~Qasim$^{1}$ \quad 10 November 2026}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.24\linewidth}\raggedleft
+\includegraphics[height=1.25cm]{ship-logo-white.png}\\[4pt]
+\includegraphics[height=0.75cm]{uzh-logo-white.png}
+\end{minipage}
+\end{tcolorbox}
+{\footnotesize\color{greytxt}$^1$ University of Zurich, $^2$ European Organization for Nuclear Research (CERN)}
+
+\medskip
+\noindent This note gives the state of the background estimate for the SHiP decay-vessel veto after PR~\#15
+(merged 10 Nov 2026) and the V0-production check of the same day. Every number points to the file it comes from
+(\src{...}, paths relative to \path{Optimization_Veto_System/veto/}). Rates are per spill of $4\times10^{13}$\,\pot{}
+(= kHz at $4\times10^{13}$\,\pot/s); yields are per 15 years ($6\times10^{20}$\,\pot{} = $1.5\times10^{7}$ spills).
+Reference design: \texttt{D6\_straw\_mod}. Each result is tagged \solid{} (checked by an independent method),
+\est{} (extrapolated or model-dependent) or \open{} (known disagreement, not resolved).
+
+\input{sections/01_summary}
+\input{sections/02_setup}
+\input{sections/03_combinatorial}
+\input{sections/04_muon_dis}
+\clearpage
+\input{sections/05_ms7}
+\input{sections/06_neutrinos}
+\input{sections/07_rock_debris}
+\input{sections/08_statistics}
+\input{sections/09_open}
+
+\bibliographystyle{unsrt}
+\bibliography{refs}
+\end{document}

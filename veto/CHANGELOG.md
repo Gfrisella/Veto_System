@@ -4,6 +4,90 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-14 — tile2 limits from SR-389, A2 scan memory fix (branch `veto-nov4-source`)
+
+- `lib/veto/technology.py`: tile2 (2 x 2 cm flame tiles) max 2.5 MHz per channel and 90 ps, as SPSC-SR-389 (was 1 MHz, 80 ps).
+- `bin/scan_bounce.py`: first point per design run serially before the worker pool (cache build; 256 GB OOM on 12 Nov).
+- `data/interactions/genie/nu_library_v2.npz` linked to Shah Rukh's GENIE v2 library (MS7 neutrino chain, S3).
+
+## 2026-11-12 — default UBT, batch code, re-run batch scripts (branch `veto-nov4-source`)
+- Default UBT layout 2026-11-11 (design.apply_ubt_layout, plane kind `tiles`, ubt_tiles.regions with 2x2 cm flame blocks),
+  tile rate map from the store (reco.tile_rate_map), tile EM maps (em_debris), straw-UBT material at its own z.
+- make_peak_maps from a store; build_dis_parent_store from one store; air_upstream target group (code 8); paths env overrides.
+- B4: bin/eventcalc_b4.sh fixed (LCG setup, checks) and run; signal_eventcalc default store eventcalc_dcdcfc1.
+- bin/batch/{env.sh, task.sbatch, submit_rerun.sh}: the re-run batch; scan_bounce fixes.
+
+## 2026-11-11 (afternoon) — issue-review code (branch `veto-nov4-source`; D6 on `veto-d6-energy-rescale`)
+- C5: `bin/shell_to_store.py --stream` (column by column, memory-mapped; identical to the in-memory path on 20 seeds);
+  store `design-optimization-dataset-nov4-shell-3220seeds-2026-11-11` built (7.70e8 rows, 84 GB, per-type rates = summary.txt),
+  `paths.MUON_DATASET_FULL` (default switch in the re-run batch, with new pair inputs).
+- D15: Geant4 modules imported in the parent, workers forked, import retry, completeness checks (shield_dis, em_debris,
+  g4_vessel_transport); `VETO_G4_SPAWN=1` = old behaviour.
+- D8: target group `wall` (old key `pvc` accepted); CLI `--wall` (alias `--pvc`).
+- D4: range cut in `shield_dis.draw` (`E_MIN_INT`); rate change 0.04 %.
+- C1: analytic ghost hits of strip planes (`reco.ghost_tiles / ghost_mean / ghost_tile_means`, `RecoConfig.ghost_hits`,
+  `run_reco --no-ghosts`).
+- C9: `docs/patches/C9_categorize_muons.patch` for MuonsAndMatter (to apply by Guglielmo) + README.
+- C7: `bin/evstore_redecay.py --natural` (forced K_L decays for ordinary stores).
+- B4: `evolve/evaluate_designs.py --signal eventcalc` (default), evolve on `paths.RECO_INPUTS`, `VETO_SIGNAL_STORE`,
+  `bin/eventcalc_b4.sh` (regeneration with dcdcfc1 + import; not run).
+- A2: `RecoConfig.bounce_r0`, design knobs `detector.bounce_r_slope / bounce_r0` (clamped), `bin/scan_bounce.py`.
+- D9: `bin/dis_combinatorial.py` (DIS track x muon from event stores, single-track events, V0 products of MS7 originals
+  dropped, veto; bound printed).
+- D2: `bin/d2_selfveto.py` (self-veto of nu-He events by their own products on the planes, and its signal cost).
+- D6 (branch `veto-d6-energy-rescale`): libraries 0.5/1 - 400 GeV in 5 % steps, `VETO_LIB_RESCALE`, `bin/d6_compare_libraries.py`.
+
+## 2026-11-11 — merge of main (PR #16) into `veto-nov4-source`; charge fix completed
+- Merged origin/main 34cb244 (PR #16: charge-sign fix, rare corners, neutral hadrons in the helium, evolution / SBT plan).
+  Only conflict: docs/STATUS.md (both appended): both kept, Shah Rukh's rare-corner bullets back under 2026-11-10 (day).
+- `bin/rock_combinatorial.py` cross_pairs: opposite-charge test on charges (muon_types.charge_from_pdg_column on both sides);
+  before, store muons (+-1) vs rock tracks (-13 q) kept the same-sign pairs (ISSUES D17 b).
+- `paths.RECO_INPUTS` = inputs_nov4_q.npz (charge-fixed pair inputs from PR #16); results/reco copy replaced (data, not in git).
+- ISSUES D17 -> DONE with the PR #16 numbers.
+
+## 2026-11-11 — Nov-4 production as the muon source for everything (branch `veto-nov4-source`, base 4904c4f + V0 commit 48a0f36)
+- Guglielmo's decision (ISSUES D5, 11 Nov): every study uses the Nov-4 complete target production; older sources on request only.
+- `lib/veto/paths.py`: `MUON_DATASET` (design-optimization-dataset-nov4-shell-300seeds-2026-11-10), `RECO_INPUTS` (inputs_nov4.npz),
+  `RATE_MAPS` (sample_nov4.npz), `ms7_parents()` (/disk/lhcb_data/sqasim/ms7_parents/muons_iron_nov4.npz, env VETO_MS7_PARENTS),
+  `nov4_pool_pattern()` + `NOV4_POOL_TRAIN_CHUNKS` = 23 (env VETO_NOV4_POOL).
+- Defaults switched to them: make_reco_inputs, make_design_explorer (also `--html` reads `--out`), end_to_end, run_interactions,
+  muon_dis_apply, rock_combinatorial, run_reco, check_peak_rates, closure_check, make_crossrun_pairs (n_runs from meta "seeds",
+  writes inputs_nov4_xrun.npz), em_debris, shield_dis (generate reads the Nov-4 parents; legacy prepare writes
+  data/shield_dis/muons_iron.npz as LEGACY_PREPARED), generate_muon_study (`--input` Nov-4 pool chunks, `--n-chunks` 23), objective.
+- Data (not in git): symlink data/store/<Nov-4 store> -> Shah Rukh's store; copy of results/reco/inputs_nov4.npz (md5 4437741b...).
+- Every location of Guglielmo's 11 Nov list in paths.py: SQ / SQ_VETO, MUON_DATASET_DIR (store_dir reads the Nov-4 store on
+  /disk/lhcb_data), nov4_pool_pattern(part) + NOV4_POOL_HIDDEN_CHUNKS, NOV4_SHELL_DIR, NU_FLUX_PREFIX (store2026, 6 flavours,
+  NU_FLAVOURS), NU_PROD_RAW, GENIE_APPLY_DIR + nu_apply_2026(design, pdg), EVSTORE_DIR + evstore(name). shield_dis NU_STORE_PREFIX
+  and nu_dis_apply --store / --flavours (all 6) follow; run_interactions --nu-pdg; evstore_eval --store takes bare process names.
+- Not switched yet: make_peak_maps.py (one-run Full_dataset pickle), build_dis_parent_store.py (gamma + zeta).
+- The V0-production work staged on `veto-v0-production` is commit 48a0f36 on this branch.
+
+## 2026-11-10 — V0 tally in g4shield, V0-stable MS7 chain, low-W data, K_L -> pi+ pi- (branch `veto-v0-production`)
+
+- `cpp/g4shield.cc`: `v0_tally()` (every K_L / K_S / Lambda / Xi0 created: creator process, vertex, p, fate below cut /
+  decayed / absorbed / exit); additive, the transport output is unchanged. `bin/shield_dis.py generate --v0-tally`
+  (-> shield_<kind><tag>_v0tally.npz). `lib/veto/shield_iron.py`: `G4SHIELD_BUILD` overrides the module path.
+- `bin/g4pixi.sh`: Geant4 11.4.2 from the FairShip pixi env 26.10 (CVMFS), build + run without the container.
+- `bin/v0_fate.py` (tally analysis), `bin/v0_lowW.py` + `data/reference/lowW_strangeness_photoproduction.json`
+  (SAPHIR / CLAS / ABBHHM / SLAC, sigma_tot), `bin/shield_ip_tail.py` split by V0 species.
+- `lib/fastveto/decay.py`: K_L -> pi+ pi- (1.967e-3) in KL_CHANNELS.
+- Runs: results/shield_dis/shield_muon_g4v114_{default_s401,v0stable_s402}(.npz, _v0tally.npz). Results:
+  docs/v0_production.md slides 4-6, ISSUES D16.
+
+## 2026-11-10 — status-quo report (branch `veto-v0-production`)
+
+- New `docs/status_report_2026-11-10/`: Overleaf-ready LaTeX article (main.tex, sections/, refs.bib, figures/, logos/,
+  README.md), 9 pages: background budget for D6_straw_mod per source, setup, combinatorial, muon DIS, MS7 K_L incl. the
+  V0-vs-data check, neutrinos, rock / EM debris, statistics, open issues. Numbers from docs only, nothing re-run.
+
+## 2026-11-10 — V0 production in the MS7 muon DIS chain vs data (branch `veto-v0-production`, base 4904c4f)
+
+- New `bin/v0_production.py` (host python, existing files only): every V0 made at the MS7 vertex (V0-stable library
+  folded with the PR #15 vertex-energy spectrum), V0 vs W against gamma p 20 GeV (SLAC SHF) and NOMAD yields, V0 at the
+  exit plane vs vertex depth. Results in `results/v0_production/README.md`: Geant4 K0_S / Lambda at W ~ 6 GeV within
+  ~6 % of the gamma p data, Pythia 6 ~x1.9 high; per spill 7.9e3 K_L, 7.8e3 K_S, 5.4e3 Lambda made, 2.9e3 K_L at the
+  exit (21-37 % of them made by the shower in the iron); write-up docs/v0_production.md.
+
 ## 2026-11-10 — event store, MS7 on the Nov-4 muons with Geant4, debris and event viewers (branch `veto-neutrino-2026`)
 
 - `lib/veto/evstore.py`: design-independent event stores, events + track trees (parent links, end reasons, times) from each

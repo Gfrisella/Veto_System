@@ -24,7 +24,7 @@ from fastveto import dis
 from fastveto import targets as tg
 from veto import design as vdesign
 
-DATASET = "design-optimization-dataset-gamma-2026-10-17"           # the muon dataset (--dataset or --store)
+DATASET = paths.MUON_DATASET                     # the muon dataset, Nov-4 production (2026-11-11) (--dataset or --store)
 from veto.config import SPILLS_15Y  # noqa: E402  (6e20 / 4e13 p.o.t.)
 
 
@@ -34,8 +34,8 @@ def main():
     ap.add_argument("--dataset", default=DATASET, help="a dataset in paths.store_dir")
     ap.add_argument("--store", default=None, help="a dataset directory (overrides --dataset)")
     ap.add_argument("--lib", default=str(paths.interactions_data() / "dis/mu_library.npz"))
-    for g, v in (("helium", 1e6), ("pvc", 1e6), ("air", 2e5), ("planes", 2e5)):
-        ap.add_argument(f"--{g}", type=float, default=v, help=f"draws for {g} (planes: each plane)")
+    for g, v in (("helium", 1e6), ("wall", 1e6), ("air", 2e5), ("planes", 2e5)):
+        ap.add_argument(f"--{g}", *(["--pvc"] if g == "wall" else []), type=float, default=v, help=f"draws for {g} (planes: each plane)")
     ap.add_argument("--split", default="crossover", help="crossover | w2 | geant4 (fastveto.dis.MuonLibrary)")
     ap.add_argument("--max-rows", type=int, default=None)
     ap.add_argument("--seed", type=int, default=1)
@@ -52,7 +52,7 @@ def main():
     cols = {k: np.load(store / f"{k}.npy", mmap_mode="r") for k in meta["columns"]}
     if a.max_rows:
         cols = {k: v[: a.max_rows] for k, v in cols.items()}
-    draws = {"helium": a.helium, "pvc": a.pvc, "air": a.air, "planes": a.planes}
+    draws = {"helium": a.helium, "wall": a.wall, "air": a.air, "planes": a.planes}
     inter, part, totals = dis.run(cols, design, lib, draws, np.random.default_rng(a.seed), workers=a.workers)
     t_run = time.time() - t0 - t_lib
     out = Path(a.out or paths.interactions_data() / f"dis/apply_{design.name}{'' if a.split == 'crossover' else '_' + a.split}.npz")

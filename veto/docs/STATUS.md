@@ -723,6 +723,41 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   Folded: 5.4e8 x <= 5e-7 x 1/100 (IP^2 to 0.1 m) x 0.02 (real spectrum: 99 % < 4.9 GeV; two tracks > 1 GeV need ~5 GeV+)
   -> rock neutrons ~0.05 per 15 y (0.01-0.5); 2.7 if the spectrum softness is ignored (upper end). No veto for these.
 
+## 2026-11-10 (Guglielmo) V0 production in the MS7 muon chain vs data (branch veto-v0-production)
+- bin/v0_production.py -> results/v0_production/README.md. Made at the vertex (Geant4 muonNuclear, V0-stable library, PR #15
+  vertex spectrum): per spill K_L 7.9e3, K_S 7.8e3, Lambda 5.4e3, anti-Lambda 260 (~1 % per interaction: median W 1.3 GeV).
+- Data check at W = 6.2 GeV (gamma p 20 GeV, SLAC SHF): K0_S 0.087 vs 0.082 +- 0.003, Lambda 0.051 vs 0.049 +- 0.002;
+  Pythia 6 x1.9 high -> supports Geant4 as default (D3); the Pythia "x2.7" spread looks one-sided.
+- Exit plane: K_L 2.9e3 / spill = 0.40 of made; primaries alone give 0.25-0.31 -> 25-35 % cascade secondaries. K_S / Lambda
+  at the plane all from the cascade (vertex ones decayed, D9). Not done: full V0 tally in the iron (needs g4shield change + run).
+- 10 Nov (later): V0 tally in g4shield + V0-stable chain (Geant4 11.4.2 pixi; 11.4 = 11.2 within 1-3 % for K_L): 1.5e4 K_L
+  made per spill (half in the shower), exit K_L 37 % shower; K_S / Lambda kept at the vertex: vessel decays x8-30 but none
+  passes the selection (< 1e5 / 15 y each before IP vs 1.7e7 K_L). Low W: Geant4 >= x2-3 low but only ~8 % of the relevant
+  K_L -> +8-15 %. K_L -> pi+ pi- added. docs/v0_production.md slides 4-6, ISSUES D16.
+
+## 2026-11-11 (Guglielmo) Nov-4 production for everything (branch veto-nov4-source)
+- Decision: the Nov-4 complete target production is the muon source for every study, D5 included (ISSUES D5 note 11 Nov).
+  No enriched tail -> D5's convention / angle mismatch gone; "which tail is right" (dataset c vs Nov-4) -> Nov-4.
+- Code defaults switched via lib/veto/paths.py (MUON_DATASET, RECO_INPUTS, RATE_MAPS, ms7_parents, nov4_pool_pattern), see
+  CHANGELOG 2026-11-11. Checked: store 4.72e10 mu / spill, 3.22e4 / spill reaching SST1 (types 0-2), MS7 parents 3.95e7 rows
+  4.62e8 / spill, both recorded at 4e13 (no rescale). Nothing run.
+- Branch veto-nov4-source (worktree .claude/worktrees/nov4-source): commit 48a0f36 = the V0 work staged on veto-v0-production,
+  then the switch. The main checkout is unchanged except the store symlink and the inputs_nov4.npz copy.
+- Data locations (Guglielmo's list, 11 Nov; all in lib/veto/paths.py, all checked to exist):
+  Muons: source (PDG +-13) /disk/lhcb_data/sqasim/nov4_pool/train_000-022.h5 + hidden_000-003.h5 (nov4_pool_pattern("train" |
+  "hidden")); after the shield transport, one file per spill: nov4_pool/shell/train/ (3221 files) + shell/hidden/ (561) +
+  shell/summary.txt (NOV4_SHELL_DIR); design-optimisation store /disk/lhcb_data/sqasim/workspace/uzh/Veto_System/veto/data/
+  store/design-optimization-dataset-nov4-shell-300seeds-2026-11-10 (MUON_DATASET_DIR, store_dir(MUON_DATASET) reads it there;
+  identical to the /disk/users/sqasim copy); through the shield end /disk/lhcb_data/sqasim/ms7_parents/muons_iron_nov4.npz.
+  Neutrinos: flux stores .../veto/data/interactions/neutrinos/store2026_nu{12,-12,14,-14,16,-16} (NU_FLUX_PREFIX; per spill at
+  4e13: nu_mu 1.33e11, anti-nu_mu 1.06e11, nu_e 1.52e10, anti-nu_e 1.51e10, nu_tau / anti 1.28e9; same production as our
+  data/interactions/neutrinos2026 copy, plus E / comp columns); raw /disk/lhcb_data/sqasim/nu_prod/tail/ (NU_PROD_RAW); GENIE in
+  the vessel .../veto/data/interactions/genie/apply2026_<design>_nu<pdg>.npz (nu_apply_2026; run_interactions --kind nu --nu-pdg).
+  Event stores: /disk/lhcb_data/sqasim/evstore/<process> (EVSTORE_DIR; evstore_eval --store accepts bare names).
+  Defaults now: shield_dis and nu_dis_apply read the store2026 flux, nu_dis_apply runs all 6 flavours.
+- Next (re-run batch, needs approval): rate maps sample_nov4 (make_design_explorer) and peak maps from the store (make_peak_maps
+  to adapt), then the step-3 code items (D15, D9, C1, C7, A2, D12, B4, D14) and the batch of action list step 5.
+
 ## 2026-11-11 Muon charge-sign fix
 - BUG: every stored muon dataset (alpha .. nov4, sst1/ubt_TRY6) has pdg = charge sign (+1 = mu+; generate_muon_study writes
   sign(charge); verified on Nov-4 seed_0 against the pool by pool_index: all +1 rows are -13, and in every store -1 sits at
@@ -738,3 +773,95 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
 - Regression check bin/check_charge_convention.py (helper, seed rows vs the source pool by pool_index, stores by the side
   each charge leaves on): Nov-4 seed_0 239 470 rows 0 mismatches; Nov-4, c, gamma stores OK. Convention now also in the
   metadata of new seed files and stores (pdg_convention).
+
+## 2026-11-11 (Guglielmo) merge of PR #16 into veto-nov4-source
+- origin/main (PR #16) merged; overlap with our work = the charge fix (our ISSUES D17, found in parallel): theirs kept.
+  Completed on our side: rock_combinatorial "mu x rock" opposite-charge test (was same-sign), paths.RECO_INPUTS ->
+  inputs_nov4_q.npz. Old D9 (dis_comb_pairs*, out of repo) numbers void (same inversion).
+- Still to decide with Guglielmo: the 5 questions of docs/plan_evolution_sbt_shieldend.md; issue review continues
+  (D8, D15, D9, C1 pending; then C7, A2, D12, B4, D4, C9). C5 store rebuild from 3220 spills: coordinate the new store
+  name with Shah Rukh (his plan uses the 300-seed store).
+
+## 2026-11-11 (Guglielmo) issue review complete
+- Every item of ISSUES.txt now has a decision (dated 11 Nov notes): D8, D15, D9, C1, C7, A2, D12 (closed), B4, D4, C9,
+  D2, D6, D7, D14; earlier today C5, D3 (minor), D16.4, B2 (closed), D5 (closed), D17 (done).
+- Code to write (no runs): D15 parent-loaded Geant4 + count check; D8 pvc -> wall; C1 analytic ghosts; D9 DIS x mu class
+  in evstore_eval (bound first); C7 bound; A2 slope scan + bounded genome; B4 EventCalc dcdcfc1 re-import, equal-weight
+  set in the objective; D4 range cut; C9 MuonsAndMatter categorize_muons patch (Guglielmo reviews); D2 self-veto study;
+  D6 libraries 0.5/1 - 400 GeV in 5 % + rescaling (branch veto-d6-energy-rescale); D14 shield-end debris in time + ACTS
+  parametrisation (Slurm arrays, Guglielmo submits).
+- Pending: approval of the re-run batch (step 5 of the action list), the C5 store rebuild (3220 spills; name to agree with
+  Shah Rukh), the 5 questions of docs/plan_evolution_sbt_shieldend.md.
+
+## 2026-11-12 (Guglielmo) re-run batch prepared; B4 done; default UBT
+- B4 DONE: EventCalc benchmarks regenerated (dcdcfc1) and imported -> data/signal/eventcalc_dcdcfc1 (default signal store).
+- Default UBT (Guglielmo 11-12 Nov): straws (window size) at 30.73 m + tile plane 4 x 4 m at 31.13 m, 2 x 2 cm tiles in the
+  flames (1 <= |x| <= 2 m, |y| <= 0.6 m), 4 x 4 cm elsewhere, no fins at the entrance z ("ubt_layout": "legacy" = old).
+  Nov-4: 1.28e9 mu / spill on the tile plane (1e4 in the window), 4x4 regions <= 0.67 MHz / channel, flame edges up to
+  2.8 MHz per 2x2 tile (0.15 m^2 above 1 MHz). EM debris maps on the tile plane (+7 % hits).
+- Code for the batch: make_peak_maps from the store, build_dis_parent_store from one store, tile EM maps, air upstream of the
+  vessel as its own target group (code 8, run_interactions --air-upstream-draws), paths overrides VETO_MUON_DATASET /
+  VETO_RECO_INPUTS / VETO_RATE_MAPS.
+- RE-RUN BATCH (to submit by Guglielmo from farm-gpu3/4/5): `bash bin/batch/submit_rerun.sh` on branch veto-nov4-source
+  (DRY=1 to only write the command files). 7 stages as Slurm arrays with dependencies, outputs in veto/results_rerun/
+  (nothing old overwritten): S1 maps (3220-spill store), S3 MS7 V0-stable muon (10 x 2e6) + nu, S4 pair inputs (+ S4b
+  cross-run), S2 EM debris 2e6, S5 interactions per design, S6 event stores + forced K_L, S7 run_reco full / partial with
+  debris and the B4 signal, evstore_eval, DIS x mu, D2 self-veto, closure, rock x mu. Designs: D6_straw, D6_fiber, D6_tile2,
+  D6_straw_mod (env DESIGNS). Not tested on the farm yet: first jobs may need path / memory tuning.
+- D6 libraries: branch veto-d6-energy-rescale, `sbatch --output=<dir>/d6_%a.log bin/batch/d6_libraries.sbatch`.
+- Running locally: A2 bounce scan (bin/scan_bounce.py, 3 designs). D9 local test was killed (memory): it is in S7 with a
+  300k muon sample.
+
+## 2026-11-12 (later) Slurm / GPU access for Claude; jobs submitted
+- Access: Slurm commands and nvidia-smi run outside the sandbox (per-command approval); Slurm = CPU nodes only (no GRES):
+  partitions standard (128-core / 256 GB nodes, 1 day), long, verylong, express; hep has one usable node (30 cores). GPUs:
+  4 x L40S on farm-gpu3 only (shared) -> S4 / S4b (pairing) run there with bin/batch/run_local_gpu.sh.
+- Submitted: D6 libraries 2051954 (array 0-2, logs veto/logs/slurm/d6_*.log); A2 bounce scan 2051957 (current inputs
+  inputs_nov4_q, logs/slurm/a2_scan_0.log, -> results/reco/bounce_scan.json); re-run batch S1 maps 2051958, S3 MS7 chains
+  2051959 (logs results_rerun/batch/logs). Next: S4 / S4b on the GPU after S1, then
+  `STAGES="S2 S5 S6 S7" J_S3=2051959 bash bin/batch/submit_rerun.sh` (S2 / S5 wait for S4 done locally).
+
+
+## 2026-11-12 afternoon — node overload fixed, R1/R2 first numbers, D6 comparison
+
+- **Overload (mail from the farm admin):** farm-wn81 at load 1314 on 80 cores. Cause: no thread limit; each of the 32 Pool
+  workers of `scan_bounce.py` opened one OpenBLAS thread per node core. Fix `bin/batch/env.sh` (47516d4): reads the job's
+  CMDFILE line; `--workers`/`--jobs` commands get 1 BLAS/OpenMP thread per process, others `SLURM_CPUS_PER_TASK`.
+  Same in `d6_libraries.sbatch` (027096c). Jobs 2051957, 2052184_0, 2051959_0 requeued.
+- **Memory:** S3 (16 Geant4 workers) peaks at 103 GB -> S3 resubmitted with 128G (job 2052621), S2 now 160G.
+  A2 scan needed 257 GB with 32 workers -> resubmitted with 12 workers / 128G (job 2052643).
+- **run_reco bug:** EventCalc signal had no `hits_per_event` (KeyError after the evaluation) -> fixed (3a096ca).
+- **R1 vs R2** (300-seed store, `inputs_nov4_q`, EventCalc B4 signal, MS; `results_test/reco/reco_R*.json`, job 2052622):
+
+  | design | bkg pairs 15 y (2.65 before) | signal loss | SST1 muons tagged (bounced) | Punzi | channels | cost / budget |
+  |---|---|---|---|---|---|---|
+  | R1 UBT only | 1.8e-3 | 0.48 % | 48 % (14 %) | 0.645 | 18 100 | 25 % |
+  | R2 SBT+UBT pointing | 3e-6 | 0.51 % | 70 % (57 %) | 0.662 | 31 764 | 84 % |
+  | R2 SBT any-hit, SR-389 rate | 0 | 15.3 % | 99 % (97 %) | 0.565 | 31 764 | 84 % |
+
+  Flame tiles (2x2 cm) peak at 2.78 MHz / tile, above the 2.5 MHz SR-389 limit.
+- **D6 compare** (`results/d6_compare_{iron,helium}.json`): 5 % grid cuts the energy mismatch from 5.8 % to 2.0 % rms; V0 and
+  charged yields per interaction agree with the old library within ~1.5 sigma in every energy bin; rescaling has no visible
+  effect. Neutrino library (task 2) failed: one GENIE gevgen (nu_mu, Na-23, 1 GeV) hung past the 1 h timeout.
+
+## 2026-11-14 — re-run batch resumed (R1 + R2), A2 on the reference designs
+
+- **Batch state:** S1 done (sample_nov4full, peak maps, DIS parent store 3.19e7 rows, tile map). S3 muon chains done
+  (job 2052621, `results_rerun/shield_dis/shield_muon_v0s_s501..510`). S3 neutrino task failed: `genie/nu_library_v2.npz`
+  missing in our tree -> linked to Shah Rukh's GENIE v2 library (all 6 flavours) and resubmitted (job 2064489).
+- **Rest of the chain submitted** with `DESIGNS="designs/R1_ubt_only.json designs/R2_sbt_ubt.json"`, S4 on CPU in Slurm
+  (no GPU in this session's memory budget): S4 2064490 -> S4b 2064491, S2 2064492, S5 2064493 -> S6 2064494 (also after
+  2064489) -> S7 2064495 (12 tasks). Logs `results_rerun/batch/logs`.
+- **A2:** the scan on D6_straw/fiber/tile2 was killed twice at the 256 GB node limit (12 and 32 workers). A single
+  evaluation needs 0.37 GB, so `scan_bounce.py` now runs the first point of each design serially (builds missing caches once)
+  before forking. Resubmitted on the reference designs R1 / R2 with 8 workers, 64 G (job 2064527).
+- **Open:** D6 neutrino library (GENIE hang at 1 GeV on Na-23) — not needed for the re-run, which uses Shah Rukh's v2.
+- **A2 result (job 2064527, 6 min, 8.8 GB; `results/reco/bounce_scan.json`):** bounce search off is best for R1 and R2 by
+  reward. R1: slope 0 -> 0.45 raises the bounced SST1 muons vetoed 0 -> 16.8 % (all SST1 43.0 -> 49.5 %) but the signal
+  loss 0.03 -> 0.75 %; combinatorial unchanged (0.12 / 15 y). R2: bounced 48.5 -> 58.4 %, signal loss 0.07 -> 0.76 %.
+  The script falls back to start 0.21 / range 0.105-0.42 when no design prefers a slope > 0 -> decision needed (off, or keep it as a knob).
+- **Rate penalty dominates the reward (-31 760 for both):** `technology.py` caps tile and tile2 at 1 MHz / channel;
+  SR-389 allows 2.5 MHz per 20 mm tile. Flame blocks peak 2.78 / 2.20 MHz. Proposed: tile2 limit 2.5 MHz (decision pending).
+- **Decisions (Guglielmo, 14 Nov):** (1) bounce search: keep as is (start 0.21, optimiser knob), may switch off later.
+  (2) tile2 as SR-389: 2.5 MHz per channel, 90 ps (was 1 MHz, 80 ps). Rate penalty R1/R2 31 800 -> 2 120 points (only the
+  x < 0 flame block, 2.78 MHz, 11 % over). Applied before S7 (2064495) starts.

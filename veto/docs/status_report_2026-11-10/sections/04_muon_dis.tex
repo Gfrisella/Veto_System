@@ -1,0 +1,27 @@
+\section{Muon DIS in the vessel: helium, walls, planes, air}
+
+Forced muon interactions along the stored trajectories (fastveto library: Geant4 muonNuclear at low $\nu$,
+Pythia~6 above), products optionally through Geant4 in the vessel.
+
+\begin{table}[h]
+\centering\small
+\caption{\texttt{D6\_straw\_mod} on the Nov-4 muons (\texttt{run\_interactions --kind muon}), per 15 years.
+\src{docs/STATUS.md (2026-11-10 night, ``Correction'')}}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Target & selected & after veto b & truth level c\\
+\midrule
+helium & 1\,820 & 472 & 673\\
+vessel walls (Mylar) & 176 & 44 & --\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+\item \textbf{Correction (10 Nov)}: the helium DIS was believed small; it is the \textbf{second background after the
+MS7 $K_L$}. At truth level the parent crossed no veto plane: muons entering through the side are a coverage gap of
+this straw design. For comparison, dataset c gave 210--250 for D6\_tile2 / E3 / E4 / E5 (e2e\_c). Store:
+\path{vessel_mu_nov4_D6_straw_mod} ($7.0\times10^6$ events). \est
+\item Air near the vessel and fins: done (C7, 5 Nov); old PVC wall results to be redone with Mylar (D8, \open).
+\item Statistics: helium sufficient now ($\times20$ later), walls lacking (22 per MC event, cheap to improve).
+\end{itemize}

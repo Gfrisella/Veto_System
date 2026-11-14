@@ -1,0 +1,9 @@
+{
+  "name": "R1_ubt_only",
+  "description": "Reference 1 (Shah Rukh's plan, Guglielmo 12 Nov 2026): the baseline UBT alone, no fins, no SBT. UBT = vertical straw station (window size, 30.73 m) + 4 x 4 m^2 tile plane at 31.13 m (2 x 2 cm tiles in the flames, 4 x 4 cm elsewhere, +-200 ps), as SPSC-SR-389.",
+  "frame": "fairship-2026",
+  "ubt_layout": "2026-11-11",
+  "ubt": {"y_lo": -1.35, "y_hi": 1.35},
+  "fins": [],
+  "detector": {}
+}

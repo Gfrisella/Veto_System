@@ -33,7 +33,7 @@ def old_penalty(res, cfg):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--inputs", default="inputs.npz")
+    ap.add_argument("--inputs", default=paths.RECO_INPUTS)
     ap.add_argument("--spill", type=float, default=1.0)
     args = ap.parse_args()
     inp = np.load(paths.results_dir() / "reco" / args.inputs)

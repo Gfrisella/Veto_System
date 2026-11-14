@@ -32,7 +32,7 @@ from veto import interactions as ix
 from veto import io, objective, paths, reco
 from veto.config import DEFAULT_CONFIG
 
-DATASET = "design-optimization-dataset-delta-enriched-2026-10-19"
+DATASET = paths.MUON_DATASET                     # Nov-4 production (2026-11-11)
 OUT = paths.results_dir() / "end_to_end"
 _S = {}
 
@@ -46,7 +46,7 @@ def generate(args):
     from fastveto import dis
     lib = dis.MuonLibrary(str(paths.mu_library()), split="crossover")
     muons, _ = io.open_store(paths.store_dir(args.dataset))
-    draws = dict(zip(("helium", "pvc", "air", "planes"), args.draws))
+    draws = dict(zip(("helium", "wall", "air", "planes"), args.draws))
     for name in args.designs:
         t0 = time.time()
         design = load_design(name)
@@ -64,10 +64,11 @@ def _init(args):
 
 
 def group(res, design):
-    """Per-target rows of interactions.evaluate -> helium / air / pvc / planes (all planes of the design together)."""
+    """Per-target rows of interactions.evaluate -> helium / air / wall / planes (all planes of the design together)."""
     out = {}
     for name, r in res.items():
-        key = name if name in ("helium", "air", "pvc") else "planes"
+        name = "wall" if name == "pvc" else name                     # ISSUES D8: old files
+        key = name if name in ("helium", "air", "wall") else "planes"
         g = out.setdefault(key, dict(interactions=0.0, selected=0.0, after=0.0, after_err2=0.0, truth=0.0,
                                      n_selected=0, n_after=0))
         g["interactions"] += r["interactions"]; g["selected"] += r["selected"]; g["n_selected"] += r["n_selected"]
@@ -102,7 +103,7 @@ def job(arg):
                 muon=mu_g, nu=nu_g, total=s["bkg_events_15y"], total_err=s["bkg_events_15y_err"],
                 sensitivity=s["sensitivity"], reward=s["reward"], reward_err=s["reward_err"], terms={k: v[0] for k, v in s["terms"].items()},
                 per_plane_mu={k: dict(interactions=v["interactions"], selected=v["selected"], after=v.get("survive_b", 0.0))
-                              for k, v in mu.items() if k not in ("helium", "air", "pvc")},
+                              for k, v in mu.items() if k not in ("helium", "air", "wall", "pvc")},
                 planes=[dict(name=p["plane"], technology=p["technology"], peak_hz_cm2=p["peak_hz_cm2"],
                              peak_channel_hz=p["peak_channel_hz"]) for p in r["planes"]],
                 seconds=round(time.time() - t0, 1))
@@ -114,7 +115,7 @@ def main():
     ap.add_argument("--designs", nargs="+", required=True)
     ap.add_argument("--cones", type=float, nargs="+", default=[0, 10, 20], help="mrad")
     ap.add_argument("--dataset", default=DATASET)
-    ap.add_argument("--inputs", default="inputs_delta_s.npz")
+    ap.add_argument("--inputs", default=paths.RECO_INPUTS)
     ap.add_argument("--draws", type=float, nargs=4, default=[5e6, 5e6, 1e6, 1e6], help="helium pvc air planes (each)")
     ap.add_argument("--n-signal", type=int, default=100_000)
     ap.add_argument("--workers", type=int, default=40)
@@ -134,8 +135,8 @@ def main():
     for r in rows:
         g = lambda kind, t: r[kind].get(t, {}).get("after", 0.0)
         print(f"{r['design']:<12}{r['cone_mrad']:>5g}{100 * r['signal_lost']:>11.2f} %{r['combinatorial']['after']:>10.2g}"
-              + "".join(f"{g('muon', t):>9.3g}" for t in ("helium", "air", "pvc", "planes"))
-              + "".join(f"{g('nu', t):>8.3g}" for t in ("helium", "air", "pvc")) + f"{g('nu', 'planes'):>9.3g}"
+              + "".join(f"{g('muon', t):>9.3g}" for t in ("helium", "air", "wall", "planes"))
+              + "".join(f"{g('nu', t):>8.3g}" for t in ("helium", "air", "wall")) + f"{g('nu', 'planes'):>9.3g}"
               + f"{f(r['total'], r['total_err']):>17}{r['sensitivity']:>7.3f}{r['reward']:>10.2f}")
     print(f"\nconfusion matrix per source, events per 15 years (TP vetoed, FN survive; signal: FP lost, TN kept)")
     for r in rows:

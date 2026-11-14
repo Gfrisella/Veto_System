@@ -33,7 +33,7 @@ from veto import geometry as geo
 from veto import io, paths
 from veto import muon_types as mt
 
-DATASET = "design-optimization-dataset-alpha-14-oct-2026"
+DATASET = paths.MUON_DATASET                     # Nov-4 production (2026-11-11)
 SAMPLE = {0: 5000, 1: 5000, 2: 5000, 3: 5000, 4: 3000, 5: 3000, 6: 3000}
 N_DRAW = 8
 Z_SLICES = np.arange(geo.Z_UBT, geo.Z_SST1 + 0.01, 1.0)     # fin rate maps, every 1 m
@@ -118,7 +118,7 @@ def build_html(args):
     from veto import viz3d
 
     outdir = paths.results_dir() / "design_explorer"
-    s = dict(np.load(outdir / "sample.npz"))
+    s = dict(np.load(outdir / args.out))
     n = len(s["s_w"])
     fin_maps = s["fin_maps"]                       # (side, z slice, u, y)
     data = {
@@ -446,11 +446,11 @@ update();
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--html", action="store_true", help="build the HTML from results/design_explorer/sample.npz")
+    parser.add_argument("--html", action="store_true", help="build the HTML from results/design_explorer/<--out>")
     parser.add_argument("--chunk", type=int, default=10_000_000)
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--dataset", default=DATASET)
-    parser.add_argument("--out", default="sample.npz", help="file name in results/design_explorer")
+    parser.add_argument("--out", default=paths.RATE_MAPS, help="file name in results/design_explorer")
     args = parser.parse_args()
     if args.html:
         build_html(args)

@@ -6,6 +6,12 @@ pair's pointing (IP) depends on the decay (the neutrino of K_L -> pi l nu), so t
 with no new Geant4. Pre-selection: V0 with p > --p-min whose line at SST1 is within the enlarged SST1 window.
 
     python3 bin/evstore_redecay.py <ms7 store> --n 100 --out <store>_redecay100
+
+--natural (ISSUES C7, 2026-11-11): stores WITHOUT forced copies (e.g. vessel_mu_*: muon DIS in helium / air / walls / planes,
+where K_L decay only naturally): every K_L root of every event gets --n forced decays in [max(z0, vessel entrance),
+vessel exit] along its line, weight = event weight x P(decay there) / n, the rest of its event kept, code = the
+original target code, v0 = 130, copy_of = the original event. The natural K_L decays of the original store describe the
+same physics: do not add the original store's K_L-decay pairs to these (the copies replace them, with n x the decays).
 """
 import _bootstrap  # noqa: F401
 import argparse
@@ -25,28 +31,47 @@ def main():
     ap.add_argument("store"); ap.add_argument("--out", required=True); ap.add_argument("--n", type=int, default=100)
     ap.add_argument("--p-min", type=float, default=1.5); ap.add_argument("--margin", type=float, default=2.0)
     ap.add_argument("--batch", type=int, default=20000); ap.add_argument("--seed", type=int, default=31)
+    ap.add_argument("--natural", action="store_true", help="C7: K_L roots of a store without forced copies (see above)")
+    ap.add_argument("--species", type=int, nargs="+", default=[130], help="--natural: V0 species to force (|pdg|)")
     a = ap.parse_args()
     t0 = time.time()
     rng = np.random.default_rng(a.seed)
     meta, ev, tr = es.read(a.store)
-    c4 = ev["code"] == 4
     evrow = {int(e): i for i, e in enumerate(ev["event"])}
-    vroot = np.nonzero((tr["parent"] < 0) & (tr["end"] == es.END_FORCED))[0]
-    vroot = vroot[c4[[evrow[int(e)] for e in tr["event"][vroot]]]]
-    copy_of = ev["copy_of"][[evrow[int(e)] for e in tr["event"][vroot]]]
-    key = np.stack([copy_of, np.round(tr["px"][vroot], 4) * 1e4, np.round(tr["py"][vroot], 4) * 1e4, np.round(tr["pz"][vroot], 4) * 1e4], 1)
-    _, first, inv = np.unique(key, axis=0, return_index=True, return_inverse=True)
-    w_copy = ev["weight"][[evrow[int(e)] for e in tr["event"][vroot]]]
-    w_v0 = np.bincount(inv.ravel(), w_copy)                               # summed weight of the copies of each V0
-    v = vroot[first]
-    p = np.stack([tr["px"][v], tr["py"][v], tr["pz"][v]], 1).astype(float)
-    x0 = np.stack([tr["x0"][v], tr["y0"][v], tr["z0"][v]], 1).astype(float)
-    pdg = tr["pdg"][v].astype(np.int64)
-    pm = np.linalg.norm(p, axis=1); u = p / pm[:, None]
+    if not a.natural:
+        c4 = ev["code"] == 4
+        vroot = np.nonzero((tr["parent"] < 0) & (tr["end"] == es.END_FORCED))[0]
+        vroot = vroot[c4[[evrow[int(e)] for e in tr["event"][vroot]]]]
+        copy_of = ev["copy_of"][[evrow[int(e)] for e in tr["event"][vroot]]]
+        key = np.stack([copy_of, np.round(tr["px"][vroot], 4) * 1e4, np.round(tr["py"][vroot], 4) * 1e4, np.round(tr["pz"][vroot], 4) * 1e4], 1)
+        _, first, inv = np.unique(key, axis=0, return_index=True, return_inverse=True)
+        w_copy = ev["weight"][[evrow[int(e)] for e in tr["event"][vroot]]]
+        w_v0 = np.bincount(inv.ravel(), w_copy)                           # summed weight of the copies of each V0
+        v = vroot[first]
+        p = np.stack([tr["px"][v], tr["py"][v], tr["pz"][v]], 1).astype(float)
+        x0 = np.stack([tr["x0"][v], tr["y0"][v], tr["z0"][v]], 1).astype(float)
+        pdg = tr["pdg"][v].astype(np.int64)
+        pm = np.linalg.norm(p, axis=1); u = p / pm[:, None]
+        code_v = np.full(len(v), 4)
+        copy_of_v = ev["copy_of"][[evrow[int(e)] for e in tr["event"][v]]]
+    else:                                                                 # C7: K_L (species) roots of ordinary events
+        v = np.nonzero((tr["parent"] < 0) & np.isin(np.abs(tr["pdg"]), a.species) & (tr["pz"] > 0))[0]
+        p = np.stack([tr["px"][v], tr["py"][v], tr["pz"][v]], 1).astype(float)
+        x0 = np.stack([tr["x0"][v], tr["y0"][v], tr["z0"][v]], 1).astype(float)
+        pdg = tr["pdg"][v].astype(np.int64)
+        pm = np.linalg.norm(p, axis=1); u = p / pm[:, None]
+        lam0 = pm / np.array([dc.MASS[abs(int(q))] for q in pdg]) * np.array([CTAU[int(q)] for q in pdg])
+        s1 = np.maximum(G.Z_VESSEL_MIN - x0[:, 2], 0) / u[:, 2]; s2 = np.maximum(G.Z_VESSEL_MAX - x0[:, 2], 0) / u[:, 2]
+        pdec = np.exp(-s1 / lam0) - np.exp(-s2 / lam0)
+        rows_v = np.array([evrow[int(e)] for e in tr["event"][v]], dtype=np.int64)
+        w_v0 = ev["weight"][rows_v] * pdec                                # decays in the vessel per spill, each K_L
+        code_v = ev["code"][rows_v]
+        copy_of_v = ev["event"][rows_v]
     zs = G.Z_SST1
     xs, ys = x0[:, 0] + u[:, 0] * (zs - x0[:, 2]) / u[:, 2], x0[:, 1] + u[:, 1] * (zs - x0[:, 2]) / u[:, 2]
     pre = (pm > a.p_min) & (u[:, 2] > 0) & (np.abs(xs) < G.SST1_HALF_X + a.margin) & (np.abs(ys) < G.SST1_HALF_Y + a.margin)
-    print(f"{len(v):,} distinct V0 in {c4.sum():,} copies ({w_v0.sum():.4g} decays / spill); {pre.sum():,} pre-selected "
+    print(f"{len(v):,} distinct V0 ({'K_L roots, natural store' if a.natural else 'in the forced copies'}; {w_v0.sum():.4g} "
+          f"decays in the vessel / spill); {pre.sum():,} pre-selected "
           f"({w_v0[pre].sum():.4g} / spill), {time.time() - t0:.0f} s", flush=True)
     sel = np.nonzero(pre)[0]
     # rest of each event: the roots of the first copy other than the V0 and the forced products
@@ -63,7 +88,8 @@ def main():
         rep = np.repeat(b, n)
         # decay points: truncated exponential along the line between the vessel ends
         lam = pm[rep] / np.array([dc.MASS[abs(int(q))] for q in pdg[rep]]) * np.array([CTAU[int(q)] for q in pdg[rep]])
-        d1 = (G.Z_VESSEL_MIN - x0[rep, 2]) / u[rep, 2]; d2 = (G.Z_VESSEL_MAX - x0[rep, 2]) / u[rep, 2]
+        d1 = np.maximum(G.Z_VESSEL_MIN - x0[rep, 2], 0) / u[rep, 2]      # from the vertex if it is in the vessel (C7)
+        d2 = np.maximum(G.Z_VESSEL_MAX - x0[rep, 2], 0) / u[rep, 2]
         e1, e2 = np.exp(-d1 / lam), np.exp(-d2 / lam)
         d = -lam * np.log(e1 - rng.random(len(rep)) * (e1 - e2))
         vdec = x0[rep] + u[rep] * d[:, None]
@@ -74,6 +100,8 @@ def main():
         for j, q in enumerate(b):
             rows = o[lo[q]:hi[q]]
             rows = rows[(tr["parent"][rows] < 0) & (tr["end"][rows] != es.END_FORCED)]
+            if a.natural:                                                 # C7: this K_L is replaced by its forced decay
+                rows = rows[rows != v[q]]
             if len(rows):
                 k = len(rows)
                 r_ev.append(np.repeat(np.arange(j * n, (j + 1) * n), k)); r_pdg.append(np.tile(tr["pdg"][rows], n))
@@ -90,17 +118,19 @@ def main():
         forced = dict(rows=nr + np.arange(len(rep)), dec=vdec, prod_owner=ev_d, prod_pdg=pdg_d, prod_p=p_d[:, :3])
         t = es.propagate(g_ev + ids[0], g_pdg, g_x, g_p, g_t, rng, forced=forced, beam=g_b)
         src_ev = np.array([evrow[int(e)] for e in copy_ev[rep]])
-        evb = dict(event=ids, weight=w_v0[rep] / n, code=np.full(len(rep), 4), parent_row=ev["parent_row"][src_ev],
+        evb = dict(event=ids, weight=w_v0[rep] / n, code=code_v[rep], parent_row=ev["parent_row"][src_ev],
                    x=ev["x"][src_ev], y=ev["y"][src_ev], z=ev["z"][src_ev], t=ev["t"][src_ev], E=ev["E"][src_ev],
-                   copy_of=ev["copy_of"][src_ev], v0=pdg[rep])
+                   copy_of=copy_of_v[rep], v0=pdg[rep])
         for k in es.EVENT_COLS:
             EV[k].append(np.asarray(evb[k]))
         for k in es.TRACK_COLS:
             TR[k].append(t[k])
         print(f"  {b0 + len(b):,} / {len(sel):,} V0, {len(t['event']):,} tracks, {time.time() - t0:.0f} s", flush=True)
     evo = {k: np.concatenate(x) for k, x in EV.items()}; tro = {k: np.concatenate(x) for k, x in TR.items()}
-    m = es.write(a.out, dict(meta, source=meta["source"] + f" + {a.n} re-decays per pre-selected V0 (bin/evstore_redecay.py)",
-                             parent_store=a.store, redecays=a.n, p_min=a.p_min, margin=a.margin), evo, tro)
+    how = (f" + {a.n} forced decays per K_L root in the vessel (bin/evstore_redecay.py --natural, ISSUES C7)" if a.natural
+           else f" + {a.n} re-decays per pre-selected V0 (bin/evstore_redecay.py)")
+    m = es.write(a.out, dict(meta, source=meta["source"] + how, parent_store=a.store, redecays=a.n, p_min=a.p_min,
+                             margin=a.margin, natural=a.natural), evo, tro)
     print(f"-> {a.out}: {m['n_events']:,} events, {m['n_tracks']:,} tracks ({time.time() - t0:.0f} s)")
 
 

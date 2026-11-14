@@ -107,17 +107,34 @@ def field_at(fm, x, y, z):
     return np.where(ok[..., None], out, 0.0)
 
 
+def g4shield_module(natural=None, retries=6):
+    """Import the Geant4 module (g4shield, or g4shieldnat when natural): loads the Geant4 libraries from CVMFS.
+    ISSUES D15: call it in the PARENT before the worker pool forks, so the workers inherit the loaded libraries and never
+    load them from CVMFS themselves (64 workers loading at once made CVMFS fail: ImportError libG4analysis.so). If an
+    import still fails it is retried with backoff (fallback) and reported once."""
+    import importlib
+    import os
+    import sys
+    import time
+    from . import paths
+    for d in (str(paths.cpp_build()), str(paths.PROJECT_DIR / "cpp" / "build_ship"), os.environ.get("G4SHIELD_BUILD")):
+        if d and d not in sys.path:                                       # host build (bin/g4ship.sh); G4SHIELD_BUILD
+            sys.path.insert(0, d)                                         # e.g. bin/g4pixi.sh (Geant4 11.4.2, CVMFS)
+    name = "g4shieldnat" if natural else "g4shield"
+    for k in range(retries + 1):
+        try:
+            return importlib.import_module(name)
+        except ImportError as e:
+            if k == retries or "No module named" in str(e):
+                raise
+            print(f"[pid {os.getpid()}] import {name} failed ({e}); retry {k + 1}/{retries}", file=sys.stderr, flush=True)
+            time.sleep(min(30.0, 0.5 * 2 ** k))
+
+
 def init_g4shield(seed, e_cut=0.5, field=True, z_iron0=None, natural=None):
     """Import and initialise the Geant4 module (cpp/build/g4shield) for this target. natural = dict(physics_list,
     mu_bias): the g4shieldnat module instead (natural, biased muonNuclear; bin/shield_natural_check.py, D3)."""
-    import sys
-    from . import paths
-    sys.path.insert(0, str(paths.cpp_build()))
-    sys.path.insert(0, str(paths.PROJECT_DIR / "cpp" / "build_ship"))   # host build (bin/g4ship.sh), other python
-    if natural:
-        import g4shieldnat as g4shield
-    else:
-        import g4shield
+    g4shield = g4shield_module(natural)
     extra = dict(physics_list=natural["physics_list"], mu_bias=float(natural["mu_bias"])) if natural else {}
     fm = load_field() if field else dict(field=np.zeros((0, 0, 0, 3)), x0=0, dx=1, y0=0, dy=1, z0=0, dz=1, z_shift=0)
     g4shield.initialize(seed=seed, z_iron0=Z_IRON0 - 0.2 if z_iron0 is None else z_iron0, z_iron1=Z_SHIELD_END, half_x=HALF_X, half_y=HALF_Y,

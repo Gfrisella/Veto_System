@@ -37,7 +37,7 @@ def main():
     start = time.time()
 
     store, meta = io.open_store(paths.store_dir(DATASET))
-    n_runs = meta["sources"]["old"]["n_files"]
+    n_runs = meta["seeds"] if "seeds" in meta else meta["sources"]["old"]["n_files"]   # Nov-4 shell store: seeds
     types = np.asarray(store["type"])
     sst1 = np.where(types <= 2)[0]
     d = {k: np.asarray(store[c][sst1]) for k, c in COLS.items()}
@@ -70,18 +70,19 @@ def main():
     pairs, vertex = np.concatenate(all_pairs), np.concatenate(all_vertex)
     w_pair = d["weight"][pairs[:, 0]].astype(np.float64) * d["weight"][pairs[:, 1]] * n_runs / (2 * len(args.shift))
 
-    ref = np.load(paths.results_dir() / "reco" / "inputs.npz")
+    ref = np.load(paths.results_dir() / "reco" / paths.RECO_INPUTS)
     print(f"{len(pairs):,} candidates, {w_pair.sum():.4g} pairs / spill before the time coincidence "
           f"(within-run sample: {len(ref['cand']):,}, {ref['cand_w'].sum():.4g})")
     # the same single muons as inputs.npz: make_reco_inputs.py's draw (seed 3), same SST1 index space
     single = np.sort(np.random.default_rng(3).choice(len(sst1), min(200_000, len(sst1)), replace=False))
     rows = np.unique(np.concatenate([pairs.ravel(), single]))
-    np.savez(paths.results_dir() / "reco" / "inputs_xrun.npz",
+    out = paths.RECO_INPUTS.replace(".npz", "_xrun.npz")
+    np.savez(paths.results_dir() / "reco" / out,
              **{f"tr_{k}": v[rows] for k, v in d.items()},
              cand=np.searchsorted(rows, pairs), cand_vertex=vertex, cand_w=w_pair,
              single=np.searchsorted(rows, single), single_w=ref["single_w"],
              **{k: ref[k] for k in ("fin_maps", "z_slices", "u_bins", "y_bins", "ubt_hist", "ubt_y_bins", "n_runs")})
-    print(f"saved inputs_xrun.npz: {len(rows):,} tracks, {time.time() - start:.0f} s")
+    print(f"saved {out}: {len(rows):,} tracks, {time.time() - start:.0f} s")
 
 
 if __name__ == "__main__":

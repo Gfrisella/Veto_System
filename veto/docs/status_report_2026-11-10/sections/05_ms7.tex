@@ -1,0 +1,121 @@
+\section{MS7 shield DIS $\to$ V0 decaying in the vessel}
+\label{sec:ms7}
+
+\subsection{Chain}
+Parents: muons crossing the last 50\,cm of MS7 iron ($z=29.39$--29.89\,m, $|x|<1.71$, $|y|<1.27$\,m), bent by the
+field; forced muon-nuclear interaction uniform along the chord; final state from the iron library; Geant4 (FTFP\_BERT,
+MS7 field) to the exit plane $z=29.90$\,m; every $K_L$, $K_S$, $\Lambda$, $\Xi^0$ there forced to decay in the vessel
+(Fig.~\ref{fig:chain}). \src{bin/shield_dis.py, docs/shield_iron_dis.md}
+
+\begin{figure}[h]
+\centering
+\includegraphics[height=8.5cm]{dis_chain_overview.pdf}\hfill
+\includegraphics[width=0.52\linewidth]{dis_sigma_generators.pdf}
+\caption{Left: the forced chain. Right: muon-nuclear cross section per nucleon in iron for the generators (Geant4
+muonNuclear includes the soft photonuclear part; Pythia only the DIS part).
+\src{docs/dis_chain_pdf/overview.pdf, results/shield_dis/dis_sigma_generators.pdf}}
+\label{fig:chain}
+\end{figure}
+
+\subsection{Rates (PR \#15, Geant4 11.2, 10 runs $\times\,2\times10^6$ interactions)}
+\begin{itemize}
+\item $7.94\times10^{5}$ interactions per spill ($1.19\times10^{13}$ per 15\,y); at the exit plane ($p>1$\,GeV):
+$K_L$ 2\,923, $K_S$ 473, $\Lambda$ 262 per spill. \src{results/shield_dis/shield_muon_g4v112_s1??.json}
+\item V0 decays in the vessel: 1\,547 per spill ($K_L$ 1\,540) $=2.33\times10^{10}$ per 15\,y; on the Nov-4 parents
+$2.69\times10^{10}$ (parents $\times1.19$).
+\item Selection: 0 selected in each file. All cuts but IP: $1.4\times10^7$; IP $<2/1/0.5/0.25/0.1$\,m:
+$8.1\times10^6$ / $2.1\times10^6$ / $3.8\times10^5$ / $7.6\times10^4$ / $1.8\times10^4$ ($356/98/18/3/1$ MC). Near 0 the
+tail goes as IP$^2$ $\Rightarrow$ \textbf{$\sim1.5\times10^4$ per 15\,y} (range 1--2$\times10^4$), confirmed by 100
+re-decays of the 14\,168 pre-selected V0: $1.39\times10^4$ selected (13 MC), $9.7\times10^3$ after veto. \est
+\item With Geant4 downstream (g4vessel): all-but-IP $1.44\times10^7$ (straight $1.95\times10^7$), IP $<1$\,m
+$2.0\times10^6$.
+\end{itemize}
+
+\subsection{Validation and the FairShip disagreement (D3)}
+\begin{table}[h]
+\centering\small
+\caption{Leaving the iron, $p>1$\,GeV, per spill: natural Geant4 10.7.3 (no forcing) vs the forced chain.
+\src{docs/shield_iron_dis.md (natural Geant4)}}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+ & natural, QGSP\_BERT\_HP\_PEN & natural, FTFP\_BERT & chain, G4 10.7 (forced)\\
+\midrule
+$K_L$ & $3\,499\pm128$ & $3\,686\pm130$ & 3\,387\\
+$\pi^\pm$ & 93\,770 & 92\,970 & 93\,090\\
+$K^\pm$ & 7\,014 & 7\,108 & 6\,704\\
+$K_S$ / $\Lambda$ & 1\,728 / 907 & 1\,522 / 915 & 582 / 286\\
+\bottomrule
+\end{tabular}
+\end{table}
+\begin{itemize}
+\item The chain reproduces natural Geant4 for $K_L$, $\pi$, $K^\pm$, $p$, $n$ \solid; $K_S$/$\Lambda$ are $3\times$ low
+because the default library decays them at the vertex (D9).
+\item Generators: $K_L$ decays in the vessel per spill Pythia~6 5\,604, crossover 5\,170, Geant4 11.2 2\,140, Geant4
+10.7 2\,260 (6 Nov runs, earlier parents). 98\,\% of the Geant4 $K_L$ come from $Q^2<1$\,GeV$^2$, 55\,\% from
+$W=5$--10\,GeV (Fig.~\ref{fig:q2w}). Hard part only ($Q^2>1$): Pythia~8 gives $\div6$ fewer $K_L$ than Pythia~6.
+\item \open{} FairShip full simulation (\texttt{TRY\_2026\_EM\_SST1\_origin}) has 0 MS7 $K^0$-decay tracks; with the
+tracking cuts the chain expects 7.9 entries ($P(0)=4\times10^{-4}$). Not the generator, not the physics list, not the
+muon-nuclear definition. Left: the parent flux into MS7 (TRY6 vs TRY\_2026), FairShip event filtering / weights, the
+$K_L$ handling downstream. Next: small FairShip run with our MS7 parents.
+\end{itemize}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.55\linewidth]{kl_q2w_A_geant4_11.2.pdf}
+\caption{$Q^2$ and $W$ of the interactions that make the $K_L$ (Geant4 11.2, generator level).
+\src{results/shield_dis/kl_q2w_A_geant4_11.2.pdf}}
+\label{fig:q2w}
+\end{figure}
+
+\subsection{V0 production compared with data (D16, 10 Nov)}
+Every V0 made at the vertex, also those absorbed or decayed in the iron: V0-stable library (same Geant4 11.2 model,
+$K_S$/$\Lambda$ undecayed) folded with the vertex-energy spectrum of the PR runs (median 72\,GeV).
+\src{bin/v0_production.py, docs/v0_production.md}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\linewidth]{v0_vs_W.pdf}
+\caption{Left: mean V0 multiplicity per interaction vs $W$, Geant4 (solid) and Pythia~6 (dashed); stars:
+$\gamma p$ at $E_\gamma=20$\,GeV \cite{abe1984}. Right: $W$ of the library events (Geant4 median 1.3\,GeV, below the
+$K\Lambda$ threshold).}
+\label{fig:v0w}
+\end{figure}
+
+\begin{table}[h]
+\centering\small
+\caption{Per event at $W=6.2\pm0.5$\,GeV. Data on hydrogen, Geant4 on Fe, Pythia~6 on free $p$/$n$.}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+ & $K^0_S$ & $\Lambda$ (+$\Sigma^0$) & $\bar\Lambda$\\
+\midrule
+$\gamma p$, $E_\gamma=20$\,GeV, SLAC SHF \cite{abe1984} & $0.082\pm0.003$ & $0.049\pm0.002$ & $0.0029\pm0.0003$\\
+Geant4 11.2 muonNuclear (8\,381 ev) & 0.087 & 0.051 & 0.0020\\
+Pythia 6 ($1.2\times10^5$ ev) & 0.153 & 0.090 & 0.0058\\
+\midrule
+\multicolumn{4}{@{}l}{\footnotesize reference, not $W$-matched: NOMAD $\nu_\mu$ CC on C, $\langle E_\nu\rangle=45$\,GeV
+\cite{nomad2002}: 0.0676 / 0.0504 / 0.0037}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+\item Geant4 agrees with the data within $\sim6\,\%$ \solid; Pythia~6 is $\times1.9$ high: data support Geant4 as the
+default, and the Pythia $\times2.7$ spread is one-sided. The low-$W$ region (1.6--3\,GeV), where most Geant4 events are,
+is not yet compared (\open: CLAS / SAPHIR exclusive data).
+\item Made per spill: $K_L$ $7.9\times10^3$, $K_S$ $7.8\times10^3$, $\Lambda$ $5.4\times10^3$, $\bar\Lambda$ 260
+($K_L=K_S$ as required); per 15\,y $1.2\times10^{11}$ $K_L$. V0 are soft (median $p$ 1.4--2.5\,GeV).
+\item $K_L$ budget per spill: $7.9\times10^3$ made $\to$ $6.5\times10^3$ with $T>0.5$\,GeV (plane cut) $\to$
+2.0--2.5$\times10^3$ survive the iron ($\lambda=17$--22\,cm) $\to$ $3.1\times10^3$ at the exit (21--37\,\% made by the
+shower in the iron, \est) $\to$ 1\,540 decay in the vessel ($P=0.49$, PDG $c\tau$).
+\item $K_S$/$\Lambda$ at the exit rise with vertex depth up to $\sim12$\,cm: shower build-up (Fig.~\ref{fig:fate}).
+\item Decay tables vs PDG: $c\tau$ and branching ratios correct; $K_L\to\pi^+\pi^-$ ($2\times10^{-3}$, a 2-track vertex
+pointing to the shield, $\sim5\times10^7$ in the vessel per 15\,y) and $K_L\to\gamma\gamma$ missing.
+\end{itemize}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\linewidth]{v0_ms7_fate.pdf}
+\caption{Left: V0 per interaction vs muon energy (grey: MS7 interaction spectrum). Right: V0 at the exit plane per
+interaction vs vertex depth; dotted / dash-dotted: primary $K_L$ only.}
+\label{fig:fate}
+\end{figure}

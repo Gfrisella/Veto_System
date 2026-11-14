@@ -4,9 +4,9 @@
     lib.sigma(material, E)                        # microbarn per nucleon
     ev = lib.sample(material, E, u, vertex, pdg_mu, rng)   # final states in the lab: particles of every interaction
 
-    out = run(columns, design, lib, draws={"helium": 1e6, "pvc": 1e6, "air": 2e5, "planes": 2e5}, rng=rng)
+    out = run(columns, design, lib, draws={"helium": 1e6, "wall": 1e6, "air": 2e5, "planes": 2e5}, rng=rng)
 
-Interactions are forced and importance sampled per target group (helium, air, pvc, each design plane): within a
+Interactions are forced and importance sampled per target group (helium, air, wall, each design plane): within a
 group the muon crossing is drawn with probability w P, P = n_area sigma(E) the interaction probability (<< 1),
 w the muon weight (per spill); every draw carries weight S_g / M_g, S_g = sum of w P over the group (interactions
 per spill), M_g the number of draws. The vertex is uniform along the crossing. The library event comes from the
@@ -165,7 +165,7 @@ class MuonLibrary:
 
 
 def group_of(code):
-    return np.where(code >= tg.TARGET_PLANE0, code, np.minimum(code, tg.TARGET_PVC))
+    return np.where((code >= tg.TARGET_PLANE0) | (code == tg.TARGET_AIR_UP), code, np.minimum(code, tg.TARGET_PVC))
 
 
 def group_label(g, design=None):
@@ -230,15 +230,18 @@ def _pass2(job):
     return {k: np.concatenate(v) for k, v in out.items()}
 
 
-def run(columns, design, lib, draws, rng, chunk=2_000_000, include=("helium", "air", "pvc", "planes"), workers=1,
+def run(columns, design, lib, draws, rng, chunk=2_000_000, include=("helium", "air", "wall", "planes"), workers=1,
         verbose=True):
     """Forced interactions for a dataset (dict of column arrays, may be memory-mapped). draws: per group
-    {"helium": M, "air": M, "pvc": M, "planes": M (each plane)}; M > 0: M draws, crossing picked with probability
+    {"helium": M, "air": M, "wall": M, "planes": M (each plane)} ("pvc" = old name of "wall", ISSUES D8); M > 0: M draws, crossing picked with probability
     w P / S, weight S / M each; M = -k: k draws on EVERY crossing, weight w P / k each (each track contributes). Two passes over chunks of rows (workers: forked
     processes). Returns (interactions, particles, totals = interactions per spill per group)."""
     import multiprocessing as mp
     import time
     t0 = time.time()
+    draws = {("wall" if k == "pvc" else k): v for k, v in draws.items()}          # ISSUES D8: old key accepted
+    draws.setdefault("air_upstream", draws.get("air", 0))                          # C7 / D7: own group, default as air
+    include = tuple("wall" if g == "pvc" else g for g in include)
     n = len(columns["weight"])
     _CTX.update(columns=columns, design=design, lib=lib, include=include,
                 chunks=[(s, min(s + chunk, n)) for s in range(0, n, chunk)])

@@ -25,7 +25,7 @@ from veto import interactions as ix
 from veto import io, paths, reco
 from veto.config import POT_PER_SPILL
 
-DATASET = "design-optimization-dataset-gamma-2026-10-17"
+DATASET = paths.MUON_DATASET                     # Nov-4 production (2026-11-11)
 
 
 def load_npz(path):
@@ -41,7 +41,9 @@ def generate_muon_interactions(design, store, args):
     lib = dis.MuonLibrary(str(paths.mu_library()), split=args.split)
     meta = json.load(open(store / "meta.json"))
     cols = {k: np.load(store / f"{k}.npy", mmap_mode="r") for k in meta["columns"]}
-    draws = {"helium": args.draws[0], "pvc": args.draws[1], "air": args.draws[2], "planes": args.draws[3]}
+    draws = {"helium": args.draws[0], "wall": args.draws[1], "air": args.draws[2], "planes": args.draws[3]}
+    if getattr(args, "air_upstream_draws", None) is not None:
+        draws["air_upstream"] = args.air_upstream_draws          # C7 / D7: targeted draws in front of the vessel
     inter, part, _ = dis.run(cols, design, lib, draws, np.random.default_rng(args.seed), workers=args.workers)
     return inter, part
 
@@ -55,6 +57,9 @@ def main():
     ap.add_argument("--draws", type=float, nargs=4, default=[1e6, 1e6, 2e5, 2e5], help="helium pvc air planes")
     ap.add_argument("--workers", type=int, default=40)
     ap.add_argument("--dataset", default=DATASET)
+    ap.add_argument("--air-upstream-draws", type=float, default=None,
+                    help="C7 / D7: draws in the air between the shield end and the vessel (default: as the air)")
+    ap.add_argument("--nu-pdg", type=int, default=None, help="--kind nu: one flavour of the 2026 GENIE files (paths.nu_apply_2026)")
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--out", default=None)
     ap.add_argument("--ip-cut", choices=("full", "partial"), default="full",
@@ -75,7 +80,8 @@ def main():
     design = dsg.load(p if p.exists() else args.design)
     store = paths.store_dir(args.dataset)
     # muons: generated fresh by default (the older cached apply files predate the exact PVC chords)
-    npz = Path(args.interactions) if args.interactions else (None if args.kind == "muon" else paths.apply_file("nu", design.name))
+    npz = Path(args.interactions) if args.interactions else (None if args.kind == "muon" else
+           paths.nu_apply_2026(design.name, args.nu_pdg) if args.nu_pdg is not None else paths.apply_file("nu", design.name))
     if npz is not None and npz.exists():
         inter, part = load_npz(npz)
         source = str(npz)

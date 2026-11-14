@@ -1,0 +1,19 @@
+{
+  "name": "R2_sbt_ubt_any",
+  "description": "R2 with the SBT tagging on any hit in time (SR-389 definition) and the SR-389 random rate (27 MHz > 30 MeV, x13 our muon-only cells)",
+  "frame": "fairship-2026",
+  "ubt_layout": "2026-11-11",
+  "ubt": {
+    "y_lo": -1.35,
+    "y_hi": 1.35
+  },
+  "fins": [],
+  "sbt": {
+    "threshold_mev": 30.0,
+    "efficiency": 0.993,
+    "sigma_t": 1e-09,
+    "mode": "any",
+    "rate_scale": 13.0
+  },
+  "detector": {}
+}

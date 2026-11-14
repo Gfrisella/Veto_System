@@ -34,7 +34,7 @@ TYPE_NAMES = {0: "SST1 bounced", 1: "SST1 p>1 GeV & timing", 2: "SST1 other"}
 from veto.config import SPILLS_15Y  # noqa: E402
 
 
-def load_inputs(name="inputs.npz"):
+def load_inputs(name=paths.RECO_INPUTS):
     """Tracks and candidates of results/reco/<name> (inputs.npz; inputs_xrun.npz: cross-run pairs)."""
     f = np.load(paths.results_dir() / "reco" / name)
     tr = {k[3:]: f[k].astype(np.float64) for k in f.files if k.startswith("tr_")}
@@ -105,7 +105,7 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
     # hypothetical signal
     if signal_model == "eventcalc":                          # B4: EventCalc benchmark set, full selection per benchmark
         from veto import signal_eventcalc as se
-        per, fp_sum, w_sum, n_tot = {}, 0.0, 0.0, 0
+        per, fp_sum, w_sum, n_tot, n_hits = {}, 0.0, 0.0, 0, 0
         t0 = time.perf_counter()
         by_plane = np.zeros(len(design.planes), np.int64)
         for name, wb in se.BENCHMARK_SET.items():
@@ -118,10 +118,12 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
             per[name] = dict(acc_b, FP_frac=fp, n=len(w_ev))
             fp_sum, w_sum, n_tot = fp_sum + wb * fp, w_sum + wb, n_tot + len(w_ev)
             by_plane += s["by_plane"]
+            n_hits += s["n_hits"]
         fp = fp_sum / w_sum if w_sum else 0.0
         t_sig = time.perf_counter() - t0
         res["signal"] = dict(n=n_tot, FP_frac=fp, TN_frac=1 - fp,
                              FP_by_plane={design.planes[i].name: int(c) for i, c in enumerate(by_plane) if c},
+                             hits_per_event=n_hits / max(n_tot, 1),
                              us_per_event=1e6 * t_sig / max(n_tot, 1), model=signal_model, per_benchmark=per,
                              acceptance={k: v["selected_weight_frac"] for k, v in per.items()})
     elif signal_model == "target":
@@ -238,13 +240,15 @@ def main():
     parser.add_argument("--ip-cut", choices=("full", "partial"), default="full",
                         help="measured-IP selection: full (fully reconstructed, IP < 10 cm) | partial (IP < 2.5 m) (ISSUES C8)")
     parser.add_argument("--out", default=None, help="output file name in results/reco (default: results[_tw..][_oldsignal].json)")
-    parser.add_argument("--inputs", default="inputs.npz", help="results/reco file from make_reco_inputs.py")
+    parser.add_argument("--inputs", default=paths.RECO_INPUTS, help="results/reco file from make_reco_inputs.py")
     parser.add_argument("--em-debris", action="store_true",
                         help="B2: add the EM debris maps (results/em_debris/em_maps.npz, bin/em_debris.py) to the accidentals")
+    parser.add_argument("--no-ghosts", action="store_true", help="C1: no analytic ghost hits in strip planes (as before 2026-11-11)")
     args = parser.parse_args()
     names = args.designs or sorted(p.stem for p in dsg.DESIGN_DIR.glob("*.json"))
     cfg = reco.RecoConfig(spill_s=args.spill, seed=args.seed, time_window_ns=args.time_window,
-                          multiple_scattering=args.multiple_scattering, ip_max=vsel.IP_CUTS[args.ip_cut])
+                          multiple_scattering=args.multiple_scattering, ip_max=vsel.IP_CUTS[args.ip_cut],
+                          ghost_hits=not args.no_ghosts)
     tr, inp = load_inputs(args.inputs)
     if args.em_debris:                                   # B2: e / gamma from the shield end in the rate maps
         from veto import em_debris

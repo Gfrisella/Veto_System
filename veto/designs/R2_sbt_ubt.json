@@ -1,0 +1,10 @@
+{
+  "name": "R2_sbt_ubt",
+  "description": "Reference 2 (Shah Rukh's plan, Guglielmo 12 Nov 2026): the full SBT (ten rings, four faces, 20 cm liquid scintillator, 30 MeV threshold, ~1 ns) plus the baseline UBT (vertical straws at 30.73 m + 4 x 4 m^2 tiles at 31.13 m, +-200 ps), as SPSC-SR-370 / SR-389; no fins.",
+  "frame": "fairship-2026",
+  "ubt_layout": "2026-11-11",
+  "ubt": {"y_lo": -1.35, "y_hi": 1.35},
+  "fins": [],
+  "sbt": {"threshold_mev": 30.0, "efficiency": 0.993, "sigma_t": 1e-9, "mode": "pointing"},
+  "detector": {}
+}

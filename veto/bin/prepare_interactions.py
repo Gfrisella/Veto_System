@@ -40,10 +40,10 @@ def main():
 
     from fastveto import dis
     lib = dis.MuonLibrary(str(paths.mu_library()), split="crossover")
-    draws = {"helium": args.draws[0], "pvc": args.draws[1], "air": args.draws[2]}
+    draws = {"helium": args.draws[0], "wall": args.draws[1], "air": args.draws[2]}
     design = dsg.load("D0_minimal")                  # any design: helium / air / PVC do not depend on it
     inter, part, _ = dis.run(muons, design, lib, draws, np.random.default_rng(args.seed),
-                             include=("helium", "air", "pvc"), workers=args.workers)
+                             include=("helium", "air", "wall"), workers=args.workers)
     print(f"muons: {len(inter['weight']):,} interactions, {len(part['pdg']):,} particles, {time.time() - t0:.0f} s", flush=True)
     prep = ix.prepare(inter, part, cfg, muons)
     np.savez(out_dir / f"prepared_muon{args.tag}.npz", **prep)

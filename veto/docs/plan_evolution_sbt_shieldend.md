@@ -81,3 +81,50 @@ The plane model (`lib/veto/design.py`) knows two kinds: `ubt` and `fin`, both pl
 Code ~1-2 weeks in total (A ~2-3 days, B ~3 days after B1, C ~1 week after C1). Compute modest: below ~100 core-hours
 and ~1 GPU-hour, no new muon production (everything on the Nov-4 sample). The open physics choices (B5, C1, C7, A5)
 decide the comparison more than the compute.
+
+## Answers of Guglielmo (12 Nov 2026) and first numbers
+
+1. **Shield-end planes: silicon strips**, also used for shield monitoring. One station 20 x 20 x 3 cm^3 or 30 x 30 x 3 cm^3;
+   for now superimposed on the geometry (the stations sit in the MS7 field, not modelled yet). Rate limit 1 MHz per strip.
+   Technology references: LHCb Upstream Tracker (p-in-n, 250 um; 93.5 um pitch x 5 cm strips near the beam, 187.5 um x 10 cm
+   outside; SALT ASIC, 25 ns slots), ATLAS ITk strips (75.5 um pitch, 2.4 / 4.8 cm, ABCStar, 25 ns).
+   Rates at the MS7 exit z = 29.90 m (Nov-4 MS7 parents carried straight from 29.20 m + the EM debris exit states, 2e5
+   parents; photons x 0.25 % conversion in 300 um Si): muons 4.5e8 / spill, all in the return yokes (|x| > ~1.1 m; none on
+   the axis), e+- 1.1e8, gamma 9.1e8; peak 0.37 MHz/cm^2 at x ~ -1.1 m (e+- 0.33, muons 0.03). Hottest station position
+   x ~ -1.6 m, y ~ 0: 63 MHz (20 x 20) / 113 MHz (30 x 30). Per strip at the peak: UT C/D 93.5 um x 5 cm 0.02 MHz, UT A
+   187.5 um x 10 cm 0.07 MHz, ITk 75.5 um x 2.4 cm 0.01 MHz: the 1 MHz limit allows strips up to 1.4-3.6 m. Rate does not
+   limit the strip size; the 25 ns time slot gives ~1.6 random hits per window in a 63 MHz station -> the association has to
+   be spatial. Default proposed: UT-like 93.5 um x 5 cm. Stations must sit where the parent muons are (yokes, both sides).
+2. **Tagging rule**: reconstruct the K_L (V0) vertex in the vessel, trace the V0 back to the shield end, and look in the
+   shield-end stations for the parent: a muon with a kink (inelastic interaction) or a vertex of several tracks, compatible in
+   space (and time) with the back-traced line. (K_L -> pi l nu: the V0 direction is only partly known, missing neutrino.)
+3. MS7 V0 in the objective (mass cut): explained to Guglielmo, decision pending; first measure what a visible-mass cut removes
+   from the V0 background and from each benchmark.
+4. **SBT reference** (SHiP Annual Report 2026 + FairShip 26.10 geometry/veto_config_helium.yaml, veto/veto.cxx): helium balloon
+   350 um Mylar; liquid scintillator 20 cm between 0.8 cm aluminium inner / outer walls, 1.5 cm aluminium ribs; cells 82 cm in z
+   (80 cm first ring), 2 longitudinal ribs per x side and 3 per y side; ten rings; WOM readout (FastIC+), threshold 30-90 MeV
+   region-dependent (FairShip reco 45 MeV per segment), 200 ns ToT window; TRY2026 rate 966 MHz raw, 27 MHz above 30 MeV,
+   5.7 % random-hit probability per window. UBT in the report = our default (4 x 4 m^2 tiles < 200 ps + six 1 x 3 m^2 straw
+   layers). Also in the report: SciFi + 1 cm scintillator pads in the 3 cm gaps of MS6 (an in-shield detector concept).
+5. **Signal model**: yes, the B4 benchmark set (regenerated 12 Nov).
+
+## SBT and UBT from the official reports (12 Nov 2026)
+Sources: SPSC-SR-370 (BDF/SHiP Annual Report 2025, sec. 3.3.3) and SPSC-SR-389 (Annual Report 2026, CERN-SPSC-2026-035,
+sec. 4.2.2, 4.2.3, 5.4), both in Study_on_Veto_System/Optimization_Veto_System/; FairShip 26.10 geometry.
+- **SBT** (SR-370): cells of AlMg4.5 (EN AW-5083) filled with liquid scintillator (LAB + 2 g/l PPO), 20 cm thick (for neutral
+  products of helium interactions), mirror-polished walls; 80 cm along the beam everywhere, up to 150 cm across (test cell
+  110 x 80 x 20 cm); 2 WOMs per cell, 40 SiPMs in 8 groups; time resolution ~1 ns; crossing point from the WOM light ratio,
+  time difference and SiPM groups. Containers from 6 m sheets with separation walls, on I-beams (aluminium preferred, SR-389).
+  SR-389: thresholds 30-90 MeV by region (FairShip reco 45 MeV per segment), FastIC+ readout, 200 ns ToT window, TRY2026 cell
+  rate 966 MHz raw / 27 MHz above 30 MeV, 5.7 % random-hit probability per window; ten rings; Run-4 partial scenarios (side
+  walls only, first six or last five rings). FairShip 26.10: 0.8 cm Al inner / outer walls, 1.5 cm Al ribs, cells 82 cm in z.
+- **UBT** (SR-389 4.2.2): tile plane covering at least the MS7 exit face, avoiding most swept-out muons (extent being optimised;
+  abstract: 4 x 4 m^2); 40 x 40 mm tiles (< 120 ps), 20 x 20 mm in the muon flames (90 ps); 99.9 %; max 2.5 MHz per 20 x 20 tile
+  (TRY2026; ours on Nov-4: 2.8 MHz); tagging window +-200 ps. Straws: VERTICAL, 1 m long, 5 mm, three sections over the
+  decay-volume aperture, upstream of the tile plane; 100 um, 100 kHz readout; "six 1 x 3 m^2 layers"; purpose includes
+  reconstructing a vertex in the last part of the muon shield and K_S / Lambda decays before the UBT.
+- **Differences to our model, to decide**: (1) tile window +-200 ps (ours: +-1.5 ns -> ~7.5x more random hits on the tile
+  planes); (2) straw views: SR-389 vertical only (ours: 0 / +-15 deg stereo, colleague's October numbers).
+- SR-389 5.4: combinatorial 9e10 pairs / 15 y -> 36 after the +-200 ps timing coincidence; upstream tagging must reject ~1e2
+  (inefficiency ~1e-2); Table 7 = our SST1 categories; a tile plane of the MS7 exit-face size tags essentially all straight
+  muons. Next in SR-389: machine learning to combine the subdetectors.

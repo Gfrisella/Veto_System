@@ -76,7 +76,8 @@ def cross_pairs(A, B, dev, block, same=False):
     def tens(d):
         return (torch.as_tensor(np.stack([d["bx"], d["by"], d["bz"]], 1), device=dev),
                 torch.as_tensor(np.stack([d["bpx"], d["bpy"], d["bpz"]], 1), device=dev),
-                torch.as_tensor(d["pdg"], device=dev), torch.as_tensor(d["draw"], device=dev))
+                torch.as_tensor(mt.charge_from_pdg_column(d["pdg"]), device=dev),   # charges: muons +-1 (charge sign),
+                torch.as_tensor(d["draw"], device=dev))                            # rock tracks +-13 (PDG) -> ISSUES D17
     rA, pA, qA, dA = tens(A)
     rB, pB, qB, dB = tens(B)
     nA, nB = len(rA), len(rB)
@@ -127,8 +128,8 @@ def veto_term(tr, cand, cand_w, cand_v, design, inp, cfg, rng):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--design", required=True)
-    ap.add_argument("--dataset", default="design-optimization-dataset-c-pool-v3-6000seeds-2026-10-31")
-    ap.add_argument("--inputs", default="inputs_c_s.npz")
+    ap.add_argument("--dataset", default=paths.MUON_DATASET)
+    ap.add_argument("--inputs", default=paths.RECO_INPUTS)
     ap.add_argument("--rock-mu", required=True); ap.add_argument("--seeds", type=int, default=300)
     ap.add_argument("--rock-nu", default=None)
     ap.add_argument("--block", type=int, default=4096)

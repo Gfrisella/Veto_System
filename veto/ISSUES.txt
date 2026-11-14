@@ -12,7 +12,7 @@ Numbers quoted below are from run_reco.py on D6_tile / D6_straw (15 Oct 2026), u
 
 ISSUE REVIEW 9 NOV 2026 (Guglielmo): every open item decided; the solution of each is the dated "9 Nov 2026" note under it.
 Action list, in order (re-runs need approval, see the end):
-  1. D5   check the momentum convention of the enriched tail (production vs after-target); fix the tail if confirmed.
+  1. D5   DONE 11 Nov: the Nov-4 production is the muon source for everything (no enriched tail); defaults switched.
   2. D3   shield chain default -> Geant4 muonNuclear (P6 / P8 = systematic); small FairShip run on lxplus with our MS7
           parents (like-for-like K_L count). D4: cut chords at the muon range.
   3. code before the re-runs: D12 (debris_maps.py -> em_* cross-check), C7 (forced K_L decays in fastveto), D9
@@ -21,13 +21,15 @@ Action list, in order (re-runs need approval, see the end):
           (planes delta rays, cavern-wall debris at the bounce points, shield debris attached to its muon).
   4. neutrinos (D4 / D14): adopt the new flux (GSimple 2026 or Shah Rukh's Nov-9 production; the 2018 flux is x 2-2.7
           low above 10 GeV) + iron GENIE library with nu_e.
-  5. re-run batch in the FairShip layout at 4e13: stores / maps / inputs.npz (C8, D8), run_reco both IP cuts, muon
+  5. re-run batch in the FairShip layout at 4e13, ALL ON THE NOV-4 PRODUCTION (11 Nov): rate maps sample_nov4 + peak maps
+          from the store first, then stores / maps / inputs.npz (C8, D8), run_reco both IP cuts, muon
           interactions with air margin (C7, D7) + forced cavern Geant4 (D7), extra seeds (C5, A2), cross-run closure (A1),
           EM debris (B2), DIS x mu pairs (D9); B1 ms_slope / r_ms check. Old results kept until the new ones are checked.
   6. tracking: ACTS (SHiP CVMFS 26.10) resolution parametrisation into reco.measure (D14).
   7. side branches: D6 energy rescaling (veto-d6-energy-rescale); D2 lateral-track veto study with the signal loss;
           C9 MuonsAndMatter categorize_muons patch.
   8. after the first optimum: C3 FairShip validation of the optimised design.
+  10 Nov: D16 V0 production vs data (Geant4 agrees, Pythia x1.9): V0 tally in g4shield, MS7 chain on the V0-stable library.
   Questions to the detector colleagues (C2, C6): docs/detector_questions.md. Decided / closed: A5 flat spill, cosmics
   ignored, +x cavern wall not needed, parked shield muons accepted.
 
@@ -61,7 +63,7 @@ A1. Background figure of merit is saturated
       (inputs_xrun.npz, bin/make_crossrun_pairs.py) needed for the high-statistics check: with the re-runs.
 
 A2. Bounced muons: the veto barely sees them
-    STATUS: IN PROGRESS (5 Nov 2026: bounce-aware search implemented; statistics and tuning with the re-runs)
+    STATUS: IN PROGRESS (11 Nov 2026: knobs + scan code in; scan running on D6_straw / D6_fiber / D6_tile2)
     Only 74-77 % of bounced SST1 muons are vetoed. The search window contains the true crossing
     for only 30 % of them: a straight line extrapolated back from the spectrometer cannot follow
     the bounce off the cavern wall / floor. This term will probably decide the fin layout.
@@ -81,6 +83,12 @@ A2. Bounced muons: the veto barely sees them
       Still to do: more bounced statistics (C5 seeds); tune bounce_r_slope against the signal cost.
     9 Nov 2026, Guglielmo: bounce_r_slope (and the bounce query r0) become free parameters of the design optimisation:
       the objective (bkg tag vs signal veto) picks them.
+    11 Nov 2026, Guglielmo (option c): scan bounce_r_slope (and the bounce query r0) on Nov-4 for the main technologies,
+      best (bkg tagged vs signal lost) -> start value; the optimiser then varies them inside a bounded range around it.
+      Statistics from the C5 store rebuild (bounced SST1 distinct n_eff 41 324 over 3220 spills).
+    11 Nov 2026 (f59dffa): RecoConfig.bounce_r0; design "detector": {bounce_r_slope, bounce_r0} clamped to the range of
+      results/reco/bounce_scan.json (evolve/evaluate_designs.bounce_knobs; defaults slope 0.21 in 0.05 - 0.5); bin/scan_bounce.py
+      (slope x r0 grid, per design: bounced / all SST1 vetoed, signal lost, combinatorial, reward; start = best reward).
 
 A3. Rate limits are reported, not enforced
     STATUS: DONE (4 Nov 2026: steep penalty in the objective + fine peak maps near the flames)
@@ -281,7 +289,7 @@ B1. Multiple scattering (at least this interaction must be modelled)
     9 Nov 2026, Guglielmo: close B1 once the re-run batch checks that reco ms_slope / r_ms cover the true scatter.
 
 B2. EM debris rate (electrons / photons from the end of the shield)
-    STATUS: IN PROGRESS (6 Nov 2026: Geant4 chain implemented, production with the re-runs)
+    STATUS: DONE (11 Nov 2026: production on the Nov-4 parents, maps results/em_debris/em_maps.npz; debris in time -> D14)
     Only muons are simulated: no delta rays, bremsstrahlung or pair-production debris leaking from
     the shield. These add hits (occupancy, rate limits) and accidental vetoes (signal loss).
     Plan (estimate from data we have):
@@ -312,6 +320,10 @@ B2. EM debris rate (electrons / photons from the end of the shield)
       slab only; yield vs depth 3 / 6 / 10 / 20 X0 = 17 / 30 / 72 / 72 % of the full depth, same run time ->
       decided: the whole last 50 cm (28.5 X0, from the real iron start 29.39 m; the old g4shield start 29.19 m put 20 cm
       of iron too many in front). em_debris.DEPTH_X0, bin/em_debris.py --depth.
+    11 Nov 2026, Guglielmo: B2 CLOSED. Production done on the Nov-4 MS7 parents (10 Nov: 2e5 muons, 1.19e9 e / gamma per
+      spill out of MS7, UBT 5.2e6 e + 2.5e7 gamma per spill, maps results/em_debris/em_maps.npz; run_reco D6_straw_mod
+      combinatorial 2.86 -> 0.014 (0.003 with debris), signal lost 6.4 -> 7.5 %). The time structure of the debris (delta
+      rays in the planes, cavern-wall debris at the bounce points, shield debris attached to its muon) stays in D14.
 
 B3. Neutrino and muon deep inelastic scattering
     STATUS: DONE (5 Nov 2026): modelled, follow-up in C7, C8, D2 - D9
@@ -322,7 +334,7 @@ B3. Neutrino and muon deep inelastic scattering
       planes, MS7 shield chain, Geant4 transport of the products); open points are tracked in C7, C8 and D2 - D9.
 
 B4. Signal model
-    STATUS: IN PROGRESS (9 Nov 2026: re-import regenerated samples, benchmark set into the objective)
+    STATUS: DONE (12 Nov 2026: 4 benchmarks regenerated with dcdcfc1 and imported; default signal store)
     Now: neutral particle decaying uniformly in the vessel volume, two daughters uniform over the
     SST1 acceptance, p uniform 1-50 GeV. Signal is lost only through accidental hits.
     Plan: use an HNL (and dark photon) model from the literature:
@@ -365,6 +377,17 @@ B4. Signal model
       average over the set, per_benchmark in the result). Selected fraction (IP < 10 cm / 2.5 m): HNL-mu 10.5 / 37 %,
       dark photon 62 / 63 %, scalar 15 / 37 %, ALP 11 / 39 %. Signal lost: D6_straw toy 6.38 % vs set 6.29 % (HNL-mu
       8.5, DP 4.5, scalar 5.2, ALP 7.0 %); E3_robust 0.20 vs 0.19 %. Production point still at z = -0.87 (old samples).
+    11 Nov 2026, Guglielmo (option a): re-import EventCalc from dcdcfc1 (LLP from the target, --vessel-z0-eventcalc
+      32.4768), regenerate the benchmark set; the objective uses the set (HNL-mu 1 GeV, dark photon 0.9 GeV, scalar 2 GeV,
+      ALP 1 GeV, c tau 100 m) with EQUAL weights instead of the toy; toy kept only for comparison.
+    11 Nov 2026 (830f658): evolve/evaluate_designs.py --signal eventcalc (default; target = old toy), evolve on paths.RECO_INPUTS,
+      equal weights in BENCHMARK_SET, VETO_SIGNAL_STORE; bin/eventcalc_b4.sh regenerates the 4 benchmarks (c tau 100 m,
+      50k points, LCG_106, no exHad) with EventCalc_run (has dcdcfc1: 32.4768 m) after moving outputs -> outputs_vessel6p2,
+      and imports them to data/signal/eventcalc_dcdcfc1 (--vessel-z0-eventcalc 32.4768). NOT RUN: generation needs OK.
+    12 Nov 2026 (approved, bin/eventcalc_b4.sh): HNL-mu 1 GeV, DP 0.9, scalar 2, ALP 1 GeV at c tau 100 m regenerated with
+      EventCalc_run on the dcdcfc1 volume (z_EC 32.48 - 82.48 m), 30-44 k decays each, imported to data/signal/
+      eventcalc_dcdcfc1 (production point z_veto = -1.347 m = target centre; was -0.87); signal_eventcalc uses it by default.
+      The 4 Nov samples are kept in EventCalc_run/outputs_vessel6p2.
 
 ----------------------------------------------------------------------------------------------
 C. DETECTOR AND BOOKKEEPING: second order
@@ -374,7 +397,7 @@ C. DETECTOR AND BOOKKEEPING: second order
       comparison); the missing dark photon 4 GeV c tau 100 m is accepted.
 
 C1. Detector response simplifications
-    STATUS: DECIDED (9 Nov 2026): ghost hits only, to implement
+    STATUS: IN PROGRESS (11 Nov 2026: analytic ghosts in, +4.1 / +2.6 points of signal loss straw / fibre; option a pending)
       - sigma_x is not used (the 5 cm search window r0 is much larger);
       - no ghost hits from combining views when several muons share a time window;
       - straw time = uniform smearing in the 50 ns drift window; with a tile t0 the drift radius
@@ -383,6 +406,18 @@ C1. Detector response simplifications
     5 Nov 2026 (issue review with Guglielmo): left OPEN, no decision yet.
     9 Nov 2026, Guglielmo: add ghost hits from combining views (straw / fibre planes, several muons in a time window);
       the rest (sigma_x, drift time, cluster size, cross-talk, correlated efficiency) accepted as second order, documented.
+    11 Nov 2026, Guglielmo: (b) analytic ghost density per strip plane ((rate x window)^2 x view geometry) added to the
+      accidental maps, only for strip technologies (straws, fibres; tiles / pixels have none); (a) the full combination of
+      views in reco only if (b) changes the signal loss by more than ~0.5 % absolute.
+    11 Nov 2026 (b done, c0dd8a5): reco.ghost_tiles / ghost_mean / ghost_tile_means: ghosts form only inside one strip
+      overlap tile (straws 1 m rows, fibre 3 m mats): mean^2 per tile x third-view coincidence (straws), positions from the
+      tile marginals (exact for independent random hits), RecoConfig.ghost_hits (default on), run_reco --no-ghosts.
+      Nov-4 random hits per event (D6_straw): 496 real + 1 029 ghosts; D6_fiber 64 + 311. Signal loss (inputs_nov4_q,
+      run_reco, same seed) without -> with ghosts: D6_straw 6.33 -> 10.42 %, D6_fiber 1.77 -> 4.38 %, D6_pixel 1.23 -> 1.21 %
+      (control); background veto unchanged (100 %). > 0.5 % -> option a by the 11 Nov rule. Note for the decision: for
+      independent random hits the tile-marginal product IS the exact ghost distribution of a 2-view plane; a full
+      combination adds only the position-dependent third-view coincidence (straws) and the event-by-event correlation
+      with the real hits. Not counted: ghosts of a track's own hit with random hits; the ghost time window = the veto one.
 
 C2. Dead material and dead regions
     STATUS: DONE (5 Nov 2026: dead frames, placeholder widths to be confirmed; frame material not added)
@@ -407,7 +442,7 @@ C4. Energy loss of bounced muons in the cavern
     Well modelled in the stored muons (from the transport); nothing to do.
 
 C5. Weights and statistics
-    STATUS: IN PROGRESS (5 Nov 2026: correction + n_eff report implemented; extra seeds with the re-runs)
+    STATUS: IN PROGRESS (11 Nov 2026: extra seeds = rebuild the Nov-4 store from all 3220 train spills)
     The repeated-evt_n weight correction is not applied in the design-optimisation dataset;
     veto_only and rock_bounced are from one run. Decide whether to apply the correction and how
     many extra runs are needed for the rare classes.
@@ -422,6 +457,11 @@ C5. Weights and statistics
     6 Nov 2026, Guglielmo: method confirmed (keep copies, w / repetitions, rescale to keep the rate; not
       merge / drop). Fixed: repetitions counted before the per-type cap in make_design_dataset.py, and
       run_selection kdtree uses the same correction (--kdtree-unique = old). Not re-run yet.
+    11 Nov 2026, Guglielmo: the extra seeds already exist: the Nov-4 shell transport has 3220 train spills (85 GB) + 560 hidden
+      (15 GB), the store uses 300. Rebuild the design store from all 3220 train spills (bin/shell_to_store.py --seeds 3220,
+      ~84 GB on /disk/lhcb_data, 239 TB free); hidden spills kept for the cross-checks. summary.txt (all seeds): sst1_selected
+      8166 +- 32 / spill, distinct n_eff 15 058; sst1_bounced 1.09e4, distinct n_eff 41 324. Note: train vs hidden pulls of
+      -17.8 (straight_past) / +18.5 (stops_before), 0.08 % relative: the two source halves differ slightly; irrelevant classes.
 
 C6. Detector technology numbers
     STATUS: DONE (15 Oct 2026, commit f6d13ec)
@@ -432,7 +472,7 @@ C6. Detector technology numbers
     9 Nov 2026: open confirmations in the question list docs/detector_questions.md (with C2).
 
 C7. V0 from DIS outside the vessel decaying inside
-    STATUS: IN PROGRESS (5 Nov 2026: air draws restricted near the vessel and the fins)
+    STATUS: IN PROGRESS (11 Nov 2026: helium + wall K_L in the vessel ~9 / 15 y after veto; air / planes need targeted draws)
     A K_S / Lambda made by muon DIS in the cavern air, a fin or the UBT can decay inside the vessel
     and give a two-track vertex with no upstream hit of its own. Air: simulated (decay in flight),
     0 of 45 air pairs after DOCA have a vertex in the vessel, but one air draw = 7e6 interactions
@@ -447,6 +487,19 @@ C7. V0 from DIS outside the vessel decaying inside
       along the vessel walls and through the 3 x 6 m fin slabs). To do: re-run the muon interactions (approval).
     9 Nov 2026, Guglielmo: force K_L decays in fastveto (same forced-decay copies as the shield chain, weight x P(decay in
       the vessel)) for every target (helium, air, walls, planes); K_L are stable there now.
+    11 Nov 2026, Guglielmo: (c) first the upper bound: V0 (K_L / K_S / Lambda) made per 15 y by muon DIS in helium, air
+      (0.4 m margin), walls and planes x P(decay in the vessel) x the MS7 selection efficiency (all but IP, IP scaling). If
+      it can reach O(1) per 15 y: (b) forced-decay copies for those targets in the event stores (same recipe as shield_dis
+      force_v0: decay point on the V0's line from its vertex, truncated exponential in [max(vertex, 31.13), 81.13] m,
+      weight x P_dec / copies, rest of the event kept) + bin/evstore_redecay.py, evaluated by evstore_eval.
+    11 Nov 2026 (c, bound): Nov-4 vessel muon DIS store (vessel_mu_nov4q_D6_straw_mod) V0 x P(decay in vessel) x MS7 per-decay
+      efficiency (5.6e-7 full selection): ~260 per 15 y (air 189, planes 75, wall 0.1, helium 0.004); all K_L -> option b.
+      (b, done, dd69a9a): bin/evstore_redecay.py --natural, 10 forced decays per K_L root -> results/evstore/
+      vessel_mu_nov4q_D6_straw_mod_kl10 (776 610 copies), evstore_eval D6_straw_mod: helium 7.5 selected -> 5.5 after veto b
+      (379 MC), wall 5.1 -> 3.7 (16 MC): ~9 per 15 y. Air and planes 0 selected but statistically empty: air only 3 280
+      copies of weight 8.7e3 (limit ~2e4 / 15 y), planes limit ~110. With the MS7 efficiency the upstream air would give ~16
+      per 15 y -> needs targeted air draws upstream of the vessel (D7 air, AIR_MARGIN region) in the re-run batch.
+      Double counting: the original store's natural K_L decays are the same physics; drop them when adding this term.
 
 C8. DIS rates with the new selection
     STATUS: IN PROGRESS (5 Nov 2026: two selections on the measured IP)
@@ -460,7 +513,7 @@ C8. DIS rates with the new selection
       per selection. To do: regenerate results/reco/inputs.npz (pre-cut 3 m) and re-run both selections (approval).
 
 C9. shah_study categories: bounce flag not reliable
-    STATUS: DECIDED (9 Nov 2026): veto definition + bounce point K; patch MuonsAndMatter too
+    STATUS: DONE on our side (11 Nov 2026: patch docs/patches/C9_categorize_muons.patch, to be applied by Guglielmo)
     MuonsAndMatter cuda_muons_ship.categorize_muons: every muon of `bounced_back` checked in seed 0 is a perfect
     straight line from the z = 30.6 m state to z = 82 m (offset 0.000 m), and `straight_past_vessel` (z = 82, outside the
     vessel acceptance) excludes muons that go straight through the vessel and contains 0.6 % bounced ones. For
@@ -468,6 +521,13 @@ C9. shah_study categories: bounce flag not reliable
     Found making results/ubt_xy_rate (straight & selected 8.13 kHz instead of 6.24 kHz with the category).
     Also: the vessel wall is now 350 um Mylar (CHANGELOG 2026-11-04); C8 "mu PVC" numbers are for the old 0.3 mm PVC.
     5 Nov 2026 (issue review with Guglielmo): left OPEN, no decision yet.
+    11 Nov 2026, Guglielmo (option a): patch cuda_muons_ship.categorize_muons in MuonsAndMatter (his repository, he
+      reviews) to the veto definition: straight = offset from the 30.6 m line < BOUNCE_CUT 0.5 m, bounced otherwise;
+      straight_past_vessel includes the muons that go straight through the vessel. No relabelling layer in our code.
+    11 Nov 2026 (e3aa154): patch against the MuonsAndMatter WORKING COPY (it has uncommitted changes in this file; git apply
+      --check passes); docs/patches/README.md. Check on 113 762 Nov-4 muons: bounced_back 7 804 (none really bounced) ->
+      10 (9 sst1_bounced); straight_past_vessel clean; 73 sst1_bounced land in bounced_no_come_back because MuonsAndMatter's
+      SST1 acceptance requires p > 1 GeV and 89 % of real bounced SST1 muons have p <= 1 GeV (median 0.34 GeV).
 
 ----------------------------------------------------------------------------------------------
 D. FROM THE OTHER DOCS (added 4 Nov 2026, from docs/issues_report/veto_issues.pdf)
@@ -487,7 +547,7 @@ D1. Objective exploitable: signal term saturates
     nu DIS in air / walls / planes / shield counts like the muons (w_src_muon = 1). "bkg_events_15y" and "sensitivity" stay physical.
 
 D2. Neutrino DIS in helium: irreducible for an upstream veto
-    STATUS: IN PROGRESS (9 Nov 2026: study the veto from lateral tracks of the same event, with the signal loss)
+    STATUS: IN PROGRESS (11 Nov 2026: self-veto removes 39 % of nu-He after veto, signal cost 0.02 %)
     9 Nov 2026 (Shah Rukh, new flux + GENIE v2, D6_straw_mod, bin/nu_activity.py): 3.6 selected nu-He events / 15 y
       (all flavours; 3.3 after veto b). 77 % have >= 1 product leaving through the vessel side walls (charged p > 0.1 GeV
       75 %, photon E > 0.1 GeV 53 %, straight lines from the vertex); none has an extra charged track at SST1. Left 0.8:
@@ -496,9 +556,18 @@ D2. Neutrino DIS in helium: irreducible for an upstream veto
       the veto planes (fins / UBT) can veto it. Must be studied together with the signal loss (signal daughters /
       accidentals hitting the same planes). Study: per nu-He DIS event, own hits of all its charged products on the
       veto planes -> veto fraction vs signal loss for the benchmark set.
+    11 Nov 2026, Guglielmo (option a): per nu-He DIS event (2026 flux, Geant4 downstream: ~1.5 / 15 y after veto, ~2.5 with
+      the MS7 nu), the hits of ALL its charged products on the veto planes (fins / UBT) -> veto fraction, against the
+      signal loss of the equal-weight benchmark set (B4) on the same planes. From the existing vessel_nu2026 stores.
+    11 Nov 2026 (bin/d2_selfveto.py, D6_straw_mod, 2026 nu stores straight-line propagation, results/interactions/
+      d2_selfveto_D6_straw_mod.json): nu DIS in the helium after veto b 2.93 per 15 y -> 1.78 with the self-veto (own charged
+      products p > 0.1 GeV crossing an active plane, plane efficiency) = 39 % removed (lower bound: no conversions).
+      Signal lost to the same rule (equal-weight B4 set): 0.02 % (HNL-mu 0.00, DP 0.00, scalar 0.05, ALP 0.03 %).
+      To do: the same on the Geant4-downstream stores (absolute numbers there 1.3 before the self-veto); then decide whether
+      the self-veto becomes part of the veto definition (reco: own hits of all products of a vertex event).
 
 D3. MS7 shield DIS -> K_L: chain disagrees with FairShip
-    STATUS: OPEN (PRIORITY A, major) - 5 Nov 2026: Pythia 6 only (DIS part) confirmed, issue kept open as major
+    STATUS: OPEN (PRIORITY C, minor since 11 Nov 2026: Geant4 default validated by natural Geant4 + V0 data, D16)
     9 Nov 2026: with p > 1 GeV and >= 3/4 straw stations (straws.py + field map) the K0-decay tracks drop 340 -> 141 Hz
     (default) and 123 -> 48 Hz (Geant4 10.7); K0 decays with 2 good tracks 14 / 3.8 Hz.
     9 Nov 2026: --MuonBackSSTOnly = keep events with any real hit (not "muon reaches SST"): FairShip not a lower limit.
@@ -556,9 +625,11 @@ D3. MS7 shield DIS -> K_L: chain disagrees with FairShip
       (PP + DIS) quoted as the generator systematic (reverses the 5 Nov 'Pythia 6 only'). Next: a small FairShip run on
       lxplus with our MS7 parents injected at the last 50 cm (muonNuclear biased), K_L counted at the iron exit and at
       SST1: like-for-like with the chain and with natural Geant4.
+    11 Nov 2026, Guglielmo: D3 stays OPEN as MINOR. The FairShip like-for-like run on lxplus is no longer a blocker; the
+      generator spread is one-sided (D16.4 approved): data favour Geant4, Pythia 6 x1.9 high -> band ~ +20 % on the MS7 K_L.
 
 D4. MS7 shield DIS chain: simplifications
-    STATUS: IN PROGRESS (5 Nov 2026: solution accepted, code done, runs pending)
+    STATUS: DONE (11 Nov 2026: range cut in, rate change 0.04 %; neutrino part solved by the 2026 flux)
     9 Nov 2026 (Shah Rukh): GENIE library v2 (data/interactions/genie/nu_library_v2.npz, bin/nu_library.py, splines
       gxspl-fvs.xml with 15 nuclei): nu_mu, anti-nu_mu, nu_e, anti-nu_e, nu_tau, anti-nu_tau on H, He4, C, N, O, Na, Mg, Al,
       Si, Cl35/37, Ar40, K39, Ca40, Fe56; 36 energies 1-500 GeV x 2000 events; tau decayed by GENIE. Covers the iron
@@ -586,9 +657,16 @@ D4. MS7 shield DIS chain: simplifications
       SST1 tracks << 1 %. Guglielmo: cut each chord at the muon's range (drop the stoppers' missing path); straight chord
       (1e-4) and new muons made in the shield (~25 Hz on 24.3 kHz at SST1) accepted as documented limitations.
       D4 closes with the new neutrino flux (D14) and the range cut.
+    11 Nov 2026: the neutrino part is solved: the 2026 flux (store2026, default since 11 Nov) has all 6 flavours down to
+      1 GeV (nu_e: 73 % of the weight below 10 GeV). Guglielmo (option a): implement the range cut (each parent chord cut
+      at the muon's range in iron) and recheck the stopping fraction (1.9 % on the 2018 parents) on the Nov-4 parents;
+      D4 closes after that.
+    11 Nov 2026 (done, fd6bd14): shield_dis.draw cuts each muon chord where the muon reaches E_MIN_INT = 0.5 GeV (sigma
+      at the real midpoint, vertices only up to the range). Nov-4 parents: 4.56 % of the flux stops in the slab (2018:
+      1.9 %; all < 1.9 GeV), 2.64 % of the path did not exist (2018: 0.87 %); interaction rate old / new = 0.9996.
 
 D5. Muon source: enriched input disagrees with the old sample
-    STATUS: DEFERRED (9 Nov 2026: check done, convention x 0.905 + tail angles x 0.56; enriched sample kept as is)
+    STATUS: DONE (11 Nov 2026: superseded, the Nov-4 production is the muon source for everything; see the 11 Nov note)
     The SST1-selected rate is 1.55x higher with the enriched input (1.9x above 100 GeV), at the same flux
     above 150 GeV: larger than any statistical error (docs/fast_veto_sim.md section 5). Also: the
     regeneration differs by 10-20 % from the old file, the > 200 GeV tail has a ~x2 model dependence
@@ -617,8 +695,24 @@ D5. Muon source: enriched input disagrees with the old sample
     9 Nov 2026, Guglielmo: LEAVE THE ENRICHED SAMPLE AS IT IS for the moment (no rebuild, no re-run); the momentum
       convention (x 0.905) and the tail angles (x 0.56) stay documented here; source systematic on the SST1-selected
       muon rate quoted from this check until the angles are settled.
+    11 Nov 2026, Guglielmo: USE THE NOV-4 PRODUCTION FOR EVERYTHING (D5 included). The Nov-4 production is one complete
+      target production (FairShip target, Pythia 8.223, Geant4 11.2 FTFP_BERT, 10 GeV, 4e13 p.o.t. / spill, roulette + weight
+      window instead of a stitched high-threshold tail), so the enriched-tail convention / angle mismatch above does not
+      arise: there is no enriched tail. It also settles the "which tail is right" question of 10 Nov (dataset c had 3-4x
+      more near-axis SST1 muons above 30-100 GeV): Nov-4. The enriched file, alpha / gamma / delta / c datasets and the
+      2018 one-run files are legacy (explicit request only); their results stay until the Nov-4 ones are checked.
+      Code (branch veto-nov4-source): paths.MUON_DATASET = design-optimization-dataset-nov4-shell-300seeds-2026-11-10
+      (4.72e10 mu / spill, 3.22e4 / spill types 0-2, pot_per_spill 4e13 recorded -> no rescale), paths.RECO_INPUTS =
+      inputs_nov4.npz, paths.RATE_MAPS = sample_nov4.npz, paths.ms7_parents() = muons_iron_nov4.npz (3.95e7 rows, 4.62e8 /
+      spill), paths.nov4_pool_pattern() (23 train chunks) as the transport input; defaults of make_reco_inputs,
+      make_design_explorer, end_to_end, run_interactions, muon_dis_apply, rock_combinatorial, run_reco, check_peak_rates,
+      closure_check, make_crossrun_pairs, em_debris, shield_dis, generate_muon_study, objective follow them.
+      Also the 2026 neutrino flux (store2026, 6 flavours), its GENIE vessel files and the event stores: locations in STATUS 11 Nov.
+      Watch: Nov-4 SST1-selected statistics saturate at ~10 seeds per chunk (7 Nov test, distinct n_eff x4.2 at 10 seeds);
+      the MS7 K_L tail needs K_L-enriched generation (10 Nov). Not switched yet: make_peak_maps.py (reads the one-run
+      Full_dataset pickle; to be fed from the store) and build_dis_parent_store.py (gamma + zeta) -> in the re-run batch.
 D6. Interaction-library approximations
-    STATUS: DECIDED (9 Nov 2026): energy rescaling on a branch
+    STATUS: DECIDED (11 Nov 2026): finer libraries up to 400 GeV (5 % steps) + rescaling to the exact energy, on a branch
     Final states not rescaled to the exact muon energy (15 % grid); no nuclear effects (Fermi motion,
     shadowing, re-interactions) in the Pythia part; no tau library (~1 % nu_tau in the flux)
     (docs/fastveto_physics.md "Open").
@@ -635,9 +729,18 @@ D6. Interaction-library approximations
       - nu_tau: build a nu_tau library with bin/nu_library.py (GENIE, --nus 16 -16), ~1 % of the flux.
     9 Nov 2026, Guglielmo: do the energy rescaling only (branch veto-d6-energy-rescale, compare V0 yield / multiplicity
       with the current library); nuclear effects and nu_tau stay documented systematics.
+    11 Nov 2026, Guglielmo: the 500 GeV upper edge has no physics reason (beam 400 GeV, the Nov-4 pool drops p >= 400 GeV);
+      points 434 / 500 (mu) and 419 / 500 (nu) are wasted. Option c "with the energy correct": rebuild the grids
+      mu 0.5 - 400 GeV (139 points) and nu 1 - 400 GeV (124 points) in 5 % steps (nearest-point error 7.3 / 9.3 % -> 2.5 %),
+      then rescale each final state to the exact energy (E / E_grid, angles kept). Build cost minutes (mu 2 min, nu 4.5 min
+      on 300 cores now; one energy point per Slurm array task possible); size x2.8 (iron mu library ~6 GB). Compare V0
+      yield / multiplicity with the current library on branch veto-d6-energy-rescale before switching.
+    12 Nov 2026 (approved): bin/batch/d6_libraries.sbatch on branch veto-d6-energy-rescale (3 tasks: muon all materials,
+      muon iron, neutrino GENIE; new names *_5pct.npz next to the current libraries), to submit on the farm; then
+      bin/d6_compare_libraries.py old vs new before switching.
 
 D7. Interactions upstream of z = 30.6 m not simulated
-    STATUS: IN PROGRESS (9 Nov 2026: air DONE 5 Nov; cavern walls / rock implemented by Shah Rukh, PR #13)
+    STATUS: DECIDED (11 Nov 2026): close after the mu x rock combinatorial is redone with the fixed charge
     9 Nov 2026 (Shah Rukh): selection + veto of the cavern-rock products (bin/rock_select.py, the same
       interactions.evaluate): muon rock 0 selected (4.6e9 / 15 y with >= 2 good tracks, best-pair IP >= 12.6 m), neutrino
       rock (bin/nu_rock.py: GENIE v2 on concrete, g4rock, walls / floor / ceiling / face) 0 selected (3.2e3 with >= 2
@@ -663,17 +766,27 @@ D7. Interactions upstream of z = 30.6 m not simulated
       2.47e28 weighted nucleons/m^2 (helium and wall unchanged).
     9 Nov 2026, Guglielmo: go ahead with the forced Geant4 from the 30.6 m states in the real cavern (wall + floor, forced
       K_L decays in the vessel), with the Geant4 default generator (D3). No +x wall: it is far away, not relevant.
+    11 Nov 2026, Guglielmo (option a): rock covered (muon / nu rock 0 selected by geometry; PR #16 rare corners: floor /
+      wall K_L < 0.02, rock neutrons in the helium ~0.05 per 15 y). The mu x rock 0.023 / 15 y was computed with the
+      inverted charge test (D17 b, same-sign pairs): redo it in the re-run batch, then close D7. The forced Geant4 from
+      the 30.6 m states in the real cavern only if the redone mu x rock is not negligible.
 
 D8. Results computed with the old PVC vessel wall
-    STATUS: OPEN (PRIORITY B)
+    STATUS: DONE (11 Nov 2026: key wall in the code, pvc accepted; numbers regenerate with the re-run batch)
     Wall is now 350 um Mylar (CHANGELOG 2026-11-04; x/X0 1.53e-3 -> 1.23e-3, +18 % nucleons, no Cl).
     results/interactions, apply / reco-input files with "pvc" rows, scattering-dependent reco and the C8
     wall numbers are still PVC-based.
     Plan: rerun wall DIS and reco with Mylar; rename the target key "pvc" -> "wall" once all saved files
     are regenerated.
+    11 Nov 2026, Guglielmo (options a + b): (a) nothing dedicated: the code is Mylar since 4 Nov, the Nov-4 re-run batch
+      regenerates every wall number; old PVC numbers marked superseded, D8 closes when the batch is in. (b) rename the
+      target key "pvc" -> "wall" (code, CODE_NAMES, draws), old files still read via an alias. No rescaling of old numbers.
+    11 Nov 2026 (done, 5d6fa3b): target group "wall" (fastveto.targets TARGET_WALL / WALL_ALIASES, dis.run, CODE_NAMES[2],
+      run_interactions / prepare_interactions / muon_dis_apply / nu_dis_apply --wall (alias --pvc), end_to_end); the old key
+      "pvc" is accepted everywhere (identical crossings, 26 229 on 3e5 Nov-4 muons). The material "pvc" stays a material.
 
 D9. DIS x mu pairs not redone with the V0-stable library
-    STATUS: DECIDED (9 Nov 2026): redo with multi-vertex rejection
+    STATUS: DECIDED (11 Nov 2026): new background class in evstore_eval (DIS track x muon), analytic bound first
     With K_S / Lambda tracked in the MS7 iron (data/interactions/dis/mu_library_iron_v0stable.npz,
     2026-11-02) the dis_comb_* DIS x mu combinatorial pairs were not redone.
     Plan: rerun artifacts_work/scripts/dis_comb_pairs_asym.py on the V0-stable sample.
@@ -681,6 +794,13 @@ D9. DIS x mu pairs not redone with the V0-stable library
     9 Nov 2026, Guglielmo: redo on the V0-stable sample in the re-run batch, AND reject a combination when it has more
       than one vertex in the same time window (several tracks pointing to one vertex are fine; two vertices in the
       same window are rare and are not a signal topology).
+    10 Nov 2026: the PR #15 MS7 runs (g4v112, Geant4 default) still use the default library; see D16 a.
+    10 Nov 2026: V0-stable chain run (D16 a): K_S / Lambda vertices add nothing to the selected MS7 background (< 1e5
+      / 15 y before the IP cut); the DIS x mu combinatorial part of D9 stays open.
+    11 Nov 2026, Guglielmo: (c) first an analytic bound (rate x partner-muon veto inefficiency) for the expected size, then
+      (b) DIS-track x muon pairs as a standard background class of bin/evstore_eval.py (event stores on Nov-4 + the Nov-4
+      muons, charges via charge_from_pdg_column, opposite-charge pairs, multi-vertex rejection of 9 Nov), so every design
+      and the objective get it with the veto. The old dis_comb_pairs* numbers are void (D17: same-sign pairs).
 
 D10. Geant4 built-in neutrino physics unusable
     STATUS: DONE
@@ -699,7 +819,7 @@ D11. Bugs found and fixed (record)
       - shah_study "straight" category replaced by the BOUNCE_CUT definition (C9).
 
 D12. EM debris implemented twice (with B2)
-    STATUS: DECIDED (9 Nov 2026): ours in the main chain, debris_maps.py -> em_* cross-check
+    STATUS: DONE (11 Nov 2026): ours in the main chain on Nov-4 parents, debris_maps.py writes em_* (cross-check -> D14)
     PR #13 bin/debris_maps.py adds e + 0.05 x gamma (P_GAMMA placeholder) straight into ubt_hist / fin_maps of the rate
     maps; ours (B2, run_reco --em-debris) adds em_* maps in reco.plane_rate_map. Using both counts the debris twice.
     His: muons back-projected straight to an iron box at 29.89 m (upper bound), 0.5 m iron library without field,
@@ -710,6 +830,10 @@ D12. EM debris implemented twice (with B2)
     9 Nov 2026, Guglielmo: OURS (B2) in the main chain; bin/debris_maps.py rewritten to write em_* keys (cross-check, never
       summed); Shah Rukh's g4slab library reused for debris made in the veto planes / vessel walls (D14); g4shield fed
       with the current dataset's muons.
+    11 Nov 2026, Guglielmo: CLOSED. Already in place: debris_maps.py writes separate em_* maps (never summed with the
+      muon maps, since 9 Nov); em_debris (g4shield + field -> g4vessel) is the main chain on the Nov-4 MS7 parents (B2).
+      Moved to D14: g4slab library for debris made in the veto planes / vessel walls, and a one-off cross-check of the
+      two methods on the same Nov-4 parents (order of magnitude; straight lines vs field differ by design).
 
 D13. Protons per spill: one convention
     STATUS: DONE (9 Nov 2026: config.POT_PER_SPILL = 4e13, legacy inputs rescaled when read, CHANGELOG 2026-11-09)
@@ -718,7 +842,7 @@ D13. Protons per spill: one convention
     15-year totals agree; per-spill rates differ by 0.8.
 
 D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_inventory.md, moved here 9 Nov 2026)
-    STATUS: OPEN (PRIORITY C unless noted)
+    STATUS: DECIDED (11 Nov 2026): debris in time (shield-end first) + ACTS parametrisation, both on Slurm
     9 Nov 2026 (Shah Rukh): neutrino DIS in the vessel with the 2026 flux + GENIE v2, D6_straw_mod, per 15 y:
       interactions helium 2.9e4, air 6.6e4, wall 5.8e4, planes 5.8e3; after selection + veto 3.3 (nu_e 1.37, nu_mu 1.02,
       anti-nu_mu 0.51, anti-nu_e 0.39, nu_tau 0.04), all but ~0.07 in helium; air / wall < 0.1 - 0.2 per flavour.
@@ -795,10 +919,121 @@ D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_invento
       Guglielmo (10 Nov): keep our UBT on the vessel window.
       Next: our straw hits (straws.digitize detIDs + drift radii, z + 2.14 m) and OUR field map as a TVirtualMagField
       -> ActsStrawTracker.FitCandidate per track -> resolution / efficiency parametrisation for reco.measure.
+    11 Nov 2026 status: DONE since 9 Nov: neutrino flux 2026 (all flavours, > 1 GeV), iron GENIE library with nu_e / nu_tau
+      (v2), muon source = Nov-4 (D5). Moved: K_L decays in the vessel -> C7. Ignored by decision: cosmics.
+      Guglielmo (11 Nov), the two remaining items, with the Slurm farm (hep partition; submitted by Guglielmo from
+      farm-gpu3/4/5, this session cannot reach Slurm; we write the .sbatch):
+      1. debris in time: first (c) shield-end debris attached in time to its parent muon (em_debris already stores the
+         parent row of each e / gamma); (a) delta rays in the planes and (b) cavern-wall debris at the bounce points only
+         if (c) changes the veto efficiency noticeably; + the one-off cross-check of debris_maps vs em_debris (from D12).
+         Geant4 stage as a Slurm array (2e6 parents ~3 h on 16 workers -> ~10-15 min).
+      2. ACTS parametrisation: our straw hits + our field map -> resolution / efficiency vs p, angle for reco.measure;
+         particle-gun scan as a Slurm array in the FairShip pixi environment 26.10.
 
 D15. CVMFS library loading under load (shield_dis / shield_natural workers)
-    STATUS: OPEN (9 Nov 2026, decided: retry + count check)
+    STATUS: DONE (11 Nov 2026: Geant4 loaded in the parent, forked workers, retry + completeness check)
     With many workers some fail to load CVMFS Geant4 libraries (ImportError libG4analysis.so; 16 416 in the p8full log,
     88 MB) and are restarted; all 2e6 interactions came back, but a silent loss is possible.
     Guglielmo (9 Nov): import retried with backoff and logged once per worker; at the end assert that every chunk came
     back (fail loudly otherwise); workers capped at ~48.
+    11 Nov 2026, Guglielmo: (b) import / initialise the Geant4 module in the parent process before the worker pool forks
+      (workers inherit the loaded libraries, no CVMFS access from the workers -> removes the cause) + (a) the end-of-run
+      assert that every chunk came back (fail loudly). Retry-with-backoff only as a fallback if b is not possible.
+    11 Nov 2026 (done, 3c93dc7): shield_iron.g4shield_module / g4vessel.module import the Geant4 module once in the parent
+      (retry with backoff as fallback); shield_dis.transport, em_debris.pool_run and g4_vessel_transport fork their workers
+      (inherit the loaded libraries, each initialises its own run manager and seed) and raise if any chunk is missing.
+      VETO_G4_SPAWN=1 restores the old spawn pool. Tests: 400 interactions / 8 workers, 400 of 400 back (4.8 s); em_debris
+      --n 300 both stages (20 s). The test also hit one CVMFS first-access ImportError: the failure mode is real.
+
+D17. Muon charge flipped: the stores' "pdg" column is the charge sign (+1 = mu+), the code reads it as a PDG id
+    STATUS: DONE (11 Nov 2026: fixed in PR #16 (61aebc1) + mu x rock pairing on veto-nov4-source; old D9 numbers void)
+    Every muon store (alpha, gamma, delta, c, Nov-4) writes pdg = sign(charge) (bin/generate_muon_study.py:541,
+    shell_to_store, make_design_dataset: "muon charge sign"): +1 = mu+. Checked on the Nov-4 store against the source
+    h5 (real PDG; pi+ / K+ parents give -13): 500 000 rows, store +1 <-> source -13 (mu+) 274 161, store -1 <-> +13
+    225 839, no exceptions; +1 carries 2.47e10 vs 2.25e10 / spill (the mu+ excess, source 1.12). Readers apply the PDG
+    rule q = -sign(pdg) (comment "mu- (13) has q = -1") -> the charge of every store muon is flipped.
+    Affected:
+      a. timing-detector acceptance through the spectrometer field (A6) with the wrong charge: make_reco_inputs,
+         make_crossrun_pairs, rock_combinatorial, visualize_full_dataset, muon_types.muon_charge / muon_types_torch when
+         given store data. Nov-4, 3e5 SST1 rows: accepted weight 0.5886 (true) vs 0.5933 (flipped), but 11.1 % of the
+         weight is different muons (5.3 % wrongly dropped, 5.8 % wrongly kept), mostly 5-20 GeV (0.841 vs 0.897).
+         -> inputs*.npz (pair inputs, single muons) built on a partly wrong muon set.
+      b. pairs of a store muon with a track that carries a real PDG id: the opposite-charge test is inverted (same-sign
+         pairs kept): rock_combinatorial "mu x rock"; the old DIS x mu study (Presentation_Combinatorial/scripts/
+         dis_comb_pairs*.py, class A: 3.8e4 / spill MS7 DIS track x mu) -> those numbers are same-sign pairs.
+      c. vessel muon DIS (lib/fastveto/dis.py:154): the scattered muon gets pdg -13 if pdg_mu < 0 else 13 from the
+         store value -> its charge is flipped; the hadrons are not. Opposite-charge pairs mu x hadron in the vessel
+         DIS selection (helium / air / wall / planes, e.g. helium 472 per 15 y after veto b on Nov-4) pair the wrong
+         hadrons, and its spectrometer bending is wrong.
+    Not affected: mu x mu pairs of one store (both flipped: product unchanged); the muon types in the stores (the
+      transport classifies with -13 x charge = real PDG); the MS7 chain and the EM debris (cpu_transport q = pdg / -13,
+      shield_dis / em_debris use -13 q: correct); signal (EventCalc real PDG); neutrino stores (separate path, to check).
+    11 Nov 2026: FIXED in PR #16 (Shah Rukh, 61aebc1, merged in main): muon_types.charge_from_pdg_column (+-13 PDG id, +-1
+      charge sign) in every reader of a + c (muon_types, muon_types_torch, selection, make_reco_inputs, make_crossrun_pairs,
+      rock_combinatorial timing, visualize_full_dataset, sst1_bounce_categories, fastveto.dis scattered muon); stores keep
+      +-1 with pdg_convention in the metadata (no PDG rewrite: one documented convention); regression check
+      bin/check_charge_convention.py. Reruns on Nov-4, D6_straw_mod, per 15 y: pair candidates 5 739 -> 6 005 / spill,
+      combinatorial 0.014 -> 0.0038 (debris 0.0028 -> 0.0031), helium mu DIS after veto 472 -> 520, walls 44 -> 22,
+      signal lost (debris) 7.46 -> 7.30 %. New: inputs_nov4_q.npz (paths.RECO_INPUTS), evstore vessel_mu_nov4q_D6_straw_mod.
+      b was left in PR #16: rock_combinatorial cross_pairs compared the muons' +-1 with the rock tracks' -13 q -> fixed on
+      veto-nov4-source (both sides through charge_from_pdg_column; old test kept exactly the same-sign pairs). "mu x rock"
+      numbers before this fix are same-sign pairs: rerun. The out-of-repo Presentation_Combinatorial/scripts/dis_comb_pairs*.py
+      (old D9 class A, 3.8e4 / spill) have the same inversion: those numbers are void; D9 is redone in the re-run batch.
+
+D18. Search window not aware of the material crossed
+    STATUS: OPEN (PRIORITY C, minor; logged 11 Nov 2026 by Guglielmo)
+    reco.predictions extrapolates the measured SST1 state back as a straight line and uses one cone for every track and
+    plane: r = r0 + (r_slope + r_ms / p) x L (r0 5 cm, r_slope 0.5 mrad, r_ms 6 mrad GeV), L = path length to the plane.
+    The simulated tracks scatter in the real materials (scattering.py: Mylar windows / walls with exact chords, helium
+    and air in 1 m slices, UBT and fins, tails). The true displacement at a plane is ~ sum of theta_i (z_i - z_plane) over
+    the scatterers between the plane and SST1: an exit-window kink has the whole vessel as lever arm, an entrance-window
+    kink almost none at the UBT; tracks leaving through a side wall into air (X0 304 m vs helium 5671 m) see much more.
+    The single cone is too wide on clean helium paths (random hits -> signal loss, now larger with ghosts, C1) and may be
+    narrow on wall + air paths. Geometry-aware already: bounce search (A2), vertex limit, per-plane time window / cells.
+    Possible solution (not scheduled): sigma(plane) = sqrt(sum_i theta0_i^2 (z_i - z_plane)^2) from the material chords
+    between the plane and SST1 along the line (scattering.py chord code), r = r0 + r_slope L + k sigma / p with one factor
+    k (~3) instead of r_ms; compare with the cone on D6_straw / D6_fiber (signal loss, bounced / SST1 veto). Would also
+    replace B1's check that r_ms covers the true scatter.
+    Note for the BT report (sec. 2.8.2, "rho_ms / p about 3.8 x Highland"): Highland for 50 m helium + two 350 um Mylar
+    windows is ~1.2 mrad GeV -> r_ms = 6 is ~5x; with the 0.95 m of air before SST1 ~1.37 -> ~4.4x. Check which
+    material sum the report uses.
+
+D16. V0 production in the MS7 muon chain: checked against data (10 Nov 2026, branch veto-v0-production)
+    STATUS: IN PROGRESS (PRIORITY B)
+    Analysis: bin/v0_production.py (existing files only) -> docs/v0_production.md (figures docs/figures/v0_production/).
+    Found (per spill at 4e13): made at the vertex (Geant4 muonNuclear, V0-stable library, PR #15 vertex spectrum)
+      K_L 7.9e3, K_S 7.8e3, Lambda 5.4e3, anti-Lambda 260 (~1 % per interaction, median W 1.3 GeV); at the exit plane
+      K_L 3.1e3 (2.9e3 with p > 1 GeV), of which ~20-35 % made by secondaries of the shower in the iron; 1540 decay in
+      the vessel (0.49 of the exit K_L) = the 2.33e10 / 15 y of PR #15.
+      Data at W = 6.2 GeV (gamma p 20 GeV, SLAC SHF): K0_S 0.082 +- 0.003 vs Geant4 0.087 vs Pythia 6 0.153; Lambda 0.049
+      +- 0.002 vs 0.051 vs 0.090. Geant4 within ~6 %, Pythia 6 x1.9 high.
+    Issues found:
+      a. The PR #15 MS7 runs (shield_muon_g4v112_*) still use mu_library_iron.npz: K_S / Lambda decayed at the vertex
+         (D9), so K_S / Lambda at the exit (473 / 262 per spill) are cascade-only, low by ~x3.
+      b. No record of the V0 made inside the iron by the shower (secondaries) nor of the absorbed ones: g4shield only
+         writes the exit plane. The 20-35 % secondary share is an estimate (absorption length assumed 17-22 cm).
+      c. Low W (1.6 - 3 GeV), where most Geant4 events are, not compared with data yet.
+      d. fastveto KL_CHANNELS lack K_L -> pi+ pi- (BR 2.0e-3, a 2-track vertex: ~5e7 / 15 y in the vessel) and
+         K_L -> gamma gamma (C7).
+      e. Geant4 eta' (331) left undecayed in the library (8.8e-3 per event): minor.
+    10 Nov 2026 (Guglielmo approved 1-3 + the pi pi channel; done, docs/v0_production.md slides 4-6):
+      a. V0-stable chain run (Geant4 11.4.2 pixi, bin/g4pixi.sh; 2e6, seed 402) vs default (seed 401) vs PR #15 (11.2):
+         11.4 = 11.2 within 1-3 % for K_L. K_S / Lambda at exit x3.3 / x3.7, vessel decays K_S 51, Lambda 22, anti-L 11
+         per spill (default 6 / 0.7 / 0.9), but they decay right behind the window (median z 31.25 m): 0 of 18 250 K_S /
+         8 385 Lambda copies pass all-but-IP -> < 1e5 / 15 y each (90 % CL) vs K_L 1.7e7. MS7 V0 background stays K_L.
+      b. V0 tally (cpp/g4shield v0_tally, shield_dis --v0-tally, bin/v0_fate.py): per spill 1.5e4 K_L made (7.8e3 vertex
+         + 7.6e3 shower), K_S 1.5e4, Lambda 1.1e4; exit K_L 3.2e3 = 63 % vertex + 37 % shower; vertex K_L above cut
+         32 % survive the iron. Shower V0 from pi+- (45 %), K+ (20 %), K_L (19 %), K_S (11 %) inelastic.
+      c. Low W (bin/v0_lowW.py, data/reference/lowW_strangeness_photoproduction.json): Geant4 >= x2 low at W < 2.2 GeV
+         (below the exclusive K Y channels), >= x2.5-3 at 2.5-3 GeV (SLAC visible-decay limit); Pythia 6 x3-5 high.
+         Only 7.6 % of the relevant K_L (T > 0.5 GeV) come from W < 3.5 GeV -> +8-15 %. W 3.5-5 GeV (14 %) unchecked.
+      d. K_L -> pi+ pi- (1.967e-3) added to KL_CHANNELS (lib/fastveto/decay.py; evstore picks it up).
+      4 (11 Nov 2026, Guglielmo APPROVED): Pythia spread one-sided, data-based band ~ +20 % on the MS7 K_L.
+    STATUS of D16: a-d DONE; open: W 3.5-5 GeV, eta', K_L tail statistics.
+    Next steps (re-runs need approval):
+      1. MS7 chain on mu_library_iron_v0stable.npz (with D9 in the re-run batch).
+      2. V0 tally in cpp/g4shield: every K_L / K_S / Lambda created in the iron (creator process, vertex, p, fate:
+         decayed / absorbed / exit) -> primary vs secondary, total made; small run (1e5 interactions).
+      3. Low-W check: exclusive gamma p -> K+ Lambda / K+ Sigma0 / K0 Sigma+ (CLAS, SAPHIR) and gamma A -> K0 X; A-dependence.
+      4. D3: treat the Pythia 6 spread as one-sided (data favour Geant4).
+      5. Add K_L -> pi+ pi- and gamma gamma to KL_CHANNELS (with C7).

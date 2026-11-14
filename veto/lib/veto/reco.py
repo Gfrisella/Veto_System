@@ -46,8 +46,10 @@ class RecoConfig:
     ip_max: float = 0.10               # selection: measured IP < ip_max [m] at the target (vertex_selection.py):
                                        # 0.10 = fully reconstructed, 2.5 = partially reconstructed (IP_CUTS, C8)
     max_tracks: int = 2                # selection: at most this many tracks in SST1 (interaction events)
+    ghost_hits: bool = True            # C1 (2026-11-11): analytic ghost hits of strip planes (ghost_mean)
     bounce_search: bool = True         # A2 (2026-11-05): second window for tracks whose backward line meets the cavern
     bounce_r_slope: float = 0.21       # wall / floor upstream: mirrored line from that point W, radius r + slope x |W - plane|
+    bounce_r0: float = None            # A2 (2026-11-11): base radius of the bounce query [m] (None = the track's own radius r)
                                        # (0.21 = 68 % of bounced SST1 muons at z = 30.6; the bounce is not specular)
     straw_cuts: str = None             # A6b: None = accept every track (as before); "acts" = straw fit quality cuts (ACTS, pending: GenFit discarded 2026-11-09)
                                        # (straws.py) on the vertex tracks: converged, ndf > 25, chi2/ndf < 5, fitted p > 1
@@ -69,8 +71,8 @@ def true_crossing(tr, plane):
     b = np.stack([tr["bx"], tr["by"], tr["bz"]], 1)
     # every plane (the UBT too, at 31.13 m since the FairShip layout, downstream of the stored state A at 30.6 m)
     x, y, ok = mt.path_at_z(a, k, b, plane.z)
-    if plane.kind == "ubt":
-        ok &= (tr["apz"] > 0) & (a[:, 2] < geo.Z_UBT + mt.A_TOLERANCE)  # tracks starting further in never cross it
+    if plane.kind in ("ubt", "tiles"):
+        ok &= (tr["apz"] > 0) & (a[:, 2] < plane.z + mt.A_TOLERANCE)   # tracks starting further in never cross it
     p = np.stack([x, y, np.full(len(x), plane.z)], 1)
     u = plane.to_local(x)
     ok = ok & plane.inside(u, y)
@@ -91,9 +93,9 @@ def own_hits(tr, event, design, rng, tracks_mask=None):
         if kicks is not None:                   # multiple scattering upstream of this plane
             dx, dy = scattering.offset_at(kicks, plane.z)
             crossed = np.isfinite(u) & np.isfinite(y)
-            if plane.kind == "ubt":             # as true_crossing: only tracks starting upstream of the UBT cross it
-                crossed &= (tr["apz"] > 0) & (tr["az"] < geo.Z_UBT + mt.A_TOLERANCE)
-            u, y = u + (dx if plane.kind == "ubt" else plane.sign * dx), y + dy
+            if plane.kind in ("ubt", "tiles"):  # as true_crossing: only tracks starting upstream of the plane cross it
+                crossed &= (tr["apz"] > 0) & (tr["az"] < plane.z + mt.A_TOLERANCE)
+            u, y = u + (dx if plane.kind in ("ubt", "tiles") else plane.sign * dx), y + dy
             ok = crossed & plane.inside(u, y)
         ok &= sel & (rng.random(len(ok)) < plane.efficiency)
         uc, yc = plane.cell_centre(u[ok], y[ok])
@@ -108,8 +110,51 @@ def own_hits(tr, event, design, rng, tracks_mask=None):
 
 # ---------------------------------------------------------------- accidental hits from the rate maps
 
+TILE_BIN = 0.05                 # m, binning of the UBT tile-plane rate map
+
+
+def tile_rate_map(z, half_x, half_y, dataset=None):
+    """Muons per spill per (x, y) bin on a full transverse plane at z (the 4 x 4 m^2 UBT tile plane, 11 Nov 2026), from
+    the stored states at z = 30.6 m of the muon store, extrapolated straight (no field between the shield and the vessel).
+    Built once per store / plane and cached in results/rate_maps/. Returns (x_edges, y_edges, h)."""
+    from . import io
+    dataset = dataset or paths.MUON_DATASET
+    f = paths.results_dir() / "rate_maps" / f"tiles_{dataset}_z{z:.2f}_{half_x:g}x{half_y:g}.npz"
+    if f.exists():
+        d = np.load(f)
+        return d["x_edges"], d["y_edges"], d["h"]
+    c, meta = io.open_store(paths.store_dir(dataset))
+    xe = np.arange(-half_x, half_x + 1e-9, TILE_BIN); ye = np.arange(-half_y, half_y + 1e-9, TILE_BIN)
+    h = np.zeros((len(xe) - 1, len(ye) - 1))
+    n = len(c["weight"])
+    for s0 in range(0, n, 20_000_000):
+        sl = slice(s0, min(n, s0 + 20_000_000))
+        z0 = np.asarray(c["z_30"][sl], np.float64); pz = np.asarray(c["pz_30"][sl], np.float64)
+        ok = (z0 > mt.REACH_30) & (pz > 0) & (z0 < z)
+        t = (z - z0[ok]) / pz[ok]
+        x = np.asarray(c["x_30"][sl], np.float64)[ok] + np.asarray(c["px_30"][sl], np.float64)[ok] * t
+        y = np.asarray(c["y_30"][sl], np.float64)[ok] + np.asarray(c["py_30"][sl], np.float64)[ok] * t
+        h += np.histogram2d(x, y, (xe, ye), weights=np.asarray(c["weight"][sl], np.float64)[ok])[0]
+    f.parent.mkdir(parents=True, exist_ok=True)
+    np.savez(f, x_edges=xe, y_edges=ye, h=h, dataset=dataset, z=z)
+    return xe, ye, h
+
+
 def plane_rate_map(plane, maps):
     """Rate map of a plane: bin edges in u, y and muons per spill per bin, clipped to the plane."""
+    if plane.kind == "tiles":                                     # UBT tile plane (11 Nov 2026): its own (x, y) map
+        if "tile_hist" in maps:
+            xe, ye, h = maps["tile_x_edges"], maps["tile_y_edges"], maps["tile_hist"]
+        else:
+            xe, ye, h = tile_rate_map(plane.z, plane.half_x, max(plane.half_x, geo.UBT_TILES_HALF_Y))   # the whole plane's map
+        if "em_tile_e" in maps and np.allclose(maps["em_tile_x_edges"], xe) and np.allclose(maps["em_tile_y_edges"], ye):
+            from .em_debris import detection_probability     # B2 / tile plane: EM debris of the shield end, same binning
+            p_e, p_g = detection_probability(plane)
+            h = h + p_e * maps["em_tile_e"] + p_g * maps["em_tile_g"]
+        ub = xe + plane.half_x - plane.u_off
+        uc, yc = 0.5 * (ub[1:] + ub[:-1]), 0.5 * (ye[1:] + ye[:-1])
+        keep = ((uc >= 0) & (uc <= plane.u_max))[:, None] & ((yc >= plane.y_lo) & (yc <= plane.y_hi))[None, :]
+        return ub, ye, np.where(keep, h, 0.0)
     em = "em_ubt_e" in maps                                       # B2: EM debris maps loaded (run_reco --em-debris)
     if em:
         from .em_debris import detection_probability
@@ -169,6 +214,8 @@ def _box_sum(a, k):
 def fine_peak(plane, pm, scale):
     """Peak muons per spill per m^2 over a scale x scale window [m] inside the plane, from the fine maps, and its
     1-sigma statistical error; None if the plane is outside the fine maps or no window has PEAK_MIN_NEFF muons."""
+    if plane.kind == "tiles":                    # no fine maps for the tile plane: the 5 cm map is fine already
+        return None
     yb = pm["y_bins"]
     b = float(yb[1] - yb[0])
     if plane.kind == "ubt":
@@ -255,10 +302,69 @@ def plane_rates(design, maps, spill_s=1.0):
 ACC_MARGIN_NS = 2.0     # random hits are drawn this much beyond a plane's time window (inclined tracks)
 
 
+def ghost_tiles(plane):
+    """C1: regions in which strips of every view overlap (ghosts form only inside one): strips are at most
+    max_length long, so near-vertical views (|angle| < 45 deg) are segmented in y and horizontal views in u.
+    Returns the tile edges (u_edges, y_edges) in local coordinates, or None for pads / generic planes."""
+    if plane.technology is None:
+        return None
+    t = tech.TECHNOLOGIES[plane.technology]
+    if t.get("readout") != "strip" or not t.get("views") or len(t["views"]) < 2:
+        return None
+    L = t.get("max_length") or np.inf
+    vert = any(abs(a) < 45 for a in t["views"]); horiz = any(abs(a) >= 45 for a in t["views"])
+    dy = plane.y_hi - plane.y_lo
+    ny = int(np.ceil(dy / L - 1e-9)) if (vert and np.isfinite(L)) else 1
+    nu = int(np.ceil(plane.u_max / L - 1e-9)) if (horiz and np.isfinite(L)) else 1
+    return np.linspace(0, plane.u_max, nu + 1), np.linspace(plane.y_lo, plane.y_hi, ny + 1)
+
+
+def ghost_mean(plane, mean, du=None, dy=None):
+    """ISSUES C1 (2026-11-11), analytic ghosts in ONE strip overlap region (ghost_tiles) holding `mean` real random hits
+    (Poisson) in the time window. Two views (fibre x / y): every ordered pair of hits (one view of each) gives a point,
+    E[N(N-1)] = mean^2. Every further view must have a fired strip through that point by chance:
+    q_v = 1 - exp(-mean * pitch / W_v), W_v = the region's width across that view's strips. Pads (tile, pixel) and
+    generic planes: 0. Ghosts between a track's own hit and random hits are not counted (second order)."""
+    if plane.technology is None or mean <= 0:
+        return 0.0
+    t = tech.TECHNOLOGIES[plane.technology]
+    if t.get("readout") != "strip" or not t.get("views") or len(t["views"]) < 2:
+        return 0.0
+    g = mean ** 2
+    du = plane.u_max if du is None else du
+    dy = (plane.y_hi - plane.y_lo) if dy is None else dy
+    for ang in t["views"][2:]:
+        a = np.radians(ang)
+        w = abs(np.cos(a)) * du + abs(np.sin(a)) * dy
+        g *= 1.0 - np.exp(-mean * t["pitch"] / max(w, t["pitch"]))
+    return float(g)
+
+
+def ghost_tile_means(plane, ub, yb, h, mean):
+    """Per overlap tile: (mask of rate-map bins in it, real random hits per event in it, ghosts per event in it)."""
+    tl = ghost_tiles(plane)
+    if tl is None or mean <= 0:
+        return []
+    ue, ye = tl
+    uc, yc = 0.5 * (ub[1:] + ub[:-1]), 0.5 * (yb[1:] + yb[:-1])
+    iu, iy = np.clip(np.searchsorted(ue, uc) - 1, 0, len(ue) - 2), np.clip(np.searchsorted(ye, yc) - 1, 0, len(ye) - 2)
+    rate = h.sum()
+    out = []
+    for a in range(len(ue) - 1):
+        for b in range(len(ye) - 1):
+            m = (iu == a)[:, None] & (iy == b)[None, :]
+            r = h[m].sum()
+            if r <= 0:
+                continue
+            mt_ = mean * r / rate
+            out.append((m, mt_, ghost_mean(plane, mt_, ue[a + 1] - ue[a], ye[b + 1] - ye[b])))
+    return out
+
+
 def accidental_hits(design, maps, n_events, window_ns, cfg, rng):
     """Random hits of all other muons in +- window_ns around each plane's nominal time.
     window_ns: one half width for every plane, or one per plane (each plane only needs its own)."""
-    out = {k: [] for k in ("event", "plane", "u", "y", "t")}
+    out = {k: [] for k in ("event", "plane", "u", "y", "t", "ghost")}
     windows = np.broadcast_to(np.asarray(window_ns, float), (len(design.planes),))
     for plane in design.planes:
         window_ns = float(windows[plane.index])
@@ -279,6 +385,23 @@ def accidental_hits(design, maps, n_events, window_ns, cfg, rng):
         out["event"].append(np.repeat(np.arange(n_events), n)); out["plane"].append(np.full(total, plane.index))
         out["u"].append(u); out["y"].append(y)
         out["t"].append(nominal + rng.uniform(-window_ns, window_ns, total))
+        out["ghost"].append(np.zeros(total, bool))
+        tiles = ghost_tile_means(plane, ub, yb, h, mean) if getattr(cfg, "ghost_hits", False) else []
+        for m, _, g in tiles:                       # C1: per overlap tile, u of one hit x y of another (tile marginals)
+            if g <= 0:
+                continue
+            ng = rng.poisson(g, n_events)
+            tg = int(ng.sum())
+            ht = np.where(m, h, 0.0)
+            pu, py = ht.sum(1) / ht.sum(), ht.sum(0) / ht.sum()
+            iu, iy = rng.choice(len(pu), tg, p=pu), rng.choice(len(py), tg, p=py)
+            u = np.clip(ub[iu] + rng.random(tg) * np.diff(ub)[iu], 0, plane.u_max)
+            y = np.clip(yb[iy] + rng.random(tg) * np.diff(yb)[iy], plane.y_lo, plane.y_hi)
+            u, y = plane.cell_centre(u, y)
+            out["event"].append(np.repeat(np.arange(n_events), ng)); out["plane"].append(np.full(tg, plane.index))
+            out["u"].append(u); out["y"].append(y)
+            out["t"].append(nominal + rng.uniform(-window_ns, window_ns, tg))
+            out["ghost"].append(np.ones(tg, bool))
     return {k: np.concatenate(v) if v else np.empty(0) for k, v in out.items()}
 
 
@@ -344,7 +467,8 @@ def predictions(meas, event, z_limit, design, cfg):
             dW = zW[b] - plane.z
             xb, yb = xW - txm * dW, yW - tym * dW
             dist_b = dist[b] + 0.0                       # path length ~ the straight one (time window)
-            rb = r[b] + cfg.bounce_r_slope * dW * np.sqrt(1 + txm ** 2 + tym ** 2)
+            r_base = r[b] if getattr(cfg, "bounce_r0", None) is None else np.full(len(b), float(cfg.bounce_r0))
+            rb = r_base + cfg.bounce_r_slope * dW * np.sqrt(1 + txm ** 2 + tym ** 2)
             ub = plane.to_local(xb)
             rch = ((ub >= -rb - plane.cell_u) & (ub <= plane.u_max + rb + plane.cell_u)
                    & (yb >= plane.y_lo - rb - plane.cell_y) & (yb <= plane.y_hi + rb + plane.cell_y))
@@ -424,11 +548,19 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
     explained = np.bincount(q["track"][found], minlength=len(event)) >= cfg.min_planes
     vetoed = np.zeros(n_events, bool)
     vetoed[event[explained]] = True
+    sbt_cfg = getattr(design, "sbt", None)
+    n_sbt = 0
+    if sbt_cfg:                                  # Surrounding Background Tagger (veto.sbt, 12 Nov 2026): OR with the planes
+        from . import sbt
+        sb = sbt.tag(tr_true, meas, event, z_limit, sbt_cfg, cfg, rng, n_events, with_own_hits=with_own_hits)
+        n_sbt = int((sb["vetoed"] & ~vetoed).sum())
+        explained |= sb["explained"]
+        vetoed |= sb["vetoed"]
     timing["reconstruct"] = time.perf_counter() - t0
     by_plane = np.bincount(q["plane"][found], minlength=len(design.planes))
     out = dict(vetoed=vetoed, explained=explained, by_plane=by_plane, timing=timing,
                n_hits=len(hits["event"]), n_own=len(own["event"]), n_queries=len(q["event"]),
-               n_compared=n_compared)
+               n_compared=n_compared, sbt_only=n_sbt)
     if details:   # for visualisation: every hit (own ones first), query, match and measured track
         out.update(hits=hits, queries=q, found=found, hit_of_query=hit_of_query, meas=meas)
     return out
