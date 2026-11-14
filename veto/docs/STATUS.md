@@ -843,3 +843,16 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
 - **D6 compare** (`results/d6_compare_{iron,helium}.json`): 5 % grid cuts the energy mismatch from 5.8 % to 2.0 % rms; V0 and
   charged yields per interaction agree with the old library within ~1.5 sigma in every energy bin; rescaling has no visible
   effect. Neutrino library (task 2) failed: one GENIE gevgen (nu_mu, Na-23, 1 GeV) hung past the 1 h timeout.
+
+## 2026-11-14 — re-run batch resumed (R1 + R2), A2 on the reference designs
+
+- **Batch state:** S1 done (sample_nov4full, peak maps, DIS parent store 3.19e7 rows, tile map). S3 muon chains done
+  (job 2052621, `results_rerun/shield_dis/shield_muon_v0s_s501..510`). S3 neutrino task failed: `genie/nu_library_v2.npz`
+  missing in our tree -> linked to Shah Rukh's GENIE v2 library (all 6 flavours) and resubmitted (job 2064489).
+- **Rest of the chain submitted** with `DESIGNS="designs/R1_ubt_only.json designs/R2_sbt_ubt.json"`, S4 on CPU in Slurm
+  (no GPU in this session's memory budget): S4 2064490 -> S4b 2064491, S2 2064492, S5 2064493 -> S6 2064494 (also after
+  2064489) -> S7 2064495 (12 tasks). Logs `results_rerun/batch/logs`.
+- **A2:** the scan on D6_straw/fiber/tile2 was killed twice at the 256 GB node limit (12 and 32 workers). A single
+  evaluation needs 0.37 GB, so `scan_bounce.py` now runs the first point of each design serially (builds missing caches once)
+  before forking. Resubmitted on the reference designs R1 / R2 with 8 workers, 64 G (job 2064527).
+- **Open:** D6 neutrino library (GENIE hang at 1 GeV on Na-23) — not needed for the re-run, which uses Shah Rukh's v2.

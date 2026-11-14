@@ -53,8 +53,18 @@ def main():
     a = ap.parse_args()
     r0s = [None if x.lower() == "none" else float(x) for x in a.r0]
     jobs = [(d, s, r) for d in a.designs for s in a.slopes for r in (r0s if s > 0 else [None])]
-    with Pool(min(a.workers, len(jobs)), initializer=_init, initargs=(a.signal, a.n_signal)) as pool:
-        rows = pool.map(job, jobs)
+    # first point of each design in this process: builds any missing rate-map cache once (12 Nov: 12-32 workers building
+    # the same maps in parallel reached the 256 GB node limit), then the workers only read the caches
+    _init(a.signal, a.n_signal)
+    first = {}
+    for j in jobs:
+        first.setdefault(j[0], j)
+    rows0 = {j: job(j) for j in first.values()}
+    rest = [j for j in jobs if j not in rows0]
+    _S.clear()
+    with Pool(max(1, min(a.workers, len(rest))), initializer=_init, initargs=(a.signal, a.n_signal)) as pool:
+        rows_rest = dict(zip(rest, pool.map(job, rest)))
+    rows = [rows0[j] if j in rows0 else rows_rest[j] for j in jobs]
     print(f"{'design':<12}{'slope':>6}{'r0':>6}{'bounced vetoed':>16}{'SST1 vetoed':>13}{'signal lost':>13}{'comb./15y':>11}{'reward':>9}")
     for x in rows:
         print(f"{x['design']:<12}{x['bounce_r_slope']:>6g}{str(x['bounce_r0']):>6}{100 * x['bounced_vetoed']:>15.2f}%"
