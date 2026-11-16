@@ -975,3 +975,9 @@ full-sample R1 / R2 results, jobs, next steps, Shah Rukh's open requests) and `d
 R3 final: 3 layers 29.39 / 29.59 / 29.79 m x 8 stations 30 x 30 cm (|x| 0.75-1.35, |y| < 0.3), 82 % of the V0 points,
 <= 34 MHz per station, 378.7 drachmas. Report pushed (Appendix G). MS7 V0 statistics plan proposed (x20 copies, V0-only
 draws x10-70, more seeds), waiting for the go.
+
+## 2026-11-16 (evening 2) — MS7 V0 statistics increase (Guglielmo: "go for the V0 statistics increase and document it")
+- Importance sampling of the MS7 chain (`--final-state v0|nov0`, `--v0-acc-cut`), docs/v0_statistics.md. Validation
+  (job 2088400): V0-only gives 1 524 vs 2 093 V0 decays / spill -> 27 % secondary V0 -> complementary samples.
+- Production 2089589 (40 jobs), stores 2089590 (ms7_muon_fsv0, ms7_muon_fsnov0: SUM), cache 2089591 (prepared_ms7_v0stat).
+- Then: R1 / R2 / R3 on the new MS7 sample, document in the report (Appendix G / B), update HANDOFF.

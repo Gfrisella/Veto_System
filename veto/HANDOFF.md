@@ -54,7 +54,9 @@ MS7 V0: 399 selected events (partial) but only **2** at full selection carrying 
 
 ## Next steps (in order)
 
-1. **MS7 V0 statistics** (proposed, waiting for Guglielmo's go): v0-copies 5 -> 100 (x20, nearly free); draw only
+1. **MS7 V0 statistics** (GO given 16 Nov; running, see docs/v0_statistics.md: jobs 2089589 production, 2089590 stores,
+   2089591 cache `prepared_ms7_v0stat`; 27 % of the V0 are secondary -> two complementary samples fsv0 + fsnov0, SUM them).
+   Original proposal: v0-copies 5 -> 100 (x20, nearly free); draw only
    library interactions with a V0 among the products, weight x fraction (x10-70: only 1.4 % of Geant4 and 20 % of Pythia
    iron interactions have a K_L / K_S / Lambda; needs code in `bin/shield_dis.py`); more seeds (x10). Target x1e3.
    Then rebuild `prepared_ms7_nov4full` (`bin/prepare_interactions.py --ms7 ...`, now with strip layer data).

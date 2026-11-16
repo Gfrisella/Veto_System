@@ -31,9 +31,27 @@ split geant4), and most forced decays can never pass the selection.
 ## Validation (job 2088400)
 
 One seed, 2e6 interactions, `--v0-only --v0-copies 5`, no pre-cut: the V0 decay rate in the vessel per spill must agree
-with the unbiased 2 093 +- 25; a deficit is the secondary-V0 part. Result: see below.
+with the unbiased 2 093 +- 25; a deficit is the secondary-V0 part.
 
-## Production
+**Result: 1 524 per spill (K_L 1 443, K_S 50, Lambda 31) vs 2 093: 27 % of the V0 (~570 / spill, almost all K_L) are
+secondary**, made by hadrons of V0-free final states during the Geant4 transport through the remaining iron. The V0-only
+seed gave 2.6e6 forced decays (x36 an unbiased seed) but peaked at 153 GB (53 min, 16 workers).
 
-See STATUS.md / HANDOFF.md for the job ids and the resulting store (`results_rerun/evstore/ms7_muon_v0only`), the rebuilt
-cache `prepared_ms7_nov4full` and the new full / partial selected counts and weights.
+**Fix: two complementary samples** (`--final-state v0` and `--final-state nov0`): the V0 final states (weight x P(V0|E))
+and the V0-free ones (weight x P(no V0|E), their V0 come from the transport). Every interaction belongs to exactly one,
+so v0 + nov0 = the unbiased chain (checked: P(V0) + P(no V0) = 1.0000 at 3 and 30 GeV, no V0 in the nov0 draws).
+
+## Production (16 Nov 2026)
+
+- `--final-state v0`: 20 jobs x 1e6 interactions (seeds 801-820), `--v0-copies 20 --v0-acc-cut` (~x200 forced decays of
+  primary V0 vs the unbiased S3 production).
+- `--final-state nov0`: 20 jobs x 2e6 interactions (seeds 901-920), `--v0-copies 100 --v0-acc-cut` (~x40 for the secondary V0).
+- Jobs: production 2089589 (array 0-39, 8 at a time, 200 GB), event stores 2089590 (`results_rerun/evstore/ms7_muon_fsv0`,
+  `ms7_muon_fsnov0`, built separately: each store averages over its own seeds; downstream the two are SUMMED), MS7 cache
+  2089591 (`prepared_ms7_v0stat`: fsv0 + fsnov0 + ms7_nu2026).
+- Use: `bin/prepare_interactions.py --ms7 <fsv0> <fsnov0> <nu>`; evaluations over both muon stores (sum). The old store
+  `ms7_muon_v0s` (unbiased, 10 seeds) stays as the cross-check.
+
+## Results
+
+(to be filled: selected events and weights, full / partial, before / after R1 / R2 / R3)
