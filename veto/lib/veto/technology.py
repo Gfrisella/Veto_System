@@ -37,6 +37,9 @@ marks numbers that are not in the documents.
 
 Relative cost per channel (cost_channel, straw = 1): fibre 4 and pixel 20 (the user's table), tile 5
 (colleague). veto_window: fixed half width of the veto time window [s], instead of +- 3 sigma (tiles: +-200 ps, SPSC-SR-389, 12 Nov 2026).
+Tiles use +- 3 sigma since 16 Nov 2026 (Guglielmo): the fixed +-200 ps of SR-389 is only +-1.3 / 1.5 sigma of the combined
+tile (120 / 90 ps) + timing-detector (100 ps) resolution and lost ~20 % of straight muons on time alone (R1: selected muons
+tagged 81.7 -> 97.7 %, full-selection muon pairs 0.012 -> 0 / 15 y; signal loss +0.3-0.5 points).
 
 Readout: strip technologies have `views` (strip angles from vertical, deg) with `layers_per_view`
 layers each; pads (pixel, tile) measure both coordinates. A hit sits at the centre of a cell (u, y):
@@ -70,11 +73,11 @@ TECHNOLOGIES = {
                   efficiency=0.999, max_length=None, max_rate=3.5e8, max_channel_rate=None,
                   x0_per_layer=0.005, cost_m2_per_layer=3800.0, cost_channel=20.0),   # cost: estimate, see above
     "tile": dict(name="Scintillating tile (4 x 4 cm, SiPM)", readout="pad", views=None, layers_per_view=1,
-                 pitch=0.04, sigma_x=0.04, sigma_t=0.12e-9, time_window=None, veto_window=0.2e-9,
+                 pitch=0.04, sigma_x=0.04, sigma_t=0.12e-9, time_window=None, veto_window=None,   # +- 3 sigma (16 Nov)
                  efficiency=0.999, max_length=None, max_rate=None, max_channel_rate=1e6,
                  x0_per_layer=0.024, cost_m2_per_layer=30.0, cost_channel=5.0),
     "tile2": dict(name="Scintillating tile (2 x 2 cm, SiPM)", readout="pad", views=None, layers_per_view=1,
-                  pitch=0.02, sigma_x=0.02, sigma_t=0.09e-9, time_window=None, veto_window=0.2e-9,
+                  pitch=0.02, sigma_x=0.02, sigma_t=0.09e-9, time_window=None, veto_window=None,   # +- 3 sigma (16 Nov)
                   efficiency=0.999, max_length=None, max_rate=None, max_channel_rate=2.5e6,   # SR-389 (14 Nov 2026)
                   x0_per_layer=0.024, cost_m2_per_layer=30.0, cost_channel=5.0),
 }
