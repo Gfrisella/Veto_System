@@ -999,3 +999,5 @@ draws x10-70, more seeds), waiting for the go.
   Closed A1, A5, C1, C5, D7, D20. HANDOFF, CHANGELOG updated. S6b cut flow (2089733) done.
 - B1 check (bin/b1_scatter_check.py, R2 full sample): window covers the scatter above 5 GeV (100 %); 1-2 GeV 98.6 %, < 1 GeV 94.6 %.
   Proposal r_ms 6 -> 9 mrad GeV pending. Closed today: A2, C7, C8, D2, D3, D18; deferred D6, D14 (debris in time, ACTS).
+- B1 closed (r_ms = 6 kept): bin/entrance_misses.py -> no muon through the vessel entrance is lost by the window (R2);
+  window misses only outside the entrance, left to the optimiser (fins, redundancy).

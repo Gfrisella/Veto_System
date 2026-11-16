@@ -276,7 +276,7 @@ B. PHYSICS MISSING: changes the results
 ----------------------------------------------------------------------------------------------
 
 B1. Multiple scattering (at least this interaction must be modelled)
-    STATUS: IN PROGRESS (16 Nov 2026: check done; window too narrow below 2 GeV, r_ms decision pending)
+    STATUS: DONE (16 Nov 2026, Guglielmo: r_ms stays 6 mrad GeV; nothing lost at the vessel entrance)
     The stored muons have NO multiple scattering after the shield: the states at z = 30.6 m and
     z = 82 m are joined by straight lines and the transport did not include the air / vessel.
     Material along a muon's path (now fully defined, so MS can be computed for every muon):
@@ -330,6 +330,13 @@ B1. Multiple scattering (at least this interaction must be modelled)
       Above 5 GeV every variant covers 100 %. The material window is cheaper in area at 1-5 GeV but does not fix < 1 GeV
       (the Gaussian sigma misses the non-Gaussian part there; tails not separated yet). Effect on tagging / signal loss
       needs run_reco with the window implemented in reco.predictions.
+    16 Nov 2026, Guglielmo: keep r_ms = 6. Evaluate only the muons through the vessel ENTRANCE that the UBT cannot tag; the
+      rest (outside the entrance) is for the optimiser (new fins, redundancy). bin/entrance_misses.py (R2, 5 scattering
+      draws, results_rerun/reco/entrance_misses_R2.json): non-bounced single SST1 muons through the entrance window
+      1 237 / spill (44 below 1 GeV), lost (hit outside the window on BOTH UBT planes) 0. Candidate pairs: 82 % (IP < 10 cm)
+      / 29 % (IP < 2.5 m) of the pair weight have a leg through the entrance; a lost leg in 1 / 15 pairs (weight fraction
+      7.5e-8 / 6.4e-6), both legs lost in none. The straws + tiles double layer covers the entrance; the window misses of
+      the B1 check are on the outer tiles (outside the vessel window). Closed.
 
 B2. EM debris rate (electrons / photons from the end of the shield)
     STATUS: DONE (11 Nov 2026: production on the Nov-4 parents, maps results/em_debris/em_maps.npz; debris in time -> D14)

@@ -88,4 +88,5 @@ MS7 V0: 399 selected events (partial) but only **2** at full selection carrying 
 
 Closed 16 Nov: A1 (direct count), A5, C1 (no ghosts with one-view straws), C5 (3220 spills), D7 (no rock pairs), D20.
 Also closed 16 Nov: A2, C7, C8, D2 (R2: nu-He 3.6 / 15 y), D3, D18. Deferred: C3, D6, D14 (debris in time, ACTS).
-Still open: B1 (window < 2 GeV, r_ms decision), D9 (S7 3 / 8), D16 (MS7 V0 production), D19 (SBT model).
+B1 closed (r_ms = 6 kept; nothing lost at the vessel entrance). Still open: D9 (S7 3 / 8), D16 (MS7 V0 production),
+D19 (SBT model).
