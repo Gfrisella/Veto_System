@@ -45,7 +45,7 @@ GEOMETRY (5 Nov 2026): FairShip layout (geometry_config.py 2026-0.1), target-ali
     EVERY result before this date (types in the stores, rate maps, reco inputs, interactions) uses the old layout.
 
 A1. Background figure of merit is saturated
-    STATUS: DECIDED (16 Nov 2026, Guglielmo: DIRECT count is the pair estimate everywhere)
+    STATUS: DONE (16 Nov 2026: direct count everywhere, weighted error; factorised kept as cross-check)
     The pair background is 2-3 surviving pairs out of 196,736 candidates (-> ~1e-5 events in
     15 years). Every reasonable design gives ~0, so differences between designs are Poisson
     noise.
@@ -77,6 +77,8 @@ A1. Background figure of merit is saturated
       n_eff_survive and the 20 heaviest surviving pairs (survivors: pair, muons, w_15y, share). 0 survivors: 90 % CL 2.3 / n.
       Factorised kept as an option and as the closure cross-check. Open: closure_check has no EM debris (run_reco
       with --em-debris): use the same veto settings in both; inspect which heavy muons drive R2.
+    16 Nov 2026: closed (Guglielmo). Follow-ups moved: which heavy muons drive R2's survivors -> next R1/R2/R3 run
+      (run_reco now saves them); closure_check without EM debris is only a cross-check.
 
 A2. Bounced muons: the veto barely sees them
     STATUS: IN PROGRESS (11 Nov 2026: knobs + scan code in; scan running on D6_straw / D6_fiber / D6_tile2)
@@ -158,7 +160,7 @@ A4. No objective, two inconsistent cost models
       Guglielmo (5 Nov): keep the per-channel model, FLAGGED for the detector colleagues.
 
 A5. Spill and PoT normalisation
-    STATUS: DECIDED (5 Nov 2026): keep the flat 1 s spill
+    STATUS: DONE (16 Nov 2026: flat 1 s spill, decided 5 + 9 Nov)
     Accidental hits use flat times inside a 1 s spill (--spill). config.py has 5e13 PoT per spill
     and 6e20 PoT in 15 years. Check that rates match the 5e13 PoT/s convention, and model the real
     spill structure (50 Hz ripple, duty factor): accidentals scale with the instantaneous rate,
@@ -166,6 +168,7 @@ A5. Spill and PoT normalisation
     5 Nov 2026, Guglielmo: keep the flat 1 s spill at 5e13 PoT/s (rates in kHz at 5e13 PoT/s), stated as an assumption;
       no duty factor / 50 Hz ripple for now.
     9 Nov 2026, Guglielmo: keep the flat spill (confirmed again).
+    16 Nov 2026: closed; rates quoted at 4e13 PoT / spill since 9 Nov.
 
 A6. Spectrometer field map not used: products propagated in straight lines
     STATUS: DONE (5 Nov 2026: RK4 in the field map, re-centred; helium products in Geant4, built on the host)
@@ -1024,7 +1027,7 @@ D18. Search window not aware of the material crossed
     material sum the report uses.
 
 D20. Gap between the vessel end and SST1 (no tagger there)
-    STATUS: OPEN (PRIORITY C, downgraded 16 Nov 2026: no background pair contains these muons)
+    STATUS: DONE (16 Nov 2026: no background pair contains a gap muon)
     R2 on the full 3220-spill inputs: 25 % of the bounced SST1 muons with p > 1 GeV are untagged, 69 % of them cross no
     detector at all: they bounce off the cavern wall late (k_z ~ 79 m, k_x ~ -6 m) and enter the acceptance through the
     0.95 m between the vessel end (81.13 m) and SST1 (82.08 m). Bounced x selected pairs are 3 % of the pairs.
@@ -1035,6 +1038,7 @@ D20. Gap between the vessel end and SST1 (no tagger there)
       bounced muon, 3 % of the weight, bounce earlier; vertices at z 68-81 m). The gap muons do not make background vertices,
       so the single-muon "untagged" fraction overstates what matters: quote the untagged fraction of the PAIR muons
       (run_reco pair_muons, the factorised estimate), from S7 on the full sample.
+    16 Nov 2026: closed (Guglielmo): the gap muons never form a vertex in the vessel; nothing to add.
 
 D19. SBT cell model: missing ingredients
     STATUS: OPEN (PRIORITY B; logged 16 Nov 2026)
