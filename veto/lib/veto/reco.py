@@ -56,6 +56,7 @@ class RecoConfig:
     cone: float = 0.0                  # vertex cone [rad]: tracks of a vertex also search r0 + cone * (distance from
                                        # the vertex to the plane), for parents bent at the vertex (0 = off)
     multiple_scattering: bool = False  # scatter the muons after z = 30.6 m (scattering.py)
+    debris_in_time: bool = False       # D14.1: each muon's own shield-end e / gamma on the UBT planes, in time (debris_in_time.py)
     msc_media: bool = True             # ... also in the helium and the air (1 m slices)
     msc_tails: bool = True             # ... with single-scattering tails (fastveto.msc, tuned to Geant4)
     seed: int = 1
@@ -580,6 +581,12 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
         tr_true = tr
     own = own_hits(tr_true, event, design, rng) if with_own_hits else {k: np.empty(0) for k in
                                                                    ("event", "track", "plane", "u", "y", "t")}
+    if with_own_hits and getattr(cfg, "debris_in_time", False):   # D14.1: the muons' own debris, in time with them
+        from . import debris_in_time
+        deb = debris_in_time.hits(tr_true, event, design, rng,
+                                  muon_time_at=lambda pl: -true_crossing(tr_true, pl)[2] / C)
+        own = {k: np.concatenate([own[k], deb[k]]) for k in own}
+        timing["debris_hits"] = len(deb["event"])
     window = time_window(design, cfg) + ACC_MARGIN_NS        # each plane its own window
     rule = v0_rule_config(design) if v0 is not None else None
     if rule:                                                 # the V0 rule looks earlier: draw random hits there too

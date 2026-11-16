@@ -260,6 +260,8 @@ def main():
                         help="measured-IP selection: full (fully reconstructed, IP < 10 cm) | partial (IP < 2.5 m) (ISSUES C8)")
     parser.add_argument("--out", default=None, help="output file name in results/reco (default: results[_tw..][_oldsignal].json)")
     parser.add_argument("--inputs", default=paths.RECO_INPUTS, help="results/reco file from make_reco_inputs.py")
+    parser.add_argument("--debris-in-time", action="store_true",
+                        help="D14.1: each muon's own shield-end e / gamma on the UBT planes, in time with it (lib/veto/debris_in_time.py)")
     parser.add_argument("--em-debris", action="store_true",
                         help="B2: add the EM debris maps (results/em_debris/em_maps.npz, bin/em_debris.py) to the accidentals")
     parser.add_argument("--no-ghosts", action="store_true", help="C1: no analytic ghost hits in strip planes (as before 2026-11-11)")
@@ -267,7 +269,7 @@ def main():
     names = args.designs or sorted(p.stem for p in dsg.DESIGN_DIR.glob("*.json"))
     cfg = reco.RecoConfig(spill_s=args.spill, seed=args.seed, time_window_ns=args.time_window,
                           multiple_scattering=args.multiple_scattering, ip_max=vsel.IP_CUTS[args.ip_cut],
-                          ghost_hits=not args.no_ghosts)
+                          ghost_hits=not args.no_ghosts, debris_in_time=args.debris_in_time)
     tr, inp = load_inputs(args.inputs)
     if args.em_debris:                                   # B2: e / gamma from the shield end in the rate maps
         from veto import em_debris
