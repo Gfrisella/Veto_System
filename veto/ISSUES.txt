@@ -1003,12 +1003,17 @@ D18. Search window not aware of the material crossed
     material sum the report uses.
 
 D20. Gap between the vessel end and SST1 (no tagger there)
-    STATUS: OPEN (PRIORITY B; logged 16 Nov 2026)
+    STATUS: OPEN (PRIORITY C, downgraded 16 Nov 2026: no background pair contains these muons)
     R2 on the full 3220-spill inputs: 25 % of the bounced SST1 muons with p > 1 GeV are untagged, 69 % of them cross no
     detector at all: they bounce off the cavern wall late (k_z ~ 79 m, k_x ~ -6 m) and enter the acceptance through the
     0.95 m between the vessel end (81.13 m) and SST1 (82.08 m). Bounced x selected pairs are 3 % of the pairs.
     Options: an SBT-like ring / a plane closing the gap (cost in drachmas), or the A2 bounce search on the last ring;
     measure the effect on the pairs first (n_eff 8: statistics).
+    16 Nov 2026 (Guglielmo: "they are not entering the decay vessel, their vertex will never fall in the vessel?"): checked on
+      inputs_nov4full: of the 215 500 candidate pairs NONE contains a muon bouncing after z = 77 m (the 260 pairs with a
+      bounced muon, 3 % of the weight, bounce earlier; vertices at z 68-81 m). The gap muons do not make background vertices,
+      so the single-muon "untagged" fraction overstates what matters: quote the untagged fraction of the PAIR muons
+      (run_reco pair_muons, the factorised estimate), from S7 on the full sample.
 
 D19. SBT cell model: missing ingredients
     STATUS: OPEN (PRIORITY B; logged 16 Nov 2026)

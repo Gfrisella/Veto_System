@@ -948,3 +948,6 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   25 % (n_eff 8): 69 % cross NO detector: they bounce off the cavern wall late (k_z ~ 79 m, k_x ~ -6 m) and reach SST1
   through the 0.95 m gap between the vessel end (81.13 m) and SST1 (82.08 m), where there is no SBT.
 - **V0 event display**: bin/v0_examples.py (job 2087343) -> page.
+- **D20 downgraded to C:** no candidate pair (inputs_nov4full, 215 500) contains a muon bouncing after z = 77 m; the gap
+  muons never form a background vertex. Untagged fractions that matter = those of the pair muons (S7, full sample).
+- **Guglielmo: report only full-sample (3220) statistics.** Report Table 30 / R1-R2 numbers to be replaced from S7.
