@@ -994,3 +994,4 @@ draws x10-70, more seeds), waiting for the go.
   146 GB > 128 GB). Dropped: Guglielmo, 16 Nov: only R1 / R2 / R3 anywhere. Rock pairs to be redone on R2 with draws from
   the Nov-4 full sample: NOT needed (Guglielmo, 16 Nov: mu x rock already shown negligible, ISSUES line ~752);
   Section 6 drops the rock pair rows and says so in one sentence.
+- A1 explainer page (product rule vs direct count, weak-spot toy, closure numbers): https://claude.ai/artifact/RkWTjSXM8gHe4yWWg5Sg2P
