@@ -37,10 +37,13 @@ DEFAULT = dict(threshold_mev=30.0, efficiency=0.993, sigma_t=1.0e-9, n_sigma=3.0
                cost_fraction_full=0.59, budget_kchf=8000.0,   # full SBT ~59 % of the 2023 reference budget of 8 MCHF (placeholder;
                # technology.REF_BUDGET_KCHF; the optimisation budget is veto.budget = the cost of R2)
                rate_scale=1.0,   # x random-hit rate (see below)
-               window_z="projected", sin_min=0.05)   # pointing window along the wall (16 Nov 2026): "projected" = rings within
+               window_z="projected", sin_min=0.05, shell_window=True)   # pointing window along the wall (16 Nov 2026): "projected" = rings within
                # r / sin(alpha) of the crossing (alpha: line vs the wall face; sin floored at sin_min) and each hit timed against
                # the line's time inside its ring; "r" = the first version (rings within r, time at the crossing): our cells see muons only (Nov-4: 2.07 MHz > 30 MeV); SR-389 quotes
                                  # 27 MHz > 30 MeV with the particles scattered from the cavern walls and e / gamma -> 13
+# shell_window (16 Nov 2026, evening): the pointing window spans the whole shell crossing, from the backward line's crossing
+# of the OUTER shell surface to its inner-wall crossing (+- r_z): a shallow track deposits its energy in the outer shell, up
+# to T_SHELL / tan(alpha) upstream of the inner crossing (0.57 m at 21 deg: rock tracks). False = the previous window.
 CHANNELS_PER_CELL = 16       # 2 WOMs x 8 SiPM groups (SR-370)
 
 _Z0, _Z1 = geo.Z_VESSEL_MIN, geo.Z_VESSEL_MAX
@@ -105,13 +108,14 @@ def cost_kchf(cfg, budget_kchf):
 
 # ---------------------------------------------------------------- geometry of crossings
 
-def crossings(p, q):
-    """Crossings of the segments p -> q (n, 3) with the four lateral faces of the vessel frustum (z0 < z < z1).
+def crossings(p, q, grow=0.0):
+    """Crossings of the segments p -> q (n, 3) with the four lateral faces of the vessel frustum (z0 < z < z1), grown by
+    `grow` in x and y (grow = T_SHELL: the outer surface of the SBT shell).
     Returns dict: seg (index), face (0..3), t (fraction along the segment), x, y, z, cos (|cos| to the wall normal)."""
     d = q - p
     out = {k: [] for k in ("seg", "face", "t", "x", "y", "z", "cos")}
     for fi, (axis, sign) in enumerate(((0, 1), (0, -1), (1, 1), (1, -1))):
-        h0, s = (geo.VESSEL_X_IN, _SX) if axis == 0 else (geo.VESSEL_Y_IN, _SY)
+        h0, s = (geo.VESSEL_X_IN + grow, _SX) if axis == 0 else (geo.VESSEL_Y_IN + grow, _SY)
         # sign * (p_a + t d_a) = h0 + s (p_z + t d_z - z0)
         with np.errstate(divide="ignore", invalid="ignore"):
             t = (h0 + s * (p[:, 2] - _Z0) - sign * p[:, axis]) / (sign * d[:, axis] - s * d[:, 2])
@@ -121,7 +125,7 @@ def crossings(p, q):
             continue
         pt = p[i] + t[i, None] * d[i]
         hx, hy = geo.vessel_half_widths(pt[:, 2])
-        other = np.abs(pt[:, 1 - axis]) <= (hy if axis == 0 else hx)
+        other = np.abs(pt[:, 1 - axis]) <= (hy if axis == 0 else hx) + grow
         inz = (pt[:, 2] > _Z0) & (pt[:, 2] < _Z1)
         k = other & inz
         i, pt = i[k], pt[k]
@@ -361,6 +365,20 @@ def tag(tr_true, meas, event, z_limit, cfg, reco_cfg, rng, n_events, with_own_hi
         k_path = dn                                                     # path length per unit z
     else:
         r_z = r
+    # thick shell: the backward line crosses the outer shell surface upstream of the inner wall; search the whole span
+    z_out, c_out = c["z"].copy(), np.where(np.isin(c["face"], (0, 1)), c["y"], c["x"])
+    if cfg.get("shell_window", True):
+        co = crossings(start, end, grow=T_SHELL)
+        first = {}
+        for k_ in np.argsort(co["t"]):                                  # earliest outer crossing per line (from the vertex)
+            first.setdefault(int(co["seg"][k_]), k_)
+        for j_ in range(len(s)):
+            k_ = first.get(int(s[j_]))
+            if k_ is None:                                              # leaves the outer frustum through the entrance plane
+                z_out[j_] = _Z0
+            elif int(co["face"][k_]) == int(c["face"][j_]):
+                z_out[j_] = co["z"][k_]
+                c_out[j_] = co["y"][k_] if c["face"][j_] in (0, 1) else co["x"][k_]
     # candidate cells: the ring range and segment range within r of the crossing point
     hits_by_ev = {}
     order = np.argsort(h_ev)
@@ -372,7 +390,7 @@ def tag(tr_true, meas, event, z_limit, cfg, reco_cfg, rng, n_events, with_own_hi
         if lo == hi:
             continue
         face = int(c["face"][j])
-        zlo, zhi = c["z"][j] - r_z[j], c["z"][j] + r_z[j]
+        zlo, zhi = min(c["z"][j], z_out[j]) - r_z[j], max(c["z"][j], z_out[j]) + r_z[j]
         r_lo = max(int(np.searchsorted(RING_EDGES, zlo, side="right") - 1), 0)
         r_hi = min(int(np.searchsorted(RING_EDGES, zhi, side="right") - 1), N_RING - 1)
         hx, hy = geo.vessel_half_widths(np.array([c["z"][j]]))
@@ -380,8 +398,9 @@ def tag(tr_true, meas, event, z_limit, cfg, reco_cfg, rng, n_events, with_own_hi
             nseg, coord, half = N_SEG_X_FACE, c["y"][j], hy[0]
         else:
             nseg, coord, half = N_SEG_Y_FACE, c["x"][j], hx[0]
-        s_lo = int(np.clip((coord - r[j] + half) / (2 * half) * nseg, 0, nseg - 1))
-        s_hi = int(np.clip((coord + r[j] + half) / (2 * half) * nseg, 0, nseg - 1))
+        c_lo, c_hi = min(coord, c_out[j]), max(coord, c_out[j])
+        s_lo = int(np.clip((c_lo - r[j] + half) / (2 * half) * nseg, 0, nseg - 1))
+        s_hi = int(np.clip((c_hi + r[j] + half) / (2 * half) * nseg, 0, nseg - 1))
         cand = {cell_id(face, rr, ss) for rr in range(r_lo, r_hi + 1) for ss in range(s_lo, s_hi + 1)}
         if projected:   # expected time while the line is inside the hit's ring: [t(ring upstream edge), t(downstream edge)]
             rg = hc[lo:hi] // 10 % 1000
