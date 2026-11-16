@@ -979,5 +979,6 @@ draws x10-70, more seeds), waiting for the go.
 ## 2026-11-16 (evening 2) — MS7 V0 statistics increase (Guglielmo: "go for the V0 statistics increase and document it")
 - Importance sampling of the MS7 chain (`--final-state v0|nov0`, `--v0-acc-cut`), docs/v0_statistics.md. Validation
   (job 2088400): V0-only gives 1 524 vs 2 093 V0 decays / spill -> 27 % secondary V0 -> complementary samples.
-- Production 2089589 (40 jobs), stores 2089590 (ms7_muon_fsv0, ms7_muon_fsnov0: SUM), cache 2089591 (prepared_ms7_v0stat).
+- Production 2089604 (160 small jobs, 64 GB, %24: the farm is memory-bound; the 40 x 200 GB version never started), stores
+  2089605 (ms7_muon_fsv0, ms7_muon_fsnov0: SUM), cache 2089606 (prepared_ms7_v0stat).
 - Then: R1 / R2 / R3 on the new MS7 sample, document in the report (Appendix G / B), update HANDOFF.
