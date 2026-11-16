@@ -47,11 +47,11 @@ so v0 + nov0 = the unbiased chain (checked: P(V0) + P(no V0) = 1.0000 at 3 and 3
   of primary V0 vs the unbiased S3 production).
 - `--final-state nov0`: 80 jobs x 5e5 interactions (seeds 9001-9080), `--v0-copies 100 --v0-acc-cut` (~x40 for the secondary V0).
 - Split into small jobs (64 GB) because the farm is memory-bound (big nodes: idle cores, 1-10 GB free); first submission
-  (40 x 200 GB) never started. Throttle 24 at a time, 16 CPUs each, BLAS/OpenMP threads capped by env.sh (farm etiquette,
+  (40 x 200 GB) never started. Throttle 24 at a time, 8 CPUs / 8 workers each (16 workers needed 82 GB at Geant4 start-up, ~5 GB per worker: first array OOM-killed), BLAS/OpenMP threads capped by env.sh (farm etiquette,
   Roland Bernet's mail of 12 Nov).
-- Jobs: production 2089604 (array 0-159), event stores 2089605 (`results_rerun/evstore/ms7_muon_fsv0`,
+- Jobs: production 2089677 (array 0-159), event stores 2089678 (`results_rerun/evstore/ms7_muon_fsv0`,
   `ms7_muon_fsnov0`, built separately: each store averages over its own seeds; downstream the two are SUMMED), MS7 cache
-  2089606 (`prepared_ms7_v0stat`: fsv0 + fsnov0 + ms7_nu2026).
+  2089679 (`prepared_ms7_v0stat`: fsv0 + fsnov0 + ms7_nu2026).
 - Use: `bin/prepare_interactions.py --ms7 <fsv0> <fsnov0> <nu>`; evaluations over both muon stores (sum). The old store
   `ms7_muon_v0s` (unbiased, 10 seeds) stays as the cross-check.
 
