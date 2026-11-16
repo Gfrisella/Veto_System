@@ -67,7 +67,8 @@ MS7 V0: 399 selected events (partial) but only **2** at full selection carrying 
    iron interactions have a K_L / K_S / Lambda; needs code in `bin/shield_dis.py`); more seeds (x10). Target x1e3.
    Then rebuild `prepared_ms7_nov4full` (`bin/prepare_interactions.py --ms7 ...`, now with strip layer data).
 2. Run the R1 / R2 / R3 test (above); fill report Table `tab:tag:refeval` (R3 row, MS7 V0 columns).
-3. Report Section 6 (no-tagging yields): from the S6b cut flow + S7 3 / 8 (this session); MS7 muon V0 row after step 1.
+3. Report Section 6 (no-tagging yields): FILLED 16 Nov (report f9fe9c9, not pushed); pending in red: MS7 muon V0 row (step 1)
+   and vessel-DIS x mu pairs (S7 3 / 8 OOM, D9).
    Rock pairs: one sentence (negligible, not re-evaluated).
 4. Optimiser trial (`evolve/evolve_designs.py --generations 5 --children 8 --inputs inputs_nov4full.npz
    --prep-tag _nov4full`, host slurm, seeds R1 / R2; add R3): only after 1 (the MS7 V0 source would dominate on 2 events).

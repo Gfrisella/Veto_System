@@ -1014,3 +1014,5 @@ draws x10-70, more seeds), waiting for the go.
   and Section 6 should keep the rock rows (pending Guglielmo). Survivor dump + page in progress.
 - D6: nu_library fixed (hung gevgen = failed attempt; cache by energy), neutrino 5 % library job 2090354 (branch veto-d6-energy-rescale).
 - D14.1 debris in time implemented (866d086, ceb0e34), R1/R2 runs 2090726; D14.2 ACTS scan in a separate session.
+- Report Section 6 filled (bt-report f9fe9c9, not pushed): full-sample no-tagging yields; pending MS7 muon V0 and vessel-DIS x mu
+  (S7 3/8 OOM at 128 GB; MS7-V0 x mu from the logs: 62.7 selected, R1 1.62, R2 0.0081 / 15 y). D19 handed to a fresh agent.

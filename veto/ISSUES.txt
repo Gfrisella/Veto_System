@@ -855,7 +855,7 @@ D8. Results computed with the old PVC vessel wall
       "pvc" is accepted everywhere (identical crossings, 26 229 on 3e5 Nov-4 muons). The material "pvc" stays a material.
 
 D9. DIS x mu pairs not redone with the V0-stable library
-    STATUS: DECIDED (11 Nov 2026): new background class in evstore_eval (DIS track x muon), analytic bound first
+    STATUS: IN PROGRESS (16 Nov 2026: MS7-V0 x mu done; vessel-DIS x mu OOM in S7, to redo)
     With K_S / Lambda tracked in the MS7 iron (data/interactions/dis/mu_library_iron_v0stable.npz,
     2026-11-02) the dis_comb_* DIS x mu combinatorial pairs were not redone.
     Plan: rerun artifacts_work/scripts/dis_comb_pairs_asym.py on the V0-stable sample.
@@ -870,6 +870,11 @@ D9. DIS x mu pairs not redone with the V0-stable library
       (b) DIS-track x muon pairs as a standard background class of bin/evstore_eval.py (event stores on Nov-4 + the Nov-4
       muons, charges via charge_from_pdg_column, opposite-charge pairs, multi-vertex rejection of 9 Nov), so every design
       and the objective get it with the veto. The old dis_comb_pairs* numbers are void (D17: same-sign pairs).
+    16 Nov 2026 (S7 tasks 3 / 8, full sample, 300 000 SST1 muons): MS7 V0 product x mu: 1.19e10 opposite-charge pairs,
+      1.1e8 candidates, selected 62.7 / 15 y (IP < 10 cm, before tagging); after the veto R1 1.62 (366 149 MC), R2 0.0081
+      (1 962 MC). Vessel muon-DIS track x mu: both tasks killed at 144 GB > 128 GB after 4 h, in cross_pairs over
+      135 k muons x 2.0 M single-track DIS events (the selected pairs accumulate in memory). Output json not written (the
+      MS7 numbers are from the logs). To redo: vessel store only, more memory or blocks of DIS events.
 
 D10. Geant4 built-in neutrino physics unusable
     STATUS: DONE
