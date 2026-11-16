@@ -4,6 +4,19 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-16 (night) — rock pairs, SBT shell window, tile 3-sigma window, MS7 statistics, forced K+- (branch `veto-nov4-source`)
+
+- `bin/rock_combinatorial.py`: veto in chunks (`--veto-chunk`), streaming IP cut in `cross_pairs(sel=cfg)` (also used by
+  `bin/dis_combinatorial.py`; OOM at 128 GB before), `--survivors` dump, `--ip-cut full|partial`, rock x rock opt-in
+  (`--rock-rock`, dropped). `bin/rock_survivors_page.py` + `docs/pages/rock_survivors.*` (pair explorer, rock species by
+  exact join on the draws).
+- `lib/veto/sbt.py` (b87da94): `shell_window` (default on): the pointing window spans the whole shell crossing (outer to
+  inner surface, +- r / sin a); `crossings(p, q, grow)`.
+- `lib/veto/technology.py` (5f7a770): tiles / tile2 `veto_window=None` -> +- 3 sigma (0.469 / 0.404 ns) instead of +-200 ps.
+- MS7 statistics: complementary importance-sampled samples fsv0 / fsnov0 (closure within 1.6 sigma); `bin/force_kaons.py` +
+  `force_v0(species, only_codes)` + store builder (e825a26): forced K+- decay copies, every forced species stable except
+  in its own copy.
+
 ## 2026-11-16 (evening) — pair estimate = direct count; Section 6 cut flow; issues closed (branch `veto-nov4-source`)
 
 - ISSUES A1 decided (Guglielmo, "I prefer direct"): `objective.ObjectiveConfig.bkg_estimate` default `direct` (was

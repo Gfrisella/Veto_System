@@ -1042,3 +1042,11 @@ draws x10-70, more seeds), waiting for the go.
 - ACTS scan 2090827 failed on all tasks (FairRunSim::Init abort on the nodes); ACTS and D19 agents resumed.
 - D9 removed from the open lists (HANDOFF, ISSUES action list); report pushed 22f8bad.
 - D14.2 ACTS done (agent, 6bc4d73): resolutions finer than RecoConfig; not wired into reco.measure, decision pending.
+
+### 16 Nov 2026 (night) — tile window, K+- copies, hand-over (this session; see HANDOFF.md)
+- Tiles +- 3 sigma (5f7a770): the fixed +-200 ps lost the straight muons on TIME (all misses |dt| 0.2-0.4 ns, positions
+  fine). Test (tilewin3s_*): R1 selected muons tagged 81.7 -> 97.7 %, R1 full pairs 0.012 -> 0, partial 0.79 -> 3e-8, R2
+  pairs -> 0, signal loss +0.3-0.5 points. Re-run of everything UBT-dependent: job 2095750 (old outputs *_w200.*).
+- MS7: new sample closes on the unbiased chain (docs/v0_statistics.md); the heavy code-3 event is a K- decay in flight ->
+  forced K+- copies (e825a26), jobs 2095744 (copies + stores *_k) / 2095745 (cache prepared_ms7_v0statk).
+- Report 285ed5d: Section 6 rock row (634 / 211 / pending), D7 text, tile and shell windows in Section 7, App. G enlarged sample.

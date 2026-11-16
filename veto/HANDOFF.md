@@ -1,93 +1,81 @@
-# Veto optimisation — handoff (16 Nov 2026)
+# Veto optimisation — handoff (16 Nov 2026, evening)
 
 Read this first in a new session. Details: `docs/STATUS.md` (dated log), `ISSUES.txt` (tracker), `CHANGELOG.md`,
-`docs/r3_shield_strips_v0rule.md` (latest study), `docs/plan_evolution_sbt_shieldend.md` (Shah Rukh's plan + answers).
+`docs/v0_statistics.md` (MS7 V0 / K+- statistics, closure), `docs/r3_shield_strips_v0rule.md` (R3 study),
+`docs/plan_evolution_sbt_shieldend.md` (Shah Rukh's plan + answers).
 
 ## Where things are
 
 - Code: branch `veto-nov4-source` (worktree `.claude/worktrees/nov4-source/veto`), pushed. PR to main: to be opened by Guglielmo.
+  Another session (gfrise-f5, with background D19 / ACTS agents) works in the same worktree: commit only your own hunks
+  (stage a HEAD-based copy with `git hash-object -w` + `git update-index --cacheinfo`), announce batch jobs to avoid duplicates.
 - Results of the re-run: `<main checkout>/veto/results_rerun/` (env: `bin/batch/env.sh`, VETO_RESULTS there).
-- Report: Background Tagging Report, worktree `Veto_Status_Report/.claude/worktrees/bt-report`, pushed to GitHub `main` (Overleaf).
-- Slurm: `sbatch` from this machine needs the unsandboxed shell; batch scripts in `bin/batch/` (task.sbatch runs line N of a .cmd).
+- Report: Background Tagging Report, worktree `Veto_Status_Report/.claude/worktrees/bt-report`, pushed to GitHub `main`
+  (Overleaf), last 285ed5d.
+- Slurm: `sbatch` from this machine needs the unsandboxed shell; batch scripts in `bin/batch/` (task.sbatch runs line N of a
+  .cmd). Use `--partition=standard,hep` (hep is our group's, often idle); farm etiquette (Roland): jobs stay in their CPUs.
 
 ## Conventions decided (Guglielmo)
 
 - Everything on the **Nov-4 production**; quote **only full-sample (3 220 spills) statistics**.
 - **Only three reference designs**: R1 (`designs/R1_ubt_only.json`, UBT only), R2 (`R2_sbt_ubt.json`, full SBT + UBT,
-  = the budget), R3 (`R3_sbt_ubt_strips.json`, R2 + V0 rule + strips in MS7). Old D / E designs were deleted on 16 Nov (only in git history now).
-- **Costs in drachmas**: 1 drachma = one 0.5 x 0.5 m module of 4 x 4 cm tiles; budget = R2 = 333.5; R1 99.7; R3 378.7.
-  Never money. (Named in honour of Archimedes / Syracusia in the report.)
-- Tiles as SR-389 (2 x 2 cm: 90 ps, 2.5 MHz; window +-200 ps); UBT straws vertical; SBT pointing window r / sin(alpha).
+  = the budget), R3 (`R3_sbt_ubt_strips.json`, R2 + V0 rule + strips in MS7). Old D / E designs deleted (git history only).
+- **Costs in drachmas**: 1 drachma = one 0.5 x 0.5 m module of 4 x 4 cm tiles; budget = R2 = 333.5; R1 99.7; R3 378.7. Never money.
+- Tiles as SR-389 (2 x 2 cm 90 ps, 4 x 4 cm 120 ps, 2.5 MHz) but with a **+-3 sigma time window** (+-0.469 / +-0.404 ns,
+  since 5f7a770; the +-200 ps lost ~20 % of straight muons on time). UBT straws vertical.
+- SBT pointing window: r / sin(alpha) along the wall AND spanning the whole 21.6 cm shell crossing (`shell_window`, b87da94).
+- Rock x rock is not evaluated (Guglielmo). D14.1 debris in time stays off.
+- MS7: forced stores (`ms7_muon_fsv0[k]`, `ms7_muon_fsnov0[k]`, SUM them) only for the VERTEX background; the single-track
+  combinatorial (D9) keeps `ms7_muon_v0s` (natural decays). No channel biasing of the forced decays (BR sampled).
 - Explain before acting on physics / weights; ask before re-running productions.
 
-## Results so far (full sample, `results_rerun/reco/reco_R{1,2}_*_{full,partial}.json`, S7)
+## Results of 16 Nov (details STATUS; numbers marked * are being re-run with the +-3 sigma tiles)
 
-| | pairs / 15 y full (2.36 before) | partial (34.4 before) | signal lost F / P | single SST1 mu tagged |
-|---|---|---|---|---|
-| R1 | 0.012 +- 0.006 | 0.79 +- 0.2 | 2.64 / 2.73 % | 53 % |
-| R2 | 2.5e-6 | 0.0011 +- 0.001 | 2.87 / 2.62 % | 90 % |
+- Muon x rock (full selection, before tagging): candidates 634 / 15 y, IP < 10 cm **211** (mu x mu 2.36). After tagging*
+  R1 35.0 (rock legs tagged 16 %: R1 has nothing on the vessel walls), R2 2.3e-6 with the shell window. Rock tracks: pi- /
+  K- / pbar / e- of 1-6 GeV from the -x cavern wall at z 67-73 m, entering through the vessel side wall; partner muons hard
+  (~250 GeV, near axis), which sets the pair direction. Page: https://claude.ai/artifact/CTdxuttxYrQAK6UfNbQmv1
+- Tile +-3 sigma test (`*_w200` = old outputs): R1 selected muons tagged 81.7 -> 97.7 %, R1 full pairs 0.012 -> 0
+  (partial 0.79 -> 3e-8), R2 pairs -> 0; signal loss +0.3-0.5 points (R1 full 2.64 -> 3.14 %, R2 full 2.88 -> 3.24 %).
+- SBT shell window on R2: single SST1 tagged 90.5 -> 93.3 %, signal loss +0.02 points, pairs unchanged.
+- MS7 V0 statistics (done): importance sampling closes on the unbiased chain (all exit rates within 1.6 sigma); full
+  selection 78 events, 3.3e4 / 15 y before tagging (was 2 events, 6.1e4); V0 copies n_eff 57, heaviest 790. One code-3
+  event (6.3 GeV K- decaying in flight at z 65.5 m) carried 1.8e4 -> forced K+- copies added (e825a26).
 
-Signal loss is dominated by the UBT straws (EM debris in the 25 ns window). R3: not run yet.
-Pair numbers are DIRECT counts (A1 decided 16 Nov: direct everywhere, also in the optimiser). The R2 2.5e-6 rests on 9
-pairs; the closure check (no EM debris) gets 7 pairs and ~5e-4 on the same candidates: a few heavy pairs decide the
-weighted R2 value. run_reco now saves FN_frac_err (weighted), n_eff_survive and the heaviest survivors.
-Other: R2 misses 2.1 % of selected muons (n_eff ~3); late-bounced muons via the vessel-end gap never form pairs (D20, C).
-MS7 V0: 399 selected events (partial) but only **2** at full selection carrying 6.1e4 / 15 y (statistics, see below).
+## Jobs running at hand-over (check `sacct -j <id> -X`; logs `results_rerun/batch/logs/`)
 
-## Pages (claude.ai artifacts, private)
-
-- R3 design, strip layers, V0 production histograms: https://claude.ai/artifact/JCNdVa2LEaCzg4yudFRkfW
-- MS7 V0 event display + strip tagging: https://claude.ai/artifact/5hYk9446RtEnLkFePxW8AY
-- R2 coverage, untagged muons by category (full sample): https://claude.ai/artifact/3ejSJY4v9pPTVg75rMUVQq
-- (older, 300-spill) R2 untagged muons / r-sin(alpha) fix: https://claude.ai/artifact/FnWCuP3xHpYcQewWnZ17U8
-- A1 explained (product rule vs direct count, weak-spot toy, closure numbers): https://claude.ai/artifact/RkWTjSXM8gHe4yWWg5Sg2P
-
-## Jobs
-
-- S7 (2085945): all done except 3 and 8 (DIS x mu, R1 / R2), running. Task 11 (rock x mu, D6) failed OOM and is dropped
-  (D7 closed: not needed). Check: `sacct -j 2085945 -X`; logs `results_rerun/batch/logs/S7_eval_*.log`.
-- S6b cut flow without tagging (2089733, `bin/cutflow_notag.py`): done, `results_rerun/reco/cutflow_notag_*.json`
-  (per target, nu flavour, V0 species; interactions / >= 2 tracks / pair no IP / IP < 10 cm / IP < 2.5 m) for Section 6.
-- R1 / R2 / R3 test: cancelled before running (R3 changed). Resubmit (layer maps for 29.39 / 29.59 / 29.79 are cached):
-  ```
-  cd <worktree>/veto && export VETO_CODE=$PWD && source bin/batch/env.sh && R=$VETO_RESULTS
-  D="designs/R1_ubt_only.json designs/R2_sbt_ubt.json designs/R3_sbt_ubt_strips.json"
-  { echo "python3 bin/v0rule_study.py --designs $D --out $R/reco/r123_study.json"
-    for d in $D; do n=$(basename $d .json); for ip in full partial; do
-      echo "python3 bin/run_reco.py $d --ip-cut $ip --em-debris --signal eventcalc --n-signal 40000 --multiple-scattering --out r123_${n}_${ip}.json"; done; done; } > $R/batch/r123.cmd
-  sbatch --array=0-6 --job-name=r123 --output=$R/batch/logs/r123_%a.log --export=ALL,CMDFILE=$R/batch/r123.cmd,VETO_CODE=$VETO_CODE --mem=200G bin/batch/task.sbatch
-  ```
+- **2095750** `tile3s` (17 tasks, `batch/tile3s.cmd`): R1 / R2 run_reco full + partial, evstore_eval R1 / R2, D9
+  (dis_combinatorial) R1 / R2 (~4 h), d2_selfveto R1 / R2, closure, R3 run_reco full + partial, rock x mu R1 / R2 full
+  (+ survivors npz) and partial. All with +-3 sigma tiles + shell window.
+- **2095744** `kpm` -> **2095745** `kpmprep`: forced K+- copies (100 / K+-) on all 160 MS7 files (`*_kpm.npz`), stores
+  `evstore/ms7_muon_fsv0k`, `ms7_muon_fsnov0k`, cache `interactions/prepared_ms7_v0statk.npz`.
 
 ## Next steps (in order)
 
-1. **MS7 V0 statistics** (GO given 16 Nov; running, see docs/v0_statistics.md: jobs 2089677 production, 2089678 stores,
-   2089679 cache `prepared_ms7_v0stat`; 27 % of the V0 are secondary -> two complementary samples fsv0 + fsnov0, SUM them).
-   Original proposal: v0-copies 5 -> 100 (x20, nearly free); draw only
-   library interactions with a V0 among the products, weight x fraction (x10-70: only 1.4 % of Geant4 and 20 % of Pythia
-   iron interactions have a K_L / K_S / Lambda; needs code in `bin/shield_dis.py`); more seeds (x10). Target x1e3.
-   Then rebuild `prepared_ms7_nov4full` (`bin/prepare_interactions.py --ms7 ...`, now with strip layer data).
-2. Run the R1 / R2 / R3 test (above); fill report Table `tab:tag:refeval` (R3 row, MS7 V0 columns).
-3. Report Section 6 (no-tagging yields): FILLED 16 Nov (report 22f8bad, pushed); only pending in red: MS7 muon V0 row
-   (step 1). Vessel-DIS x mu pairs: 0.0037 / 15 y (D9 closed).
-   Rock pairs: one sentence (negligible, not re-evaluated).
-4. Optimiser trial (`evolve/evolve_designs.py --generations 5 --children 8 --inputs inputs_nov4full.npz
-   --prep-tag _nov4full`, host slurm, seeds R1 / R2; add R3): only after 1 (the MS7 V0 source would dominate on 2 events).
+1. When 2095744/5 are done: R1 / R2 / R3 on the new MS7 sample, partial and full:
+   `python3 bin/v0rule_study.py --designs designs/R1_ubt_only.json designs/R2_sbt_ubt.json designs/R3_sbt_ubt_strips.json
+   --stores $R/evstore/ms7_muon_fsv0k $R/evstore/ms7_muon_fsnov0k $R/evstore/ms7_nu2026 --prep-tag _nov4full --out
+   $R/reco/r123_study.json` (batch, 200 GB: the stores are 20 M + 40 M events). SUM fsv0k + fsnov0k.
+   End-to-end check: partial-selection rate old (`ms7_muon_v0s`, 399 events) vs new.
+2. When 2095750 is done: update the report — Section 6 rock row IP < 2.5 m (`rock_comb_R*_partial.json`; before-tagging
+   numbers are design independent), Table `tab:tag:refeval` (R1 / R2 / R3, both selections, rock and MS7 columns), remove
+   the "being re-evaluated" note in Section 7, Appendix G results of the K+- copies; tell gfrise-f5 the Section 6
+   after-tagging numbers. Rebuild the rock page with `bin/rock_survivors_page.py` (+ `--dir`) and republish
+   (same file `docs/pages/rock_survivors.html`, artifact CTdxuttxYrQAK6UfNbQmv1).
+3. Optimiser trial (`evolve/evolve_designs.py --generations 5 --children 8 --inputs inputs_nov4full.npz --prep-tag
+   _v0statk`, host slurm, seeds R1 / R2 / R3) — the MS7 source now has statistics.
+4. Check the rock library's antiproton yield (7.5 % of the R1 rock survivors are pbar of 1-5 GeV: suspicious).
 5. Strips: kink rule, MS7 field in the stations, EM shower inside the iron; V0 time of flight in the simulation.
-6. Signal loss from the UBT straws with EM debris (~2.8 %): check the debris map and the straw window.
+6. Signal loss: UBT straws with EM debris (~2.8 %) + the wider tile window (+0.3-0.5): check the debris map / straw window.
 
 ## Shah Rukh's requests still open (`docs/plan_evolution_sbt_shieldend.md`)
 
-- Q3 (mass cut on the MS7 V0 in the objective): explained, decision pending; first measure what a visible-mass cut removes
-  from the V0 background and from each benchmark.
-- C3-C8 (traditional SBT as a material): muon DIS libraries for steel / LS, muon DIS in the SBT walls, neutrino DIS in steel /
-  LS, Geant4 through the thick wall, LS response library (efficiency, delta rays), SBT accidentals with debris. Our SBT is
-  a cell model without material (ISSUES D19); neutral products of helium interactions not in it (relevant for D2).
-- D (the comparison): evolution runs (1) fins + UBT, (2) with shield-end planes, (3) SBT + UBT fixed; we now use R1 / R2 / R3.
-- Done from his list: strips (B, as R3), tagging rule (V0 rule + strips), SBT from the reports, B4 signal set.
+- Q3 (mass cut on the MS7 V0 in the objective): explained, decision pending.
+- C3-C8 (traditional SBT as a material): D19 work in the other session (flags default off).
+- D (the comparison): we use R1 / R2 / R3. Done: strips (R3), tagging rule (V0 rule + strips), SBT from the reports, B4.
 
 ## Open issues (ISSUES.txt)
 
-Closed 16 Nov: A1 (direct count), A5, C1 (no ghosts with one-view straws), C5 (3220 spills), D7 (no rock pairs), D20.
-Also closed 16 Nov: A2, C7, C8, D2 (R2: nu-He 3.6 / 15 y), D3, D18. Deferred: C3, D6, D14 (debris in time, ACTS).
-B1 and D9 closed (r_ms = 6 kept; vessel-DIS x mu 0.0037 / 15 y). Still open: D16 (MS7 V0 production),
-D19 (SBT model).
+D7 REOPENED 16 Nov evening (rock x mu not negligible for R1; partial selection pending). D16 (MS7 V0: statistics done,
+K+- copies running), D19 (SBT model, other session). Closed 16 Nov: A1, A2, A5, B1, C1, C5, C7, C8, D2, D3, D9, D18, D20.
+Deferred: C3, D6, D14 (ACTS, other session).

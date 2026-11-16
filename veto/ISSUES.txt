@@ -807,7 +807,11 @@ D6. Interaction-library approximations
       (nearest-point error 7-9 % in energy, a documented systematic).
 
 D7. Interactions upstream of z = 30.6 m not simulated
-    STATUS: DONE (16 Nov 2026, Guglielmo: mu x rock not redone, already negligible)
+    STATUS: REOPENED (16 Nov 2026 evening, Guglielmo). The "negligible" came from D6_straw_mod, whose side fins tagged
+      99.99 % of the rock legs. On the reference designs (bin/rock_combinatorial.py, Nov-4, full selection): mu x rock
+      634 candidates / 211 IP < 10 cm per 15 y before tagging (mu x mu 2.36); after tagging R1 35.0 (rock legs tagged 16 %),
+      R2 2.3e-6 (shell window b87da94). Rock x rock dropped (no candidates). Pending: re-run with the +-3 sigma tiles and the
+      partial selection (job 2095750), report Section 6 row IP < 2.5 m. Page https://claude.ai/artifact/CTdxuttxYrQAK6UfNbQmv1
     9 Nov 2026 (Shah Rukh): selection + veto of the cavern-rock products (bin/rock_select.py, the same
       interactions.evaluate): muon rock 0 selected (4.6e9 / 15 y with >= 2 good tracks, best-pair IP >= 12.6 m), neutrino
       rock (bin/nu_rock.py: GENIE v2 on concrete, g4rock, walls / floor / ceiling / face) 0 selected (3.2e3 with >= 2
