@@ -69,7 +69,7 @@ A1. Background figure of merit is saturated
       Correction (same day): the R2 2.5e-6 / 15 y of run_reco (reco_R2_sbt_ubt_full.json) is a DIRECT count (9 pairs,
       FN 1.06e-6), not factorised; closure_check's direct count on the same 42 390 pairs gives 7 pairs, FN 2.0e-4 (x190).
       Two direct counts differ by x190 -> the weighted result hinges on whether one or two heavy pairs survive (veto
-      settings differ between the two scripts: EM debris / random hits / seed, to check). Pair weight itself =
+      settings differ: closure_check has no EM debris, run_reco ran with --em-debris -> extra random hits). Pair weight =
       w_a x w_b x 2 dt (correct for accidentals); A1 concerns only the survival part (eps x eps vs direct).
 
 A2. Bounced muons: the veto barely sees them
