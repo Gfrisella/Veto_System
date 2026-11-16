@@ -315,9 +315,11 @@ def plane_particles(g):
                 beam=np.zeros(len(v), bool))
 
 
-def force_v0(inter, part, rng, copies=1):
+def force_v0(inter, part, rng, copies=1, acc_cut=False):
     """`copies` extra interactions per neutral long-lived particle at the plane (weight / copies each): it decays in
-    the vessel, at an independent point and in an independent channel in every copy."""
+    the vessel, at an independent point and in an independent channel in every copy. acc_cut (16 Nov 2026): keep only the
+    copies whose decay has >= 2 charged products with p > 1 GeV heading into the SST1 aperture (+10 % margin) - the
+    others can never pass the selection; their weight is simply not stored (no reweighting needed)."""
     from fastveto import decay
     n_inter = len(inter["weight"])
     rows = np.nonzero(np.isin(part["pdg"], list(V0)))[0]
@@ -340,6 +342,24 @@ def force_v0(inter, part, rng, copies=1):
     k = len(rows)
     new_id = n_inter + np.arange(k)
     ev_d, pdg_d, p_d, v_d = decay.force_decay(new_id, pdg, part["p"][rows], vdec, rng)
+    if acc_cut:
+        from veto.interactions import charge
+        q = charge(pdg_d)
+        pz = p_d[:, 2]
+        with np.errstate(divide="ignore", invalid="ignore"):
+            xs = v_d[:, 0] + p_d[:, 0] / pz * (geo.Z_SST1 - v_d[:, 2]); ys = v_d[:, 1] + p_d[:, 1] / pz * (geo.Z_SST1 - v_d[:, 2])
+        good_d = (q != 0) & (pz > 0) & (np.linalg.norm(p_d[:, :3], axis=1) > 1.0) & (np.abs(xs) < 1.1 * geo.SST1_HALF_X) \
+            & (np.abs(ys) < 1.1 * geo.SST1_HALF_Y)
+        n_good = np.bincount(ev_d - n_inter, weights=good_d, minlength=len(rows))
+        keepk = np.nonzero(n_good >= 2)[0]
+        remap = np.full(len(rows), -1); remap[keepk] = np.arange(len(keepk))
+        md = remap[ev_d - n_inter] >= 0
+        ev_d, pdg_d, p_d, v_d = n_inter + remap[ev_d[md] - n_inter], pdg_d[md], p_d[md], v_d[md]
+        rows, pdg, Pdec, vdec = rows[keepk], pdg[keepk], Pdec[keepk], vdec[keepk]
+        k = len(rows)
+        new_id = n_inter + np.arange(k)
+        if not k:
+            return inter, part
     # the rest of each copied event: every other particle of the interaction
     src = part["int"][rows]
     starts = np.searchsorted(part["int"], np.arange(n_inter + 1))
@@ -404,7 +424,10 @@ def generate(a):
     print(f"  Geant4: {len(plane['pdg']):,} particles at z = {si.Z_PLANE:.2f} m, {time.time() - t0:.0f} s", flush=True)
     summ["exit"] = exit_summary(inter, plane)
     plane.pop("primary")
-    inter2, part2 = force_v0(inter, plane, rng, a.v0_copies)
+    n_v0_plane = int(np.isin(plane["pdg"], list(V0)).sum())
+    inter2, part2 = force_v0(inter, plane, rng, a.v0_copies, acc_cut=a.v0_acc_cut)
+    summ["v0_at_plane"] = n_v0_plane
+    summ["v0_acc_cut"] = bool(a.v0_acc_cut)
     v0 = inter2["v0"] != 0
     summ["v0_copies"] = int(v0.sum())
     summ["copies_per_v0"] = a.v0_copies
@@ -442,6 +465,8 @@ def main():
     g.add_argument("--v0-tally", action="store_true", help="record every V0 created in the iron (cpp/g4shield v0_tally, "
                    "D16) -> shield_<kind><tag>_v0tally.npz")
     g.add_argument("--v0-copies", type=int, default=1, help="forced vessel decays per V0 at the plane (weight / copies)")
+    g.add_argument("--v0-acc-cut", action="store_true", help="keep only V0 copies with >= 2 charged products > 1 GeV into the "
+                                                             "SST1 aperture (+10 %%): the others never pass the selection")
     g.add_argument("--v0-only", action="store_true", help="muons: draw only library final states with a V0, weight x P(V0 | E) "
                                                           "(importance sampling of the MS7 V0 chain; secondary V0 made in the "
                                                           "Geant4 transport of V0-free final states are not in it)")
