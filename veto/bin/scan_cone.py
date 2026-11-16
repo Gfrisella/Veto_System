@@ -38,7 +38,7 @@ def job(arg):
     d = dsg.load(name)
     cfg = reco.RecoConfig(seed=1, multiple_scattering=True, cone=cone * 1e-3)
     r = evaluate(d, _S["tr"], _S["inp"], cfg, 40_000, DEFAULT_CONFIG["time_window"], "target")
-    s = objective.score(r, _S["stats"], objective.ObjectiveConfig(bkg_estimate="max"))
+    s = objective.score(r, _S["stats"], objective.ObjectiveConfig(bkg_estimate="direct"))
     inter, part = load_npz(paths.results_dir() / "interactions" / f"{name}_muon_interactions.npz")
     res = ix.evaluate(inter, part, d, _S["inp"], cfg, np.random.default_rng(1), muons=_S["muons"], max_tracks=_S["max_tracks"] if _S["max_tracks"] is not None else "cfg")
     tot = lambda k: sum(v.get(k, 0.0) for v in res.values())

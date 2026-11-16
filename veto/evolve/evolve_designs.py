@@ -479,8 +479,8 @@ def main():
                     help="design format: free lengths (default since 16 Nov 2026, the R designs) or the 50 cm module grid (A7)")
     ap.add_argument("--seed-runs", nargs="*", default=[], help="earlier runs (results/evolve/<run>) whose best designs join gen 0")
     ap.add_argument("--seed-top", type=int, default=6, help="designs taken from each of --seed-runs")
-    ap.add_argument("--bkg-estimate", choices=["max", "factorised", "direct"], default="max",
-                    help="false vertices: max of the direct count and the factorised estimate (default), or one of them")
+    ap.add_argument("--bkg-estimate", choices=["max", "factorised", "direct"], default="direct",
+                    help="false vertices: direct count of surviving pairs (default, A1 16 Nov 2026), factorised, or the max of both")
     ap.add_argument("--inspirations", type=int, default=3)
     ap.add_argument("--n-signal", type=int, default=40_000)
     ap.add_argument("--temperature", type=float, default=0.9, help="openrouter only")

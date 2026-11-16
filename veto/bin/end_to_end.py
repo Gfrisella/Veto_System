@@ -2,7 +2,7 @@
 """End-to-end figure of merit of designs on one muon dataset: every background source, before and after the veto.
 
 Sources (per 15 years, after the selection of RecoConfig: measured IP < 0.1 m, at most 2 tracks in SST1):
-  combinatorial        two unrelated SST1 muons in time (run_reco.evaluate + veto.objective, bkg_estimate "max")
+  combinatorial        two unrelated SST1 muons in time (run_reco.evaluate + veto.objective, bkg_estimate "direct")
   muon interactions    fastveto.dis.run on the muon dataset (library split crossover), per target: helium, air,
                        PVC walls and every plane of the design; veto level b (interactions.evaluate)
   neutrino interactions  bin/nu_dis_apply.py for the design (GENIE, --out results/end_to_end/<design>_nu.npz)
@@ -85,7 +85,7 @@ def job(arg):
     d = load_design(name)
     cfg = reco.RecoConfig(seed=1, multiple_scattering=True, cone=cone * 1e-3)
     r = evaluate(d, _S["tr"], _S["inp"], cfg, args.n_signal, DEFAULT_CONFIG["time_window"], "target")
-    comb = objective.score(r, _S["stats"], objective.ObjectiveConfig(bkg_estimate="max"))
+    comb = objective.score(r, _S["stats"], objective.ObjectiveConfig(bkg_estimate="direct"))
     mu = ix.evaluate(*load_npz(OUT / f"{d.name}{args.mu_suffix}_mu.npz"), d, _S["inp"], cfg, np.random.default_rng(1), muons=_S["muons"])
     nu_file = OUT / f"{d.name}_nu.npz"
     nu = ix.evaluate(*load_npz(nu_file), d, _S["inp"], cfg, np.random.default_rng(2)) if nu_file.exists() else {}
@@ -93,7 +93,7 @@ def job(arg):
     tot = lambda g: (sum(v["after"] for v in g.values()), math.sqrt(sum(v["after_err"] ** 2 for v in g.values())))
     r["interactions"] = {"muon": dict(zip(("total", "total_err"), tot(mu_g))),
                          "nu": dict(zip(("total", "total_err"), tot(nu_g)), per_target=nu_g)}   # helium split in the objective
-    s = objective.score(r, _S["stats"], objective.ObjectiveConfig(bkg_estimate="max", form="sensitivity"))
+    s = objective.score(r, _S["stats"], objective.ObjectiveConfig(bkg_estimate="direct", form="sensitivity"))
     cb = comb["confusion"]["background"]
     return dict(design=d.name, cone_mrad=cone, cost_kchf=s["cost_kchf"], n_channels=r["n_channels"],
                 feasible=s["feasible"], over_rate_limit=s["over_rate_limit"],

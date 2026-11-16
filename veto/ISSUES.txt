@@ -45,7 +45,7 @@ GEOMETRY (5 Nov 2026): FairShip layout (geometry_config.py 2026-0.1), target-ali
     EVERY result before this date (types in the stores, rate maps, reco inputs, interactions) uses the old layout.
 
 A1. Background figure of merit is saturated
-    STATUS: IN PROGRESS (16 Nov 2026: closure FAILS for R2 on the full sample, factorised x5-7 low in count)
+    STATUS: DECIDED (16 Nov 2026, Guglielmo: DIRECT count is the pair estimate everywhere)
     The pair background is 2-3 surviving pairs out of 196,736 candidates (-> ~1e-5 events in
     15 years). Every reasonable design gives ~0, so differences between designs are Poisson
     noise.
@@ -71,6 +71,12 @@ A1. Background figure of merit is saturated
       Two direct counts differ by x190 -> the weighted result hinges on whether one or two heavy pairs survive (veto
       settings differ: closure_check has no EM debris, run_reco ran with --em-debris -> extra random hits). Pair weight =
       w_a x w_b x 2 dt (correct for accidentals); A1 concerns only the survival part (eps x eps vs direct).
+    16 Nov 2026, Guglielmo: "I prefer direct". Implemented: objective.ObjectiveConfig.bkg_estimate default "direct"
+      (was factorised; the optimiser used "max"), evolve/objective.py, evolve_designs --bkg-estimate, end_to_end, scan_cone.
+      Error of the direct count now weighted: run_reco background.FN_frac_err = sqrt(sum w_surv^2) / sum w, plus
+      n_eff_survive and the 20 heaviest surviving pairs (survivors: pair, muons, w_15y, share). 0 survivors: 90 % CL 2.3 / n.
+      Factorised kept as an option and as the closure cross-check. Open: closure_check has no EM debris (run_reco
+      with --em-debris): use the same veto settings in both; inspect which heavy muons drive R2.
 
 A2. Bounced muons: the veto barely sees them
     STATUS: IN PROGRESS (11 Nov 2026: knobs + scan code in; scan running on D6_straw / D6_fiber / D6_tile2)

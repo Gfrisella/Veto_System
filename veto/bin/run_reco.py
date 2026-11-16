@@ -94,8 +94,14 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
     t_bkg = time.perf_counter() - t0
     w = cand_w * 2 * dt_pair / cfg.spill_s                  # random-coincidence candidates per spill
     surv = ~b["vetoed"]
+    ws = w[surv]                                            # A1 (16 Nov 2026): direct count is the estimate;
+    top = np.argsort(-w * surv)[:min(20, int(surv.sum()))]  # its error is weighted (a few heavy pairs dominate)
     res["background"] = dict(n=len(cand), n_vetoed=int(b["vetoed"].sum()), n_survive=int(surv.sum()),
                              TP_frac=float(1 - w[surv].sum() / w.sum()), FN_frac=float(w[surv].sum() / w.sum()),
+                             FN_frac_err=float(np.sqrt((ws ** 2).sum()) / w.sum()),
+                             n_eff_survive=float(ws.sum() ** 2 / (ws ** 2).sum()) if len(ws) else 0.0,
+                             survivors=[dict(pair=int(i), muons=[int(x) for x in cand[i]], w_15y=float(w[i] * SPILLS_15Y),
+                                             share=float(w[i] / ws.sum())) for i in top],
                              per_spill_before=float(w.sum()), per_spill_after=float(w[surv].sum()),
                              per_15y_before=float(w.sum() * SPILLS_15Y), per_15y_after=float(w[surv].sum() * SPILLS_15Y),
                              hits_per_event=b["n_hits"] / len(cand), comparisons=b["n_compared"],

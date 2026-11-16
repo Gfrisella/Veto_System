@@ -21,8 +21,9 @@ Background term (default bkg_form = "exp"):  T_bkg = 1 - exp(-N / bkg_scale).
 With bkg_scale = 1 event it is the Poisson probability of at least one false vertex in 15 years.
 It saturates for N >> bkg_scale (no gradient there); bkg_form = "log" keeps one.
 
-Background estimate (ISSUES A1): the direct count of surviving pairs is 0-3 out of 196 736, i.e.
-Poisson noise. The default estimate factorises the single-muon inefficiencies per muon type,
+Background estimate (ISSUES A1): DEFAULT = DIRECT count of surviving pairs (Guglielmo, 16 Nov 2026: the factorised
+estimate failed the full-sample closure for R2, 7 observed vs 1.3); weighted error sqrt(sum w^2) of the survivors,
+90 % CL limit 2.3 / n when none survives. The alternative (bkg_estimate = "factorised") factorises the single-muon inefficiencies per muon type,
     N = N_before * sum_kl f_kl eps_k eps_l ,
 with f_kl the weighted pair composition of the candidates and eps_k = 1 - veto efficiency of the
 muons of type k. By default (eps_source = "pairs") eps_k is measured on the muons of the pairs
@@ -77,7 +78,7 @@ class ObjectiveConfig:
     bkg_form: str = "exp"             # "exp": 1 - exp(-N / bkg_scale) | "log": log10(1 + N / bkg_target) / ...
     bkg_scale: float = 1.0            # exp: false vertices in 15 years at which the term reaches 1 - 1/e
     bkg_target: float = 0.01          # log: events in 15 years regarded as background free
-    bkg_estimate: str = "factorised"  # "factorised" | "direct" | "max" (conservative)
+    bkg_estimate: str = "direct"      # "direct" (default since 16 Nov 2026, Guglielmo, A1) | "factorised" | "max"
     eps_source: str = "pairs"         # eps_k from the muons of the pairs ("pairs") or the single-muon sample ("single")
     sig_loss_max: float = 0.10        # signal loss mapped to the top of the signal tier
     cost_min_kchf: float = 97.2       # straw UBT alone (D0)
@@ -159,7 +160,10 @@ def confusion_matrix(res, stats, cfg=ObjectiveConfig()):
     fn_fact_err = float(np.sqrt(((2 * f @ eps) * eps_err) @ ((2 * f @ eps) * eps_err)))
     n_surv = b["n_survive"]
     fn_dir = b["FN_frac"]
-    fn_dir_err = fn_dir / math.sqrt(n_surv) if n_surv else 2.3 / b["n"]     # 0 survivors: 90 % CL limit
+    if n_surv:   # weighted error when run_reco gives it (A1, 16 Nov 2026: a few heavy pairs dominate), else Poisson
+        fn_dir_err = b.get("FN_frac_err", fn_dir / math.sqrt(n_surv))
+    else:
+        fn_dir_err = 2.3 / b["n"]                                            # 0 survivors: 90 % CL limit
     fn, fn_err = {"factorised": (fn_fact, fn_fact_err), "direct": (fn_dir, fn_dir_err),
                   "max": max((fn_fact, fn_fact_err), (fn_dir, fn_dir_err))}[cfg.bkg_estimate]
 
