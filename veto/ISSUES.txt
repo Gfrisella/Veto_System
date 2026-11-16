@@ -321,6 +321,15 @@ B1. Multiple scattering (at least this interaction must be modelled)
       UBT straws: all crossings > 10 GeV, 100 %. Not covered: the SBT pointing window (sbt.py, its own rule).
       Option: r_ms 6 -> 9 mrad GeV (x1.5) covers q99 in every bin; cost = larger window for soft tracks (accidentals,
       signal loss) -> one run_reco to measure. Decision pending (Guglielmo).
+    16 Nov 2026, material-aware window tested in the same check (D18 idea: r = r0 + r_slope L + k sigma_d, sigma_d from
+      Highland on the scatterers between the plane and SST1 only). R2 tiles, inside the window / mean area vs current:
+        current r_ms 6       < 1 GeV 94.6 %   1-2 GeV 98.6 %   2-5 GeV 99.84 %   area x1.00
+        r_ms 9               < 1 GeV 99.3 %   1-2 GeV 99.7 %   2-5 GeV 100 %     area x1.34 (x2.1 / x1.9 at < 1 / 1-2 GeV)
+        material k = 3       < 1 GeV 87.9 %   1-2 GeV 98.6 %   2-5 GeV 99.51 %   area x0.98 (x0.92 / x0.86)
+        material k = 3.5     < 1 GeV 93.3 %   1-2 GeV 99.2 %   2-5 GeV 99.67 %   area x1.08 (x1.22 / x1.09)
+      Above 5 GeV every variant covers 100 %. The material window is cheaper in area at 1-5 GeV but does not fix < 1 GeV
+      (the Gaussian sigma misses the non-Gaussian part there; tails not separated yet). Effect on tagging / signal loss
+      needs run_reco with the window implemented in reco.predictions.
 
 B2. EM debris rate (electrons / photons from the end of the shield)
     STATUS: DONE (11 Nov 2026: production on the Nov-4 parents, maps results/em_debris/em_maps.npz; debris in time -> D14)
