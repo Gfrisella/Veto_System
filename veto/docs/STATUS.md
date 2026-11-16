@@ -1001,3 +1001,14 @@ draws x10-70, more seeds), waiting for the go.
   Proposal r_ms 6 -> 9 mrad GeV pending. Closed today: A2, C7, C8, D2, D3, D18; deferred D6, D14 (debris in time, ACTS).
 - B1 closed (r_ms = 6 kept): bin/entrance_misses.py -> no muon through the vessel entrance is lost by the window (R2);
   window misses only outside the entrance, left to the optimiser (fins, redundancy).
+
+### 16 Nov 2026 (evening) — rock x mu for R1 / R2 (job 2090190; Guglielmo asked to run it)
+- `bin/rock_combinatorial.py` now vetoes in chunks (`--veto-chunk`, 2-2.5 GB instead of > 128 GB). Rock draws: Shah Rukh's
+  `apply_D6_straw_mod_draws.npz` (design-independent: every draw with a product into the vessel or SST1). Full selection.
+- Per 15 y (candidates / IP < 10 cm / after veto, legs explained mu / rock):
+  R1: mu x mu 35.8 / 2.36 / 0.0074 +- 0.0024; **mu x rock 634 / 211 / 35.0 +- 0.4 (446 101 MC; rock leg explained 0.16)**.
+  R2: mu x mu 35.8 / 2.36 / 0.00047 +- 0.00046; mu x rock 634 / 211 / 0.0042 +- 0.0022 (53 MC; rock leg 0.992).
+  rock x rock: 0 candidates (3e6 opposite pairs). Rock tracks: 1.84e4 good / spill vs 8.5e3 shield muons.
+- => The earlier "mu x rock negligible" (D6_straw_mod, 0.023: its side fins tagged 99.99 % of rock legs) does NOT hold for
+  R1 (no fins / SBT: rock tracks enter through the walls untagged) and rock > mu x mu also for R2. D7 should be reopened
+  and Section 6 should keep the rock rows (pending Guglielmo). Survivor dump + page in progress.
