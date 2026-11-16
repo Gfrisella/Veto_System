@@ -1041,3 +1041,4 @@ draws x10-70, more seeds), waiting for the go.
 - D6 nu library (2090354_2) still running after 6 h: 705 gevgen timeouts, 194 (E, target) points dropped so far (low E).
 - ACTS scan 2090827 failed on all tasks (FairRunSim::Init abort on the nodes); ACTS and D19 agents resumed.
 - D9 removed from the open lists (HANDOFF, ISSUES action list); report pushed 22f8bad.
+- D14.2 ACTS done (agent, 6bc4d73): resolutions finer than RecoConfig; not wired into reco.measure, decision pending.

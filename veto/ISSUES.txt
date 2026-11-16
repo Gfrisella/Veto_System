@@ -921,7 +921,7 @@ D13. Protons per spill: one convention
     15-year totals agree; per-spill rates differ by 0.8.
 
 D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_inventory.md, moved here 9 Nov 2026)
-    STATUS: IN PROGRESS (16 Nov 2026: debris in time DONE, switched off (no effect); only the ACTS parametrisation left)
+    STATUS: IN PROGRESS (16 Nov 2026: debris in time DONE, off; ACTS parametrisation DONE (6bc4d73), wiring into reco.measure to decide)
     9 Nov 2026 (Shah Rukh): neutrino DIS in the vessel with the 2026 flux + GENIE v2, D6_straw_mod, per 15 y:
       interactions helium 2.9e4, air 6.6e4, wall 5.8e4, planes 5.8e3; after selection + veto 3.3 (nu_e 1.37, nu_mu 1.02,
       anti-nu_mu 0.51, anti-nu_e 0.39, nu_tau 0.04), all but ~0.07 in helium; air / wall < 0.1 - 0.2 per flavour.
@@ -1028,6 +1028,13 @@ D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_invento
       Debris in time rescues a few low-weight pairs and ~0.2 % of single muons (R1); no change in the weighted background
       or the signal. Bounced muons get no debris (they do not come from the MS7 iron). Flag stays default-off (decision).
     16 Nov 2026, Guglielmo: switch it off (no effect). run_reco --debris-in-time stays available, default off. Part (1) closed.
+    16 Nov 2026 result (2), ACTS (6bc4d73, docs/acts_resolution.md, data/acts/resolution_param.json; job 2095542; first
+      job 2090827 failed: inherited DISPLAY -> Geant4 Qt abort): mu+- gun 1-400 GeV at 81.21 m, FairShip 26.10 geometry,
+      truth pattern reco. sigma(p)/p = 0.93 % (+) 1.87e-4 p; sigma_tx = 85 urad (+) 1.28 mrad GeV / p, sigma_ty = 24 (+) 0.66;
+      sigma_x = 0.61 mm (+) 1.05 / p, sigma_y = 46 um (+) 0.078 / p; fit eff 0.96 at 1 GeV, >= 0.996 above 2 GeV; no
+      charge flips. Current RecoConfig (sigma_pos 1 mm, sigma_slope 0.1 mrad, ms_slope 2 mrad GeV, no p smearing) is
+      conservative. FairShip field 0.84 T m vs ours 1.07 -> sigma(p)/p scaled x0.78 by default. Not wired into
+      reco.measure (decision pending).
 
 D15. CVMFS library loading under load (shield_dis / shield_natural workers)
     STATUS: DONE (11 Nov 2026: Geant4 loaded in the parent, forked workers, retry + completeness check)
