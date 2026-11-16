@@ -811,7 +811,7 @@ D7. Interactions upstream of z = 30.6 m not simulated
       99.99 % of the rock legs. On the reference designs (bin/rock_combinatorial.py, Nov-4, full selection): mu x rock
       634 candidates / 211 IP < 10 cm per 15 y before tagging (mu x mu 2.36); after tagging R1 35.0 (rock legs tagged 16 %),
       R2 2.3e-6 (shell window b87da94). Rock x rock dropped (no candidates). Pending: re-run with the +-3 sigma tiles and the
-      partial selection (job 2095750), report Section 6 row IP < 2.5 m. Page https://claude.ai/artifact/CTdxuttxYrQAK6UfNbQmv1
+      partial selection (job 2095750), report Section 6 row IP < 2.5 m. (Survivor page deleted 16 Nov: it showed the +-200 ps tile results.)
     9 Nov 2026 (Shah Rukh): selection + veto of the cavern-rock products (bin/rock_select.py, the same
       interactions.evaluate): muon rock 0 selected (4.6e9 / 15 y with >= 2 good tracks, best-pair IP >= 12.6 m), neutrino
       rock (bin/nu_rock.py: GENIE v2 on concrete, g4rock, walls / floor / ceiling / face) 0 selected (3.2e3 with >= 2
@@ -925,7 +925,7 @@ D13. Protons per spill: one convention
     15-year totals agree; per-spill rates differ by 0.8.
 
 D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_inventory.md, moved here 9 Nov 2026)
-    STATUS: IN PROGRESS (16 Nov 2026: debris in time DONE, off; ACTS parametrisation DONE (6bc4d73), wiring into reco.measure to decide)
+    STATUS: DONE (17 Nov 2026: debris in time off; ACTS parametrisation as option --acts-resolution, not default)
     9 Nov 2026 (Shah Rukh): neutrino DIS in the vessel with the 2026 flux + GENIE v2, D6_straw_mod, per 15 y:
       interactions helium 2.9e4, air 6.6e4, wall 5.8e4, planes 5.8e3; after selection + veto 3.3 (nu_e 1.37, nu_mu 1.02,
       anti-nu_mu 0.51, anti-nu_e 0.39, nu_tau 0.04), all but ~0.07 in helium; air / wall < 0.1 - 0.2 per flavour.
@@ -1039,6 +1039,11 @@ D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_invento
       charge flips. Current RecoConfig (sigma_pos 1 mm, sigma_slope 0.1 mrad, ms_slope 2 mrad GeV, no p smearing) is
       conservative. FairShip field 0.84 T m vs ours 1.07 -> sigma(p)/p scaled x0.78 by default. Not wired into
       reco.measure (decision pending).
+    17 Nov 2026 comparison (run_reco --acts-resolution, job 2095718, vs the same code without it, job 2095763; full selection,
+      +-3 sigma tiles): R1 pairs left 0 -> 1 (B 0 -> 1.2e-4), signal loss 3.14 -> 2.82 %, single SST1 tagged 65.8 -> 65.0 %
+      (bounced 40.9 -> 36.0, other 66.7 -> 69.1); R2 pairs 0 -> 0, signal loss 3.24 % both, single 92.1 -> 94.3 %.
+      Candidates 42 390 -> 42 534 (IP < 10 cm), B before tagging 2.36 -> 2.33. Small effect; default still off.
+    17 Nov 2026, Guglielmo: ACTS NOT the default; --acts-resolution stays an option. D14 closed.
 
 D15. CVMFS library loading under load (shield_dis / shield_natural workers)
     STATUS: DONE (11 Nov 2026: Geant4 loaded in the parent, forked workers, retry + completeness check)
@@ -1125,7 +1130,7 @@ D20. Gap between the vessel end and SST1 (no tagger there)
     16 Nov 2026: closed (Guglielmo): the gap muons never form a vertex in the vessel; nothing to add.
 
 D19. SBT cell model: missing ingredients
-    STATUS: OPEN (PRIORITY B; logged 16 Nov 2026)
+    STATUS: IN PROGRESS (16 Nov 2026 night: SBT as a material implemented, flags off (1b1eef5, 4ac6a71); decisions pending)
     lib/veto/sbt.py (12 Nov) models the SBT of R2: 854 cells (61 rings x 4/3 across), muon path in the 20 cm LS shell per
     ring, 1.5 MeV/cm, threshold 30 MeV, 99.3 %, 1 ns; random hits from the store cell rates (2.07 MHz > 30 MeV, muons
     only; SR-389: 27 MHz incl. cavern back-scatter and e/gamma -> rate_scale 13); tagging "pointing" (default) or "any".
@@ -1139,6 +1144,17 @@ D19. SBT cell model: missing ingredients
       89.4 %: the pointing rule is robust to the back-scatter rate (Guglielmo: "go for 4").
     Next: rate model (scale or simulated back-scatter), neutrals for D2, SBT material in the interaction targets; decide
       on the soft untagged muons after the re-run gives their effect on the combinatorial pairs.
+    16 Nov 2026 night (agent, docs/d19_sbt.md, results_rerun/sbt_d19/summary_R2.json): Al 0.8 / LS 20 / Al 0.8 cm + ribs
+      (~23 g/cm2, ~470 x Mylar) as interaction targets (sbt_material.py, sbt_interactions.py, sbt_eval.py). R2, per 15 y,
+      IP < 10 cm: muons in the SBT material 1.2e4 before tagging -> 783 +- 75 after R2 (mostly K_L from LS / outer Al /
+      ribs; Mylar wall today 45); + v0_line 402; + selftag_hits 326. Neutrinos 0.82 -> 0.41. IP < 2.5 m: mu 1.8e6 -> 2.7e5.
+      v0_line signal cost 0.08-0.45 %. Item 2: "zone" rule (own fired cell downstream of z_v - 1 m) nu-He 3.59 -> 1.02
+      for 0.6-2.3 % signal (parametrised response). Item 3 material_scattering: single SST1 tagged 90.6 -> 84.5 %.
+      Caveat: muon transport has no SBT material (muons run straight along the walls, median 8 m LS path), so the muon
+      term may be overestimated; CH2 for LAB; parametrised deposits. Decisions (Guglielmo): (a) adopt the ~780 term,
+      (b) v0_line / selftag_hits on, (c) zone rule, (d) material_scattering on.
+    17 Nov 2026, Guglielmo: (a) YES, the SBT-material term enters the background budget; (b) YES, v0_line and selftag_hits
+      on; (c) YES, zone rule adopted; (d) not decided (material_scattering stays off). Implementation: D19 agent.
 
 D16. V0 production in the MS7 muon chain: checked against data (10 Nov 2026, branch veto-v0-production)
     STATUS: IN PROGRESS (PRIORITY B)

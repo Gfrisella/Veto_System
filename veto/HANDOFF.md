@@ -34,7 +34,8 @@ Read this first in a new session. Details: `docs/STATUS.md` (dated log), `ISSUES
 - Muon x rock (full selection, before tagging): candidates 634 / 15 y, IP < 10 cm **211** (mu x mu 2.36). After tagging*
   R1 35.0 (rock legs tagged 16 %: R1 has nothing on the vessel walls), R2 2.3e-6 with the shell window. Rock tracks: pi- /
   K- / pbar / e- of 1-6 GeV from the -x cavern wall at z 67-73 m, entering through the vessel side wall; partner muons hard
-  (~250 GeV, near axis), which sets the pair direction. Page: https://claude.ai/artifact/CTdxuttxYrQAK6UfNbQmv1
+  (~250 GeV, near axis), which sets the pair direction. (Survivor page deleted: it showed the +-200 ps tile results;
+  rebuild with `bin/rock_survivors_page.py` if needed.)
 - Tile +-3 sigma test (`*_w200` = old outputs): R1 selected muons tagged 81.7 -> 97.7 %, R1 full pairs 0.012 -> 0
   (partial 0.79 -> 3e-8), R2 pairs -> 0; signal loss +0.3-0.5 points (R1 full 2.64 -> 3.14 %, R2 full 2.88 -> 3.24 %).
 - SBT shell window on R2: single SST1 tagged 90.5 -> 93.3 %, signal loss +0.02 points, pairs unchanged.
@@ -60,8 +61,8 @@ Read this first in a new session. Details: `docs/STATUS.md` (dated log), `ISSUES
 2. When 2095750 is done: update the report — Section 6 rock row IP < 2.5 m (`rock_comb_R*_partial.json`; before-tagging
    numbers are design independent), Table `tab:tag:refeval` (R1 / R2 / R3, both selections, rock and MS7 columns), remove
    the "being re-evaluated" note in Section 7, Appendix G results of the K+- copies; tell gfrise-f5 the Section 6
-   after-tagging numbers. Rebuild the rock page with `bin/rock_survivors_page.py` (+ `--dir`) and republish
-   (same file `docs/pages/rock_survivors.html`, artifact CTdxuttxYrQAK6UfNbQmv1).
+   after-tagging numbers. A rock survivor page can be rebuilt with `bin/rock_survivors_page.py` (+ `--dir`) if wanted (the old
+   one was deleted).
 3. Optimiser trial (`evolve/evolve_designs.py --generations 5 --children 8 --inputs inputs_nov4full.npz --prep-tag
    _v0statk`, host slurm, seeds R1 / R2 / R3) — the MS7 source now has statistics.
 4. Check the rock library's antiproton yield (7.5 % of the R1 rock survivors are pbar of 1-5 GeV: suspicious).

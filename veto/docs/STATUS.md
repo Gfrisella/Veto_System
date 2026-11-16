@@ -1042,6 +1042,7 @@ draws x10-70, more seeds), waiting for the go.
 - ACTS scan 2090827 failed on all tasks (FairRunSim::Init abort on the nodes); ACTS and D19 agents resumed.
 - D9 removed from the open lists (HANDOFF, ISSUES action list); report pushed 22f8bad.
 - D14.2 ACTS done (agent, 6bc4d73): resolutions finer than RecoConfig; not wired into reco.measure, decision pending.
+- D14.2 comparison: run_reco --acts-resolution (RecoConfig.acts_resolution, default off; smears x/y/tx/ty and p with acts_resolution.sigmas) on R1/R2 full/partial, job 2095718 (first 2095702 failed: VETO_CODE unset; batch/acts_cmp.cmd, outputs reco_*_acts.json) vs S7 / R2_shellwin outputs.
 
 ### 16 Nov 2026 (night) — tile window, K+- copies, hand-over (this session; see HANDOFF.md)
 - Tiles +- 3 sigma (5f7a770): the fixed +-200 ps lost the straight muons on TIME (all misses |dt| 0.2-0.4 ns, positions
@@ -1050,3 +1051,7 @@ draws x10-70, more seeds), waiting for the go.
 - MS7: new sample closes on the unbiased chain (docs/v0_statistics.md); the heavy code-3 event is a K- decay in flight ->
   forced K+- copies (e825a26), jobs 2095744 (copies + stores *_k) / 2095745 (cache prepared_ms7_v0statk).
 - Report 285ed5d: Section 6 rock row (634 / 211 / pending), D7 text, tile and shell windows in Section 7, App. G enlarged sample.
+- D19 agent done (1b1eef5 pushed, 4ac6a71 not): SBT material term ~780 / 15 y at IP<10 cm after R2 (muon K_L), decisions a-d pending (ISSUES D19).
+- D19 agent done (1b1eef5 pushed, 4ac6a71 not): SBT material term ~780 / 15 y at IP<10 cm after R2 (muon K_L), decisions a-d pending (ISSUES D19).
+- ACTS vs baseline (same code, job 2095763 *_basenow): R1 signal loss 3.14 -> 2.82 %, single tagged 65.8 -> 65.0; R2 signal 3.24 both, single 92.1 -> 94.3; pairs ~0 in all. ISSUES D14.
+- 17 Nov, Guglielmo: ACTS stays an option (D14 closed). D19: (a) SBT-material term in the budget, (b) v0_line + selftag_hits on, (c) zone rule on; (d) open.
