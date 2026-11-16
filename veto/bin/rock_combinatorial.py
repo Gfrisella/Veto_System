@@ -123,6 +123,8 @@ def veto_term(tr, cand, cand_w, cand_v, design, inp, cfg, rng, chunk=200_000):
         del b
     surv, expl = np.concatenate(surv), np.concatenate(expl)
     wk = w[keep]
+    sk = keep[surv]                                                    # survivors (for --survivors)
+    out["_surv"] = dict(rows=cand[sk], w15=w[sk], vtx=cand_v[sk], ip=ip[sk], explained=expl[surv])
     out.update(after_15y=float(wk[surv].sum()), n_after=int(surv.sum()),
                after_err_15y=float(np.sqrt((wk[surv] ** 2).sum())),
                after_upper_15y=float(2.3 * wk.max()) if not surv.any() else None,
@@ -142,6 +144,7 @@ def main():
     ap.add_argument("--mu-sample", type=int, default=2_000_000, help="random SST1 muon rows (weights scaled); 0 = all")
     ap.add_argument("--cone", type=float, default=0.0, help="mrad")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--survivors", default=None, help="npz with the pairs surviving the veto (per term)")
     a = ap.parse_args()
     t0 = time.time()
     dev = "cuda" if torch.cuda.is_available() else "cpu"
@@ -157,10 +160,14 @@ def main():
     print(f"good tracks per spill: muons {mu['weight'].sum():.4g} ({len(mu['ax']):,} rows), rock {rk['weight'].sum():.4g} "
           f"({len(rk['ax']):,} rows); {time.time() - t0:.0f} s", flush=True)
 
-    res = {}
+    res, dump = {}, {}
     # muon x muon from the reco inputs (the existing combinatorial term), same code
     res["mu x mu"] = veto_term(tr_in, inp["cand"], inp["cand_w"].astype(float), inp["cand_vertex"], design, inp, cfg,
                                np.random.default_rng(1), a.veto_chunk)
+    sv = res["mu x mu"].pop("_surv", None)
+    if sv is not None:
+        sv.update({f"tr_{k}": v[sv["rows"]] for k, v in tr_in.items()})
+        dump["mu x mu"] = sv
     print(f"mu x mu done, {time.time() - t0:.0f} s", flush=True)
     for name, A, B, same in (("mu x rock", mu, rk, False), ("rock x rock", rk, rk, True)):
         ia, ib, v, n_pairs = cross_pairs(A, B, dev, a.block, same)
@@ -168,6 +175,11 @@ def main():
         cand = np.stack([ia, ib + len(A["ax"])], 1)
         w = A["weight"][ia] * B["weight"][ib]
         res[name] = dict(veto_term(tr, cand, w, v, design, inp, cfg, np.random.default_rng(2), a.veto_chunk), opposite_pairs=n_pairs)
+        if "_surv" in res[name]:
+            sv = res[name].pop("_surv")
+            for k in KEYS:
+                sv[k] = tr[k][sv["rows"]]                                  # (n, 2): leg 0 = A (muon), leg 1 = B
+            dump[name] = sv
         del tr, cand, w, ia, ib, v
         print(f"{name}: {n_pairs:.3g} opposite-charge pairs, {res[name]['n_candidates']:,} candidates, {time.time() - t0:.0f} s", flush=True)
     print(f"\ndesign {design.name}, cone {a.cone:g} mrad; per 15 years (time window +-{DEFAULT_CONFIG['time_window'] * 1e12:.0f} ps)")
@@ -180,6 +192,9 @@ def main():
                    rates_per_spill=dict(muons=float(mu["weight"].sum()), rock=float(rk["weight"].sum())), terms=res),
               open(a.out, "w"), indent=1, default=float)
     print(f"wrote {a.out} ({time.time() - t0:.0f} s)")
+    if a.survivors:
+        np.savez_compressed(a.survivors, **{f"{t.replace(' ', '')}__{k}": np.asarray(v) for t, d in dump.items() for k, v in d.items()})
+        print(f"wrote {a.survivors}: " + ", ".join(f"{t} {len(d['w15'])}" for t, d in dump.items()))
 
 
 if __name__ == "__main__":
