@@ -4,6 +4,13 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-16 — SBT pointing window along the wall (branch `veto-nov4-source`)
+
+- `lib/veto/sbt.py`: pointing window z +- r / sin(alpha) along the wall, per-ring hit timing (`window_z`, `sin_min`;
+  `"r"` = old). R2 single SST1 muons tagged 70.5 -> 90.2 %, signal loss 0.51 -> 0.54 %.
+- `bin/diag_untagged.py`: per-muon breakdown of untagged single muons (page: claude.ai/artifact/FnWCuP3xHpYcQewWnZ17U8).
+- `bin/nu_dis_apply.py` default GENIE v2 library; `bin/make_crossrun_pairs.py --pair-block`; batch S5 240G.
+
 ## 2026-11-14 — tile2 limits from SR-389, A2 scan memory fix (branch `veto-nov4-source`)
 
 - `lib/veto/technology.py`: tile2 (2 x 2 cm flame tiles) max 2.5 MHz per channel and 90 ps, as SPSC-SR-389 (was 1 MHz, 80 ps).

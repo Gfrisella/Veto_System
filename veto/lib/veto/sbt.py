@@ -35,7 +35,10 @@ THRESHOLDS = (30.0, 45.0, 60.0, 90.0)   # MeV, the cached rate maps
 C = 0.299792458              # m / ns
 DEFAULT = dict(threshold_mev=30.0, efficiency=0.993, sigma_t=1.0e-9, n_sigma=3.0, mode="pointing",
                cost_fraction_full=0.59, budget_kchf=8000.0,   # full SBT ~59 % of the reference budget (placeholder)
-               rate_scale=1.0)   # x random-hit rate: our cells see muons only (Nov-4: 2.07 MHz > 30 MeV); SR-389 quotes
+               rate_scale=1.0,   # x random-hit rate (see below)
+               window_z="projected", sin_min=0.05)   # pointing window along the wall (16 Nov 2026): "projected" = rings within
+               # r / sin(alpha) of the crossing (alpha: line vs the wall face; sin floored at sin_min) and each hit timed against
+               # the line's time inside its ring; "r" = the first version (rings within r, time at the crossing): our cells see muons only (Nov-4: 2.07 MHz > 30 MeV); SR-389 quotes
                                  # 27 MHz > 30 MeV with the particles scattered from the cavern walls and e / gamma -> 13
 CHANNELS_PER_CELL = 16       # 2 WOMs x 8 SiPM groups (SR-370)
 
@@ -334,6 +337,16 @@ def tag(tr_true, meas, event, z_limit, cfg, reco_cfg, rng, n_events, with_own_hi
     L = meas["z"][s] - c["z"]                                           # ~ path length along z from SST1
     r = reco_cfg.r0 + (reco_cfg.r_slope + reco_cfg.r_ms / np.maximum(meas["p"][s], 0.1)) * L
     t_pred = meas["t"][s] - L / C
+    projected = cfg.get("window_z", "projected") == "projected"
+    if projected:
+        # a lateral uncertainty r moves the wall crossing by r / sin(alpha) along z (alpha: line vs the face)
+        tx, ty = meas["tx"][s], meas["ty"][s]
+        dn = np.sqrt(1 + tx ** 2 + ty ** 2)
+        sin_a = c["cos"]                                                # |cos(line, face normal)| = sin(alpha)
+        r_z = r / np.maximum(sin_a, cfg.get("sin_min", 0.05))
+        k_path = dn                                                     # path length per unit z
+    else:
+        r_z = r
     # candidate cells: the ring range and segment range within r of the crossing point
     hits_by_ev = {}
     order = np.argsort(h_ev)
@@ -345,7 +358,7 @@ def tag(tr_true, meas, event, z_limit, cfg, reco_cfg, rng, n_events, with_own_hi
         if lo == hi:
             continue
         face = int(c["face"][j])
-        zlo, zhi = c["z"][j] - r[j], c["z"][j] + r[j]
+        zlo, zhi = c["z"][j] - r_z[j], c["z"][j] + r_z[j]
         r_lo = max(int(np.searchsorted(RING_EDGES, zlo, side="right") - 1), 0)
         r_hi = min(int(np.searchsorted(RING_EDGES, zhi, side="right") - 1), N_RING - 1)
         hx, hy = geo.vessel_half_widths(np.array([c["z"][j]]))
@@ -356,7 +369,15 @@ def tag(tr_true, meas, event, z_limit, cfg, reco_cfg, rng, n_events, with_own_hi
         s_lo = int(np.clip((coord - r[j] + half) / (2 * half) * nseg, 0, nseg - 1))
         s_hi = int(np.clip((coord + r[j] + half) / (2 * half) * nseg, 0, nseg - 1))
         cand = {cell_id(face, rr, ss) for rr in range(r_lo, r_hi + 1) for ss in range(s_lo, s_hi + 1)}
-        m = np.isin(hc[lo:hi], list(cand)) & (np.abs(ht[lo:hi] - t_pred[j]) < window)
+        if projected:   # expected time while the line is inside the hit's ring: [t(ring upstream edge), t(downstream edge)]
+            rg = hc[lo:hi] // 10 % 1000
+            e0 = RING_EDGES[np.clip(rg, 0, N_RING - 1)]; e1 = RING_EDGES[np.clip(rg + 1, 0, N_RING)]
+            zm = meas["z"][s[j]]
+            t_lo = meas["t"][s[j]] - (zm - e0) * k_path[j] / C; t_hi = meas["t"][s[j]] - (zm - e1) * k_path[j] / C
+            intime = (ht[lo:hi] > t_lo - window) & (ht[lo:hi] < t_hi + window)
+        else:
+            intime = np.abs(ht[lo:hi] - t_pred[j]) < window
+        m = np.isin(hc[lo:hi], list(cand)) & intime
         if m.any():
             explained[s[j]] = True
             vetoed[e] = True

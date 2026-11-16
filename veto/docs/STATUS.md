@@ -882,3 +882,17 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   (same as S4), batch uses `--device cpu --pair-block 20000`. Resubmitted 2085339; S6 2085340, S7 2085341 behind them.
 - S5 nu R1 done (2085338_1, 127 GB); R2 OOM at 134 GB -> rerun with 240G (2085943); S5 default now 240G.
   S6 2085944 / S7 2085945 resubmitted behind 2085943 and S4b 2085339 (running).
+
+## 2026-11-16 — SBT pointing window r / sin(alpha) (Guglielmo: "yes implement the r/sin α fix and test it")
+
+- `sbt.tag` (pointing mode): rings within r / sin(alpha) of the wall crossing (alpha = line vs face normal complement,
+  from `crossings()["cos"]`, floored at `sin_min` = 0.05), and each hit timed against the line's time inside its ring
+  (a cell 8 m away is 27 ns off the crossing time). `window_z: "r"` keeps the first version.
+- Test (300-seed store, inputs_nov4_q, EventCalc dcdcfc1, MS, seed 1; `results_test/reco/reco_R2_sbt_ubt*_win.json`):
+  old window reproduces 12 Nov exactly (70.49 %, 0.512 %). New: all SST1 tagged 70.49 -> 90.19 % (bounced 57.3 -> 86.5,
+  p>1 & timing 93.2 -> 99.6, other 67.2 -> 87.2); signal loss 0.512 -> 0.541 % (+0.03, ~1 sigma of 40k events);
+  background pairs left 3 -> 0.
+- Diagnostic (`diag_untagged_R2_win.json`): untagged 26.8 -> 11.2 %: SBT pointing missed 17.1 -> 7.6 %, UBT window
+  missed 9.4 -> 3.3 %. Remaining SBT misses: soft (median 0.27 GeV); 49 % of them the measured line meets no side wall,
+  20 % a different face, rest a median 7 m away.
+- The queued S7 (2085945) runs this code (default "projected"), so the batch R2 numbers include the fix.
