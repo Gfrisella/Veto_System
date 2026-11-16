@@ -22,7 +22,7 @@ import time
 import numpy as np
 import torch
 
-from benchmark_designs import candidates
+from benchmark_designs import candidates, candidates_blocked
 from make_reco_inputs import COLS, DATASET
 from veto import geometry as geo
 from veto import io, paths
@@ -33,6 +33,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--shift", type=int, nargs="+", default=[1, 2], help="pair run r with run r + s")
     parser.add_argument("--device", default="cuda")
+    parser.add_argument("--pair-block", type=int, default=0,
+                        help="> 0: pairs in blocks of this many muons per spill (full 3220-seed store: 216 GB without, 14 Nov)")
     args = parser.parse_args()
     start = time.time()
 
@@ -61,7 +63,8 @@ def main():
              for k, c in (("x", "bx"), ("y", "by"), ("z", "bz"), ("px", "bpx"), ("py", "bpy"), ("pz", "bpz"))}
         t["pdg"] = torch.as_tensor(d["pdg"][idx].astype(np.float64), device=dev)
         t["file_index"] = torch.as_tensor(group, device=dev)
-        pairs, vertex, _ = candidates(t, dev, spill_chunk=100)
+        pairs, vertex, _ = (candidates_blocked(t, dev, args.pair_block) if args.pair_block
+                            else candidates(t, dev, spill_chunk=100))
         pairs, vertex = pairs.cpu().numpy(), vertex.cpu().numpy()
         cross = role[pairs[:, 0]] != role[pairs[:, 1]]               # one muon of run r, one of run r + s
         all_pairs.append(idx[pairs[cross]])

@@ -35,7 +35,7 @@ cat > $B/S4_inputs.cmd <<EOT
 python3 bin/make_reco_inputs.py --dataset $VETO_MUON_DATASET --maps $VETO_RATE_MAPS --out $VETO_RECO_INPUTS --device cpu --pair-block 20000
 EOT
 cat > $B/S4b_xrun.cmd <<EOT
-python3 bin/make_crossrun_pairs.py
+python3 bin/make_crossrun_pairs.py --device cpu --pair-block 20000
 EOT
 cat > $B/S2_em.cmd <<EOT
 g4:python3 bin/em_debris.py --n 2000000 --workers 16

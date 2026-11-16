@@ -31,7 +31,7 @@ from veto.config import SPILLS_15Y  # noqa: E402  (6e20 / 4e13 p.o.t.)
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--design", default="D6_straw")
-    ap.add_argument("--lib", default=str(paths.interactions_data() / "genie/nu_library.npz"))
+    ap.add_argument("--lib", default=str(paths.interactions_data() / "genie/nu_library_v2.npz"))   # GENIE v2: all 6 flavours (S5 failed on nu_tau with v1, 14 Nov)
     ap.add_argument("--store", default=str(paths.NU_FLUX_PREFIX))   # 2026 flux, <prefix>_nu<pdg>
     ap.add_argument("--flavours", default=",".join(map(str, paths.NU_FLAVOURS)))
     for g, v in (("helium", 5e5), ("wall", 5e5), ("air", 2e5), ("planes", 1e5)):

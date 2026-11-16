@@ -872,3 +872,11 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   matched ones; not grazing (79 vs 111 mrad). Likely cause: sbt.tag opens rings z +- r, but a lateral r moves the crossing
   by r / sin(alpha) along z (~8 m at 80 mrad). Proposed fix (not applied): ring range +- r / sin(alpha). Statistics: the
   200k singles have n_eff ~ 490 (1 000 heaviest carry 59 %), so shares are +- a few %.
+
+## 2026-11-16 — batch: two failures fixed, S4b/S5-nu/S6/S7 resubmitted
+
+- Done: S4 inputs (2064490, 43 min, 7 GB), S2 EM debris (2064492), S5 muon DIS for R1 and R2 (2064493_0/2).
+- S5 nu (R1, R2) failed on nu_tau: `nu_dis_apply.py` read the v1 GENIE library (nu_mu, nu_e only) -> default now
+  `nu_library_v2.npz` (Shah Rukh, all 6 flavours, also Fe and the concrete nuclei). Resubmitted tasks 1,3 (2085338).
+- S4b cross-run pairs OOM (216 GB): unblocked pair building on the 3220-seed store -> `make_crossrun_pairs.py --pair-block`
+  (same as S4), batch uses `--device cpu --pair-block 20000`. Resubmitted 2085339; S6 2085340, S7 2085341 behind them.
