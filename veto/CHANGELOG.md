@@ -14,6 +14,9 @@ what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20)
   `designs/<name>.json`.
 - S7 rock x mu (D7) is now queued for R1 and R2 (was D6_straw_mod, OOM at 128 GB). `ROCK_MU` (Shah Rukh's rock draws,
   file named after the D6 geometry it was drawn with) stays as input data.
+- Deleted (Guglielmo's OK) the old-design outputs in `veto/results`: 91 files (~119 GB: D6_straw muon interactions,
+  per-track DIS, D0-D6 visualisations, report_2026-10-23 design copies) and the store `evstore/vessel_mu_nov4q_D6_straw_mod_kl10`.
+  Shah Rukh's D6 stores in /disk/lhcb_data/sqasim/evstore (~35 GB) were not touched.
 
 ## 2026-11-16 (afternoon) — silicon strip stations at the MS7 exit (branch `veto-nov4-source`)
 
