@@ -27,7 +27,7 @@ import numpy as np
 
 from veto import vertex_selection as vsel  # noqa: E402
 from veto import design as dsg
-from veto import shield_strips
+from veto import budget, shield_strips
 from veto import paths, reco
 from veto.config import DEFAULT_CONFIG
 
@@ -203,7 +203,7 @@ def report(r, cfg):
     print(f"    {r['n_planes']} planes, {r['area_m2']:.1f} m2, {r['n_cells']:,} cells, "
           f"{r['total_rate_per_spill']:.3g} muon hits / spill ({r['total_rate_per_spill'] / cfg.spill_s:.3g} Hz)")
     print(f"    technology: {', '.join(r['technologies'])}; {r['n_channels']:,} readout channels, "
-          f"cost {r['cost_kchf']:.4g} kCHF ({r['rel_cost']:.4g} straw-channel units), "
+          f"cost {budget.drachma(r['cost_kchf']):.4g} drachmas ({budget.pct(r['cost_kchf']):.0f} % of the budget), "
           f"UBT material {100 * r['ubt_x0']:.2f} % X0")
     print(f"    background: {b['n']:,} candidates, TP {100 * b['TP_frac']:.3f} %  FN {100 * b['FN_frac']:.3f} % "
           f"({b['n_survive']:,} survive) -> {b['per_15y_before']:.3g} -> {b['per_15y_after']:.3g} events in 15 years")
@@ -269,13 +269,13 @@ def main():
         results.append(r)
     print(f"\nFIGURE OF MERIT (signal model: {args.signal}; positive = vetoed; spill {args.spill:g} s)")
     print(f"{'design':<15}{'area m2':>8}{'TPR %':>10}{'FNR %':>9}{'FPR %':>8}{'TNR %':>8}{'pairs left':>11}"
-          f"{'B / 15 y':>18}{'Punzi':>7}{'cost kCHF':>11}{'channels':>14}")
+          f"{'B / 15 y':>18}{'Punzi':>7}{'drachmas':>11}{'channels':>14}")
     for r in results:
         f, b = r["fom"], r["background"]
         lim = "<" if f["B_15y_is_upper_limit"] else ""
         print(f"{r['design']:<15}{r['area_m2']:>8.0f}{100 * f['TPR']:>10.4f}{100 * f['FNR']:>9.4f}{100 * f['FPR']:>8.3f}"
               f"{100 * f['TNR']:>8.3f}{b['n_survive']:>11,}{lim + format(f['B_15y'], '.2g') + ' ± ' + format(f['B_15y_err'], '.1g'):>18}"
-              f"{f['punzi']:>7.3f}{r['cost_kchf']:>11,.0f}{r['n_channels']:>14,}")
+              f"{f['punzi']:>7.3f}{budget.drachma(r['cost_kchf']):>11.1f}{r['n_channels']:>14,}")
     name = args.out or f"results{tag(cfg)}{'_oldsignal' if args.signal == 'old' else ''}.json"
     out = paths.results_dir() / "reco" / name
     out.write_text(json.dumps(dict(config=vars(cfg), spill_s=args.spill, inputs=args.inputs, signal=args.signal, results=results),

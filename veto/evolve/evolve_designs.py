@@ -104,14 +104,14 @@ def technology_table():
         rows.append(f"  {key:<6} {t['name']}: pitch {t['pitch'] * 1e3:g} mm, timing {timing}, "
                     f"veto window {'+-%.1f ns' % (t['veto_window'] * 1e9) if t['veto_window'] else '+-3 sigma'}, "
                     f"efficiency {t['efficiency']}, x0 {tech.x0(t) * 100:.2f} % per plane, "
-                    + ("" if GRID == "modules" else f"cost {t['cost_m2_per_layer']} kCHF per layer-m^2 x {tech.n_layers(t)} layers, ")
+                    + ("" if GRID == "modules" else f"cost {budget.drachma(tech.module_cost(key) / (tech.MODULES[tech.ALIASES.get(key, key)]['size'][0] * tech.MODULES[tech.ALIASES.get(key, key)]['size'][1])):.2f} drachmas per m^2, ")
                     + f"rate limit {t['max_rate'] or '-'} Hz/cm^2, {t['max_channel_rate'] or '-'} Hz per channel")
         if GRID == "modules":
             m = tech.MODULES[key]
             rows.append(f"         module {m['size'][0]:g} x {m['size'][1]:g} m (u x y) = {int(round(m['size'][0] / tech.SLOT))} x "
                         f"{int(round(m['size'][1] / tech.SLOT))} slots, dead frame {m['frame'] * 100:g} cm "
                         f"({'readout end, y_hi' if m['frame_edges'] == 'y_hi' else 'every edge'}), "
-                        f"cost {budget.pct(tech.module_cost(key)):.2f} % of the budget per module")
+                        f"cost {budget.drachma(tech.module_cost(key)):.2f} drachmas per module")
     return "\n".join(rows)
 
 
@@ -132,14 +132,14 @@ CONTINUOUS_FORMAT = f"""DESIGN JSON (all lengths in metres; omit a block to get 
 - Fins at the entrance z are dropped (the tile plane covers it); fins further downstream are allowed.
 - "sbt": the Surround Background Tagger on the four vessel walls, in TEN full rings around the vessel (SR-389), ring k
   covering about z = 31.1 + 5 k .. 36.1 + 5 k m; "ring_set" lists the instrumented rings (any subset; each ring is a full
-  ring around the vessel). Cost scales with the instrumented area (ring 0 ~5 %, ring 9 ~10 % of the budget).
+  ring around the vessel). Cost scales with the instrumented area (ring 0 ~16, ring 9 ~33 drachmas).
   "mode": "pointing" (recommended; "any" vetoes on any SBT hit in time and loses ~15 % of the signal).
 - "shield_strips": silicon strip stations (size x size m, 3 cm deep) at the MS7 exit face z = 29.90 m, superimposed on the
   shield; centres [x, y] (the MS7 iron box is |x| < 1.71, |y| < 1.27; the V0 parents are in the return yokes, 1 < |x| < 1.7,
   more on the cavern-wall side -x). They tag the MS7 V0 background (a muon interacting in the last iron, a K_L / K_S /
   Lambda decaying in the vessel): the V0 vertex is traced back along its visible momentum to z = 29.90 and the products
   of the interaction are looked for within r0 + theta x distance; "rule" "point" (>= 1 hit) or "vertex" (>= 2 hits).
-  Each 20 x 20 cm station ~2 100 channels, ~0.4 % of the budget; up to ~45 MHz per station (random hits cost signal only
+  Each 20 x 20 cm station ~2 100 channels, ~1.3 drachmas; up to ~45 MHz per station (random hits cost signal only
   if a signal vertex traces back onto a station, which is rare: signal points to the target)."""
 GRID = "continuous"   # 16 Nov 2026: the reference designs are continuous ("modules": the 50 cm module grid of A7)   # A7 (2026-11-05): designs on the 50 cm module grid ("continuous": the old free lengths)
 
@@ -162,7 +162,8 @@ def system_prompt():
 Surround Background Tagger (SBT), optional fins and optional silicon strip stations at the end of the muon shield. You propose
 COMPLETE design JSON files; each is simulated and reconstructed (muon-pair background candidates, muon and neutrino
 interactions in and around the vessel, the MS7 V0 background, signal decays, single muons) and scored. Goal: the highest score.
-The two reference designs are R1 (UBT only, ~30 % of the budget) and R2 (full SBT + UBT = the budget, 100 %).
+COSTS are in DRACHMAS (1 drachma = one 0.5 x 0.5 m module of 4 x 4 cm tiles). The two reference designs are R1 (UBT only,
+~100 drachmas) and R2 (full SBT + UBT, ~334 drachmas = the budget).
 
 GEOMETRY (metres; z along the beam; looking from the target, right = -x, left = +x):
 - Muon shield ends at z = 29.89 (last magnet MS7: iron |x| < 1.71, |y| < 1.27, z 29.39 .. 29.89).
@@ -193,7 +194,7 @@ OBJECTIVE (the reward; higher is better):
 {objective.__doc__}
 
 {MODULE_FORMAT if GRID == "modules" else CONTINUOUS_FORMAT}
-BUDGET: the cost of the full SBT + UBT configuration (R2) = 100 %; above it a design is penalised like a rate violation.
+BUDGET: the cost of the full SBT + UBT configuration (R2), ~334 drachmas; above it a design is penalised like a rate violation.
 "detector": {{"cone_mrad": 0 .. 50}} sets the vertex cone of the veto (default 0): the tracks of a vertex also search
 r0 + cone x (distance from the vertex to the plane) on every plane upstream, which catches the parents of muon
 interactions (bent by a few mrad at the vertex) but picks up random hits, so it costs signal on busy planes:
@@ -233,7 +234,7 @@ def compact(report):
             "peak_MHz_per_channel": round(p["peak_channel_hz"] / 1e6, 3),
             "limit_MHz_per_channel": ch_limit / 1e6 if ch_limit else None,
             "peak_Hz_per_cm2": f"{p['peak_hz_cm2']:.2g}", "limit_Hz_per_cm2": p["max_rate_hz_cm2"],
-            "cost_kCHF": round(p["cost"]) if p["cost"] == p["cost"] else None,
+            "cost_drachmas": round(budget.drachma(p["cost"]), 1) if p["cost"] == p["cost"] else None,
             "signal_lost": lost.get(g["name"], 0), "pairs_vetoed": vetoed.get(g["name"], 0)})
     return {
         "reward": round(sc["reward"], 3), "reward_err": round(sc["reward_err"], 3), "feasible": sc["feasible"],
@@ -248,7 +249,7 @@ def compact(report):
         "surviving_pairs_counted": f"{bg['n_survive_direct']} of {bg['n_candidates']}",
         "signal_efficiency_pct": f"{100 * sg['efficiency']:.2f} +- {100 * sg['efficiency_err']:.2f}",
         "signal_decays_simulated": sg["n"],
-        "cost_pct_of_budget": round(sc["cost_pct_budget"], 1), "channels": r["n_channels"],
+        "cost_drachmas": round(sc["cost_drachma"], 1), "budget_drachmas": round(sc["budget_drachma"], 1), "channels": r["n_channels"],
         "pair_muons_unvetoed": {k: f"{e:.2g} +- {de:.1g}" for k, (e, de) in sc["confusion"]["single_inefficiency"].items()},
         "planes": planes,
         "loader_notes": report.get("notes", []),

@@ -199,6 +199,11 @@ def rate_penalty(res, cfg=ObjectiveConfig()):
     return p, over
 
 
+def _drachma_kchf():
+    from veto import budget
+    return budget.drachma_kchf()
+
+
 def budget_penalty(cost, cfg=ObjectiveConfig()):
     """0 within budget, else 1 + relative overshoot (so >= 1, i.e. >= w_budget in the reward)."""
     return 0.0 if cost <= cfg.cost_budget_kchf else 1 + (cost - cfg.cost_budget_kchf) / cfg.cost_budget_kchf
@@ -323,6 +328,7 @@ def score(res, stats, cfg=ObjectiveConfig()):
             "reward_err": math.sqrt(sum(e * e for _, e in terms.values())),
             "terms": terms, "feasible": not over and not p_budget, "over_rate_limit": over,
             "over_budget": bool(p_budget), "cost_kchf": cost, "cost_pct_budget": 100 * cost / cfg.cost_budget_kchf,
+            "cost_drachma": cost / _drachma_kchf(), "budget_drachma": cfg.cost_budget_kchf / _drachma_kchf(),
             "sensitivity": sens,
             "bkg_events_15y": n_bkg_raw, "bkg_events_15y_weighted": n_bkg, "bkg_events_15y_err": n_bkg_err,
             "bkg_by_source": sources, "bkg_source_weight": src_w,
@@ -345,11 +351,11 @@ def main():
               f"direct {bg['n_survive_direct']} pairs, FN {bg['FN_direct']:.3g} +- {bg['FN_direct_err']:.2g})")
         print("  single inefficiency: " + ", ".join(f"{k} {e:.3g} +- {de:.2g}" for k, (e, de) in cm["single_inefficiency"].items()))
         print(f"  signal efficiency {100 * sg['efficiency']:.2f} +- {100 * sg['efficiency_err']:.2f} %   "
-              f"cost {r['cost_kchf']:.0f} kCHF")
+              f"cost {r['cost_drachma']:.1f} drachmas")
         for o in r["over_rate_limit"]:
             print(f"  OVER RATE LIMIT  {o}")
         if r["over_budget"]:
-            print(f"  OVER BUDGET  {r['cost_kchf']:.0f} > {r['config']['cost_budget_kchf']:.0f} kCHF")
+            print(f"  OVER BUDGET  {r['cost_drachma']:.1f} > {r['budget_drachma']:.1f} drachmas")
 
 
 if __name__ == "__main__":
