@@ -71,8 +71,12 @@ def rock_tracks(path, kind, seeds, draw_offset):
                 draw=tr["inter"][g] + draw_offset)
 
 
-def cross_pairs(A, B, dev, block, same=False):
-    """Candidate pairs (i in A, j in B) passing the pair cuts; same=True: A is B, i < j, different draws."""
+def cross_pairs(A, B, dev, block, same=False, sel=None):
+    """Candidate pairs (i in A, j in B) passing the pair cuts; same=True: A is B, i < j, different draws.
+
+    sel = RecoConfig: streaming selection (memory, 16 Nov 2026: ~1e9 vessel-DIS x mu candidates do not fit in 128 GB):
+    the measured IP is computed block by block, only pairs with IP < sel.ip_max are kept, and the candidates are only
+    counted (number, sum of wA x wB). Returns then a fifth value dict(n, w, ip) for veto_term(pre=...)."""
     def tens(d):
         return (torch.as_tensor(np.stack([d["bx"], d["by"], d["bz"]], 1), device=dev),
                 torch.as_tensor(np.stack([d["bpx"], d["bpy"], d["bpz"]], 1), device=dev),
@@ -82,7 +86,9 @@ def cross_pairs(A, B, dev, block, same=False):
     rB, pB, qB, dB = tens(B)
     nA, nB = len(rA), len(rB)
     r, p = torch.cat([rA, rB]), torch.cat([pA, pB])
-    out_a, out_b, out_v, n_pairs = [], [], [], 0
+    out_a, out_b, out_v, out_ip, n_pairs, n_cand, w_cand = [], [], [], [], 0, 0, 0.0
+    wA, wB = np.asarray(A["weight"], float), np.asarray(B["weight"], float)
+    rng_ip = np.random.default_rng(777)
     for i0 in range(0, nA, block):
         for j0 in range(i0 if same else 0, nB, block):
             ni, nj = min(block, nA - i0), min(block, nB - j0)
@@ -94,23 +100,43 @@ def cross_pairs(A, B, dev, block, same=False):
             ia, jb = ia[m], jb[m]
             n_pairs += len(ia)
             a, bb, v = _pair_cut(ia, jb + nA, r, p)
-            out_a.append(a.cpu().numpy()); out_b.append((bb - nA).cpu().numpy()); out_v.append(v.cpu().numpy())
-    return np.concatenate(out_a), np.concatenate(out_b), np.concatenate(out_v), n_pairs
+            a, bb, v = a.cpu().numpy(), (bb - nA).cpu().numpy(), v.cpu().numpy()
+            if sel is not None and len(a):
+                n_cand += len(a); w_cand += float((wA[a] * wB[bb]).sum())
+                ip = vsel.measured_ip(np.stack([A["bx"][a], A["by"][a], A["bz"][a]], 1), np.stack([A["bpx"][a], A["bpy"][a], A["bpz"][a]], 1),
+                                      np.stack([B["bx"][bb], B["by"][bb], B["bz"][bb]], 1), np.stack([B["bpx"][bb], B["bpy"][bb], B["bpz"][bb]], 1),
+                                      sel, rng_ip)
+                k = ip < sel.ip_max
+                a, bb, v = a[k], bb[k], v[k]
+                out_ip.append(ip[k])
+            out_a.append(a); out_b.append(bb); out_v.append(v)
+    cat = lambda x, sh, dt: np.concatenate(x) if x else np.zeros(sh, dt)
+    res = (cat(out_a, 0, np.int64), cat(out_b, 0, np.int64), cat(out_v, (0, 3), np.float64), n_pairs)
+    if sel is None:
+        return res
+    return res + (dict(n=n_cand, w=w_cand, ip=cat(out_ip, 0, np.float64)),)
 
 
-def veto_term(tr, cand, cand_w, cand_v, design, inp, cfg, rng, chunk=200_000):
-    """Measured IP cut and veto for candidate pairs (rows of tr); returns per-15-year before / after IP / after veto."""
+def veto_term(tr, cand, cand_w, cand_v, design, inp, cfg, rng, chunk=200_000, pre=None):
+    """Measured IP cut and veto for candidate pairs (rows of tr); returns per-15-year before / after IP / after veto.
+    pre = dict(n, w, ip) from cross_pairs(sel=cfg): cand are already the IP-selected pairs (streaming)."""
     dt = DEFAULT_CONFIG["time_window"]
-    w = cand_w * 2 * dt / cfg.spill_s * SPILLS_15Y
-    out = dict(n_candidates=int(len(cand)), candidates_15y=float(w.sum()))
-    if not len(cand):
-        return dict(out, selected_15y=0.0, n_selected=0, after_15y=0.0, n_after=0)
-    st = lambda i: (np.stack([tr["bx"][i], tr["by"][i], tr["bz"][i]], 1), np.stack([tr["bpx"][i], tr["bpy"][i], tr["bpz"][i]], 1))
-    ip = vsel.measured_ip(*st(cand[:, 0]), *st(cand[:, 1]), cfg, np.random.default_rng(777))
-    keep = np.nonzero(ip < cfg.ip_max)[0]
+    fac = 2 * dt / cfg.spill_s * SPILLS_15Y
+    w = cand_w * fac
+    if pre is not None:
+        out = dict(n_candidates=int(pre["n"]), candidates_15y=float(pre["w"] * fac))
+        ip = pre["ip"]
+        keep = np.arange(len(cand))
+    else:
+        out = dict(n_candidates=int(len(cand)), candidates_15y=float(w.sum()))
+        if not len(cand):
+            return dict(out, selected_15y=0.0, n_selected=0, after_15y=0.0, n_after=0)
+        st = lambda i: (np.stack([tr["bx"][i], tr["by"][i], tr["bz"][i]], 1), np.stack([tr["bpx"][i], tr["bpy"][i], tr["bpz"][i]], 1))
+        ip = vsel.measured_ip(*st(cand[:, 0]), *st(cand[:, 1]), cfg, np.random.default_rng(777))
+        keep = np.nonzero(ip < cfg.ip_max)[0]
     out.update(selected_15y=float(w[keep].sum()), n_selected=int(len(keep)))
     if not len(keep):
-        return dict(out, after_15y=0.0, n_after=0, after_upper_15y=float(2.3 * w.mean() * len(keep) / max(len(cand), 1)))
+        return dict(out, after_15y=0.0, n_after=0, after_upper_15y=None)
     # veto in chunks of candidates (memory: the D6 muon x rock term needed > 128 GB in one go, 16 Nov 2026)
     surv, expl = [], []
     for c0 in range(0, len(keep), chunk):
@@ -170,11 +196,11 @@ def main():
         dump["mu x mu"] = sv
     print(f"mu x mu done, {time.time() - t0:.0f} s", flush=True)
     for name, A, B, same in (("mu x rock", mu, rk, False), ("rock x rock", rk, rk, True)):
-        ia, ib, v, n_pairs = cross_pairs(A, B, dev, a.block, same)
+        ia, ib, v, n_pairs, pre = cross_pairs(A, B, dev, a.block, same, sel=cfg)
         tr = {k: np.concatenate([np.asarray(A[k], float), np.asarray(B[k], float)]) for k in KEYS}
         cand = np.stack([ia, ib + len(A["ax"])], 1)
         w = A["weight"][ia] * B["weight"][ib]
-        res[name] = dict(veto_term(tr, cand, w, v, design, inp, cfg, np.random.default_rng(2), a.veto_chunk), opposite_pairs=n_pairs)
+        res[name] = dict(veto_term(tr, cand, w, v, design, inp, cfg, np.random.default_rng(2), a.veto_chunk, pre=pre), opposite_pairs=n_pairs)
         if "_surv" in res[name]:
             sv = res[name].pop("_surv")
             for k in KEYS:

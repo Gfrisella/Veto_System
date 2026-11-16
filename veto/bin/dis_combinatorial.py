@@ -110,14 +110,16 @@ def main():
         infos[st] = info
         print(f"{st}: {info['single_track_events']:,} single-track events ({info['single_rate_per_spill']:.4g} tracks / spill), "
               f"{info['multi_track_events']:,} multi-track events rejected (D9), {time.time() - t0:.0f} s", flush=True)
-        ia, ib, v, n_pairs = cross_pairs(mu, B, dev, a.block)
+        ia, ib, v, n_pairs, pre = cross_pairs(mu, B, dev, a.block, sel=cfg)      # streaming IP cut (memory)
         tr = {k: np.concatenate([np.asarray(mu[k], float), np.asarray(B[k], float)]) for k in KEYS}
         cand = np.stack([ia, ib + len(mu["ax"])], 1)
         w = mu["weight"][ia] * B["weight"][ib]
-        r = veto_term(tr, cand, w, v, design, inp, cfg, np.random.default_rng(2))
+        r = veto_term(tr, cand, w, v, design, inp, cfg, np.random.default_rng(2), pre=pre)
+        r.pop("_surv", None)
         r.update(opposite_pairs=n_pairs, bound_15y=r["selected_15y"] * mu_ineff)
+        del tr, cand, w, ia, ib, v, pre
         res[st] = r
-        print(f"  {n_pairs:.3g} opposite-charge pairs, {len(ia):,} candidates; selected {r['selected_15y']:.3g} / 15 y "
+        print(f"  {n_pairs:.3g} opposite-charge pairs, {r['n_candidates']:,} candidates; selected {r['selected_15y']:.3g} / 15 y "
               f"(bound x mu inefficiency {mu_ineff:.2e}: {r['bound_15y']:.3g}), after veto {r.get('after_15y', 0):.3g} "
               f"({r.get('n_after', 0)} MC), {time.time() - t0:.0f} s", flush=True)
     print(f"\ndesign {design.name}: DIS track x muon, per 15 years (time window +-{DEFAULT_CONFIG['time_window'] * 1e12:.0f} ps)")
