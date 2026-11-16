@@ -60,8 +60,7 @@ print = functools.partial(print, flush=True)
 
 REMOTE_VETO = "/disk/users/sqasim/workspace/uzh/Veto_System/veto"
 EXEC = "bash /disk/lhcb_data/sqasim/images/shared/exec_cudabear_november_2025.sh python3"
-SEEDS = ["D0_minimal", "D1_wide_ubt", "D3_heavy_right", "D6_tile2", "D6_fiber", "D6_straw", "E1_llm_run1", "E2_llm_run2", "E3_robust",
-         "E4_ubt2", "E4_entry2"]
+SEEDS = ["R1_ubt_only", "R2_sbt_ubt"]   # Guglielmo 16 Nov 2026: the reference designs only (old D / E designs dropped)
 DIRECTIVES = {
     "refine": "Refine the parent: keep its structure, fix its clearest weakness from the report "
               "(a violation first: a plane over its rate limit or the budget; then a plane costing signal "
@@ -116,13 +115,33 @@ def technology_table():
     return "\n".join(rows)
 
 
-CONTINUOUS_FORMAT = f"""DESIGN JSON (all lengths in metres):
-{{"name": "<short unique name>", "description": "<one line>",
+CONTINUOUS_FORMAT = f"""DESIGN JSON (all lengths in metres; omit a block to get its default, "ubt_tiles": null / "sbt": null /
+"shield_strips": null switch that system off):
+{{"name": "<short unique name>", "description": "<one line>", "frame": "fairship-2026", "ubt_layout": "2026-11-11",
   "ubt": {{"y_lo": -1.35, "y_hi": 1.35}},
-  "fins": [{{"side": "right"|"left", "z": {geo.Z_UBT:.2f}, "length": 3.0, "y_lo": -3.0, "y_hi": 3.0, "tilt": 0,
-            "technology": "tile"}}, ...],
-  "detector": {{}}}}"""
-GRID = "modules"   # A7 (2026-11-05): designs on the 50 cm module grid ("continuous": the old free lengths)
+  "ubt_tiles": {{"half_x": 2.0, "y_lo": -2.0, "y_hi": 2.0,
+                "regions": [{{"x": [-1.0, 1.0], "y": [-2.0, 2.0], "technology": "tile"}},
+                            {{"x": [-2.0, -1.0], "y": [-0.6, 0.6], "technology": "tile2"}}, ...]}},
+  "fins": [{{"side": "right"|"left", "z": 46.13, "length": 3.0, "y_lo": -3.0, "y_hi": 3.0, "tilt": 0, "technology": "tile"}}, ...],
+  "sbt": {{"ring_set": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "threshold_mev": 30.0, "mode": "pointing"}},
+  "shield_strips": {{"stations": [[-1.5, 0.0], [-1.3, 0.0], ...], "size": 0.20, "rule": "point", "theta": 0.01}},
+  "detector": {{}}}}
+- "ubt": the vertical-straw station at z = {geo.Z_UBT_STRAW:.2f} on the window (|x| < 0.5); y extent at least -1.35 .. 1.35.
+- "ubt_tiles": the tile plane at z = {geo.Z_UBT_TILES:.2f}, |x| < half_x, y_lo .. y_hi; "regions" are non-overlapping rectangles
+  that tile it, each "tile" (4 x 4 cm) or "tile2" (2 x 2 cm, for the flames at 1 < |x| < 2, |y| < 0.6). Default: R1's plane.
+- Fins at the entrance z are dropped (the tile plane covers it); fins further downstream are allowed.
+- "sbt": the Surround Background Tagger on the four vessel walls, in TEN full rings around the vessel (SR-389), ring k
+  covering about z = 31.1 + 5 k .. 36.1 + 5 k m; "ring_set" lists the instrumented rings (any subset; each ring is a full
+  ring around the vessel). Cost scales with the instrumented area (ring 0 ~5 %, ring 9 ~10 % of the budget).
+  "mode": "pointing" (recommended; "any" vetoes on any SBT hit in time and loses ~15 % of the signal).
+- "shield_strips": silicon strip stations (size x size m, 3 cm deep) at the MS7 exit face z = 29.90 m, superimposed on the
+  shield; centres [x, y] (the MS7 iron box is |x| < 1.71, |y| < 1.27; the V0 parents are in the return yokes, 1 < |x| < 1.7,
+  more on the cavern-wall side -x). They tag the MS7 V0 background (a muon interacting in the last iron, a K_L / K_S /
+  Lambda decaying in the vessel): the V0 vertex is traced back along its visible momentum to z = 29.90 and the products
+  of the interaction are looked for within r0 + theta x distance; "rule" "point" (>= 1 hit) or "vertex" (>= 2 hits).
+  Each 20 x 20 cm station ~2 100 channels, ~0.4 % of the budget; up to ~45 MHz per station (random hits cost signal only
+  if a signal vertex traces back onto a station, which is rare: signal points to the target)."""
+GRID = "continuous"   # 16 Nov 2026: the reference designs are continuous ("modules": the 50 cm module grid of A7)   # A7 (2026-11-05): designs on the 50 cm module grid ("continuous": the old free lengths)
 
 MODULE_FORMAT = f"""DESIGN JSON (module grid, ISSUES A7):
 {{"name": "<short unique name>", "description": "<one line>",
@@ -139,31 +158,26 @@ must stay inside the cavern wall (room = 4.56 - X(z) m), nothing below y = -3.2.
 
 
 def system_prompt():
-    return f"""You design the veto (UBT + side fins) of the SHiP decay vessel. You propose COMPLETE design JSON files;
-each is simulated and reconstructed (muon-pair background candidates, muon and neutrino interactions, signal decays, single muons)
-and scored. Your goal: the highest score.
+    return f"""You design the background tagging (veto) of the SHiP decay vessel: the Upstream Background Tagger (UBT), the
+Surround Background Tagger (SBT), optional fins and optional silicon strip stations at the end of the muon shield. You propose
+COMPLETE design JSON files; each is simulated and reconstructed (muon-pair background candidates, muon and neutrino
+interactions in and around the vessel, the MS7 V0 background, signal decays, single muons) and scored. Goal: the highest score.
+The two reference designs are R1 (UBT only, ~30 % of the budget) and R2 (full SBT + UBT = the budget, 100 %).
 
 GEOMETRY (metres; z along the beam; looking from the target, right = -x, left = +x):
-- Decay vessel (FairShip layout): frustum z = {geo.Z_VESSEL_MIN:.2f} .. {geo.Z_VESSEL_MAX:.2f}, half widths x 0.5 -> 2.0,
-  y 1.35 -> 3.0. SST1 tracker at z = {geo.Z_SST1:.2f} (|x| < 2, |y| < 3), the spectrometer (field map) and the timing
-  detector at z = {geo.Z_TIMING:.2f}. Cavern wall at x = -4.56, floor y = -3.36.
-- UBT: a straw plane at z = {geo.Z_UBT:.2f} on the vessel entrance, |x| < 0.5 (fixed); it must cover
-  at least y = -1.35 .. 1.35 and stays above y = -3.2. Always straws (technology fixed).
-- Fins: thin vertical x-y planes at a fixed z ({geo.Z_UBT:.2f} .. {geo.Z_SST1:.2f}) on the right or left side. A fin touches the
-  vessel side wall with its inner edge (|x| = X(z) = 0.5 + 0.03 (z - {geo.Z_VESSEL_MIN:.2f})) and reaches OUT in x by `length`; it covers
-  y from y_lo (>= -3.2) to y_hi. Right fins are cut at the cavern wall x = -4.56 (the loader does it and notes it).
-  Each fin has a technology (straw, fiber, pixel, tile, tile2); tilt must be 0.
-- No detector on top of or below the vessel.
+- Muon shield ends at z = 29.89 (last magnet MS7: iron |x| < 1.71, |y| < 1.27, z 29.39 .. 29.89).
+- Decay vessel: frustum z = {geo.Z_VESSEL_MIN:.2f} .. {geo.Z_VESSEL_MAX:.2f}, half widths x 0.5 -> 2.0, y 1.35 -> 3.0. SST1 tracker at
+  z = {geo.Z_SST1:.2f} (|x| < 2, |y| < 3), spectrometer and timing detector at z = {geo.Z_TIMING:.2f}. Cavern wall x = -4.56, floor y = -3.36.
+- Fins (optional): thin vertical x-y planes at a z downstream of the entrance, inner edge on the vessel side wall
+  (|x| = X(z) = 0.5 + 0.03 (z - {geo.Z_VESSEL_MIN:.2f})), reaching out by `length`, y_lo (>= -3.2) .. y_hi; tilt 0.
 
-HOW THE VETO WORKS: a background candidate is a pair of muons forming a fake vertex in the vessel. Each
-spectrometer track is extrapolated backwards in a straight line to every plane upstream of its vertex; a hit
-in a space window (cm, grows with distance and 1/p) and time window explains the track; a pair is vetoed if
-either track is explained. Signal (a neutral from the target decaying in the vessel) has no hits of its own and
-is lost only when a RANDOM hit of the other 10^9 - 10^10 muons/s falls in its search window: signal loss grows
-with the plane's muon density x cell size x time window, so fast, fine-grained planes away from the hot
-regions lose little signal. Muons cross the planes mostly in a hot lobe near y = 0, 1.5 - 3 m from the wall.
-Fins at z = 30.6 veto most of the background; later fins catch muons entering the vessel further down.
-Muons that bounce off the cavern wall (right side) can only be followed back after their bounce.
+HOW THE VETO WORKS: every spectrometer track is extrapolated backwards in a straight line to every plane upstream of its
+vertex; a hit in a space window (grows with distance and 1/p) and time window explains it. The SBT is searched along the
+wall around the line's crossing point (window r / sin(alpha)). A muon pair is vetoed if either muon is explained; an
+interaction if any of its tracks is. Signal (a neutral from the target decaying in the vessel) has no hits of its own and is
+lost only when RANDOM hits fall in its windows: signal loss grows with the local rate x cell size x time window.
+The UBT tile plane sees ~1.3e9 muons/s, almost all in the two flame blocks next to the window; the SBT tags muons entering
+through the walls and bounced muons; the strips are the only handle on the MS7 V0 (neutral, it crosses no plane).
 
 TECHNOLOGIES:
 {technology_table()}
@@ -179,6 +193,7 @@ OBJECTIVE (the reward; higher is better):
 {objective.__doc__}
 
 {MODULE_FORMAT if GRID == "modules" else CONTINUOUS_FORMAT}
+BUDGET: the cost of the full SBT + UBT configuration (R2) = 100 %; above it a design is penalised like a rate violation.
 "detector": {{"cone_mrad": 0 .. 50}} sets the vertex cone of the veto (default 0): the tracks of a vertex also search
 r0 + cone x (distance from the vertex to the plane) on every plane upstream, which catches the parents of muon
 interactions (bent by a few mrad at the vertex) but picks up random hits, so it costs signal on busy planes:
@@ -233,7 +248,7 @@ def compact(report):
         "surviving_pairs_counted": f"{bg['n_survive_direct']} of {bg['n_candidates']}",
         "signal_efficiency_pct": f"{100 * sg['efficiency']:.2f} +- {100 * sg['efficiency_err']:.2f}",
         "signal_decays_simulated": sg["n"],
-        "cost_MCHF": round(sc["cost_kchf"] / 1000, 3), "channels": r["n_channels"],
+        "cost_pct_of_budget": round(sc["cost_pct_budget"], 1), "channels": r["n_channels"],
         "pair_muons_unvetoed": {k: f"{e:.2g} +- {de:.1g}" for k, (e, de) in sc["confusion"]["single_inefficiency"].items()},
         "planes": planes,
         "loader_notes": report.get("notes", []),
@@ -386,8 +401,32 @@ class OpenRouter:
 EVAL_DATA = dict(inputs=paths.RECO_INPUTS, prep_tag="")   # which reco inputs / interaction caches (--inputs, --prep-tag)
 
 
+def evaluate_slurm(designs, workers, n_signal, seed=1):
+    """Evaluate on the farm through Slurm (16 Nov 2026): one job per generation, evaluate_designs.py on all designs with
+    `workers` processes; waits for it (sbatch --wait)."""
+    tmp = Path(tempfile.mkdtemp(prefix="eval_", dir=paths.results_dir() / "evolve"))
+    (tmp / "in.json").write_text(json.dumps(designs))
+    script = (f"#!/bin/bash\nexport VETO_CODE={VETO}\nsource {VETO}/bin/batch/env.sh\ncd {VETO}\n"
+              f"export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1\n"
+              f"python3 evolve/evaluate_designs.py --workers {workers} --n-signal {n_signal} --seed {seed} "
+              f"--inputs {EVAL_DATA['inputs']} --prep-tag '{EVAL_DATA['prep_tag']}' < {tmp}/in.json > {tmp}/out.txt\n")
+    (tmp / "job.sh").write_text(script)
+    cpus = max(4, min(32, workers))
+    proc = subprocess.run(["sbatch", "--wait", "--parsable", "--partition=standard", f"--cpus-per-task={cpus}",
+                           f"--mem={min(240, 16 + 10 * workers)}G", "--time=04:00:00", f"--job-name=evo_{len(designs)}",
+                           f"--output={tmp}/slurm.log", str(tmp / "job.sh")], capture_output=True, text=True, timeout=5 * 3600)
+    try:
+        return json.loads((tmp / "out.txt").read_text().strip().splitlines()[-1])
+    except Exception:  # noqa: BLE001
+        err = ((tmp / "slurm.log").read_text() if (tmp / "slurm.log").exists() else proc.stderr or "")[-800:]
+        return [dict(name=d.get("name"), error=f"slurm evaluation failed: {err}") for d in designs]
+
+
 def evaluate_remote(designs, proxy_port, host, workers, n_signal, seed=1):
-    """Evaluate on `host` over our SSH proxy, or here (host "local": when this runs on the cluster)."""
+    """Evaluate on `host` over our SSH proxy, or here (host "local": when this runs on the cluster), or through Slurm
+    (host "slurm")."""
+    if host == "slurm":
+        return evaluate_slurm(designs, workers, n_signal, seed)
     run = (f"OMP_NUM_THREADS=1 {EXEC} evolve/evaluate_designs.py --workers {workers} "
            f"--n-signal {n_signal} --seed {seed} --inputs {EVAL_DATA['inputs']} --prep-tag '{EVAL_DATA['prep_tag']}'")
     if host == "local":
@@ -400,6 +439,11 @@ def evaluate_remote(designs, proxy_port, host, workers, n_signal, seed=1):
     except Exception:  # noqa: BLE001
         err = (proc.stderr or "")[-800:]
         return [dict(name=d.get("name"), error=f"cluster evaluation failed: {err}") for d in designs]
+
+
+def design_key(d):
+    """Identity of a design for de-duplication: everything but its name and description."""
+    return json.dumps({k: v for k, v in d.items() if k not in ("name", "description")}, sort_keys=True, default=str)
 
 
 def reward_err(report):
@@ -430,8 +474,8 @@ def main():
     ap.add_argument("--children", type=int, default=8, help="LLM proposals per generation")
     ap.add_argument("--population", type=int, default=10)
     ap.add_argument("--seeds", nargs="*", default=SEEDS, help="designs/*.json to start from")
-    ap.add_argument("--grid", choices=["modules", "continuous"], default="modules",
-                    help="design format: the 50 cm module grid (A7, default; seeds from designs/modules) or the old free lengths")
+    ap.add_argument("--grid", choices=["modules", "continuous"], default="continuous",
+                    help="design format: free lengths (default since 16 Nov 2026, the R designs) or the 50 cm module grid (A7)")
     ap.add_argument("--seed-runs", nargs="*", default=[], help="earlier runs (results/evolve/<run>) whose best designs join gen 0")
     ap.add_argument("--seed-top", type=int, default=6, help="designs taken from each of --seed-runs")
     ap.add_argument("--bkg-estimate", choices=["max", "factorised", "direct"], default="max",
@@ -442,7 +486,8 @@ def main():
     ap.add_argument("--max-tokens", type=int, default=6000)
     ap.add_argument("--env-file", default=str(Path.home() / "workspace/uzh/supply2/.env"))
     ap.add_argument("--proxy-port", default=os.environ.get("PROXY_PORT", "2226"))
-    ap.add_argument("--host", default="farm-gpu3", help='cluster node, or "local" to evaluate on this machine')
+    ap.add_argument("--host", default="slurm", help='"slurm" (default: one Slurm job per generation), a cluster node over the '
+                                                    'proxy, or "local" to evaluate on this machine')
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--inputs", default=paths.RECO_INPUTS, help="results/reco file (inputs_delta.npz: the enriched dataset); "
                                                          "needed here too, for the pair statistics of the objective")
@@ -500,8 +545,7 @@ def main():
     best = population[0]
     (run / "best.json").write_text(json.dumps(best["design"], indent=1))
 
-    seen = {json.dumps(c["design"]["fins"], sort_keys=True) + json.dumps(c["design"]["ubt"], sort_keys=True)
-            for c in population}
+    seen = {design_key(c["design"]) for c in population}
     for gen in range(1, args.generations + 1):
         t0 = time.time()
         weights = [1.0 / (1 + i) for i in range(len(population))]
@@ -528,7 +572,7 @@ def main():
             d["name"] = str(d.get("name") or f"g{gen}c{k}")[:60]
             d.setdefault("detector", {})
             d.setdefault("description", out.get("rationale", "")[:200])
-            key = json.dumps(d.get("fins"), sort_keys=True) + json.dumps(d.get("ubt"), sort_keys=True)
+            key = design_key(d)
             if key in seen:
                 continue
             seen.add(key)

@@ -164,18 +164,26 @@ def station_rates(cfg):
     return out
 
 
-def own_hits(cfg, part_int, part_pdg, part_p, part_v, rng):
-    """Hits of the events' own charged particles that start at the exit plane (within 2 cm upstream of the station z) and
-    cross a station. Returns (event index, x, y)."""
+def exit_hits(part_int, part_pdg, part_p, part_v, z=Z_EXIT):
+    """Charged particles that start at the MS7 exit plane (the store's reference surface, or in the last 60 cm of iron),
+    at the plane z: (event index, x, y). Design independent (cached by interactions.prepare)."""
     from .interactions import charge
     q = charge(part_pdg)
     p, v = part_p[:, :3], part_v
-    z = cfg["z"]
     m = (q != 0) & (p[:, 2] > 0) & (v[:, 2] <= z + 1e-3) & (v[:, 2] > z - 0.6)
     x = v[m, 0] + p[m, 0] / p[m, 2] * (z - v[m, 2]); y = v[m, 1] + p[m, 1] / p[m, 2] * (z - v[m, 2])
-    st = station_of(cfg, x, y)
-    ok = (st >= 0) & (rng.random(len(x)) < cfg["efficiency"])
-    return part_int[m][ok], x[ok], y[ok]
+    return part_int[m], x, y
+
+
+def on_stations(cfg, he, hx, hy, rng):
+    """The exit hits that fall on a station, after the station efficiency."""
+    ok = (station_of(cfg, hx, hy) >= 0) & (rng.random(len(hx)) < cfg["efficiency"])
+    return he[ok], hx[ok], hy[ok]
+
+
+def own_hits(cfg, part_int, part_pdg, part_p, part_v, rng):
+    """Hits of the events' own charged particles that start at the exit plane and cross a station: (event, x, y)."""
+    return on_stations(cfg, *exit_hits(part_int, part_pdg, part_p, part_v, cfg["z"]), rng)
 
 
 def tag(cfg, vtx, p_vis, rng, hits=None, n_disc=16):

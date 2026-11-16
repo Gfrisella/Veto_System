@@ -58,31 +58,44 @@ def config(raw):
     if not s:
         return None
     out = dict(DEFAULT)
-    out.update({k: v for k, v in s.items() if k in DEFAULT or k in ("rings", "faces")})
-    out.setdefault("rings", [0, N_RING])            # instrumented rings [first, last) (Run-4 partial scenarios)
+    out.update({k: v for k, v in s.items() if k in DEFAULT or k in ("rings", "faces", "ring_set")})
+    out.setdefault("rings", [0, N_RING])            # instrumented cell rings [first, last) (Run-4 partial scenarios)
     out.setdefault("faces", list(FACES))
+    if "ring_set" in out:                           # SR-389 rings (0..9), each a full ring around the vessel (16 Nov 2026)
+        out["cell_rings"] = sorted({c for k in out["ring_set"] for c in sr_ring_cells(int(k))})
+    else:
+        out["cell_rings"] = list(range(out["rings"][0], out["rings"][1]))
     return out
 
 
+N_SR_RINGS = 10            # SR-389: the SBT in ten rings of ~5 m; ring k = cell rings 1 + 6k .. 6 + 6k (ring 0 also the
+                           # first 80 cm row): 7 + 9 x 6 = 61 cell rings
+
+
+def sr_ring_cells(k):
+    """Cell-ring indices of SR-389 ring k (0..9)."""
+    lo = 0 if k == 0 else 1 + 6 * k
+    return list(range(lo, min(1 + 6 * (k + 1), N_RING)))
+
+
 def n_cells(cfg):
-    r0, r1 = cfg["rings"]
     per_ring = sum(N_SEG_X_FACE if f in ("+x", "-x") else N_SEG_Y_FACE for f in cfg["faces"])
-    return (r1 - r0) * per_ring
+    return len(cfg["cell_rings"]) * per_ring
 
 
 def area(cfg):
     """m^2 of instrumented surface."""
-    r0, r1 = cfg["rings"]
-    z = np.linspace(RING_EDGES[r0], RING_EDGES[r1], 200)
-    hx, hy = geo.vessel_half_widths(z)
     a = 0.0
-    for f in cfg["faces"]:
-        a += np.trapezoid(2 * (hy if f in ("+x", "-x") else hx), z)
+    for r in cfg["cell_rings"]:
+        z = np.linspace(RING_EDGES[r], RING_EDGES[r + 1], 20)
+        hx, hy = geo.vessel_half_widths(z)
+        for f in cfg["faces"]:
+            a += np.trapezoid(2 * (hy if f in ("+x", "-x") else hx), z)
     return float(a)
 
 
 def full_area():
-    return area(dict(rings=[0, N_RING], faces=list(FACES)))
+    return area(dict(cell_rings=list(range(N_RING)), faces=list(FACES)))
 
 
 def cost_kchf(cfg, budget_kchf):
@@ -138,7 +151,7 @@ def cell_id(face, ring, seg):
 
 def instrumented(cfg, face, ring):
     fi = [FACES.index(f) for f in cfg["faces"]]
-    return np.isin(face, fi) & (ring >= cfg["rings"][0]) & (ring < cfg["rings"][1])
+    return np.isin(face, fi) & np.isin(ring, cfg["cell_rings"])
 
 
 def deposit_mev(cos):

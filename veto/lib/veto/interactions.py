@@ -294,6 +294,13 @@ def prepare(inter, part, cfg, muons=None, codes=DESIGN_FREE_CODES, g4=None):
     if len(sel):
         trk, ev, z_a, z_b, _ = event_tracks(inter, tr, sel, pair, vertex, muons)
         out.update({f"trk_{k}": v for k, v in trk.items()}, track_event=ev, track_z_a=z_a, track_z_b=z_b)
+        # for the shield-end strip stations (16 Nov 2026): vertex, visible momentum and the exit-plane hits of the products
+        from . import shield_strips
+        pos = np.full(n_inter, -1); pos[sel] = np.arange(len(sel))
+        he, hx, hy = shield_strips.exit_hits(part["int"], part["pdg"], part["p"], part["v"])
+        k = pos[he] >= 0
+        out.update(event_vtx=vertex, event_pvis=tr["p"][pair[:, 0]] + tr["p"][pair[:, 1]],
+                   strip_hit_event=pos[he[k]], strip_hit_x=hx[k], strip_hit_y=hy[k])
     return out
 
 
@@ -307,6 +314,11 @@ def veto(prep, design, maps, cfg, rng, level="b", muons=None):
         trk = {k[4:]: prep[k] for k in prep if k.startswith("trk_")}
         z = prep["track_z_b" if level == "b" else "track_z_a"]
         surv = ~reco.run_events(trk, prep["track_event"], z, design, maps, cfg, rng)["vetoed"][:n]
+        strips = getattr(design, "shield_strips", None)
+        if strips is not None and len(strips["stations"]) and "event_vtx" in prep:     # shield-end strip stations
+            from . import shield_strips
+            hits = shield_strips.on_stations(strips, prep["strip_hit_event"], prep["strip_hit_x"], prep["strip_hit_y"], rng)
+            surv &= ~shield_strips.tag(strips, prep["event_vtx"], prep["event_pvis"], rng, hits=hits)["tagged"]
     out = {}
     for i, c in enumerate(prep["codes"]):
         m = code == c
