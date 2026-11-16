@@ -67,8 +67,8 @@ MS7 V0: 399 selected events (partial) but only **2** at full selection carrying 
    iron interactions have a K_L / K_S / Lambda; needs code in `bin/shield_dis.py`); more seeds (x10). Target x1e3.
    Then rebuild `prepared_ms7_nov4full` (`bin/prepare_interactions.py --ms7 ...`, now with strip layer data).
 2. Run the R1 / R2 / R3 test (above); fill report Table `tab:tag:refeval` (R3 row, MS7 V0 columns).
-3. Report Section 6 (no-tagging yields): FILLED 16 Nov (report f9fe9c9, not pushed); pending in red: MS7 muon V0 row (step 1)
-   and vessel-DIS x mu pairs (S7 3 / 8 OOM, D9).
+3. Report Section 6 (no-tagging yields): FILLED 16 Nov (report 22f8bad, pushed); only pending in red: MS7 muon V0 row
+   (step 1). Vessel-DIS x mu pairs: 0.0037 / 15 y (D9 closed).
    Rock pairs: one sentence (negligible, not re-evaluated).
 4. Optimiser trial (`evolve/evolve_designs.py --generations 5 --children 8 --inputs inputs_nov4full.npz
    --prep-tag _nov4full`, host slurm, seeds R1 / R2; add R3): only after 1 (the MS7 V0 source would dominate on 2 events).
@@ -89,5 +89,5 @@ MS7 V0: 399 selected events (partial) but only **2** at full selection carrying 
 
 Closed 16 Nov: A1 (direct count), A5, C1 (no ghosts with one-view straws), C5 (3220 spills), D7 (no rock pairs), D20.
 Also closed 16 Nov: A2, C7, C8, D2 (R2: nu-He 3.6 / 15 y), D3, D18. Deferred: C3, D6, D14 (debris in time, ACTS).
-B1 closed (r_ms = 6 kept; nothing lost at the vessel entrance). Still open: D9 (S7 3 / 8), D16 (MS7 V0 production),
+B1 and D9 closed (r_ms = 6 kept; vessel-DIS x mu 0.0037 / 15 y). Still open: D16 (MS7 V0 production),
 D19 (SBT model).

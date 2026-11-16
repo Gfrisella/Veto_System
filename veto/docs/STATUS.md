@@ -1033,3 +1033,11 @@ draws x10-70, more seeds), waiting for the go.
   2.616 -> 2.634 % (+0.02 points); pairs: full 2.5e-6 (unchanged), partial 0.00106 (24 -> 23 MC). D2 self-veto unchanged
   (helium nu DIS 3.6 -> 3.55, signal 0 %). Closure re-run done. Still running: evstore_eval R2, D9 R2, rock x mu R2.
 - Guglielmo: debris in time OFF (no effect), D14 = ACTS only. Rock x rock not evaluated anymore; mu x rock handled from the other session (SBT window).
+
+### 16 Nov 2026 (evening): D9 vessel-DIS x mu closed
+- Blocked rerun (--dis-block 100000, job 2091067_0, 64 GB, 4 h): selected 0.0037 / 15 y (IP < 10 cm, no tagging);
+  after veto R1 5.4e-4, R2 1.3e-6 (other session's 2091195_5). Negligible. Report Section 6 rows filled locally (bt-report,
+  not committed / pushed).
+- D6 nu library (2090354_2) still running after 6 h: 705 gevgen timeouts, 194 (E, target) points dropped so far (low E).
+- ACTS scan 2090827 failed on all tasks (FairRunSim::Init abort on the nodes); ACTS and D19 agents resumed.
+- D9 removed from the open lists (HANDOFF, ISSUES action list); report pushed 22f8bad.

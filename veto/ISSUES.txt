@@ -24,7 +24,7 @@ Action list, in order (re-runs need approval, see the end):
   5. re-run batch in the FairShip layout at 4e13, ALL ON THE NOV-4 PRODUCTION (11 Nov): rate maps sample_nov4 + peak maps
           from the store first, then stores / maps / inputs.npz (C8, D8), run_reco both IP cuts, muon
           interactions with air margin (C7, D7) + forced cavern Geant4 (D7), extra seeds (C5, A2), cross-run closure (A1),
-          EM debris (B2), DIS x mu pairs (D9); B1 ms_slope / r_ms check. Old results kept until the new ones are checked.
+          EM debris (B2), DIS x mu pairs (D9, DONE 16 Nov); B1 ms_slope / r_ms check. Old results kept until the new ones are checked.
   6. tracking: ACTS (SHiP CVMFS 26.10) resolution parametrisation into reco.measure (D14).
   7. side branches: D6 energy rescaling (veto-d6-energy-rescale); D2 lateral-track veto study with the signal loss;
           C9 MuonsAndMatter categorize_muons patch.
@@ -855,7 +855,7 @@ D8. Results computed with the old PVC vessel wall
       "pvc" is accepted everywhere (identical crossings, 26 229 on 3e5 Nov-4 muons). The material "pvc" stays a material.
 
 D9. DIS x mu pairs not redone with the V0-stable library
-    STATUS: IN PROGRESS (16 Nov 2026: MS7-V0 x mu done; vessel-DIS x mu OOM in S7, to redo)
+    STATUS: DONE (16 Nov 2026: MS7-V0 x mu 62.7 / 15 y before tagging; vessel-DIS x mu negligible, 0.0037 / 15 y)
     With K_S / Lambda tracked in the MS7 iron (data/interactions/dis/mu_library_iron_v0stable.npz,
     2026-11-02) the dis_comb_* DIS x mu combinatorial pairs were not redone.
     Plan: rerun artifacts_work/scripts/dis_comb_pairs_asym.py on the V0-stable sample.
@@ -875,6 +875,11 @@ D9. DIS x mu pairs not redone with the V0-stable library
       (1 962 MC). Vessel muon-DIS track x mu: both tasks killed at 144 GB > 128 GB after 4 h, in cross_pairs over
       135 k muons x 2.0 M single-track DIS events (the selected pairs accumulate in memory). Output json not written (the
       MS7 numbers are from the logs). To redo: vessel store only, more memory or blocks of DIS events.
+    16 Nov 2026 (rerun in blocks of 100 000 DIS rows, --dis-block, a1e61e7; 64 GB): vessel muon-DIS track x mu, 2.02 M
+      single-track DIS events x 135 k SST1 muons, 1.3e11 opposite-charge pairs, 2.1e8 candidates (0.035 / 15 y);
+      selected (IP < 10 cm, before tagging) 0.0037 / 15 y. After the veto: R1 5.4e-4 (3.1 M MC, job 2091067_0,
+      reco/dis_comb_vessel_R1_ubt_only.json), R2 1.3e-6 (6 938 MC, job 2091195_5 of the other session, new SBT window,
+      reco/dis_comb_R2_sbt_ubt.json). Negligible for every design: closed.
 
 D10. Geant4 built-in neutrino physics unusable
     STATUS: DONE
