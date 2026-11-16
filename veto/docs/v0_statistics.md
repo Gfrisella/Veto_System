@@ -49,6 +49,7 @@ so v0 + nov0 = the unbiased chain (checked: P(V0) + P(no V0) = 1.0000 at 3 and 3
 - Split into small jobs (64 GB) because the farm is memory-bound (big nodes: idle cores, 1-10 GB free); first submission
   (40 x 200 GB) never started. Throttle 24 at a time, 8 CPUs / 8 workers each (16 workers needed 82 GB at Geant4 start-up, ~5 GB per worker: first array OOM-killed), BLAS/OpenMP threads capped by env.sh (farm etiquette,
   Roland Bernet's mail of 12 Nov).
+- Partitions standard + hep (16 Nov evening: standard full, hep idle; peak memory per task 42 GB, 12.5 min per v0 task).
 - Jobs: production 2089677 (array 0-159), event stores 2089678 (`results_rerun/evstore/ms7_muon_fsv0`,
   `ms7_muon_fsnov0`, built separately: each store averages over its own seeds; downstream the two are SUMMED), MS7 cache
   2089679 (`prepared_ms7_v0stat`: fsv0 + fsnov0 + ms7_nu2026).
