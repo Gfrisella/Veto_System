@@ -1016,3 +1016,13 @@ draws x10-70, more seeds), waiting for the go.
 - D14.1 debris in time implemented (866d086, ceb0e34), R1/R2 runs 2090726; D14.2 ACTS scan in a separate session.
 - Report Section 6 filled (bt-report f9fe9c9, not pushed): full-sample no-tagging yields; pending MS7 muon V0 and vessel-DIS x mu
   (S7 3/8 OOM at 128 GB; MS7-V0 x mu from the logs: 62.7 selected, R1 1.62, R2 0.0081 / 15 y). D19 handed to a fresh agent.
+- Rock survivors page: https://claude.ai/artifact/CTdxuttxYrQAK6UfNbQmv1 (pair explorer; rock species by exact join on the
+  draws: all negative, R1 pi- 73 / K- 12 / pbar 7.5 (check) / e- 7 %, R2 pi- 49 / e- 48 %). Partner shield muons are hard
+  (~250 GeV, near axis): the hard leg sets the pair direction, so IP < 10 cm. No double counting with the Nov-4 production
+  (muon-only store; rock_apply excludes the parent muon).
+- Why the SBT misses the 53 R2 pairs: 20 re-rolls (bin: $TMPDIR script, seeds 100-119) veto all 53 in 20/20 -> 52 pairs
+  (76 % of the weight) are random coincidences of SBT 99.3 % and UBT inefficiency (expected 1.3e-5 of the pairs, seen 2.0e-5).
+  1 pair (24 %): rock leg tagged 0/20 = systematic: the pi- (2.2 GeV, 21 deg to the wall) deposits 55 MeV in ring 59 at
+  z 80.12, the pointing window is centred on the INNER-wall crossing (80.51, ring 60) +- r/sin a = 0.16 m -> ring 60 only.
+  The 21.6 cm shell spans 0.57 m in z at this angle. Proposed (pending Guglielmo): window from the outer-shell crossing - r_z
+  to the inner crossing + r_z (sbt.tag), then re-run R2.
