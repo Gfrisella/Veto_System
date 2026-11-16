@@ -5,7 +5,7 @@ leaves the rock (wall: z, y; floor: z, x), species, energy band, its straight li
 or, for e+-, the end of its range in air, and its crossings of the design's plane z values and SST1 (both directions).
 Also the full-statistics source map and the geometry.
 
-    bin/lcg.sh python3 bin/em_viz_rock_data.py <rock_em.npz> --design designs/modules/D6_straw_mod.json --out <dir>/em_rock
+    bin/lcg.sh python3 bin/em_viz_rock_data.py <rock_em.npz> --design designs/R2_sbt_ubt.json --out <dir>/em_rock
 """
 import _bootstrap  # noqa: F401
 import argparse

@@ -49,7 +49,7 @@ def merge_prepared(parts):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--draws", type=float, nargs=3, default=[5e6, 5e6, 1e6], help="helium pvc air")
-    ap.add_argument("--nu", default=str(paths.apply_file("nu", "D6_straw")))
+    ap.add_argument("--nu", default=str(paths.results_dir() / "interactions" / "apply2026_R2_sbt_ubt.npz"))
     ap.add_argument("--workers", type=int, default=40)
     ap.add_argument("--seed", type=int, default=11)
     ap.add_argument("--dataset", default=DATASET, help="muon dataset (parents of the muon interactions)")

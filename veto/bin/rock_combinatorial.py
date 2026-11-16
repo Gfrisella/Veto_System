@@ -9,7 +9,7 @@ the rock tracks (one row per particle, weight per spill of 4e13 of its draw). Pa
 sources) and rock x rock from different draws; the pairs within one draw are the rock vertex term (bin/rock_select.py).
 The muon x muon term is recomputed from the reco inputs with the same code for the ratio.
 
-    bin/remote.sh run bin/rock_combinatorial.py --design designs/modules/D6_straw_mod.json \
+    bin/remote.sh run bin/rock_combinatorial.py --design designs/R2_sbt_ubt.json \
         --rock-mu /disk/lhcb_data/sqasim/rock_dis/apply_D6_straw_mod_draws.npz --rock-nu .../nu_rock_D6_straw_mod_draws.npz
 """
 import _bootstrap  # noqa: F401

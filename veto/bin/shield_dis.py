@@ -5,8 +5,8 @@ Geant4 out of the shield, as interactions for the selection and veto (bin/run_in
     python3 bin/shield_dis.py prepare                                   # muons crossing the iron (host python)
     bin/g4.sh python3 bin/shield_dis.py generate --kind muon --n 2000000 --workers 90
     bin/g4.sh python3 bin/shield_dis.py generate --kind nu   --n 500000  --workers 90
-    python3 bin/run_interactions.py --design D6_straw --kind nu --interactions results/shield_dis/shield_muon.npz \\
-        --out results/shield_dis/D6_straw_shield_muon.json
+    python3 bin/run_interactions.py --design R2_sbt_ubt --kind nu --interactions results/shield_dis/shield_muon.npz \\
+        --out results/shield_dis/R2_sbt_ubt_shield_muon.json
 
 1. Parents (veto.shield_iron). Muons: Muons_2950_50cm_before_end_MS.pkl, one full run of the old 506 M input, true
    plane z = 29.20 m; bent by the MS7 field to the vertex (shield_iron.curved_points, since 2026-11-05, D4; mean

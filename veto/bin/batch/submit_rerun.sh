@@ -11,7 +11,7 @@
 #   S5 interact    per design: muon DIS (helium, wall, air, air upstream with targeted draws, planes) + neutrino DIS
 #   S6 stores      event stores (MS7, vessel per design) + forced K_L decays (C7) (after S3, S5)
 #   S7 evaluate    per design: run_reco full / partial IP with EM debris and the B4 signal set, event-store evaluation,
-#                  DIS x mu (D9), self-veto (D2); closure (A1); rock x mu (D7) for D6_straw_mod (after S2, S4b, S6)
+#                  DIS x mu (D9), self-veto (D2); closure (A1); rock x mu (D7) for R1 / R2 (after S2, S4b, S6)
 set -euo pipefail
 export VETO_CODE=${VETO_CODE:-$(cd "$(dirname "$0")/../.." && pwd)}
 source "$VETO_CODE/bin/batch/env.sh"
@@ -62,7 +62,7 @@ for d in $DESIGNS; do n=$(name $d)
   echo "python3 bin/d2_selfveto.py --design $d --stores $R/evstore/vessel_nu2026_${n} --out $R/interactions/d2_selfveto_${n}.json" >> $B/S7_eval.cmd
 done
 echo "python3 bin/closure_check.py $DESIGNS --out closure_rerun.json" >> $B/S7_eval.cmd
-echo "python3 bin/rock_combinatorial.py --design designs/modules/D6_straw_mod.json --rock-mu $ROCK_MU --out $R/reco/rock_comb_D6_straw_mod.json" >> $B/S7_eval.cmd
+for d in R1_ubt_only R2_sbt_ubt; do echo "python3 bin/rock_combinatorial.py --design designs/$d.json --rock-mu $ROCK_MU --out $R/reco/rock_comb_$d.json" >> $B/S7_eval.cmd; done
 
 # ---------------- submission
 sub() {   # sub <stage> <dependency job ids, space separated or empty> [extra sbatch args]

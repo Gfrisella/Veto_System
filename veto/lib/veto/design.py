@@ -2,7 +2,7 @@
 
 A design is a JSON file (veto/designs/*.json):
 
-    {"name": "D2_default",
+    {"name": "R1_ubt_only",
      "ubt": {"y_lo": -1.35, "y_hi": 1.35, "cell_x": 0.1, "cell_y": 0.1},
      "fins": [{"side": "right", "z": 30.6, "length": 3, "y_lo": -3, "y_hi": 3, "tilt": 0,
                "cell_u": 0.1, "cell_y": 0.1}, ...],

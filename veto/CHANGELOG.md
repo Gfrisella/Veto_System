@@ -4,6 +4,17 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-16 (evening) — old designs removed (branch `veto-nov4-source`)
+
+- Guglielmo: "remove these old designs from everywhere, only R1, R2, R3". Deleted `designs/D0-D6*`, `designs/E1-E5*`,
+  `designs/modules/` (all `*_mod` variants) and `designs/R2_sbt_ubt_any.json`; they stay in git history.
+- Script defaults and usage examples now use R1 / R2 / R3 (scan_bounce, scan_cone, visualize_reco, benchmark_reco,
+  muon/nu_dis_apply, rock_apply, reco_event_display, dis_combinatorial stores, prepare_interactions `--nu` =
+  `results_rerun/interactions/apply2026_R2_sbt_ubt.npz`, docstrings). `rock_apply` / `reco_event_display` load
+  `designs/<name>.json`.
+- S7 rock x mu (D7) is now queued for R1 and R2 (was D6_straw_mod, OOM at 128 GB). `ROCK_MU` (Shah Rukh's rock draws,
+  file named after the D6 geometry it was drawn with) stays as input data.
+
 ## 2026-11-16 (afternoon) — silicon strip stations at the MS7 exit (branch `veto-nov4-source`)
 
 - `lib/veto/shield_strips.py` (new): stations, rate map, own / random hits, back-trace tagging (rules point / vertex);

@@ -14,7 +14,7 @@ Read this first in a new session. Details: `docs/STATUS.md` (dated log), `ISSUES
 
 - Everything on the **Nov-4 production**; quote **only full-sample (3 220 spills) statistics**.
 - **Only three reference designs**: R1 (`designs/R1_ubt_only.json`, UBT only), R2 (`R2_sbt_ubt.json`, full SBT + UBT,
-  = the budget), R3 (`R3_sbt_ubt_strips.json`, R2 + V0 rule + strips in MS7). Old D / E designs are not used.
+  = the budget), R3 (`R3_sbt_ubt_strips.json`, R2 + V0 rule + strips in MS7). Old D / E designs were deleted on 16 Nov (only in git history now).
 - **Costs in drachmas**: 1 drachma = one 0.5 x 0.5 m module of 4 x 4 cm tiles; budget = R2 = 333.5; R1 99.7; R3 378.7.
   Never money. (Named in honour of Archimedes / Syracusia in the report.)
 - Tiles as SR-389 (2 x 2 cm: 90 ps, 2.5 MHz; window +-200 ps); UBT straws vertical; SBT pointing window r / sin(alpha).

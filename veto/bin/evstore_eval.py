@@ -2,7 +2,7 @@
 """Selection and veto of one design on event stores (lib/veto/evstore.py): the stored tracks are intersected with the
 design's planes by the existing reconstruction (interactions.evaluate), nothing is regenerated.
 
-    bin/remote.sh run bin/evstore_eval.py --design designs/modules/D6_straw_mod.json --store <dir> [<dir> ...] [--ip-tail]
+    bin/remote.sh run bin/evstore_eval.py --design designs/R2_sbt_ubt.json --store <dir> [<dir> ...] [--ip-tail]
 Prints per target code: interactions, selected, after veto (levels a, b) per 15 years; --ip-tail adds the rate of events
 passing everything but the IP cut below IP = 0.1 / 0.25 / 0.5 / 1 / 2 m (the MS7 V0 extrapolation, ~IP^2 near 0).
 """

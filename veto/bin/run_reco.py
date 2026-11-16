@@ -14,7 +14,7 @@ Also: detector rates per plane and cell, how well the search window contains the
 crossings, number of hit comparisons (the combinatorics) and runtime per event.
 
   bin/run_reco.py                          # all designs, local (needs results/reco/inputs.npz)
-  bin/run_reco.py D2_default D4_dense --spill 4.8
+  bin/run_reco.py R1_ubt_only R2_sbt_ubt --spill 4.8
 """
 
 import _bootstrap  # noqa: F401

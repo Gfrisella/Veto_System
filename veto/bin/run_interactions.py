@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Interaction backgrounds of one design: forced interactions (lib/fastveto) through our selection and veto.
 
-  bin/remote.sh run bin/run_interactions.py --design E2_llm_run2            # muons (generated if needed)
-  bin/remote.sh run bin/run_interactions.py --design D6_straw --kind nu     # neutrinos (bin/nu_dis_apply.py npz)
+  bin/remote.sh run bin/run_interactions.py --design R2_sbt_ubt             # muons (generated if needed)
+  bin/remote.sh run bin/run_interactions.py --design R2_sbt_ubt --kind nu     # neutrinos (bin/nu_dis_apply.py npz)
 
 Muons: fastveto.dis.run on the muon dataset (library split "crossover", --workers forked processes), or the file
 given with --interactions. Neutrinos: paths.apply_file("nu", design) (bin/nu_dis_apply.py). Selection and veto:

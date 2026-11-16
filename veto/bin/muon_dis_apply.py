@@ -1,6 +1,6 @@
 """Muon interactions in the vessel helium, the air, the PVC walls and the veto planes of one design (fastveto.dis).
 
-    bin/lcg.sh python3 bin/muon_dis_apply.py --design D6_straw [--store DIR] [--lib data/dis/mu_library.npz]
+    bin/lcg.sh python3 bin/muon_dis_apply.py --design R2_sbt_ubt [--store DIR] [--lib data/dis/mu_library.npz]
         [--helium 1e6] [--pvc 1e6] [--air 2e5] [--planes 2e5] [--max-rows N] [--out data/dis/apply_<design>.npz]
 
 Input: the design-optimisation muon dataset (cuda-muons output, Veto_System column store: states at z = 30.6 / 82 m,
@@ -30,7 +30,7 @@ from veto.config import SPILLS_15Y  # noqa: E402  (6e20 / 4e13 p.o.t.)
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--design", default="D6_straw")
+    ap.add_argument("--design", default="R2_sbt_ubt")
     ap.add_argument("--dataset", default=DATASET, help="a dataset in paths.store_dir")
     ap.add_argument("--store", default=None, help="a dataset directory (overrides --dataset)")
     ap.add_argument("--lib", default=str(paths.interactions_data() / "dis/mu_library.npz"))

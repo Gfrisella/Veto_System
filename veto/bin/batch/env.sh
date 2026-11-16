@@ -13,6 +13,7 @@ export VETO_RECO_INPUTS=${VETO_RECO_INPUTS:-inputs_nov4full.npz}
 export VETO_RATE_MAPS=${VETO_RATE_MAPS:-sample_nov4full.npz}
 export DIS_PARENTS=${DIS_PARENTS:-dis-parents-$VETO_MUON_DATASET-types0123}
 export MU_LIB_V0STABLE=${MU_LIB_V0STABLE:-$VETO_INTERACTIONS/dis/mu_library_iron_v0stable.npz}
+# rock-muon draws: Shah Rukh's file (named after the geometry it was drawn with); used with the R designs
 export ROCK_MU=${ROCK_MU:-/disk/lhcb_data/sqasim/rock_dis/apply_D6_straw_mod_draws.npz}
 export DESIGNS=${DESIGNS:-"designs/R1_ubt_only.json"}   # reference designs (12 Nov 2026): R1 UBT only; R2 SBT + UBT once the SBT model exists
 export G4SHIELD_BUILD=${G4SHIELD_BUILD:-$VETO_MAIN/cpp/build_ship}

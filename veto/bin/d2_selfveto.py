@@ -13,7 +13,7 @@ to SST1). Photon conversions are not counted (the neutrino self-veto is a lower 
   signal:    the B4 benchmark set (equal weights): EventCalc decays through the selection (as signal_eventcalc.
              selected_signal), the self-veto on ALL charged daughters of the selected decays -> signal lost per benchmark.
 
-    python3 bin/d2_selfveto.py --design D6_straw_mod --out results/interactions/d2_selfveto_D6_straw_mod.json
+    python3 bin/d2_selfveto.py --design R2_sbt_ubt --out results/interactions/d2_selfveto_R2_sbt_ubt.json
 """
 import _bootstrap  # noqa: F401
 

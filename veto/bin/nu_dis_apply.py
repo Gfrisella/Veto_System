@@ -1,6 +1,6 @@
 """Neutrino interactions in the vessel helium, the air, the PVC walls and the veto planes of one design (GENIE library).
 
-    bin/lcg.sh python3 bin/nu_dis_apply.py --design D6_straw [--lib data/genie/nu_library.npz]
+    bin/lcg.sh python3 bin/nu_dis_apply.py --design R2_sbt_ubt [--lib data/genie/nu_library.npz]
         [--helium 5e5] [--pvc 5e5] [--air 2e5] [--planes 1e5] [--flavours 14,-14] [--out data/genie/apply_<design>.npz]
 
 Per flavour: the flux store (bin/nu_prepare.py: straight lines at z = 30.6 / 82 m, weight per spill) through
@@ -30,7 +30,7 @@ from veto.config import SPILLS_15Y  # noqa: E402  (6e20 / 4e13 p.o.t.)
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--design", default="D6_straw")
+    ap.add_argument("--design", default="R2_sbt_ubt")
     ap.add_argument("--lib", default=str(paths.interactions_data() / "genie/nu_library_v2.npz"))   # GENIE v2: all 6 flavours (S5 failed on nu_tau with v1, 14 Nov)
     ap.add_argument("--store", default=str(paths.NU_FLUX_PREFIX))   # 2026 flux, <prefix>_nu<pdg>
     ap.add_argument("--flavours", default=",".join(map(str, paths.NU_FLAVOURS)))

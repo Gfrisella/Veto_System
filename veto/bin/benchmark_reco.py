@@ -11,7 +11,7 @@ Stages (algorithm A, numpy, one core):
 Background events are muon pairs (2 tracks), as in run_reco.py.
 
   bin/remote.sh run bin/benchmark_reco.py                       # on the cluster
-  bin/benchmark_reco.py --designs D2_default --n-events 20000
+  bin/benchmark_reco.py --designs R2_sbt_ubt --n-events 20000
 """
 
 import _bootstrap  # noqa: F401
@@ -59,7 +59,7 @@ def bench(design, tr, inp, n_events, ms, seed=1):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--designs", nargs="*", default=["D0_minimal", "D1_wide_ubt", "D2_default", "D4_dense", "D6_tile2"])
+    parser.add_argument("--designs", nargs="*", default=["R1_ubt_only", "R2_sbt_ubt", "R3_sbt_ubt_strips"])
     parser.add_argument("--n-events", type=int, default=50_000)
     args = parser.parse_args()
     tr, inp = load_inputs()

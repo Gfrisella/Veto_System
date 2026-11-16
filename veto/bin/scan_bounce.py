@@ -8,7 +8,7 @@ bounced SST1 muons vetoed (single muons, type sst1_bounced), all SST1 muons veto
 veto and the objective reward (veto.objective.score). Start = the best reward per design (ties: the smaller window);
 range = [start / 2, 2 x start] for the slope, [r0 / 2, 2 x r0] (or 0.02 - 0.5 m when the best is the track's own radius).
 
-    python3 bin/scan_bounce.py --designs D6_straw D6_fiber D6_tile2 --slopes 0 0.1 0.15 0.21 0.3 0.45 --r0 none 0.1 0.25
+    python3 bin/scan_bounce.py --designs R1_ubt_only R2_sbt_ubt R3_sbt_ubt_strips --slopes 0 0.1 0.15 0.21 0.3 0.45 --r0 none 0.1 0.25
 """
 import _bootstrap  # noqa: F401
 
@@ -44,7 +44,7 @@ def job(arg):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--designs", nargs="+", default=["D6_straw", "D6_fiber", "D6_tile2"])
+    ap.add_argument("--designs", nargs="+", default=["R1_ubt_only", "R2_sbt_ubt", "R3_sbt_ubt_strips"])
     ap.add_argument("--slopes", type=float, nargs="+", default=[0.0, 0.1, 0.15, 0.21, 0.3, 0.45])
     ap.add_argument("--r0", nargs="+", default=["none", "0.1", "0.25"], help="bounce base radius [m]; none = the track's own")
     ap.add_argument("--signal", choices=("eventcalc", "target"), default="eventcalc")

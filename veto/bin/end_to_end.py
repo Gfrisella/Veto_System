@@ -10,8 +10,8 @@ Plus the signal lost to random hits, the cost and the objective (veto.objective,
 Stage 1 (--stage generate) draws the muon interactions of each design (results/end_to_end/<design>_mu.npz);
 stage 2 (--stage evaluate) runs every (design, cone) and writes results/end_to_end/<tag>.json.
 
-  GPU_HOST=farm-gpu5 bin/remote.sh run bin/end_to_end.py --stage generate --designs E3_robust D6_tile2
-  GPU_HOST=farm-gpu5 bin/remote.sh run bin/end_to_end.py --stage evaluate --designs E3_robust D6_tile2 --cones 0 10 20
+  GPU_HOST=farm-gpu5 bin/remote.sh run bin/end_to_end.py --stage generate --designs R1_ubt_only R2_sbt_ubt
+  GPU_HOST=farm-gpu5 bin/remote.sh run bin/end_to_end.py --stage evaluate --designs R1_ubt_only R2_sbt_ubt --cones 0 10 20
 """
 
 import _bootstrap  # noqa: F401

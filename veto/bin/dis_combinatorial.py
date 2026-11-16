@@ -14,7 +14,7 @@ pre-cut), then rock_combinatorial.veto_term: time coincidence, measured IP < cut
 Bound (option c, printed first): candidates x (1 - veto efficiency of the SST1 muons) = what survives if the DIS track
 is never vetoed and the muon leg is vetoed like an average SST1 muon.
 
-    python3 bin/dis_combinatorial.py --design D6_straw --out results/reco/dis_comb_D6_straw.json
+    python3 bin/dis_combinatorial.py --design designs/R2_sbt_ubt.json --out results/reco/dis_comb_R2_sbt_ubt.json
 """
 import _bootstrap  # noqa: F401
 
@@ -35,7 +35,7 @@ from veto import paths, reco
 from veto.config import DEFAULT_CONFIG
 
 V0 = (130, 310, 3122, 3322)
-DEFAULT_STORES = ("ms7_muon_g4v112_nov4", "vessel_mu_nov4q_D6_straw_mod")
+DEFAULT_STORES = ("ms7_muon_v0s", "vessel_mu_R2_sbt_ubt")
 
 
 def drop_v0_products_of_originals(ev, tr):

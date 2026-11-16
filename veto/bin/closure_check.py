@@ -13,7 +13,7 @@ n_obs = 0 the direct estimate is a 90 % CL upper limit (2.3 / n_pairs, objective
 two muons of a pair are vetoed independently: a large excess of n_obs means correlated escapes (e.g. both muons
 bounced off the same wall region).
 
-    python3 bin/closure_check.py D6_straw E3_robust [--inputs inputs.npz inputs_xrun.npz] [--out closure.json]
+    python3 bin/closure_check.py R1_ubt_only R2_sbt_ubt [--inputs inputs.npz inputs_xrun.npz] [--out closure.json]
 """
 
 import _bootstrap  # noqa: F401

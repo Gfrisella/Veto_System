@@ -5,7 +5,7 @@ For each design and cone: run_reco.evaluate (40 k signal decays, the 196 736 pai
 the muon interactions saved by bin/run_interactions.py (results/interactions/<design>_muon_interactions.npz)
 through interactions.evaluate (veto levels a and b). Writes results/interactions/cone_scan.json.
 
-  GPU_HOST=farm-gpu5 bin/remote.sh run bin/scan_cone.py --designs D6_tile2 E3_robust --cones 0 5 10 20 30 50
+  GPU_HOST=farm-gpu5 bin/remote.sh run bin/scan_cone.py --designs R1_ubt_only R2_sbt_ubt --cones 0 5 10 20 30 50
 """
 
 import _bootstrap  # noqa: F401
@@ -50,7 +50,7 @@ def job(arg):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--designs", nargs="+", default=["D6_tile2", "E3_robust"])
+    ap.add_argument("--designs", nargs="+", default=["R1_ubt_only", "R2_sbt_ubt", "R3_sbt_ubt_strips"])
     ap.add_argument("--cones", type=float, nargs="+", default=[0, 5, 10, 20, 30, 50], help="mrad")
     ap.add_argument("--workers", type=int, default=12)
     ap.add_argument("--max-tracks", type=int, default=None, help="selection: at most this many tracks in SST1")

@@ -96,7 +96,7 @@ def nu_apply_2026(design: str, pdg: int) -> Path:
 
 
 def evstore(name: str) -> Path:
-    """An event store: a path, or a process name under EVSTORE_DIR (e.g. vessel_mu_nov4_D6_straw_mod)."""
+    """An event store: a path, or a process name under EVSTORE_DIR (e.g. vessel_mu_R2_sbt_ubt)."""
     p = Path(name)
     return p if p.exists() or p.is_absolute() else EVSTORE_DIR / name
 
