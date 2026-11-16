@@ -913,3 +913,19 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   102 k channels, ~15 % of the budget. Not yet: the kink (station upstream of the iron), the field in the stations.
 - **Study** `bin/strip_study.py` (job 2086899): back-trace error -> theta, layouts (cavern-side yoke, both yokes,
   hottest 10 / 25 cells of the selected parents), rule x theta -> tagged MS7 V0 / MS7 nu background and signal loss.
+
+## 2026-11-16 (evening) — budget, SBT rings, optimiser for R1 / R2
+
+- **Budget** (Guglielmo: "reduce the maximum budget to the one foreseen for the full SBT and UBT ... then relative to this"):
+  `lib/veto/budget.py` = the cost of R2 in the same placeholder model (6 733 kCHF); R1 = 30 %, R2 = 100 %; 8 MCHF kept only as
+  REF_BUDGET_KCHF (base of the 2023 SBT fraction); 10 MCHF overrides removed. Report updated (1533162).
+- **SBT rings** ("SBT can be optimized in ring, one full ring over the decay vessel"): `"sbt": {"ring_set": [...]}` = SR-389's
+  ten rings (ring k = cell rings 1+6k .. 6+6k, ring 0 also the first 80 cm row), each all four faces; ring 0 ~4.8 %, ring 9
+  ~9.8 % of the budget; full = 854 cells, unchanged.
+- **Optimiser** (evolve/evolve_designs.py; "trash the old designs", "score on the 3220 seeds"): seeds R1 / R2 only; new prompt
+  (2026 UBT straws + tile regions, SBT rings, shield-end strips, budget); `--host slurm` (one sbatch --wait per generation);
+  continuous grid; de-duplication on the whole design. Objective sources: combinatorial + prepared muon / nu / **ms7**
+  caches (`bin/prepare_interactions.py --muon-npz <S5 R2> --nu <S5 apply2026 R2> --ms7 <stores> --tag _nov4full`, job
+  2087009); `ix.veto` applies the strips to the MS7 cache.
+- Next: trial run, 5 generations x 8 children, `--inputs inputs_nov4full.npz --prep-tag _nov4full`, after the caches and
+  the strip study (theta default).
