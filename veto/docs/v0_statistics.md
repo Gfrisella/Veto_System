@@ -56,6 +56,19 @@ so v0 + nov0 = the unbiased chain (checked: P(V0) + P(no V0) = 1.0000 at 3 and 3
 - Use: `bin/prepare_interactions.py --ms7 <fsv0> <fsnov0> <nu>`; evaluations over both muon stores (sum). The old store
   `ms7_muon_v0s` (unbiased, 10 seeds) stays as the cross-check.
 
-## Results
+## Results (16 Nov 2026 evening, full selection IP < 10 cm, before tagging; prepared_ms7_v0stat)
 
-(to be filled: selected events and weights, full / partial, before / after R1 / R2 / R3)
+| sample | selected MC events | per 15 y |
+|---|---|---|
+| old unbiased chain (ms7_muon_v0s, 10 seeds) | 2 | 6.1e4 (n_eff 1.5, heaviest 4.9e4) |
+| fsv0 (V0 final states, 80 seeds) | 75 | 3.1e4 |
+| fsnov0 (V0-free final states, V0 from the transport, 80 seeds) | 3 | 1.9e3 |
+| **new total (fsv0 + fsnov0)** | **78** | **3.3e4** |
+
+- Forced-decay copies (code 4, incl. the 121 MS7 neutrino events): n_eff 57, heaviest 790 / 15 y (was 4.9e4): the V0
+  statistics problem is solved.
+- BUT one original event (code 3) carries 1.82e4 / 15 y (55 % of the total, n_eff 1): a 6.3 GeV K- from the MS7
+  interaction decaying in flight at (-1.01, 1.27, 65.46) m - a CHARGED-kaon decay in the vessel, not a V0. Legitimate (code 3
+  keeps every non-V0 product; v0 + nov0 is complete), but the forced decays do not enrich charged kaons: this channel has
+  one MC event. Needs its own enrichment (forced K+- / pi+- decays in the vessel) before the optimiser can score it.
+- R1 / R2 / R3 after tagging: pending (waits for the tile time-window decision, see STATUS).

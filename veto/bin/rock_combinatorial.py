@@ -169,6 +169,8 @@ def main():
     ap.add_argument("--veto-chunk", type=int, default=200_000, help="candidates per veto call (memory)")
     ap.add_argument("--mu-sample", type=int, default=2_000_000, help="random SST1 muon rows (weights scaled); 0 = all")
     ap.add_argument("--cone", type=float, default=0.0, help="mrad")
+    ap.add_argument("--ip-cut", choices=("full", "partial"), default="full",
+                    help="measured-IP selection: full (IP < 10 cm) | partial (IP < 2.5 m), as run_reco.py")
     ap.add_argument("--out", required=True)
     ap.add_argument("--rock-rock", action="store_true", help="also the rock x rock term (dropped 16 Nov 2026, Guglielmo: "
                     "0 candidates, two rock tracks never point back to the target)")
@@ -178,7 +180,7 @@ def main():
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     p = Path(a.design)
     design = dsg.load(p if p.exists() else a.design)
-    cfg = reco.RecoConfig(seed=1, multiple_scattering=True, cone=a.cone * 1e-3)
+    cfg = reco.RecoConfig(seed=1, multiple_scattering=True, cone=a.cone * 1e-3, ip_max=vsel.IP_CUTS[a.ip_cut])
     tr_in, inp = load_inputs(a.inputs)
     mu = muon_tracks(a.dataset, a.mu_sample)
     rk = rock_tracks(a.rock_mu, "muon", a.seeds, 0)
@@ -217,7 +219,7 @@ def main():
         aft = f"{r['after_15y']:.3g}" if r.get("n_after") else f"< {r.get('after_upper_15y') or 0:.2g}"
         le = " / ".join(f"{x:.4f}" for x in r.get("leg_explained", []))
         print(f"  {k:14s}{r['candidates_15y']:>14.4g}{r['selected_15y']:>12.4g}{r['n_selected']:>7d}{aft:>13s}{r.get('n_after', 0):>6d}   {le}")
-    json.dump(dict(design=design.name, dataset=a.dataset, inputs=a.inputs, rock_mu=a.rock_mu, rock_nu=a.rock_nu, cone_mrad=a.cone,
+    json.dump(dict(design=design.name, ip_cut=a.ip_cut, ip_max=cfg.ip_max, dataset=a.dataset, inputs=a.inputs, rock_mu=a.rock_mu, rock_nu=a.rock_nu, cone_mrad=a.cone,
                    rates_per_spill=dict(muons=float(mu["weight"].sum()), rock=float(rk["weight"].sum())), terms=res),
               open(a.out, "w"), indent=1, default=float)
     print(f"wrote {a.out} ({time.time() - t0:.0f} s)")
