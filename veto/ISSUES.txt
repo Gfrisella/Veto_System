@@ -777,7 +777,7 @@ D5. Muon source: enriched input disagrees with the old sample
       the MS7 K_L tail needs K_L-enriched generation (10 Nov). Not switched yet: make_peak_maps.py (reads the one-run
       Full_dataset pickle; to be fed from the store) and build_dis_parent_store.py (gamma + zeta) -> in the re-run batch.
 D6. Interaction-library approximations
-    STATUS: DEFERRED (16 Nov 2026: side branch; nu library rebuild hung on GENIE)
+    STATUS: IN PROGRESS (16 Nov 2026: muon 5 % libraries done and agree; nu library rebuilding, job 2090354, after the hang fix)
     Final states not rescaled to the exact muon energy (15 % grid); no nuclear effects (Fermi motion,
     shadowing, re-interactions) in the Pythia part; no tau library (~1 % nu_tau in the flux)
     (docs/fastveto_physics.md "Open").
