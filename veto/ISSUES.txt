@@ -916,7 +916,7 @@ D13. Protons per spill: one convention
     15-year totals agree; per-spill rates differ by 0.8.
 
 D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_inventory.md, moved here 9 Nov 2026)
-    STATUS: IN PROGRESS (16 Nov 2026: debris in time implemented, R1 / R2 runs 2090726; ACTS scan started)
+    STATUS: IN PROGRESS (16 Nov 2026: debris in time DONE, switched off (no effect); only the ACTS parametrisation left)
     9 Nov 2026 (Shah Rukh): neutrino DIS in the vessel with the 2026 flux + GENIE v2, D6_straw_mod, per 15 y:
       interactions helium 2.9e4, air 6.6e4, wall 5.8e4, planes 5.8e3; after selection + veto 3.3 (nu_e 1.37, nu_mu 1.02,
       anti-nu_mu 0.51, anti-nu_e 0.39, nu_tau 0.04), all but ~0.07 in helium; air / wall < 0.1 - 0.2 per flavour.
@@ -1022,6 +1022,7 @@ D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_invento
         R2 partial  24 -> 23, B 1.06e-3 -> 1.06e-3; 89.27 -> 89.28 %
       Debris in time rescues a few low-weight pairs and ~0.2 % of single muons (R1); no change in the weighted background
       or the signal. Bounced muons get no debris (they do not come from the MS7 iron). Flag stays default-off (decision).
+    16 Nov 2026, Guglielmo: switch it off (no effect). run_reco --debris-in-time stays available, default off. Part (1) closed.
 
 D15. CVMFS library loading under load (shield_dis / shield_natural workers)
     STATUS: DONE (11 Nov 2026: Geant4 loaded in the parent, forked workers, retry + completeness check)

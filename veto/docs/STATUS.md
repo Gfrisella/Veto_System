@@ -1032,3 +1032,4 @@ draws x10-70, more seeds), waiting for the go.
   (selected 99.37 -> 99.69 %, bounced 87.3 -> 90.5 %, other 87.5 -> 91.7 %); signal loss full 2.866 -> 2.882 %, partial
   2.616 -> 2.634 % (+0.02 points); pairs: full 2.5e-6 (unchanged), partial 0.00106 (24 -> 23 MC). D2 self-veto unchanged
   (helium nu DIS 3.6 -> 3.55, signal 0 %). Closure re-run done. Still running: evstore_eval R2, D9 R2, rock x mu R2.
+- Guglielmo: debris in time OFF (no effect), D14 = ACTS only. Rock x rock not evaluated anymore; mu x rock handled from the other session (SBT window).
