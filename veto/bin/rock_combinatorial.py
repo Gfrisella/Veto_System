@@ -98,7 +98,7 @@ def cross_pairs(A, B, dev, block, same=False):
     return np.concatenate(out_a), np.concatenate(out_b), np.concatenate(out_v), n_pairs
 
 
-def veto_term(tr, cand, cand_w, cand_v, design, inp, cfg, rng):
+def veto_term(tr, cand, cand_w, cand_v, design, inp, cfg, rng, chunk=200_000):
     """Measured IP cut and veto for candidate pairs (rows of tr); returns per-15-year before / after IP / after veto."""
     dt = DEFAULT_CONFIG["time_window"]
     w = cand_w * 2 * dt / cfg.spill_s * SPILLS_15Y
@@ -111,13 +111,18 @@ def veto_term(tr, cand, cand_w, cand_v, design, inp, cfg, rng):
     out.update(selected_15y=float(w[keep].sum()), n_selected=int(len(keep)))
     if not len(keep):
         return dict(out, after_15y=0.0, n_after=0, after_upper_15y=float(2.3 * w.mean() * len(keep) / max(len(cand), 1)))
-    rows = cand[keep].ravel()
-    event = np.repeat(np.arange(len(keep)), 2)
-    z_lim = np.repeat(cand_v[keep, 2], 2)
-    b = reco.run_events(take(tr, rows), event, z_lim, design, inp, cfg, rng)
-    surv = ~b["vetoed"]
+    # veto in chunks of candidates (memory: the D6 muon x rock term needed > 128 GB in one go, 16 Nov 2026)
+    surv, expl = [], []
+    for c0 in range(0, len(keep), chunk):
+        kc = keep[c0:c0 + chunk]
+        rows = cand[kc].ravel()
+        event = np.repeat(np.arange(len(kc)), 2)
+        z_lim = np.repeat(cand_v[kc, 2], 2)
+        b = reco.run_events(take(tr, rows), event, z_lim, design, inp, cfg, rng)
+        surv.append(~b["vetoed"]); expl.append(b["explained"].reshape(-1, 2))
+        del b
+    surv, expl = np.concatenate(surv), np.concatenate(expl)
     wk = w[keep]
-    expl = b["explained"].reshape(-1, 2)
     out.update(after_15y=float(wk[surv].sum()), n_after=int(surv.sum()),
                after_err_15y=float(np.sqrt((wk[surv] ** 2).sum())),
                after_upper_15y=float(2.3 * wk.max()) if not surv.any() else None,
@@ -133,6 +138,7 @@ def main():
     ap.add_argument("--rock-mu", required=True); ap.add_argument("--seeds", type=int, default=300)
     ap.add_argument("--rock-nu", default=None)
     ap.add_argument("--block", type=int, default=4096)
+    ap.add_argument("--veto-chunk", type=int, default=200_000, help="candidates per veto call (memory)")
     ap.add_argument("--mu-sample", type=int, default=2_000_000, help="random SST1 muon rows (weights scaled); 0 = all")
     ap.add_argument("--cone", type=float, default=0.0, help="mrad")
     ap.add_argument("--out", required=True)
@@ -154,15 +160,16 @@ def main():
     res = {}
     # muon x muon from the reco inputs (the existing combinatorial term), same code
     res["mu x mu"] = veto_term(tr_in, inp["cand"], inp["cand_w"].astype(float), inp["cand_vertex"], design, inp, cfg,
-                               np.random.default_rng(1))
+                               np.random.default_rng(1), a.veto_chunk)
     print(f"mu x mu done, {time.time() - t0:.0f} s", flush=True)
     for name, A, B, same in (("mu x rock", mu, rk, False), ("rock x rock", rk, rk, True)):
         ia, ib, v, n_pairs = cross_pairs(A, B, dev, a.block, same)
         tr = {k: np.concatenate([np.asarray(A[k], float), np.asarray(B[k], float)]) for k in KEYS}
         cand = np.stack([ia, ib + len(A["ax"])], 1)
         w = A["weight"][ia] * B["weight"][ib]
-        res[name] = dict(veto_term(tr, cand, w, v, design, inp, cfg, np.random.default_rng(2)), opposite_pairs=n_pairs)
-        print(f"{name}: {n_pairs:.3g} opposite-charge pairs, {len(ia):,} candidates, {time.time() - t0:.0f} s", flush=True)
+        res[name] = dict(veto_term(tr, cand, w, v, design, inp, cfg, np.random.default_rng(2), a.veto_chunk), opposite_pairs=n_pairs)
+        del tr, cand, w, ia, ib, v
+        print(f"{name}: {n_pairs:.3g} opposite-charge pairs, {res[name]['n_candidates']:,} candidates, {time.time() - t0:.0f} s", flush=True)
     print(f"\ndesign {design.name}, cone {a.cone:g} mrad; per 15 years (time window +-{DEFAULT_CONFIG['time_window'] * 1e12:.0f} ps)")
     print(f"  {'term':14s}{'candidates':>14s}{'IP < cut':>12s}{'n':>7s}{'after veto':>13s}{'n':>6s}   legs explained")
     for k, r in res.items():
