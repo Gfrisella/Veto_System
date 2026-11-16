@@ -276,7 +276,7 @@ B. PHYSICS MISSING: changes the results
 ----------------------------------------------------------------------------------------------
 
 B1. Multiple scattering (at least this interaction must be modelled)
-    STATUS: DONE pending the ms_slope / r_ms check in the re-run batch (9 Nov 2026)
+    STATUS: IN PROGRESS (16 Nov 2026: check done; window too narrow below 2 GeV, r_ms decision pending)
     The stored muons have NO multiple scattering after the shield: the states at z = 30.6 m and
     z = 82 m are joined by straight lines and the transport did not include the air / vessel.
     Material along a muon's path (now fully defined, so MS can be computed for every muon):
@@ -313,6 +313,14 @@ B1. Multiple scattering (at least this interaction must be modelled)
       it). Left as a MILD issue (priority C): FairShip's lateral walls carry the SBT (Al + liquid scintillator), so muons
       entering through the sides see more material there (scattering, wall DIS) than in our model.
     9 Nov 2026, Guglielmo: close B1 once the re-run batch checks that reco ms_slope / r_ms cover the true scatter.
+    16 Nov 2026 check (bin/b1_scatter_check.py, R2, all 207 065 non-bounced single SST1 muons of inputs_nov4full,
+      results_rerun/reco/b1_scatter_R2.json): true crossing with scattering (media + tails, as run_events) vs the window
+      r = r0 + (r_slope + r_ms / p) L of the measured (scattered) track. Inside the window (with the cell margin):
+        p > 5 GeV 100 % (d / r 99 % quantile <= 0.67); 2-5 GeV 99.84 %; 1-2 GeV 98.6 %; < 1 GeV 94.6 % (q99 d / r 1.44).
+      Without scattering: 99.8-100 % in every bin -> the misses are the scatter. Muons < 2 GeV are 0.5 % of the crossings.
+      UBT straws: all crossings > 10 GeV, 100 %. Not covered: the SBT pointing window (sbt.py, its own rule).
+      Option: r_ms 6 -> 9 mrad GeV (x1.5) covers q99 in every bin; cost = larger window for soft tracks (accidentals,
+      signal loss) -> one run_reco to measure. Decision pending (Guglielmo).
 
 B2. EM debris rate (electrons / photons from the end of the shield)
     STATUS: DONE (11 Nov 2026: production on the Nov-4 parents, maps results/em_debris/em_maps.npz; debris in time -> D14)

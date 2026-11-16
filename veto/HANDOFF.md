@@ -87,5 +87,5 @@ MS7 V0: 399 selected events (partial) but only **2** at full selection carrying 
 ## Open issues (ISSUES.txt)
 
 Closed 16 Nov: A1 (direct count), A5, C1 (no ghosts with one-view straws), C5 (3220 spills), D7 (no rock pairs), D20.
-Still open: A2 (bounce search), B1 (scatter check), C3 (deferred: FairShip validation of the optimum), C7, C8, D2, D3,
-D6 (nu library rebuild hung on GENIE), D9, D14, D16, D18, D19 (SBT model). Finalisation proposal per issue: STATUS.md.
+Also closed 16 Nov: A2, C7, C8, D2 (R2: nu-He 3.6 / 15 y), D3, D18. Deferred: C3, D6, D14 (debris in time, ACTS).
+Still open: B1 (window < 2 GeV, r_ms decision), D9 (S7 3 / 8), D16 (MS7 V0 production), D19 (SBT model).
