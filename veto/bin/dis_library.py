@@ -7,7 +7,8 @@ Two generators, all events stored with their energy transfer nu and hadronic mas
     on p+ and n0, W > 2 GeV (CKIN(77) default), grid energies from 2.2 GeV.
   * Geant4 11.2.2 muonNuclear (cpp/g4dis: G4KokoulinMuonNuclearXS + G4MuonVDNuclearModel, FTFP_BERT), one forced
     interaction per event, per material (nuclear break-up included, ions not kept): helium, PVC, Mylar,
-    polystyrene, silicon, PVT, air.
+    polystyrene, silicon, PVT, air, iron; aluminium and ls (SBT cells, ISSUES D19; add them to an existing library with
+    --only-g4 aluminium ls --base <library>).
 Which generator covers which part is chosen when the library is loaded (fastveto.dis.MuonLibrary, split=...):
   "crossover" (default): Geant4 for nu < nu_x(E), Pythia above. nu_x(E) = where Pythia's dsigma/dnu (p + n mean)
       first reaches Geant4's (Kokoulin, helium per nucleon) above nu = 2 GeV (Pythia ramps up from W = 2 GeV and is
@@ -57,7 +58,11 @@ NU_X_MIN = 2.0
 G4_MATERIALS = {"helium": ("G4_He", 0.000166322), "pvc": ("G4_POLYVINYL_CHLORIDE", 1.30),
                 "mylar": ("G4_MYLAR", 1.40), "polystyrene": ("G4_POLYSTYRENE", 1.06), "silicon": ("G4_Si", 2.33),
                 "pvt": ("G4_PLASTIC_SC_VINYLTOLUENE", 1.032), "air": ("G4_AIR", 0.00120479),
-                "iron": ("G4_Fe", 7.874)}
+                "iron": ("G4_Fe", 7.874),
+                # D19 (16 Nov 2026), SBT as a material: AlMg4.5 cell walls / ribs as pure Al; the liquid scintillator (LAB + PPO,
+                # FairShip media.geo: H 12.16 %, C 87.84 % by mass, 0.86 g/cm^3) has no NIST material: polyethylene (CH2, H 14.4 %)
+                # stands in for its nuclei (per-nucleon muonNuclear and final states; fastveto uses its own density / Z/A)
+                "aluminium": ("G4_Al", 2.699), "ls": ("G4_POLYETHYLENE", 0.94)}
 CHUNK = 2500
 KEEP_NEUTRAL_EMIN = 0.01          # GeV kinetic, neutral particles below are dropped (charged all kept)
 NEUTRAL = [22, 111, 130, 310, 2112, 3122]
@@ -214,13 +219,16 @@ def add_g4_materials(a):
     base = np.load(a.base)
     meta = json.loads(str(base["meta"]))
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
-    tmp = tempfile.mkdtemp(prefix="dislib_", dir=str(Path(a.out).parent))
-    procs = {m: subprocess.Popen([sys.executable, __file__, "--n-g4", str(a.n_g4), *(["--stable-v0"] if a.stable_v0 else []),
-                                  "--g4-worker", m, f"{tmp}/g4_{m}.npy"],
-                                 stdout=open(f"{tmp}/g4_{m}.log", "w"), stderr=subprocess.STDOUT) for m in a.only_g4}
+    if a.g4_npy_dir:          # workers already run elsewhere (e.g. in the Geant4 container, which cannot read /disk/gfs_lhcb)
+        tmp, procs = a.g4_npy_dir, {m: None for m in a.only_g4}
+    else:
+        tmp = tempfile.mkdtemp(prefix="dislib_", dir=str(Path(a.out).parent))
+        procs = {m: subprocess.Popen([sys.executable, __file__, "--n-g4", str(a.n_g4), *(["--stable-v0"] if a.stable_v0 else []),
+                                      "--g4-worker", m, f"{tmp}/g4_{m}.npy"],
+                                     stdout=open(f"{tmp}/g4_{m}.log", "w"), stderr=subprocess.STDOUT) for m in a.only_g4}
     lib = {k: base[k] for k in base.files if k != "meta"}
     for m, p in procs.items():
-        if p.wait() != 0:
+        if p is not None and p.wait() != 0:
             raise RuntimeError(f"Geant4 worker {m} failed, see {tmp}/g4_{m}.log")
         r = np.load(f"{tmp}/g4_{m}.npy", allow_pickle=True).item()
         for k, v in pack([(ie, 0, r[ie]) for ie in range(len(E_GRID))]).items():
@@ -232,9 +240,10 @@ def add_g4_materials(a):
     meta["base"] = str(a.base)
     lib["meta"] = np.array(json.dumps(meta))
     np.savez(a.out, **lib)
-    for f in Path(tmp).iterdir():
-        f.unlink()
-    Path(tmp).rmdir()
+    if not a.g4_npy_dir:
+        for f in Path(tmp).iterdir():
+            f.unlink()
+        Path(tmp).rmdir()
     print(f"library {a.out}: {time.time() - t0:.0f} s")
 
 
@@ -249,6 +258,8 @@ def main():
                     help="build only the Geant4 part of these materials (e.g. iron) and take the Pythia part, nu_x and "
                          "the other materials from --base")
     ap.add_argument("--base", help="existing library for --only-g4")
+    ap.add_argument("--g4-npy-dir", default=None, help="--only-g4: take the Geant4 tables from <dir>/g4_<material>.npy (written by "
+                    "--g4-worker, e.g. inside the Geant4 container) instead of running the workers")
     ap.add_argument("--stable-v0", action="store_true",
                     help="K_S and Lambda (and anti-Lambda) stay undecayed in both generators, for a transport that "
                          "decays them in flight (the MS7 iron, veto bin/shield_dis.py)")

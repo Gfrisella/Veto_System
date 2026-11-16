@@ -17,8 +17,10 @@ Model:
   tagging, mode "pointing" (default): each measured track is extrapolated back from SST1 to where it leaves the vessel
   upstream of its vertex (z_limit); a hit in a cell within the search radius r (reco's r0 + (r_slope + r_ms / p) L) and in
   time (+- n_sigma x 1 ns) tags it. Mode "any": any hit in time anywhere in the SBT tags the event (as SR-389 sec. 5).
-Not modelled yet: neutral particles (photons, neutrons) and EM debris in the cells, the dead space of ribs / walls,
-the Al / LS as interaction targets (interactions in the SBT material).
+Not modelled yet: EM debris in the cells, the dead space of ribs / walls.
+D19 (16 Nov 2026, flags in DEFAULT, all off): the SBT as a material (Al / LS / Al shell and ribs as interaction targets and
+scatterers: lib/veto/sbt_material.py, bin/sbt_interactions.py, bin/sbt_eval.py), the event's own deposits in the cells
+(parametrised response of charged, photons, neutral hadrons: sbt_material.deposits) and the V0 line (v0_line).
 """
 
 import numpy as np
@@ -37,7 +39,14 @@ DEFAULT = dict(threshold_mev=30.0, efficiency=0.993, sigma_t=1.0e-9, n_sigma=3.0
                cost_fraction_full=0.59, budget_kchf=8000.0,   # full SBT ~59 % of the 2023 reference budget of 8 MCHF (placeholder;
                # technology.REF_BUDGET_KCHF; the optimisation budget is veto.budget = the cost of R2)
                rate_scale=1.0,   # x random-hit rate (see below)
-               window_z="projected", sin_min=0.05, shell_window=True)   # pointing window along the wall (16 Nov 2026): "projected" = rings within
+               window_z="projected", sin_min=0.05, shell_window=True,   # pointing window along the wall (16 Nov 2026): "projected" = rings within
+               # D19 (16 Nov 2026), all OFF by default (no existing result changes):
+               v0_line=False,          # also trace the vertex candidate back as a neutral along the pair momentum (as the
+                                       # V0 rule of the planes, reco.v0_tag) and accept a fired cell near where that line
+                                       # leaves the vessel: tags V0 made in the SBT material / walls by their own cell
+               v0_line_r0=0.05, v0_line_theta=0.025, v0_line_early_ns=3.0,   # window r0 + theta x distance; time opened early
+               material_scattering=False,   # the SBT shell (Al / LS / Al) as a scatterer of the tracks crossing it (scattering.py)
+               selftag_hits=False)     # own SBT deposits of an interaction (sbt_material.deposits, passed as v0["sbt_hits"])
                # r / sin(alpha) of the crossing (alpha: line vs the wall face; sin floored at sin_min) and each hit timed against
                # the line's time inside its ring; "r" = the first version (rings within r, time at the crossing): our cells see muons only (Nov-4: 2.07 MHz > 30 MeV); SR-389 quotes
                                  # 27 MHz > 30 MeV with the particles scattered from the cavern walls and e / gamma -> 13
@@ -326,16 +335,76 @@ def random_hits(n_events, cfg, spill_s, rng, window_ns):
 
 # ---------------------------------------------------------------- tagging
 
-def tag(tr_true, meas, event, z_limit, cfg, reco_cfg, rng, n_events, with_own_hits=True):
-    """SBT decision per event (and per track for "pointing"). Returns dict vetoed (n_events), explained (n_tracks)."""
+def v0_line_tag(h_ev, h_cell, h_t, v0, cfg, n_events, window, early):
+    """D19 V0 line (sbt cfg v0_line): per event the vertex candidate traced back as a neutral along the visible momentum
+    (as reco.v0_tag for the planes) to where it leaves the vessel through a side wall; a hit (h_*: own, random, extra)
+    in a cell within r = v0_line_r0 + v0_line_theta x distance of that crossing (along the wall: r / sin(alpha), floored
+    at sin_min), in time with a light-speed back-extrapolation from SST1 (t = 0) within +- window, opened early by
+    `early` ns (a V0 is slower than light), tags the event."""
+    out = np.zeros(n_events, bool)
+    vtx, pv = np.asarray(v0["vtx"], float)[:n_events], np.asarray(v0["pvis"], float)[:n_events]
+    if not len(vtx) or not len(h_ev):
+        return out
+    u = pv / np.maximum(np.linalg.norm(pv, axis=1, keepdims=True), 1e-12)
+    end = vtx - u * 200.0                                   # far upstream: the first lateral face crossing ends it
+    c = crossings(vtx, end)
+    if not len(c["seg"]):
+        return out
+    order = np.argsort(c["t"], kind="stable")               # first crossing upstream of the vertex per event
+    seg, first = np.unique(c["seg"][order], return_index=True)
+    j = order[first]
+    zc, xc, yc, face = c["z"][j], c["x"][j], c["y"][j], c["face"][j].astype(int)
+    dist = np.linalg.norm(np.stack([xc, yc, zc], 1) - vtx[seg], axis=1)
+    r = cfg.get("v0_line_r0", 0.05) + cfg.get("v0_line_theta", 0.025) * dist
+    r_z = r / np.maximum(c["cos"][j], cfg.get("sin_min", 0.05))
+    k_path = 1 / np.maximum(np.abs(u[seg, 2]), 1e-6)
+    # time of the line at the crossing, light speed back from SST1 (t = 0 at z_SST1) along the line
+    hord = np.argsort(h_ev, kind="stable")
+    he, hc, ht = h_ev[hord], h_cell[hord], h_t[hord]
+    bounds = np.searchsorted(he, np.arange(n_events + 1))
+    hface, hring, hseg = hc // 10 // 1000, hc // 10 % 1000, hc % 10
+    zr = 0.5 * (RING_EDGES[np.clip(hring, 0, N_RING - 1)] + RING_EDGES[np.clip(hring + 1, 0, N_RING)])
+    for i, e in enumerate(seg):
+        lo, hi = bounds[e], bounds[e + 1]
+        if lo == hi:
+            continue
+        hx, hy = vessel_half = geo.vessel_half_widths(np.array([zc[i]]))
+        if face[i] in (0, 1):
+            nseg, coord, half = N_SEG_X_FACE, yc[i], hy[0]
+        else:
+            nseg, coord, half = N_SEG_Y_FACE, xc[i], hx[0]
+        s_lo = int(np.clip((coord - r[i] + half) / (2 * half) * nseg, 0, nseg - 1))
+        s_hi = int(np.clip((coord + r[i] + half) / (2 * half) * nseg, 0, nseg - 1))
+        zlo, zhi = zc[i] - r_z[i], zc[i] + r_z[i]
+        r_lo = max(int(np.searchsorted(RING_EDGES, zlo, side="right") - 1), 0)
+        r_hi = min(int(np.searchsorted(RING_EDGES, zhi, side="right") - 1), N_RING - 1)
+        sl = slice(lo, hi)
+        cand = (hface[sl] == face[i]) & (hring[sl] >= r_lo) & (hring[sl] <= r_hi) & (hseg[sl] >= s_lo) & (hseg[sl] <= s_hi)
+        t_pred = -(geo.Z_SST1 - zr[sl]) * k_path[i] / C       # the line at the hit's ring centre
+        dt = ht[sl] - t_pred
+        if (cand & (dt > -window - early - RING * k_path[i] / C) & (dt < window + RING * k_path[i] / C)).any():
+            out[e] = True
+    return out
+
+
+def tag(tr_true, meas, event, z_limit, cfg, reco_cfg, rng, n_events, with_own_hits=True, v0=None):
+    """SBT decision per event (and per track for "pointing"). Returns dict vetoed (n_events), explained (n_tracks).
+    v0 (optional, D19): dict vtx, pvis per event (the vertex candidate) and sbt_hits (event, cell, t: extra own hits of the
+    event, e.g. the deposits of the interaction itself, sbt_material.deposits); used only with cfg v0_line / selftag_hits."""
     window = cfg["n_sigma"] * np.hypot(cfg["sigma_t"] * 1e9, reco_cfg.sigma_t_track)      # ns
     own = own_hits(tr_true, event, cfg, rng) if with_own_hits else dict(event=np.zeros(0, int), cell=np.zeros(0, int),
                                                                          t=np.zeros(0), track=np.zeros(0, int))
-    acc = random_hits(n_events, cfg, reco_cfg.spill_s, rng, window + 2.0)
-    h_ev = np.concatenate([own["event"], acc["event"]]).astype(np.int64)
-    h_cell = np.concatenate([own["cell"], acc["cell"]]).astype(np.int64)
-    h_t = np.concatenate([own["t"], acc["t"]])
-    vetoed = np.zeros(n_events, bool)
+    use_line = bool(cfg.get("v0_line")) and v0 is not None and len(v0.get("vtx", [])) > 0
+    early = cfg.get("v0_line_early_ns", 3.0) if use_line else 0.0
+    acc = random_hits(n_events, cfg, reco_cfg.spill_s, rng, window + 2.0 + early)
+    extra = (v0 or {}).get("sbt_hits") if cfg.get("selftag_hits") else None
+    if extra is None or not len(extra["event"]):
+        extra = dict(event=np.zeros(0, int), cell=np.zeros(0, int), t=np.zeros(0))
+    h_ev = np.concatenate([own["event"], acc["event"], extra["event"]]).astype(np.int64)
+    h_cell = np.concatenate([own["cell"], acc["cell"], extra["cell"]]).astype(np.int64)
+    h_t = np.concatenate([own["t"], acc["t"], extra["t"]])
+    # D19 V0 line: its own association (v0_line_tag); the events it tags start as vetoed (OR with the tracks below)
+    vetoed = v0_line_tag(h_ev, h_cell, h_t, v0, cfg, n_events, window, early) if use_line else np.zeros(n_events, bool)
     explained = np.zeros(len(event), bool)
     if cfg["mode"] == "any":                       # any hit in time (relative to the cell's nominal time)
         zc = 0.5 * (RING_EDGES[h_cell // 10 % 1000] + RING_EDGES[h_cell // 10 % 1000 + 1])

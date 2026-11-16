@@ -200,6 +200,25 @@ def scatterers(tr, design, media=None):
         zs.append(np.where(in_exit, geo.Z_VESSEL_MAX, np.nan)); xs.append(np.where(in_exit, WALL_THICKNESS / X0_WALL / cos_z, 0.0))
 
 
+    # D19 (16 Nov 2026, default off): the SBT shell as a scatterer, sbt config "material_scattering": inner Al 0.8 cm, LS
+    # 20 cm (ribs smeared), outer Al 0.8 cm (0.57 X0 at normal incidence); one thin scatterer per layer piece, at its middle
+    sbt_cfg = getattr(design, "sbt", None)
+    if sbt_cfg and sbt_cfg.get("material_scattering"):
+        from . import sbt_material as sm
+        for g0, g1, x0_m in ((0.0, sm.G_LS0, sm.AL_X0 / 2.699 / 100), (sm.G_LS0, sm.G_LS1, sm.LS_X0 / sm.LS_DENSITY / 100),
+                             (sm.G_LS1, sm.G_OUT, sm.AL_X0 / 2.699 / 100)):
+            seg, ta, tb = sm.layer_pieces(p, q, g0, g1)
+            o = np.argsort(seg, kind="stable"); seg, ta, tb = seg[o], ta[o], tb[o]
+            L = np.linalg.norm(d, axis=1)
+            for piece in range(2):                      # at most two pieces per segment (way in, way out)
+                zc, xx = np.full(n, np.nan), np.zeros(n)
+                first = np.r_[True, seg[1:] != seg[:-1]] if len(seg) else np.zeros(0, bool)
+                pick = first if piece == 0 else ~first
+                sg = seg[pick]
+                zc[sg] = p[sg, 2] + 0.5 * (ta[pick] + tb[pick]) * d[sg, 2]
+                xx[sg] = (tb[pick] - ta[pick]) * L[sg] / x0_m
+                zs.append(zc); xs.append(xx)
+
     # air / helium, sliced in z (MEDIA)
     slices = np.arange(geo.Z_STATE_A + DZ_SLICE / 2, geo.Z_SST1, DZ_SLICE) if (MEDIA if media is None else media) else []
     for zc in slices:

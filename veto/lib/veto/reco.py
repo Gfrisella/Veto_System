@@ -614,7 +614,8 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
     n_sbt = 0
     if sbt_cfg:                                  # Surrounding Background Tagger (veto.sbt, 12 Nov 2026): OR with the planes
         from . import sbt
-        sb = sbt.tag(tr_true, meas, event, z_limit, sbt_cfg, cfg, rng, n_events, with_own_hits=with_own_hits)
+        sb = sbt.tag(tr_true, meas, event, z_limit, sbt_cfg, cfg, rng, n_events, with_own_hits=with_own_hits,
+                     v0=v0)               # D19: used only with the SBT flags v0_line / selftag_hits (default off)
         n_sbt = int((sb["vetoed"] & ~vetoed).sum())
         explained |= sb["explained"]
         vetoed |= sb["vetoed"]
