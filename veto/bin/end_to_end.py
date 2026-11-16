@@ -93,7 +93,7 @@ def job(arg):
     tot = lambda g: (sum(v["after"] for v in g.values()), math.sqrt(sum(v["after_err"] ** 2 for v in g.values())))
     r["interactions"] = {"muon": dict(zip(("total", "total_err"), tot(mu_g))),
                          "nu": dict(zip(("total", "total_err"), tot(nu_g)), per_target=nu_g)}   # helium split in the objective
-    s = objective.score(r, _S["stats"], objective.ObjectiveConfig(bkg_estimate="max", form="sensitivity", cost_budget_kchf=10000.0))
+    s = objective.score(r, _S["stats"], objective.ObjectiveConfig(bkg_estimate="max", form="sensitivity"))
     cb = comb["confusion"]["background"]
     return dict(design=d.name, cone_mrad=cone, cost_kchf=s["cost_kchf"], n_channels=r["n_channels"],
                 feasible=s["feasible"], over_rate_limit=s["over_rate_limit"],

@@ -53,6 +53,7 @@ from veto import design as dsg  # noqa: E402
 from veto import geometry as geo  # noqa: E402
 from veto import muon_types as mt  # noqa: E402
 from veto import paths  # noqa: E402
+from veto import budget  # noqa: E402
 from veto import technology as tech  # noqa: E402
 
 print = functools.partial(print, flush=True)
@@ -111,7 +112,7 @@ def technology_table():
             rows.append(f"         module {m['size'][0]:g} x {m['size'][1]:g} m (u x y) = {int(round(m['size'][0] / tech.SLOT))} x "
                         f"{int(round(m['size'][1] / tech.SLOT))} slots, dead frame {m['frame'] * 100:g} cm "
                         f"({'readout end, y_hi' if m['frame_edges'] == 'y_hi' else 'every edge'}), "
-                        f"cost {100 * tech.module_cost(key) / tech.BUDGET_KCHF:.2f} % of the budget per module")
+                        f"cost {budget.pct(tech.module_cost(key)):.2f} % of the budget per module")
     return "\n".join(rows)
 
 
@@ -223,7 +224,7 @@ def compact(report):
         "reward": round(sc["reward"], 3), "reward_err": round(sc["reward_err"], 3), "feasible": sc["feasible"],
         "terms": {k: round(-v, 3) for k, (v, _) in sc["terms"].items()},
         "sensitivity": round(sc["sensitivity"], 4),
-        "violations": sc["over_rate_limit"] + ([f"over the {objective.CONFIG.cost_budget_kchf / 1000:g} MCHF budget"] if sc["over_budget"] else []),
+        "violations": sc["over_rate_limit"] + ([f"over the budget (the cost of the full SBT + UBT configuration)"] if sc["over_budget"] else []),
         "false_vertices_15y": f"{sc['bkg_events_15y']:.2g} +- {sc['bkg_events_15y_err']:.1g}",
         "false_vertices_15y_by_source": {k: f"{v:.2g} +- {e:.1g}" for k, (v, e) in sc["bkg_by_source"].items()},
         "combinatorial_factorised_vs_direct": f"{bg['FN_factorised'] * bg['events_15y_before']:.2g} / {bg['FN_direct'] * bg['events_15y_before']:.2g}",

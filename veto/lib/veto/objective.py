@@ -4,7 +4,8 @@ Input: the result dict of one design as produced by bin/run_reco.py `evaluate()`
 (the entries of results/reco/results.json). Nothing is re-simulated here.
 
 Priorities, in order (lexicographic, implemented as tiers with weights 1000 / 100 / 10 / 1):
-  0. constraints      rate limits of every plane and the 8 MCHF budget: each violation costs
+  0. constraints      rate limits of every plane and the budget (veto.budget: the cost of the full SBT + UBT
+                      configuration R2; 8 MCHF until 16 Nov 2026): each violation costs
                       at least 1000, more than all the tiers below together (max 111); a rate limit
                       exceeded by a fraction f costs w_rate (1 + rate_slope f), i.e. steeply more
                       (rate_slope = 10: 2 x the limit = 11 000 points, ISSUES A3)
@@ -80,8 +81,9 @@ class ObjectiveConfig:
     eps_source: str = "pairs"         # eps_k from the muons of the pairs ("pairs") or the single-muon sample ("single")
     sig_loss_max: float = 0.10        # signal loss mapped to the top of the signal tier
     cost_min_kchf: float = 97.2       # straw UBT alone (D0)
-    cost_max_kchf: float = 8000.0     # top of the cost tier = the budget
-    cost_budget_kchf: float = 8000.0  # above it: penalty w_budget * (1 + (cost - budget) / budget)
+    cost_max_kchf: float = None       # top of the cost tier = the budget (None: veto.budget.kchf())
+    cost_budget_kchf: float = None    # above it: penalty w_budget * (1 + (cost - budget) / budget). None: the cost of the full
+                                      # SBT + UBT configuration (R2, veto.budget; Guglielmo 16 Nov 2026, was 8 / 10 MCHF)
     straw_channel_kchf: float = 97.2 / 3600   # converts rel_cost when the area cost is nan (pixels)
     rate_margin: float = 1.0          # penalise above rate_margin * limit (e.g. 0.5 for a factor 2 safety margin)
     w_rate: float = 1000.0            # per limit exceeded: w_rate * (1 + rate_slope * (peak / (margin * limit) - 1))
@@ -107,6 +109,13 @@ class ObjectiveConfig:
     split_sensitivity: bool = True
     w_bkg_tag: float = 100.0
     w_sig_veto: float = 100.0
+
+    def __post_init__(self):
+        if self.cost_budget_kchf is None or self.cost_max_kchf is None:
+            from veto import budget
+            b = budget.kchf()
+            self.cost_budget_kchf = b if self.cost_budget_kchf is None else self.cost_budget_kchf
+            self.cost_max_kchf = self.cost_budget_kchf if self.cost_max_kchf is None else self.cost_max_kchf
 
 
 def wilson_sigma(p, n):

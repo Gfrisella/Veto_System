@@ -34,7 +34,8 @@ FACES = ("+x", "-x", "+y", "-y")
 THRESHOLDS = (30.0, 45.0, 60.0, 90.0)   # MeV, the cached rate maps
 C = 0.299792458              # m / ns
 DEFAULT = dict(threshold_mev=30.0, efficiency=0.993, sigma_t=1.0e-9, n_sigma=3.0, mode="pointing",
-               cost_fraction_full=0.59, budget_kchf=8000.0,   # full SBT ~59 % of the reference budget (placeholder)
+               cost_fraction_full=0.59, budget_kchf=8000.0,   # full SBT ~59 % of the 2023 reference budget of 8 MCHF (placeholder;
+               # technology.REF_BUDGET_KCHF; the optimisation budget is veto.budget = the cost of R2)
                rate_scale=1.0,   # x random-hit rate (see below)
                window_z="projected", sin_min=0.05)   # pointing window along the wall (16 Nov 2026): "projected" = rings within
                # r / sin(alpha) of the crossing (alpha: line vs the wall face; sin floored at sin_min) and each hit timed against

@@ -12,6 +12,7 @@ import argparse
 import json
 
 from veto import design as dsg
+from veto import budget
 from veto import technology as tech
 
 
@@ -34,7 +35,7 @@ def main():
         (out_dir / f"{m['name']}.json").write_text(json.dumps(m, indent=1))
         act = sum(p.area * p.active_fraction for p in d1.planes) / d1.area
         print(f"{n:<22}{d1.area:>9.1f}{sum(p.n_modules for p in d1.planes):>9}{act:>8.3f}"
-              f"{100 * d1.cost / tech.BUDGET_KCHF:>15.1f}{100 * d0.cost / tech.BUDGET_KCHF:>10.1f}")
+              f"{budget.pct(d1.cost):>15.1f}{budget.pct(d0.cost):>10.1f}")
 
 
 if __name__ == "__main__":

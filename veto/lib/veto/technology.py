@@ -159,7 +159,8 @@ MODULES = {
 # estimate): a cost per 55 um pixel channel is meaningless. Reported as % of the budget (objective). Placeholders.
 STRAW_CHANNEL_KCHF = 97.2 / 3600
 MECH_FRACTION = 0.10
-BUDGET_KCHF = 8000.0
+REF_BUDGET_KCHF = 8000.0   # 2023 reference budget: base of the 2023 cost fractions (full SBT = 59 % of it)
+# The optimisation budget is veto.budget.kchf(): the cost of the full SBT + UBT configuration (R2), 16 Nov 2026.
 
 
 def module(tech_key):
