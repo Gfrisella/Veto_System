@@ -53,7 +53,8 @@ from veto.config import POT_PER_SPILL, SPILLS_15Y  # noqa: E402  (6e20 / 4e13 p.
 from veto import weights  # noqa: E402
 UB = 1e-34                                    # microbarn -> m^2
 V0 = {130: 15.34, 310: 0.026844, 3122: 0.0789, -3122: 0.0789, 3322: 0.0871, -3322: 0.0871}   # c tau [m]
-MASS = {130: 0.497611, 310: 0.497611, 3122: 1.115683, 3322: 1.31486}
+MASS = {130: 0.497611, 310: 0.497611, 3122: 1.115683, 3322: 1.31486, 321: 0.493677}
+KPM = {321: 3.712, -321: 3.712}   # c tau [m]: forced K+- decay copies (bin/force_kaons.py, 16 Nov 2026)
 OUT = paths.results_dir() / "shield_dis"
 PREPARED = paths.ms7_parents()                   # Nov-4 parents (2026-11-11); prepare --from-transport writes it
 LEGACY_PREPARED = paths.PROJECT_DIR / "data" / "shield_dis" / "muons_iron.npz"   # 2018 one-run pickle (prepare without --from-transport)
@@ -316,14 +317,22 @@ def plane_particles(g):
                 beam=np.zeros(len(v), bool))
 
 
-def force_v0(inter, part, rng, copies=1, acc_cut=False):
-    """`copies` extra interactions per neutral long-lived particle at the plane (weight / copies each): it decays in
+def force_v0(inter, part, rng, copies=1, acc_cut=False, species=None, only_codes=None):
+    """species: {pdg: c tau [m]} of the forced particles (default V0; KPM = charged kaons, 16 Nov 2026); only_codes: force
+    only particles of events with these codes (e.g. (3,): the originals, not the existing copies).
+    `copies` extra interactions per neutral long-lived particle at the plane (weight / copies each): it decays in
     the vessel, at an independent point and in an independent channel in every copy. acc_cut (16 Nov 2026): keep only the
     copies whose decay has >= 2 charged products with p > 1 GeV heading into the SST1 aperture (+10 % margin) - the
     others can never pass the selection; their weight is simply not stored (no reweighting needed)."""
     from fastveto import decay
     n_inter = len(inter["weight"])
-    rows = np.nonzero(np.isin(part["pdg"], list(V0)))[0]
+    species = V0 if species is None else species
+    if any(abs(int(c)) == 321 for c in species):                    # K+- channels: the evstore decay table
+        from veto import evstore as _es
+        decay.CHANNELS.setdefault(321, _es.CHANNELS[321])
+    rows = np.nonzero(np.isin(part["pdg"], list(species)))[0]
+    if only_codes is not None:
+        rows = rows[np.isin(inter["code"][part["int"][rows]], list(only_codes))]
     rows = np.repeat(rows[part["p"][rows, 2] > 0], copies)
     if not len(rows):
         return inter, part
@@ -331,7 +340,7 @@ def force_v0(inter, part, rng, copies=1, acc_cut=False):
     p3 = part["p"][rows, :3]
     pm = np.linalg.norm(p3, axis=1)
     u = p3 / pm[:, None]
-    lam = pm / np.array([MASS[abs(int(c))] for c in pdg]) * np.array([V0[int(c)] for c in pdg])
+    lam = pm / np.array([MASS[abs(int(c))] for c in pdg]) * np.array([species[int(c)] for c in pdg])
     d1 = (geo.Z_VESSEL_MIN - si.Z_PLANE) / u[:, 2]
     d2 = (geo.Z_VESSEL_MAX - si.Z_PLANE) / u[:, 2]
     e1, e2 = np.exp(-d1 / lam), np.exp(-d2 / lam)
@@ -375,9 +384,10 @@ def force_v0(inter, part, rng, copies=1, acc_cut=False):
     new_inter = {kk: np.concatenate([vv, vv[src]]) for kk, vv in inter.items()}
     new_inter["weight"][n_inter:] = inter["weight"][src] * Pdec / copies
     new_inter["code"][n_inter:] = CODE_SHIELD_V0
-    new_inter["v0"] = np.concatenate([np.zeros(n_inter, np.int64), pdg])
-    new_inter["parent"] = np.concatenate([np.arange(n_inter), src])
-    new_inter["z_decay"] = np.concatenate([np.full(n_inter, np.nan), vdec[:, 2]])
+    old = lambda k, fill: np.asarray(inter[k]) if k in inter else fill           # keep earlier copies' columns
+    new_inter["v0"] = np.concatenate([old("v0", np.zeros(n_inter, np.int64)), pdg])
+    new_inter["parent"] = np.concatenate([old("parent", np.arange(n_inter)), src])
+    new_inter["z_decay"] = np.concatenate([old("z_decay", np.full(n_inter, np.nan)), vdec[:, 2]])
     new_part = {kk: np.concatenate([part[kk], add[kk]]) for kk in part}
     order = np.argsort(new_part["int"], kind="stable")
     return new_inter, {kk: vv[order] for kk, vv in new_part.items()}
