@@ -85,7 +85,7 @@ want S3 && j3=$(sub S3_ms7 "" --mem=128G)          # 16 Geant4 workers peak at 1
 want S4 && j4=$(sub S4_inputs "$j1" --mem=200G)
 want S4b && j4b=$(sub S4b_xrun "$j4" --mem=128G)
 want S2 && j2=$(sub S2_em "$j4" --cpus-per-task=32 --mem=160G)
-want S5 && j5=$(sub S5_interact "$j4" --mem=128G)
+want S5 && j5=$(sub S5_interact "$j4" --mem=240G)   # nu_dis_apply peaks at 127-134 GB (16 Nov)
 want S6 && j6=$(sub S6_stores "$j3 $j5" --mem=96G)
 want S7 && j7=$(sub S7_eval "$j2 $j4b $j6" --mem=128G)
 echo "submitted ($STAGES): S1 ${j1:--} S3 ${j3:--} S4 ${j4:--} S4b ${j4b:--} S2 ${j2:--} S5 ${j5:--} S6 ${j6:--} S7 ${j7:--}; logs in $B/logs; outputs in $R"

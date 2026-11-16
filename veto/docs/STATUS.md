@@ -880,3 +880,5 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   `nu_library_v2.npz` (Shah Rukh, all 6 flavours, also Fe and the concrete nuclei). Resubmitted tasks 1,3 (2085338).
 - S4b cross-run pairs OOM (216 GB): unblocked pair building on the 3220-seed store -> `make_crossrun_pairs.py --pair-block`
   (same as S4), batch uses `--device cpu --pair-block 20000`. Resubmitted 2085339; S6 2085340, S7 2085341 behind them.
+- S5 nu R1 done (2085338_1, 127 GB); R2 OOM at 134 GB -> rerun with 240G (2085943); S5 default now 240G.
+  S6 2085944 / S7 2085945 resubmitted behind 2085943 and S4b 2085339 (running).
