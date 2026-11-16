@@ -160,7 +160,7 @@ def parents(kind):
 E_MIN_INT = 0.5                  # GeV, lowest muon energy of the interaction library (and of the range cut, D4)
 
 
-def draw(kind, par, n, rng, per_track=False, mu_lib=None, mu_split=None):
+def draw(kind, par, n, rng, per_track=False, mu_lib=None, mu_split=None, v0_only=False):
     """N interactions among the parents, probability proportional to w P (each S / N); per_track: one interaction on
     every parent instead, weight w_i P_i (every track contributes once). Returns (inter, part, summary)."""
     from fastveto import dis, nudis
@@ -208,21 +208,26 @@ def draw(kind, par, n, rng, per_track=False, mu_lib=None, mu_split=None):
     parts = []
     inter["component"] = np.zeros(n, np.int8)
     inter["E_lib"] = np.zeros(n)
+    inter["lib_v0"] = np.zeros(n, bool)               # the library final state contains a K_L / K_S / Lambda
     for code, lb in libs.items():
         m = np.nonzero(ok & ((inter["pdg_parent"] == code) if code is not None else True))[0]
         if not len(m):
             continue
-        o = lb.sample("iron", E[m], u[m], vtx[m], inter["pdg_parent"][m], rng)
+        o = lb.sample("iron", E[m], u[m], vtx[m], inter["pdg_parent"][m], rng, **({"v0_only": True} if v0_only else {}))
         o["int"] = m[o["int"]]
         inter["component"][m] = o["component"]
         inter["E_lib"][m] = o["E_lib"]
+        if "lib_v0" in o:
+            inter["lib_v0"][m] = o["lib_v0"]
+            inter["weight"][m] = inter["weight"][m] * o["w_factor"]     # v0_only: x P(V0 final state | E)
         parts.append({k: o[k] for k in ("int", "pdg", "p", "v", "beam")})
     part = {k: np.concatenate([q[k] for q in parts]) for k in parts[0]}
     order = np.argsort(part["int"], kind="stable")
     part = {k: v[order] for k, v in part.items()}
     summ = dict(parents=len(P), parents_per_spill=float(par["weight"].sum()),
                 interactions_per_spill=S, pot_per_spill=POT_PER_SPILL, interactions_15y=S * SPILLS_15Y, draws=n, dropped_low_E=int((~ok).sum()),
-                sampling="one per track, weight w P" if per_track else "proportional to w P, weight S / N")
+                sampling=("one per track, weight w P" if per_track else "proportional to w P, weight S / N")
+                + ("; V0-only final states, weight x P(V0 | E) (importance sampling, 16 Nov 2026)" if v0_only else ""))
     return inter, part, summ
 
 
@@ -379,7 +384,9 @@ def generate(a):
     par = parents(a.kind)
     print(f"{a.kind}: {len(par['p']):,} parents cross the iron ({par['weight'].sum():.4g} per spill), {time.time() - t0:.0f} s",
           flush=True)
-    inter, part, summ = draw(a.kind, par, a.n, rng, a.per_track, a.mu_lib, a.mu_split)
+    inter, part, summ = draw(a.kind, par, a.n, rng, a.per_track, a.mu_lib, a.mu_split, v0_only=a.v0_only)
+    summ["v0_only"] = bool(a.v0_only)
+    summ["lib_v0_fraction"] = float(inter["lib_v0"].mean())
     summ["mu_library"] = str(a.mu_lib or MU_LIB)
     summ["mu_split"] = a.mu_split or MU_SPLIT
     print(f"  {summ['interactions_per_spill']:.4g} interactions per spill ({summ['interactions_15y']:.4g} in 15 years); "
@@ -435,6 +442,9 @@ def main():
     g.add_argument("--v0-tally", action="store_true", help="record every V0 created in the iron (cpp/g4shield v0_tally, "
                    "D16) -> shield_<kind><tag>_v0tally.npz")
     g.add_argument("--v0-copies", type=int, default=1, help="forced vessel decays per V0 at the plane (weight / copies)")
+    g.add_argument("--v0-only", action="store_true", help="muons: draw only library final states with a V0, weight x P(V0 | E) "
+                                                          "(importance sampling of the MS7 V0 chain; secondary V0 made in the "
+                                                          "Geant4 transport of V0-free final states are not in it)")
     g.add_argument("--mu-lib", help="muon DIS library (default data/interactions/dis/mu_library_iron.npz; "
                    "mu_library_iron_v0stable.npz keeps K_S, Lambda for Geant4 to transport and decay)")
     a = ap.parse_args()

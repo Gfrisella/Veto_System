@@ -65,6 +65,9 @@ class MuonLibrary:
         self.p6_sigma = np.zeros((2, nE))
         self.g4 = {}
         self.groups = {}
+        self.groups_v0 = {}       # the same groups restricted to final states with a V0 (K_L, K_S, Lambda) (16 Nov 2026)
+        self.f_v0 = {}            # per group key: fraction of its final states with a V0
+        V0_PDG = np.array([130, 310, 3122, -3122])
         for name, t in self.tables.items():
             ie = t["ev_ie"].astype(np.int64)
             if split == "crossover":
@@ -89,6 +92,16 @@ class MuonLibrary:
             order = kept[np.argsort(key[kept], kind="stable")]
             ks, first, cnt = np.unique(key[order], return_index=True, return_counts=True)
             self.groups[name] = (order, {int(k): (f, c) for k, f, c in zip(ks, first, cnt)})
+            # final states with a V0 among their products
+            ev_of_row = np.repeat(np.arange(len(ie)), t["ev_n"].astype(np.int64))
+            has = np.bincount(ev_of_row, weights=np.isin(t["pdg"][:len(ev_of_row)], V0_PDG), minlength=len(ie)) > 0
+            t["_has_v0"] = has
+            kv = kept[has[kept]]
+            order_v = kv[np.argsort(key[kv], kind="stable")]
+            ksv, firstv, cntv = np.unique(key[order_v], return_index=True, return_counts=True)
+            self.groups_v0[name] = (order_v, {int(k): (f, c) for k, f, c in zip(ksv, firstv, cntv)})
+            n_v = np.bincount(key[kv], minlength=2000)
+            self.f_v0[name] = np.divide(n_v, n_keep, out=np.zeros(2000), where=n_keep > 0)
 
     def _interp(self, table, E):
         """Linear in log E on the grid; 0 below the grid, the last value above it."""
@@ -105,8 +118,8 @@ class MuonLibrary:
         a, b = self.sigma_parts(material, E)
         return a + b
 
-    def _pick(self, name, tgt, ie, rng):
-        order, g = self.groups[name]
+    def _pick(self, name, tgt, ie, rng, v0_only=False):
+        order, g = (self.groups_v0 if v0_only else self.groups)[name]
         out = np.empty(len(ie), np.int64)
         keys = tgt.astype(np.int64) * 1000 + ie
         for k in np.unique(keys):
@@ -121,10 +134,13 @@ class MuonLibrary:
             out[m] = order[f + rng.integers(0, c, m.sum())]
         return out
 
-    def sample(self, material, E, u, vertex, pdg_mu, rng):
+    def sample(self, material, E, u, vertex, pdg_mu, rng, v0_only=False):
         """One final state per interaction (arrays of length n). Returns particles: interaction index, pdg,
         p (k,4) and production point (k,3) in the lab, beam flag (the scattered muon), and per interaction the
-        component (0 Pythia, 1 Geant4) and the library energy."""
+        component (0 Pythia, 1 Geant4), the library energy, lib_v0 (the final state has a V0) and w_factor.
+        v0_only (16 Nov 2026, importance sampling of the MS7 V0 chain): only final states with a K_L / K_S / Lambda are drawn,
+        the component and target in proportion to sigma x (their V0 fraction), and w_factor = the probability that an
+        interaction at that energy has a V0 final state (multiply the interaction weight by it); 1 otherwise."""
         n = len(E)
         p6, g4 = self.sigma_parts(material, E)
         comp = (rng.random(n) * (p6 + g4) >= p6).astype(np.int8)
@@ -137,13 +153,26 @@ class MuonLibrary:
         za = mat.MATERIALS[material].z_over_a
         sp, sn = self.p6_sigma[0, ie] * za, self.p6_sigma[1, ie] * (1 - za)
         tgt = np.where(comp == 0, (rng.random(n) * (sp + sn) >= sp).astype(np.int64), 0)
+        w_factor = np.ones(n)
+        if v0_only:
+            fp, fn = self.f_v0["p6"][ie], self.f_v0["p6"][1000 + ie]
+            gg = self.g4[material][ie]
+            fg = self.f_v0[material][ie]
+            a6p, a6n, ag = sp * fp, sn * fn, gg * fg
+            tot = sp + sn + gg
+            w_factor = np.divide(a6p + a6n + ag, tot, out=np.zeros(n), where=tot > 0)
+            r = rng.random(n) * (a6p + a6n + ag)
+            comp = (r >= a6p + a6n).astype(np.int8)
+            tgt = np.where(comp == 0, (r >= a6p).astype(np.int64), 0)
         parts = {k: [] for k in ("int", "pdg", "p", "v", "beam")}
+        lib_v0 = np.zeros(n, bool)
         for c, name in ((0, "p6"), (1, material)):
             m = np.nonzero(comp == c)[0]
             if not len(m):
                 continue
             t = self.tables[name]
-            ev = self._pick(name, tgt[m], ie[m], rng)
+            ev = self._pick(name, tgt[m], ie[m], rng, v0_only)
+            lib_v0[m] = t["_has_v0"][ev]
             rows, owner = _segments(t["ev_start"][ev], t["ev_n"][ev])
             k = m[owner]
             phi = rng.uniform(0, 2 * np.pi, n)[k]
@@ -161,6 +190,8 @@ class MuonLibrary:
         out = {kk: v[order] for kk, v in out.items()}
         out["component"] = comp
         out["E_lib"] = self.E[ie]
+        out["lib_v0"] = lib_v0
+        out["w_factor"] = w_factor
         return out
 
 
