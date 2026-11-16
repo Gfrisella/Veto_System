@@ -57,6 +57,7 @@ class RecoConfig:
                                        # the vertex to the plane), for parents bent at the vertex (0 = off)
     multiple_scattering: bool = False  # scatter the muons after z = 30.6 m (scattering.py)
     debris_in_time: bool = False       # D14.1: each muon's own shield-end e / gamma on the UBT planes, in time (debris_in_time.py)
+    acts_resolution: bool = False      # D14.2: measure() smears with the ACTS fit (acts_resolution.py) instead of sigma_pos / sigma_slope / ms_slope; also smears p
     msc_media: bool = True             # ... also in the helium and the air (1 m slices)
     msc_tails: bool = True             # ... with single-scattering tails (fastveto.msc, tuned to Geant4)
     seed: int = 1
@@ -412,6 +413,14 @@ def measure(tr, cfg, rng):
     """Spectrometer tracks at z = 82 m: smeared position, slopes and time (true time 0)."""
     n = len(tr["bx"])
     p = np.sqrt(tr["bpx"] ** 2 + tr["bpy"] ** 2 + tr["bpz"] ** 2)
+    if getattr(cfg, "acts_resolution", False):
+        from . import acts_resolution
+        s = acts_resolution.sigmas(p)
+        return dict(x=tr["bx"] + rng.normal(0, 1, n) * s["x_m"], y=tr["by"] + rng.normal(0, 1, n) * s["y_m"],
+                    z=tr["bz"], tx=tr["bpx"] / tr["bpz"] + rng.normal(0, 1, n) * s["tx_rad"],
+                    ty=tr["bpy"] / tr["bpz"] + rng.normal(0, 1, n) * s["ty_rad"],
+                    p=p * np.maximum(1 + rng.normal(0, 1, n) * s["dp_over_p"], 0.05),
+                    t=rng.normal(0, cfg.sigma_t_track, n))
     sig_slope = np.hypot(cfg.sigma_slope, cfg.ms_slope / np.maximum(p, 0.1))
     return dict(x=tr["bx"] + rng.normal(0, cfg.sigma_pos, n), y=tr["by"] + rng.normal(0, cfg.sigma_pos, n),
                 z=tr["bz"], tx=tr["bpx"] / tr["bpz"] + rng.normal(0, 1, n) * sig_slope,
