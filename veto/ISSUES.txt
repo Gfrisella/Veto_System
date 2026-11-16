@@ -1015,6 +1015,13 @@ D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_invento
       single SST1 muons, R2): 18 % get >= 1 detected debris hit, at the muon's own time; bounced muons none.
       R1 / R2 x full / partial with --em-debris --debris-in-time: job 2090726 (results_rerun/reco/reco_*_dit.json),
       compare with S7. (2) ACTS particle-gun scan: separate session, files bin/acts_*, data/acts, docs/acts_resolution.md.
+    16 Nov 2026 result (1), job 2090726 vs S7 (same events and random hits, debris on its own RNG stream; per 15 y):
+        R1 full     pairs left 972 -> 932, B 0.0123 -> 0.0123; single SST1 tagged 52.83 -> 52.99 %; signal lost 2.635 % both
+        R1 partial  3708 -> 3605, B 0.785 -> 0.780; 51.74 -> 51.90 %
+        R2 full     9 -> 8, B 2.5e-6 -> 2.5e-6; 90.45 -> 90.46 %; signal lost 2.866 % both
+        R2 partial  24 -> 23, B 1.06e-3 -> 1.06e-3; 89.27 -> 89.28 %
+      Debris in time rescues a few low-weight pairs and ~0.2 % of single muons (R1); no change in the weighted background
+      or the signal. Bounced muons get no debris (they do not come from the MS7 iron). Flag stays default-off (decision).
 
 D15. CVMFS library loading under load (shield_dis / shield_natural workers)
     STATUS: DONE (11 Nov 2026: Geant4 loaded in the parent, forked workers, retry + completeness check)

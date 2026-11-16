@@ -1026,3 +1026,5 @@ draws x10-70, more seeds), waiting for the go.
   z 80.12, the pointing window is centred on the INNER-wall crossing (80.51, ring 60) +- r/sin a = 0.16 m -> ring 60 only.
   The 21.6 cm shell spans 0.57 m in z at this angle. Proposed (pending Guglielmo): window from the outer-shell crossing - r_z
   to the inner crossing + r_z (sbt.tag), then re-run R2.
+- D14.1 debris in time result (2090726): negligible (R2 pairs 9->8, B unchanged; R1 singles +0.16 pts); flag default off.
+- Other session committed b87da94 (SBT shell_window, default on): affects R2 runs started after 16:32.
