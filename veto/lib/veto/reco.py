@@ -518,7 +518,53 @@ def match(queries, hits, design, cfg):
     return found, int(counts.sum()), hit_of_query
 
 
-def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, details=False):
+V0_RULE_DEFAULT = dict(theta=0.025, r0=0.05, early_ns=3.0, min_hits=1, skip_tech=())
+
+
+def v0_rule_config(design):
+    """The design's V0 rule ("detector": {"v0_rule": {...}} or true), or None (16 Nov 2026)."""
+    r = ((getattr(design, "raw", None) or {}).get("detector") or {}).get("v0_rule")
+    if not r:
+        return None
+    out = dict(V0_RULE_DEFAULT)
+    if isinstance(r, dict):
+        out.update({k: v for k, v in r.items() if k in V0_RULE_DEFAULT})
+    return out
+
+
+def v0_tag(hits, design, v0, rule, cfg, n_events):
+    """V0 rule (Guglielmo, 16 Nov 2026): the candidate is a neutral; trace it back from its vertex along the visible momentum
+    (sum of the pair) to every plane upstream of the vertex and look for ANY hit (the other products of the interaction that
+    made the V0) within r = r0 + theta x distance, in a time window opened early by early_ns (a V0 is slower than light, so
+    its parent's products arrive before a light-speed back-extrapolation). theta covers the decay opening and the missing
+    neutrino (K_L -> pi l nu). Returns (tagged per event, hits per event)."""
+    vtx, pv = np.asarray(v0["vtx"], float), np.asarray(v0["pvis"], float)
+    win = time_window(design, cfg)
+    n_hit = np.zeros(n_events, int)
+    k_path = np.sqrt(1 + (pv[:, 0] / pv[:, 2]) ** 2 + (pv[:, 1] / pv[:, 2]) ** 2)
+    for plane in design.planes:
+        if plane.technology in rule["skip_tech"]:
+            continue
+        m = (hits["plane"] == plane.index) & (hits["event"] < len(vtx))
+        if not m.any():
+            continue
+        e = hits["event"][m]
+        dz = vtx[e, 2] - plane.z
+        ok = dz > 0                                       # planes upstream of the vertex only
+        with np.errstate(divide="ignore", invalid="ignore"):
+            x = vtx[e, 0] - pv[e, 0] / pv[e, 2] * dz
+            y = vtx[e, 1] - pv[e, 1] / pv[e, 2] * dz
+        u = plane.to_local(x)
+        r = rule["r0"] + rule["theta"] * dz + 0.5 * np.hypot(plane.cell_u, plane.cell_y)
+        t_pred = -(geo.Z_SST1 - plane.z) * k_path[e] / C
+        dt = hits["t"][m] - t_pred
+        w = win[plane.index]
+        good = ok & ((hits["u"][m] - u) ** 2 + (hits["y"][m] - y) ** 2 <= r ** 2) & (dt > -w - rule["early_ns"]) & (dt < w)
+        n_hit += np.bincount(e[good], minlength=n_events)[:n_events]
+    return n_hit >= rule["min_hits"], n_hit
+
+
+def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, details=False, v0=None):
     """Full chain for a set of events. tr: true tracks (one row per track), event: event id per
     track, z_limit: search only planes upstream of this z (the vertex; 82 m for single tracks).
     Returns per-event veto flag, per-track explained flag, per-plane veto counts and timings."""
@@ -535,6 +581,9 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
     own = own_hits(tr_true, event, design, rng) if with_own_hits else {k: np.empty(0) for k in
                                                                    ("event", "track", "plane", "u", "y", "t")}
     window = time_window(design, cfg) + ACC_MARGIN_NS        # each plane its own window
+    rule = v0_rule_config(design) if v0 is not None else None
+    if rule:                                                 # the V0 rule looks earlier: draw random hits there too
+        window = window + rule["early_ns"]
     acc = accidental_hits(design, maps, n_events, window, cfg, rng)
     acc["track"] = np.full(len(acc["event"]), -1)            # accidental: no track of this event
     hits = {k: np.concatenate([own[k], acc[k]]) for k in own}
@@ -548,6 +597,11 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
     explained = np.bincount(q["track"][found], minlength=len(event)) >= cfg.min_planes
     vetoed = np.zeros(n_events, bool)
     vetoed[event[explained]] = True
+    n_v0 = 0
+    if rule:                                                 # V0 rule: the candidate traced back as a neutral
+        v0_veto, _ = v0_tag(hits, design, v0, rule, cfg, n_events)
+        n_v0 = int((v0_veto & ~vetoed).sum())
+        vetoed |= v0_veto
     sbt_cfg = getattr(design, "sbt", None)
     n_sbt = 0
     if sbt_cfg:                                  # Surrounding Background Tagger (veto.sbt, 12 Nov 2026): OR with the planes
@@ -560,7 +614,7 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
     by_plane = np.bincount(q["plane"][found], minlength=len(design.planes))
     out = dict(vetoed=vetoed, explained=explained, by_plane=by_plane, timing=timing,
                n_hits=len(hits["event"]), n_own=len(own["event"]), n_queries=len(q["event"]),
-               n_compared=n_compared, sbt_only=n_sbt)
+               n_compared=n_compared, sbt_only=n_sbt, v0_only=n_v0)
     if details:   # for visualisation: every hit (own ones first), query, match and measured track
         out.update(hits=hits, queries=q, found=found, hit_of_query=hit_of_query, meas=meas)
     return out

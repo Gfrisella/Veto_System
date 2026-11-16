@@ -87,7 +87,10 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
     event = np.repeat(np.arange(len(cand)), 2)
     z_lim = np.repeat(inp["cand_vertex"][keep, 2], 2)
     t0 = time.perf_counter()
-    b = reco.run_events(take(tr, rows), event, z_lim, design, inp, cfg, rng)
+    pv = np.stack([tr["bpx"][cand[:, 0]] + tr["bpx"][cand[:, 1]], tr["bpy"][cand[:, 0]] + tr["bpy"][cand[:, 1]],
+                   tr["bpz"][cand[:, 0]] + tr["bpz"][cand[:, 1]]], 1)
+    b = reco.run_events(take(tr, rows), event, z_lim, design, inp, cfg, rng,
+                        v0=dict(vtx=inp["cand_vertex"][keep], pvis=pv))       # V0 rule (if the design has it)
     t_bkg = time.perf_counter() - t0
     w = cand_w * 2 * dt_pair / cfg.spill_s                  # random-coincidence candidates per spill
     surv = ~b["vetoed"]
@@ -114,7 +117,8 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
             if not len(w_ev):
                 per[name] = dict(acc_b, FP_frac=None)
                 continue
-            s = reco.run_events(sig, ev, z_v, design, inp, cfg, rng, with_own_hits=False)
+            vtx, pv = shield_strips.candidates_from_tracks(sig, ev, z_v, len(w_ev))
+            s = reco.run_events(sig, ev, z_v, design, inp, cfg, rng, with_own_hits=False, v0=dict(vtx=vtx, pvis=pv))
             st = shield_strips.signal_tag(design, sig, ev, z_v, len(s["vetoed"]), rng)
             if st is not None:                                     # silicon strip stations at the MS7 exit
                 s["vetoed"] = s["vetoed"] | st
@@ -145,7 +149,9 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
         z_v, ev = z_v[rows_ok], new_id[ev[rows_ok]]
     if signal_model != "eventcalc":
         t0 = time.perf_counter()
-        s = reco.run_events(sig, ev, z_v, design, inp, cfg, rng, with_own_hits=False)
+        n_ev0 = int(ev.max()) + 1 if len(ev) else 0
+        vtx, pv = shield_strips.candidates_from_tracks(sig, ev, z_v, n_ev0)
+        s = reco.run_events(sig, ev, z_v, design, inp, cfg, rng, with_own_hits=False, v0=dict(vtx=vtx, pvis=pv))
         st = shield_strips.signal_tag(design, sig, ev, z_v, len(s["vetoed"]), rng)
         if st is not None:
             s["vetoed"] = s["vetoed"] | st

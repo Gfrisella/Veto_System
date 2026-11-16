@@ -195,7 +195,8 @@ def evaluate(inter, part, design, maps, cfg, rng, muons=None, levels=("a", "b"),
         trk, ev, z_a, z_b, _ = event_tracks(inter, tr, sel, pair, vertex, muons)
         for lev, z in (("a", z_a), ("b", z_b)):
             if lev in levels:
-                r = reco.run_events(trk, ev, z, design, maps, cfg, rng)
+                r = reco.run_events(trk, ev, z, design, maps, cfg, rng,
+                                    v0=dict(vtx=vertex, pvis=tr["p"][pair[:, 0]] + tr["p"][pair[:, 1]]))
                 survive[lev] = ~r["vetoed"][:len(sel)]
         survive["c"] = ~parent_crossed(inter, sel, muons, design) if muons is not None else np.ones(len(sel), bool)
         strips = getattr(design, "shield_strips", None)
@@ -313,7 +314,8 @@ def veto(prep, design, maps, cfg, rng, level="b", muons=None):
     if n:
         trk = {k[4:]: prep[k] for k in prep if k.startswith("trk_")}
         z = prep["track_z_b" if level == "b" else "track_z_a"]
-        surv = ~reco.run_events(trk, prep["track_event"], z, design, maps, cfg, rng)["vetoed"][:n]
+        v0 = dict(vtx=prep["event_vtx"], pvis=prep["event_pvis"]) if "event_vtx" in prep else None
+        surv = ~reco.run_events(trk, prep["track_event"], z, design, maps, cfg, rng, v0=v0)["vetoed"][:n]
         strips = getattr(design, "shield_strips", None)
         if strips is not None and len(strips["stations"]) and "event_vtx" in prep:     # shield-end strip stations
             from . import shield_strips
