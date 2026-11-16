@@ -45,7 +45,7 @@ GEOMETRY (5 Nov 2026): FairShip layout (geometry_config.py 2026-0.1), target-ali
     EVERY result before this date (types in the stores, rate maps, reco inputs, interactions) uses the old layout.
 
 A1. Background figure of merit is saturated
-    STATUS: IN PROGRESS (5 Nov 2026: closure check done on inputs.npz; cross-run check with the re-runs)
+    STATUS: IN PROGRESS (16 Nov 2026: closure FAILS for R2 on the full sample, factorised x5-7 low in count)
     The pair background is 2-3 surviving pairs out of 196,736 candidates (-> ~1e-5 events in
     15 years). Every reasonable design gives ~0, so differences between designs are Poisson
     noise.
@@ -61,6 +61,12 @@ A1. Background figure of merit is saturated
       the unweighted factorisation closes; weighted FN direct 0.138 vs factorised 0.254 (factorised conservative by
       x 1.8: heavy muons). D1 / D6_straw / E3_robust: 0 observed, < 7.6e-4 (90 % CL). Cross-run pairs
       (inputs_xrun.npz, bin/make_crossrun_pairs.py) needed for the high-statistics check: with the re-runs.
+    16 Nov 2026 (S7 task 10, results_rerun/reco/closure_rerun.json, full 3220-spill inputs): surviving pairs observed vs
+      factorised. R1: 986 vs 937 (p 0.11) on inputs_nov4full, 4069 vs 3844 (p 3e-4) cross-run. R2: 7 vs 1.3 (p 4e-4),
+      cross-run 37 vs 5.2 (p 2e-19). Weighted FN fraction R2: direct 2.0e-4 vs factorised 1.3e-6 (x150), cross-run 2.0e-5 vs
+      5.3e-6 (x4). The factorisation assumes the two legs are tagged independently; for R2 the surviving pairs are
+      correlated (both legs in the same untagged category). The R2 pair background quoted so far (2.5e-6 / 15 y) is
+      the factorised one and is too low. NOT closed.
 
 A2. Bounced muons: the veto barely sees them
     STATUS: IN PROGRESS (11 Nov 2026: knobs + scan code in; scan running on D6_straw / D6_fiber / D6_tile2)
@@ -446,7 +452,7 @@ C4. Energy loss of bounced muons in the cavern
     Well modelled in the stored muons (from the transport); nothing to do.
 
 C5. Weights and statistics
-    STATUS: IN PROGRESS (11 Nov 2026: extra seeds = rebuild the Nov-4 store from all 3220 train spills)
+    STATUS: DONE (16 Nov 2026: every result on the 3220-spill Nov-4 store)
     The repeated-evt_n weight correction is not applied in the design-optimisation dataset;
     veto_only and rock_bounced are from one run. Decide whether to apply the correction and how
     many extra runs are needed for the rare classes.
@@ -466,6 +472,9 @@ C5. Weights and statistics
       ~84 GB on /disk/lhcb_data, 239 TB free); hidden spills kept for the cross-checks. summary.txt (all seeds): sst1_selected
       8166 +- 32 / spill, distinct n_eff 15 058; sst1_bounced 1.09e4, distinct n_eff 41 324. Note: train vs hidden pulls of
       -17.8 (straight_past) / +18.5 (stops_before), 0.08 % relative: the two source halves differ slightly; irrelevant classes.
+    16 Nov 2026: closed. The design store, inputs_nov4full.npz, the cross-run pairs and the prepared caches all use the 3220
+      train spills (S4/S4b/S5, results_rerun); sst1_selected n_eff 15 058 and sst1_bounced 41 324 > the 1000 target. Hidden
+      spills kept for cross-checks. Small classes with low n_eff in the surviving pairs belong to A1.
 
 C6. Detector technology numbers
     STATUS: DONE (15 Oct 2026, commit f6d13ec)
@@ -744,7 +753,7 @@ D6. Interaction-library approximations
       bin/d6_compare_libraries.py old vs new before switching.
 
 D7. Interactions upstream of z = 30.6 m not simulated
-    STATUS: DECIDED (11 Nov 2026): close after the mu x rock combinatorial is redone with the fixed charge
+    STATUS: DONE (16 Nov 2026, Guglielmo: mu x rock not redone, already negligible)
     9 Nov 2026 (Shah Rukh): selection + veto of the cavern-rock products (bin/rock_select.py, the same
       interactions.evaluate): muon rock 0 selected (4.6e9 / 15 y with >= 2 good tracks, best-pair IP >= 12.6 m), neutrino
       rock (bin/nu_rock.py: GENIE v2 on concrete, g4rock, walls / floor / ceiling / face) 0 selected (3.2e3 with >= 2
@@ -774,6 +783,8 @@ D7. Interactions upstream of z = 30.6 m not simulated
       wall K_L < 0.02, rock neutrons in the helium ~0.05 per 15 y). The mu x rock 0.023 / 15 y was computed with the
       inverted charge test (D17 b, same-sign pairs): redo it in the re-run batch, then close D7. The forced Geant4 from
       the 30.6 m states in the real cavern only if the redone mu x rock is not negligible.
+    16 Nov 2026, Guglielmo: closed without redoing mu x rock ("we already evaluated that there is no need"); rock
+      pairs dropped from the report's Section 6 with one sentence. S7 task 11 (D6 design) had failed (OOM) and is not rerun.
 
 D8. Results computed with the old PVC vessel wall
     STATUS: DONE (11 Nov 2026: key wall in the code, pvc accepted; numbers regenerate with the re-run batch)
