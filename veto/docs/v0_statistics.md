@@ -84,3 +84,12 @@ so v0 + nov0 = the unbiased chain (checked: P(V0) + P(no V0) = 1.0000 at 3 and 3
 - RULE: the forced stores (ms7_muon_fsv0[k], ms7_muon_fsnov0[k]) are for the VERTEX background only. In them the originals'
   V0 and K+- never decay and single-product copies are dropped. The single-track combinatorial (D9, dis_combinatorial.py)
   keeps using the unforced store ms7_muon_v0s (natural decays, correct branching ratios).
+
+## Closure of the new sampling (16 Nov 2026): old unbiased vs fsv0 + fsnov0
+
+Per spill at the MS7 exit (original events, p > 1 GeV), 10 old seeds vs 10 + 10 new seeds (errors = seed-to-seed rms / sqrt n):
+interactions 9.309e5 vs 9.309e5 (exact); mu 9.214e5 vs 9.214e5; pi+- 1.076e5 vs 1.075e5; K+- 6953 vs 7001 (+1.2 sigma);
+K_L 3733 vs 3706 (-1.6); K_S 1683 vs 1702 (+1.3); Lambda 945 vs 938; p 6.887e4 vs 6.878e4; n 8.079e4 vs 8.092e4; gamma
+1.855e4 vs 1.849e4. All ratios 0.993-1.011, |pull| <= 1.6: the importance sampling is unbiased. 77-78 % of the V0 (53 % of
+the K+-) come from the 1.7 % of interactions with a V0 final state (fsv0). Script: /tmp/closure_fs.py (copy in STATUS).
+After the selection: compare the partial-selection rate (old: 399 events) when the MS7 evaluation of the new stores runs.
