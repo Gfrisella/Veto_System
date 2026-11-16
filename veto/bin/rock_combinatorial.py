@@ -170,6 +170,8 @@ def main():
     ap.add_argument("--mu-sample", type=int, default=2_000_000, help="random SST1 muon rows (weights scaled); 0 = all")
     ap.add_argument("--cone", type=float, default=0.0, help="mrad")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--rock-rock", action="store_true", help="also the rock x rock term (dropped 16 Nov 2026, Guglielmo: "
+                    "0 candidates, two rock tracks never point back to the target)")
     ap.add_argument("--survivors", default=None, help="npz with the pairs surviving the veto (per term)")
     a = ap.parse_args()
     t0 = time.time()
@@ -195,7 +197,8 @@ def main():
         sv.update({f"tr_{k}": v[sv["rows"]] for k, v in tr_in.items()})
         dump["mu x mu"] = sv
     print(f"mu x mu done, {time.time() - t0:.0f} s", flush=True)
-    for name, A, B, same in (("mu x rock", mu, rk, False), ("rock x rock", rk, rk, True)):
+    terms = [("mu x rock", mu, rk, False)] + ([("rock x rock", rk, rk, True)] if a.rock_rock else [])
+    for name, A, B, same in terms:
         ia, ib, v, n_pairs, pre = cross_pairs(A, B, dev, a.block, same, sel=cfg)
         tr = {k: np.concatenate([np.asarray(A[k], float), np.asarray(B[k], float)]) for k in KEYS}
         cand = np.stack([ia, ib + len(A["ax"])], 1)

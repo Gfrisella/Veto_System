@@ -163,7 +163,7 @@ dl.pinfo .grp:first-child { border-top: 0; padding-top: 0; }
 <section aria-labelledby="c-h">
   <h2 id="c-h">All combinatorial terms for this design</h2>
   <div class="panel scroll"><table id="terms"><thead><tr><th>pair type</th><th>candidates / 15 y</th><th>IP &lt; 10 cm</th><th>after tagging</th><th>simulated pairs left</th><th>legs tagged (first / second)</th></tr></thead><tbody></tbody></table></div>
-  <p class="note">Same code for all three terms (bin/rock_combinatorial.py): candidate cuts (DOCA &lt; 2 cm, vertex in the vessel), measured IP &lt; 10 cm, then the full tagging (own hits + accidental hits). Rock × rock has no candidate pair at all. "Legs tagged" is the weighted fraction of the selected pairs whose first (shield muon) / second leg is matched to a tagger hit.</p>
+  <p class="note">Same code for all three terms (bin/rock_combinatorial.py): candidate cuts (DOCA &lt; 2 cm, vertex in the vessel), measured IP &lt; 10 cm, then the full tagging (own hits + accidental hits). Rock × rock is not evaluated (dropped: two rock tracks never point back to the target; 0 candidate pairs in the first runs). "Legs tagged" is the weighted fraction of the selected pairs whose first (shield muon) / second leg is matched to a tagger hit.</p>
 </section>
 
 <footer>
@@ -192,7 +192,7 @@ function cards() {
     ["Rock legs tagged", pc(le[1]), `of the selected muon × rock pairs, weighted; shield-muon legs ${pc(le[0])}`],
     ["Muon × muon after tagging", fmt(mm.after_15y), `pairs per 15 years with the same code; muon × rock is ${fmt(d.total / Math.max(mm.after_15y, 1e-30))} times larger`],
   ].map(([k, v, s, hot]) => `<div class="card${hot ? " hot" : ""}"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${s}</div></div>`).join("");
-  document.querySelector("#terms tbody").innerHTML = ["mu x mu", "mu x rock", "rock x rock"].map(k => { const r = t[k];
+  document.querySelector("#terms tbody").innerHTML = ["mu x mu", "mu x rock"].filter(k => t[k]).map(k => { const r = t[k];
     const l = r.leg_explained ? r.leg_explained.map(x => (100 * x).toFixed(1) + " %").join(" / ") : "–";
     return `<tr><td>${TN[k]}</td><td>${fmt(r.candidates_15y)}</td><td>${fmt(r.selected_15y)}</td><td>${r.n_after ? fmt(r.after_15y) + " ± " + fmt(r.after_err_15y) : "0"}</td><td>${(r.n_after || 0).toLocaleString("en")}</td><td>${l}</td></tr>`; }).join("");
   const ns = d.ev.w.length;
