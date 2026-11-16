@@ -365,7 +365,8 @@ def run(columns, lib, draws, rng, chunk=2_000_000, workers=1, enrich=True, types
         vtx = np.stack([inter["x"][m], inter["y"][m], inter["z"][m]], 1)
         o = lib.sample(mname, inter["E"][m], u, vtx, inter["pdg_mu"][m], rng, v0_only=enrich)
         o["int"] = m[o["int"]]
-        inter["w_factor"][m] = o.pop("w_factor") if enrich else 1.0
+        wf = o.pop("w_factor")                            # per interaction (1 without enrichment)
+        inter["w_factor"][m] = wf if enrich else 1.0
         inter["component"][m], inter["E_lib"][m] = o.pop("component"), o.pop("E_lib")
         o.pop("lib_v0", None)
         for k in ("nucleus", "proc", "charm"):

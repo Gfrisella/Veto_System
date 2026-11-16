@@ -107,7 +107,7 @@ def zone_rate(cfg, z_vertex, window_ns, spill_s=1.0):
     return 1 - np.exp(-r * 2 * window_ns * 1e-9 / spill_s)
 
 
-def evaluate_store(path, design, maps, cfg, muons, rng, codes):
+def evaluate_store(path, design, maps, cfg, muons, rng, codes, only_unflagged=False):
     meta, ev, tr = es.read(path)
     inter, part = store_inputs(ev, tr)
     if muons is not None:
@@ -137,6 +137,9 @@ def evaluate_store(path, design, maps, cfg, muons, rng, codes):
         flagged = np.bincount(evi[fl], minlength=n) > 0
         out["selected_unflagged_15y"] = float(inter["weight"][sel][~flagged[sel]].sum() * SPILLS_15Y)
         out["n_selected_unflagged"] = int((~flagged[sel]).sum())
+        if only_unflagged:            # unenriched store: keep only the part the enriched stores cannot contain
+            k = ~flagged[sel]
+            sel, pair, vertex = sel[k], pair[k], vertex[k]
     w15 = inter["weight"] * SPILLS_15Y
     groups = inter["evt_n"]
     res = {}
@@ -239,6 +242,9 @@ def main():
     ap.add_argument("--dataset", default=paths.MUON_DATASET)
     ap.add_argument("--codes", type=int, nargs="*", default=None)
     ap.add_argument("--signal", type=int, default=0, help="signal decays per benchmark for the signal loss (0: none)")
+    ap.add_argument("--only-unflagged", action="store_true", help="unenriched stores: only the selected events whose final "
+                    "state has no strange / displaced root (their pairs use decay-in-flight products, e.g. pi -> mu): the "
+                    "complement of the enriched stores")
     ap.add_argument("--seed", type=int, default=1); ap.add_argument("--out", required=True)
     a = ap.parse_args()
     sm.register()
@@ -253,7 +259,7 @@ def main():
     rng = np.random.default_rng(a.seed)
     for s in a.store:
         t1 = time.time()
-        r = evaluate_store(str(paths.evstore(s)), design, maps, cfg, muons, rng, a.codes)
+        r = evaluate_store(str(paths.evstore(s)), design, maps, cfg, muons, rng, a.codes, a.only_unflagged)
         res["stores"][s] = r
         print(f"\n{s} ({time.time() - t1:.0f} s), K_L natural pairs dropped {r['kl_natural_dropped_15y']:.3g} / 15 y")
         for name, v in r["per_target"].items():
