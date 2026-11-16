@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The V0 rule (reco.v0_tag, 16 Nov 2026) on the interaction backgrounds: MS7 V0 chain and MS7 neutrinos (event stores,
+"""The reference designs R1 / R2 / R3 (V0 rule reco.v0_tag + strips in MS7, 16 Nov 2026) on the interaction backgrounds: MS7 V0 chain and MS7 neutrinos (event stores,
 partial and full selection) and the cached vessel muon / neutrino interactions (prepared_*<tag>, full selection), for a
 list of designs (with and without the rule). Signal loss and combinatorial pairs: bin/run_reco.py per design (separate).
 
@@ -61,9 +61,16 @@ def main():
             row = dict(n=int(len(sel)), selected_15y=float(w.sum()), n_eff=float(w.sum() ** 2 / (w ** 2).sum()))
             for name, d in designs.items():
                 r = reco.run_events(trk, evx, z_b, d, maps, cfg, np.random.default_rng(1), v0=dict(vtx=vertex, pvis=pv))
-                v = r["vetoed"][:len(sel)]
+                v = r["vetoed"][:len(sel)].copy()
+                strips = d.shield_strips
+                n_strip = 0
+                if strips is not None and len(strips["stations"]):     # shield strips: products + parent muon per layer
+                    from veto import shield_strips
+                    prow = inter["evt_n"] if "muon" in Path(store).name else None
+                    st = shield_strips.tag_events(strips, part, inter["z"], prow, sel, vertex, pv, np.random.default_rng(2))["tagged"]
+                    n_strip = int((st & ~v).sum()); v |= st
                 row[name] = dict(tagged=float((w * v).sum() / w.sum()), left_15y=float((w * ~v).sum()), n_left=int((~v).sum()),
-                                 v0_only=r.get("v0_only", 0))
+                                 v0_only=r.get("v0_only", 0), strips_only=n_strip)
             res["stores"][key] = row
             print(f"{key}: {len(sel)} selected, {w.sum():.3g} / 15 y; " +
                   ", ".join(f"{k} {v['tagged']:.3f}" for k, v in row.items() if isinstance(v, dict)) + f"  ({time.time() - t0:.0f} s)", flush=True)

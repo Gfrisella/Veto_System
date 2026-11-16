@@ -37,7 +37,7 @@ X0_SI = 0.0937           # m
 # pitch / strip length: LHCb UT outer sensors (187.5 um) with strips spanning the whole station (strip_length None = size):
 # the rate allows strips of 1.4-3.6 m (12 Nov), so long strips cut the channels by 8 vs 93.5 um x 5 cm at ~72 kHz / strip
 DEFAULT = dict(z=Z_EXIT, size=0.20, stations=[], pitch=187.5e-6, strip_length=None, n_views=2, thickness_si=300e-6,
-               efficiency=0.99, time_window_ns=12.5, rule="point", r0=0.02, theta=0.01, max_strip_rate=1e6,
+               efficiency=0.99, time_window_ns=12.5, rule="point", r0=0.02, theta=0.01, max_strip_rate=1e6, layers=None,
                cost_channel=0.4)   # relative cost per channel (straw channel = 1): ~11 CHF, LHCb-UT ballpark, assumed (C6)
 MAP_BIN = 0.02
 MAP_X, MAP_Y = 3.0, 2.5   # half extents of the rate map [m]
@@ -61,12 +61,14 @@ def config(raw):
     out["stations"] = np.asarray(st, float).reshape(-1, 2)
     if out["strip_length"] is None:
         out["strip_length"] = out["size"]
+    # layers (16 Nov 2026): z of each layer of stations (same x-y layout), e.g. inside the MS7 iron; default the exit face
+    out["layers"] = [float(z) for z in (out["layers"] or [out["z"]])]
     return out
 
 
 def n_channels(cfg):
     per = cfg["n_views"] * math.ceil(cfg["size"] / cfg["pitch"]) * math.ceil(cfg["size"] / cfg["strip_length"])
-    return int(per * len(cfg["stations"]))
+    return int(per * len(cfg["stations"]) * len(cfg["layers"]))
 
 
 def cost_kchf(cfg):
@@ -76,7 +78,7 @@ def cost_kchf(cfg):
 
 
 def area(cfg):
-    return float(len(cfg["stations"]) * cfg["size"] ** 2)
+    return float(len(cfg["stations"]) * cfg["size"] ** 2 * len(cfg["layers"]))
 
 
 def station_of(cfg, x, y):
@@ -98,7 +100,7 @@ def conversion_prob(cfg):
 
 @lru_cache(maxsize=4)
 def _rate_map_cached(z, conv):
-    f = paths.results_dir() / "rate_maps" / f"shield_strips_z{z:.2f}.npz"
+    f = paths.results_dir() / "rate_maps" / f"shield_strips_z{z:.4f}.npz"
     if f.exists():
         d = np.load(f)
         if abs(float(d["conv"]) - conv) < 1e-12:
@@ -133,13 +135,14 @@ def _rate_map_cached(z, conv):
     return mu, e, g * conv, xe, ye
 
 
-def rate_map(cfg):
-    """Hit-rate density at the station z [Hz / cm^2]: (muons, e+-, converting photons, x edges, y edges)."""
-    return _rate_map_cached(round(float(cfg["z"]), 2), conversion_prob(cfg))
+def rate_map(cfg, z=None):
+    """Hit-rate density at a layer z [Hz / cm^2]: (muons, e+-, converting photons, x edges, y edges). Muons: the MS7 parents
+    straight to z; e / gamma: the EM debris at the exit face (inside the iron the shower is not simulated: approximation)."""
+    return _rate_map_cached(round(float(cfg["z"] if z is None else z), 4), conversion_prob(cfg))
 
 
-def density(cfg, x, y):
-    mu, e, g, xe, ye = rate_map(cfg)
+def density(cfg, x, y, z=None):
+    mu, e, g, xe, ye = rate_map(cfg, z)
     tot = mu + e + g
     i = np.clip(np.searchsorted(xe, x) - 1, 0, tot.shape[0] - 1)
     j = np.clip(np.searchsorted(ye, y) - 1, 0, tot.shape[1] - 1)
@@ -148,8 +151,13 @@ def density(cfg, x, y):
 
 
 def station_rates(cfg):
-    """Per station: total hit rate [Hz] and the peak rate per strip [Hz] (density x strip area, at the busiest bin)."""
-    mu, e, g, xe, ye = rate_map(cfg)
+    """Per station (busiest layer): total hit rate [Hz] and the peak rate per strip [Hz] (density x strip area)."""
+    rows = [_station_rates(cfg, z) for z in cfg["layers"]]
+    return [max((r[i] for r in rows), key=lambda x: x["rate_hz"]) for i in range(len(rows[0]))] if rows else []
+
+
+def _station_rates(cfg, z):
+    mu, e, g, xe, ye = rate_map(cfg, z)
     tot = mu + e + g
     xc, yc = 0.5 * (xe[1:] + xe[:-1]), 0.5 * (ye[1:] + ye[:-1])
     h = cfg["size"] / 2
@@ -164,15 +172,48 @@ def station_rates(cfg):
     return out
 
 
-def exit_hits(part_int, part_pdg, part_p, part_v, z=Z_EXIT):
+def exit_hits(part_int, part_pdg, part_p, part_v, z=Z_EXIT, slopes=False):
     """Charged particles that start at the MS7 exit plane (the store's reference surface, or in the last 60 cm of iron),
-    at the plane z: (event index, x, y). Design independent (cached by interactions.prepare)."""
+    at the plane z: (event index, x, y[, tx, ty]). Design independent (cached by interactions.prepare)."""
     from .interactions import charge
     q = charge(part_pdg)
     p, v = part_p[:, :3], part_v
     m = (q != 0) & (p[:, 2] > 0) & (v[:, 2] <= z + 1e-3) & (v[:, 2] > z - 0.6)
-    x = v[m, 0] + p[m, 0] / p[m, 2] * (z - v[m, 2]); y = v[m, 1] + p[m, 1] / p[m, 2] * (z - v[m, 2])
-    return part_int[m], x, y
+    tx, ty = p[m, 0] / p[m, 2], p[m, 1] / p[m, 2]
+    x = v[m, 0] + tx * (z - v[m, 2]); y = v[m, 1] + ty * (z - v[m, 2])
+    return (part_int[m], x, y, tx, ty) if slopes else (part_int[m], x, y)
+
+
+@lru_cache(maxsize=1)
+def _parents():
+    return np.load(paths.ms7_parents(), mmap_mode="r")
+
+
+def layer_hits(cfg, he, hx, hy, htx, hty, zint, parent_row, rng):
+    """Hits on every layer: products of the interaction (state at the exit face, extrapolated back to layers downstream of
+    the interaction point zint) and the incoming parent muon (MS7 parents plane, straight to layers upstream of zint;
+    parent_row < 0: no charged parent, e.g. neutrinos). zint / parent_row per event. Returns (event, x, y, layer)."""
+    out = {k: [] for k in ("e", "x", "y", "l")}
+    par_ok = np.nonzero(np.asarray(parent_row) >= 0)[0]
+    if len(par_ok):
+        P = _parents()
+        rows = np.asarray(parent_row)[par_ok]
+        o = np.argsort(rows); rs = rows[o]
+        st = {k: np.empty(len(rs)) for k in ("x", "y", "z", "px", "py", "pz")}
+        for k in st:
+            st[k][o] = np.asarray(P[k][rs], float)
+    for li, z in enumerate(cfg["layers"]):
+        down = z > zint[he] - 1e-9
+        x = hx + htx * (z - Z_EXIT); y = hy + hty * (z - Z_EXIT)
+        out["e"].append(he[down]); out["x"].append(x[down]); out["y"].append(y[down]); out["l"].append(np.full(down.sum(), li))
+        if len(par_ok):
+            up = z < zint[par_ok]
+            dz = z - st["z"]
+            px_ = st["x"] + st["px"] / st["pz"] * dz; py_ = st["y"] + st["py"] / st["pz"] * dz
+            out["e"].append(par_ok[up]); out["x"].append(px_[up]); out["y"].append(py_[up]); out["l"].append(np.full(up.sum(), li))
+    e, x, y, l = (np.concatenate(out[k]) for k in ("e", "x", "y", "l"))
+    ok = (station_of(cfg, x, y) >= 0) & (rng.random(len(x)) < cfg["efficiency"])
+    return e[ok], x[ok], y[ok], l[ok]
 
 
 def on_stations(cfg, he, hx, hy, rng):
@@ -188,31 +229,45 @@ def own_hits(cfg, part_int, part_pdg, part_p, part_v, rng):
 
 def tag(cfg, vtx, p_vis, rng, hits=None, n_disc=16):
     """Strip-station tag per candidate. vtx (n, 3) reconstructed vertex, p_vis (n, 3) visible momentum (sum of the pair),
-    hits: (event, x, y) of the candidates' own hits (None: random hits only, e.g. signal).
-    Returns dict(tagged, on_station, n_own, mu_random) per candidate."""
+    hits: (event, x, y[, layer]) of the candidates' own hits on stations (None: random hits only, e.g. signal).
+    On every layer the back-traced point P = vtx - p_vis / p_z (z_vtx - z_layer) and r = r0 + theta (z_vtx - z_layer);
+    own hits within r on that layer plus random hits (Poisson, local density x disc area on stations x window) are summed.
+    Returns dict(tagged, on_station, n_own, mu_random, x, y, r) (x, y, r at the last layer)."""
     n = len(vtx)
-    z = cfg["z"]
-    dz = vtx[:, 2] - z
-    with np.errstate(divide="ignore", invalid="ignore"):
-        px = vtx[:, 0] - p_vis[:, 0] / p_vis[:, 2] * dz
-        py = vtx[:, 1] - p_vis[:, 1] / p_vis[:, 2] * dz
-    r = cfg["r0"] + cfg["theta"] * np.maximum(dz, 0)
-    # random hits: mean density over the part of the disc that lies on a station, times the disc area and the window
-    ang = rng.uniform(0, 2 * np.pi, (n, n_disc)); rad = r[:, None] * np.sqrt(rng.uniform(0, 1, (n, n_disc)))
-    sx, sy = px[:, None] + rad * np.cos(ang), py[:, None] + rad * np.sin(ang)
-    on = station_of(cfg, sx.ravel(), sy.ravel()).reshape(n, n_disc) >= 0
-    dens = density(cfg, sx.ravel(), sy.ravel()).reshape(n, n_disc) * on
-    area_cm2 = np.pi * (r * 100) ** 2
-    mu_rand = dens.mean(1) * area_cm2 * 2 * cfg["time_window_ns"] * 1e-9
-    n_rand = rng.poisson(np.nan_to_num(mu_rand))
-    n_own = np.zeros(n, int)
-    if hits is not None and len(hits[0]):
-        he, hx, hy = hits
-        d2 = (hx - px[he]) ** 2 + (hy - py[he]) ** 2
-        n_own = np.bincount(he[d2 <= r[he] ** 2], minlength=n)
+    n_own = np.zeros(n, int); mu_rand = np.zeros(n); on_any = np.zeros(n, bool)
+    if hits is not None and len(hits) == 3:
+        hits = (hits[0], hits[1], hits[2], np.full(len(hits[0]), len(cfg["layers"]) - 1))
+    for li, z in enumerate(cfg["layers"]):
+        dz = vtx[:, 2] - z
+        with np.errstate(divide="ignore", invalid="ignore"):
+            px = vtx[:, 0] - p_vis[:, 0] / p_vis[:, 2] * dz
+            py = vtx[:, 1] - p_vis[:, 1] / p_vis[:, 2] * dz
+        r = cfg["r0"] + cfg["theta"] * np.maximum(dz, 0)
+        ang = rng.uniform(0, 2 * np.pi, (n, n_disc)); rad = r[:, None] * np.sqrt(rng.uniform(0, 1, (n, n_disc)))
+        sx, sy = px[:, None] + rad * np.cos(ang), py[:, None] + rad * np.sin(ang)
+        on = station_of(cfg, sx.ravel(), sy.ravel()).reshape(n, n_disc) >= 0
+        dens = density(cfg, sx.ravel(), sy.ravel(), z).reshape(n, n_disc) * on
+        mu_rand += np.nan_to_num(dens.mean(1) * np.pi * (r * 100) ** 2 * 2 * cfg["time_window_ns"] * 1e-9)
+        on_any |= on.any(1)
+        if hits is not None and len(hits[0]):
+            he, hx, hy, hl = hits
+            m = hl == li
+            d2 = (hx[m] - px[he[m]]) ** 2 + (hy[m] - py[he[m]]) ** 2
+            n_own += np.bincount(he[m][d2 <= r[he[m]] ** 2], minlength=n)[:n]
+    n_rand = rng.poisson(mu_rand)
     need = 2 if cfg["rule"] == "vertex" else 1
-    tagged = (n_own + n_rand) >= need
-    return dict(tagged=tagged, on_station=on.any(1), n_own=n_own, mu_random=mu_rand, x=px, y=py, r=r)
+    return dict(tagged=(n_own + n_rand) >= need, on_station=on_any, n_own=n_own, mu_random=mu_rand, x=px, y=py, r=r)
+
+
+def tag_events(cfg, part, inter_z, parent_row, sel, vertex, pvis, rng):
+    """Strip tag of selected events straight from the fastveto inter / part arrays (event stores): layer hits of the
+    products (exit face) and of the parent muon (parent_row per interaction, -1 for none)."""
+    pos = np.full(len(inter_z), -1); pos[sel] = np.arange(len(sel))
+    he, hx, hy, htx, hty = exit_hits(part["int"], part["pdg"], part["p"], part["v"], slopes=True)
+    k = pos[he] >= 0
+    pr = np.full(len(sel), -1) if parent_row is None else np.asarray(parent_row)[sel]
+    hits = layer_hits(cfg, pos[he[k]], hx[k], hy[k], htx[k], hty[k], np.asarray(inter_z)[sel], pr, rng)
+    return tag(cfg, vertex, pvis, rng, hits=hits)
 
 
 def candidates_from_tracks(tr, event, z_vtx, n_events):

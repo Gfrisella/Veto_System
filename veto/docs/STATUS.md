@@ -951,3 +951,20 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
 - **D20 downgraded to C:** no candidate pair (inputs_nov4full, 215 500) contains a muon bouncing after z = 77 m; the gap
   muons never form a background vertex. Untagged fractions that matter = those of the pair muons (S7, full sample).
 - **Guglielmo: report only full-sample (3220) statistics.** Report Table 30 / R1-R2 numbers to be replaced from S7.
+
+## 2026-11-16 (night) — V0 rule, reference designs R1 / R2 / R3 only
+
+- **Why the MS7 V0 products are not tagged** (Guglielmo's question): the products of the iron interaction cross the 4 x 4 m
+  tile plane in every selected event (~7 charged per event, nearest hit a median 0.14 m from the daughter lines), but the
+  veto searches along each daughter's own backward line; a V0's daughters point to the decay, not to the production point
+  (opening angle, missing neutrino): on the two heavy full events 0 searches / 0.33-0.61 m off vs a 0.155 m window. In reality
+  also the V0 time of flight (median 0.35 ns late vs light, > +-0.2 ns tiles; not in the simulation: per-track clocks).
+- **V0 rule** (reco.v0_tag, design "detector": {"v0_rule": ...}): candidate traced back as a neutral along the pair
+  momentum, any hit within 5 cm + 25 mrad x distance on the planes upstream, time window opened 3 ns early, random hits
+  drawn over it. On the cached MS7 sample (full sel.) with R2: 43 -> 15 surviving events (the 1.2e4 heavy event tagged; the
+  4.9e4 one escapes: back-trace 41 mrad off).
+- **Only R1, R2, R3** (Guglielmo; also in the report). R3 = R2 + V0 rule + silicon strips in the MS7 magnet: 5 layers
+  29.39 / 29.4775 / 29.565 / 29.6525 / 29.74 m (last one 15 cm before the end), 3 stations of 20 x 20 cm each on the hottest
+  V0-parent cells (-1.1, +-0.1), (1.3, -0.1); 15 stations, 18.8 drachmas; R3 = 352.3 drachmas (5.6 % over the R2 budget).
+  Strip layers: products back from the exit face to layers downstream of the interaction, the parent muon to layers upstream.
+- Test on the full sample: maps job 2087758, then 2087759 (r123_study + run_reco R1 / R2 / R3 x full / partial).

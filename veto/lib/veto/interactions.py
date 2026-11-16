@@ -202,10 +202,7 @@ def evaluate(inter, part, design, maps, cfg, rng, muons=None, levels=("a", "b"),
         strips = getattr(design, "shield_strips", None)
         if strips is not None and len(strips["stations"]):   # silicon strip stations at the MS7 exit (16 Nov 2026)
             from . import shield_strips
-            pos = np.full(n_inter, -1); pos[sel] = np.arange(len(sel))
-            he, hx, hy = shield_strips.own_hits(strips, part["int"], part["pdg"], part["p"], part["v"], rng)
-            k = pos[he] >= 0
-            st = shield_strips.tag(strips, vertex, tr["p"][pair[:, 0]] + tr["p"][pair[:, 1]], rng, hits=(pos[he[k]], hx[k], hy[k]))
+            st = shield_strips.tag_events(strips, part, inter["z"], None, sel, vertex, tr["p"][pair[:, 0]] + tr["p"][pair[:, 1]], rng)
             strip_tagged = st["tagged"]
             for lev in list(survive):
                 survive[lev] = survive[lev] & ~strip_tagged
@@ -298,10 +295,11 @@ def prepare(inter, part, cfg, muons=None, codes=DESIGN_FREE_CODES, g4=None):
         # for the shield-end strip stations (16 Nov 2026): vertex, visible momentum and the exit-plane hits of the products
         from . import shield_strips
         pos = np.full(n_inter, -1); pos[sel] = np.arange(len(sel))
-        he, hx, hy = shield_strips.exit_hits(part["int"], part["pdg"], part["p"], part["v"])
+        he, hx, hy, htx, hty = shield_strips.exit_hits(part["int"], part["pdg"], part["p"], part["v"], slopes=True)
         k = pos[he] >= 0
         out.update(event_vtx=vertex, event_pvis=tr["p"][pair[:, 0]] + tr["p"][pair[:, 1]],
-                   strip_hit_event=pos[he[k]], strip_hit_x=hx[k], strip_hit_y=hy[k])
+                   strip_hit_event=pos[he[k]], strip_hit_x=hx[k], strip_hit_y=hy[k], strip_hit_tx=htx[k], strip_hit_ty=hty[k],
+                   strip_parent_row=np.full(len(sel), -1))      # set by the caller when the parents are MS7 muons
     return out
 
 
@@ -319,7 +317,12 @@ def veto(prep, design, maps, cfg, rng, level="b", muons=None):
         strips = getattr(design, "shield_strips", None)
         if strips is not None and len(strips["stations"]) and "event_vtx" in prep:     # shield-end strip stations
             from . import shield_strips
-            hits = shield_strips.on_stations(strips, prep["strip_hit_event"], prep["strip_hit_x"], prep["strip_hit_y"], rng)
+            if "strip_hit_tx" in prep:                    # layers: products back to each layer, parent muon upstream
+                hits = shield_strips.layer_hits(strips, prep["strip_hit_event"], prep["strip_hit_x"], prep["strip_hit_y"],
+                                                prep["strip_hit_tx"], prep["strip_hit_ty"], prep["event_zint"],
+                                                prep.get("strip_parent_row", np.full(n, -1)), rng)
+            else:                                         # older caches: exit-face hits only
+                hits = shield_strips.on_stations(strips, prep["strip_hit_event"], prep["strip_hit_x"], prep["strip_hit_y"], rng)
             surv &= ~shield_strips.tag(strips, prep["event_vtx"], prep["event_pvis"], rng, hits=hits)["tagged"]
     out = {}
     for i, c in enumerate(prep["codes"]):

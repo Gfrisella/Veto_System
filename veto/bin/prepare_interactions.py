@@ -12,6 +12,7 @@ selected events are stored, so bin/evolve and run_reco only run the veto per des
 import _bootstrap  # noqa: F401
 
 import argparse
+from pathlib import Path
 import time
 
 import numpy as np
@@ -92,7 +93,10 @@ def main():
             _, ev, trs = es.read(s)
             inter, part = es.to_fastveto(ev, trs)
             del ev, trs
-            parts.append(ix.prepare(inter, part, cfg, None, codes=(3, 4)))
+            pr = ix.prepare(inter, part, cfg, None, codes=(3, 4))
+            if "muon" in Path(s).name and "strip_parent_row" in pr:   # parents = MS7 muons (rows of paths.ms7_parents)
+                pr["strip_parent_row"] = pr["event_group"].astype(np.int64)
+            parts.append(pr)
             print(f"MS7 {s}: {len(parts[-1]['event_weight15']):,} selected events, {parts[-1]['event_weight15'].sum():.3g} "
                   f"per 15 years before the veto, {time.time() - t0:.0f} s", flush=True)
         np.savez(out_dir / f"prepared_ms7{args.tag}.npz", **merge_prepared(parts))
