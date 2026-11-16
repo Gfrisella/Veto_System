@@ -982,3 +982,11 @@ draws x10-70, more seeds), waiting for the go.
 - Production 2089604 (160 small jobs, 64 GB, %24: the farm is memory-bound; the 40 x 200 GB version never started), stores
   2089605 (ms7_muon_fsv0, ms7_muon_fsnov0: SUM), cache 2089606 (prepared_ms7_v0stat).
 - Then: R1 / R2 / R3 on the new MS7 sample, document in the report (Appendix G / B), update HANDOFF.
+
+### 16 Nov 2026 (afternoon) — Section 6 cut flow without tagging (job 2089733)
+- `bin/cutflow_notag.py`: same selection as `interactions.evaluate`, all levels kept (interactions, >= 2 good tracks,
+  pair cuts no IP, IP < 10 cm, IP < 2.5 m) per target, per nu flavour (from `apply2026_R2_sbt_ubt.npz`, rows aligned;
+  the store's meta declares `flavour` but `events.npz` lacks it) and per V0 species for MS7. No tagging -> R2 stores.
+- Closure on `ms7_nu2026`: IP < 10 cm 9.86 / 15 y = S7 eval; no-IP sum 1.42e3 = S7 ip_tail "all".
+- Array 2089733 (`batch/S6b_cutflow.cmd`, outputs `reco/cutflow_notag_*.json`) -> report Section 6 tables.
+  MS7 muon V0 row waits for the V0-statistics production (other session); mu x product / rock pairs wait for S7 3, 8, 11.
