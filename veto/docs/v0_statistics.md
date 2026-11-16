@@ -72,3 +72,15 @@ so v0 + nov0 = the unbiased chain (checked: P(V0) + P(no V0) = 1.0000 at 3 and 3
   keeps every non-V0 product; v0 + nov0 is complete), but the forced decays do not enrich charged kaons: this channel has
   one MC event. Needs its own enrichment (forced K+- / pi+- decays in the vessel) before the optimiser can score it.
 - R1 / R2 / R3 after tagging: pending (waits for the tile time-window decision, see STATUS).
+
+## Forced K+- copies (16 Nov 2026, Guglielmo; bin/force_kaons.py, e825a26)
+
+- Per spill: 9.3e5 muon interactions in the last 50 cm of MS7; 8.3e3 K+- leave MS7 (K+ 5.4e3, K- 2.8e3; 6.9e3 above
+  1 GeV; 0.75 % of the interactions have one); 79 % of them decay within the vessel z range (6.5e3 / spill). 53 % of the
+  K+- come from the 1.7 % of interactions with a V0 (associated strangeness).
+- 100 copies per K+- of the original events: w_copy = w_orig x P(decay in the vessel) / 100 (verified to 1e-9 on 3000
+  copies); the channel is SAMPLED with the branching ratios (no channel biasing: Guglielmo, the single-track K decays
+  matter for the combinatorial); --acc-cut keeps copies with >= 2 charged products into SST1.
+- RULE: the forced stores (ms7_muon_fsv0[k], ms7_muon_fsnov0[k]) are for the VERTEX background only. In them the originals'
+  V0 and K+- never decay and single-product copies are dropped. The single-track combinatorial (D9, dis_combinatorial.py)
+  keeps using the unforced store ms7_muon_v0s (natural decays, correct branching ratios).
