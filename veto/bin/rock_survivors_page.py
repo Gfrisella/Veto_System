@@ -10,8 +10,20 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 
 T = "muxrock__"
+COLS = ["x", "y", "z", "px", "py", "pz"]
+
+
+def rock_match(f, draws):
+    """Species and the muon interaction point in the rock for each surviving rock track: exact join on the exit state
+    (the rock track start point and momentum are copied from the draws file by rock_select.build)."""
+    s = pd.DataFrame({"x": f[T + "ax"][:, 1], "y": f[T + "ay"][:, 1], "z": f[T + "az"][:, 1],
+                      "px": f[T + "bpx"][:, 1], "py": f[T + "bpy"][:, 1], "pz": f[T + "bpz"][:, 1]})
+    m = s.merge(draws, on=COLS, how="left")
+    assert len(m) == len(s)
+    return m["pdg"].fillna(0).astype(int).values, m[["vx", "vy", "vz"]].values
 
 
 def hist(x, w, edges):
@@ -24,7 +36,7 @@ def origin(ax, ay):
     return np.where(ay < -3.0, 1, np.where(ax < -3.5, 0, np.where(ax > 3.5, 2, 3)))
 
 
-def design_data(f, js, n_show, rng):
+def design_data(f, js, n_show, rng, draws):
     w = f[T + "w15"]
     n = len(w)
     r = lambda k, leg: f[T + k][:, leg].astype(float)
@@ -33,6 +45,10 @@ def design_data(f, js, n_show, rng):
     vtx = f[T + "vtx"]
     org = origin(r("ax", 1), r("ay", 1))
     mu_type = r("type", 0)
+    pid, rv = rock_match(f, draws)
+    sp = {}
+    for k in np.unique(pid):
+        sp[int(k)] = float(w[pid == k].sum())
     out = dict(n=int(n), total=float(w.sum()), err=float(np.sqrt((w ** 2).sum())),
                n_eff=float(w.sum() ** 2 / max((w ** 2).sum(), 1e-300)),
                terms={k: {x: v for x, v in t.items() if x != "leg_explained"} | {"leg_explained": t.get("leg_explained")}
@@ -42,7 +58,7 @@ def design_data(f, js, n_show, rng):
                       prock=hist(np.log10(p_rock), w, np.arange(0, 2.61, 0.1)),
                       pmu=hist(np.log10(p_mu), w, np.arange(0, 2.61, 0.1))),
                origin=[float(w[org == k].sum()) for k in range(4)],
-               mu_type=[float(w[mu_type == k].sum()) for k in (0, 1, 2)])
+               mu_type=[float(w[mu_type == k].sum()) for k in (0, 1, 2)], species=sp)
     if n <= n_show:
         idx = np.argsort(-w)
     else:
@@ -51,7 +67,7 @@ def design_data(f, js, n_show, rng):
     rd = lambda a, d=3: [None if not np.isfinite(v) else round(float(v), d) for v in a]
     ev = dict(w=[float(v) for v in w[idx]], vx=rd(vtx[idx, 0]), vy=rd(vtx[idx, 1]), vz=rd(vtx[idx, 2]), ip=rd(f[T + "ip"][idx]),
               prock=rd(p_rock[idx], 2), pmu=rd(p_mu[idx], 2), org=[int(v) for v in org[idx]], mtype=[int(v) for v in mu_type[idx]],
-              rpdg=[int(v) for v in r("pdg", 1)[idx]])
+              rpid=[int(v) for v in pid[idx]], rvx=rd(rv[idx, 0]), rvy=rd(rv[idx, 1]), rvz=rd(rv[idx, 2]))
     for leg, tag in ((0, "m"), (1, "r")):
         for k in ("ax", "ay", "az", "kx", "ky", "kz", "bx", "by", "bz"):
             ev[tag + k] = rd(r(k, leg)[idx])
@@ -60,7 +76,7 @@ def design_data(f, js, n_show, rng):
     top = np.argsort(-w)[:12]
     out["top"] = [dict(w=float(w[i]), vz=round(float(vtx[i, 2]), 2), vx=round(float(vtx[i, 0]), 2), vy=round(float(vtx[i, 1]), 2),
                        prock=round(float(p_rock[i]), 2), pmu=round(float(p_mu[i]), 2), org=int(org[i]),
-                       rz=round(float(r("az", 1)[i]), 2), mtype=int(mu_type[i]), ip=round(float(f[T + "ip"][i]), 3)) for i in top]
+                       rz=round(float(r("az", 1)[i]), 2), mtype=int(mu_type[i]), ip=round(float(f[T + "ip"][i]), 3), pid=int(pid[i])) for i in top]
     return out
 
 
@@ -71,13 +87,18 @@ def main():
     ap.add_argument("--template", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--n-show", type=int, default=500)
+    ap.add_argument("--rock-draws", default="/disk/lhcb_data/sqasim/rock_dis/apply_D6_straw_mod_draws.npz")
     a = ap.parse_args()
     d = Path(a.dir) if a.dir else Path(__file__).resolve().parents[1] / "results_rerun" / "reco"
+    z = np.load(a.rock_draws)
+    draws = pd.DataFrame({c: np.asarray(z[c], float) for c in COLS + ["vx", "vy", "vz"]})
+    draws["pdg"] = np.asarray(z["pdg"]).astype(int)
+    draws = draws.drop_duplicates(COLS)
     data = {}
     for name in a.designs:
         f = np.load(d / f"rock_comb_surv_{name}.npz")
         js = json.load(open(d / f"rock_comb_{name}.json"))
-        data[name] = design_data(f, js, a.n_show, np.random.default_rng(3))
+        data[name] = design_data(f, js, a.n_show, np.random.default_rng(3), draws)
         data[name]["rates"] = js["rates_per_spill"]
         print(name, data[name]["n"], f"{data[name]['total']:.4g} / 15 y", "origin", [round(x, 4) for x in data[name]["origin"]])
     Path(a.out).write_text(Path(a.template).read_text().replace("__DATA__", json.dumps(data, separators=(",", ":"))))

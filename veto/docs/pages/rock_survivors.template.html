@@ -65,6 +65,13 @@ th:first-child, td:first-child { text-align: left; } th { font-weight: 500; colo
 .note { font-size: 12.5px; color: var(--ink-3); max-width: 96ch; }
 footer { font-size: 12px; color: var(--ink-3); display: grid; gap: 4px; }
 .mono { font-family: var(--f-mono); }
+.pgrid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 14px; align-items: start; }
+.pcanv { display: grid; gap: 6px; min-width: 0; }
+dl.pinfo { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; font-size: 13px; align-content: start; font-variant-numeric: tabular-nums; }
+dl.pinfo dt { color: var(--ink-3); } dl.pinfo dd { margin: 0; color: var(--ink); min-width: 0; }
+dl.pinfo .grp { grid-column: 1 / -1; font-family: var(--f-display); font-weight: 600; font-size: 14px; padding-top: 6px; border-top: 1px solid var(--rule); display: flex; gap: 8px; align-items: center; }
+dl.pinfo .grp:first-child { border-top: 0; padding-top: 0; }
+@media (max-width: 860px) { .pgrid { grid-template-columns: 1fr; } }
 </style>
 
 <div class="wrap">
@@ -103,10 +110,41 @@ footer { font-size: 12px; color: var(--ink-3); display: grid; gap: 4px; }
   </div>
 </section>
 
+<section aria-labelledby="p-h">
+  <h2 id="p-h">Pair by pair</h2>
+  <div class="panel">
+    <div class="controls">
+      <button class="chip" id="pp" aria-label="Previous pair">← previous</button>
+      <label for="psel">pair <select id="psel"></select></label>
+      <button class="chip" id="pn" aria-label="Next pair">next →</button>
+      <span id="pcount"></span>
+    </div>
+    <div class="pgrid">
+      <div class="pcanv">
+        <div class="vlabel">top view · x [m] vs z [m], zoomed on the pair</div>
+        <canvas id="px" height="300" aria-label="Top view of the selected pair"></canvas>
+        <div class="vlabel">side view · y [m] vs z [m]</div>
+        <canvas id="py" height="250" aria-label="Side view of the selected pair"></canvas>
+        <div class="legend">
+          <span><i class="dot" style="background:var(--rock);border-radius:0;transform:rotate(45deg)"></i>muon interaction in the rock</span>
+          <span><i class="sw" style="background:var(--rock);opacity:.5"></i>path inside the rock (not drawn by the simulation, straight guide)</span>
+          <span><i class="sw" style="background:var(--rock)"></i>rock track</span>
+          <span><i class="dot" style="border:2px solid var(--rock);background:transparent"></i>enters the vessel</span>
+          <span><i class="sw" style="background:var(--mu)"></i>shield muon</span>
+          <span><i class="dot" style="background:var(--vtx)"></i>fake vertex</span>
+        </div>
+      </div>
+      <dl class="pinfo" id="pinfo"></dl>
+    </div>
+    <p class="note">Pairs are ordered by weight, heaviest first. For R1 the list is the weight-proportional sample of the display above; for R2 it is every surviving pair. The shield muon is drawn from its stored state at z = 30.6 m (it comes out of the muon shield there) to SST1.</p>
+  </div>
+</section>
+
 <section aria-labelledby="h-h">
   <h2 id="h-h">Where they come from</h2>
   <p class="lead" id="hlead"></p>
   <div class="grid2">
+    <div class="panel hbox"><h3>Rock-track particle</h3><div class="bars" id="species"></div><div class="cap">Matched back to the rock-library draws. All are negative: the partner shield muons are positive.</div></div>
     <div class="panel hbox"><h3>Origin of the rock track</h3><div class="bars" id="origin"></div><div class="cap">Surface the rock track leaves: cavern wall at −x, floor, the opposite side (+x), elsewhere.</div></div>
     <div class="panel hbox"><h3>Which shield muon</h3><div class="bars" id="mtype"></div><div class="cap">Type of the shield-muon leg: bounced off the wall or floor, selected (p &gt; 1 GeV, reaching the timing detector), other.</div></div>
     <div class="panel hbox"><h3>Fake vertex z</h3><canvas id="h-vz" height="170" aria-label="Fake vertex z"></canvas><div class="cap">Decay vessel 31.13 – 81.13 m.</div></div>
@@ -119,7 +157,7 @@ footer { font-size: 12px; color: var(--ink-3); display: grid; gap: 4px; }
 
 <section aria-labelledby="t-h">
   <h2 id="t-h">The heaviest surviving pairs</h2>
-  <div class="panel scroll"><table id="top"><thead><tr><th>#</th><th>pairs / 15 y</th><th>vertex z, x, y [m]</th><th>IP [m]</th><th>rock origin</th><th>origin z [m]</th><th>p rock [GeV]</th><th>muon</th><th>p muon [GeV]</th></tr></thead><tbody></tbody></table></div>
+  <div class="panel scroll"><table id="top"><thead><tr><th>#</th><th>pairs / 15 y</th><th>vertex z, x, y [m]</th><th>IP [m]</th><th>rock particle</th><th>rock origin</th><th>origin z [m]</th><th>p rock [GeV]</th><th>muon</th><th>p muon [GeV]</th></tr></thead><tbody></tbody></table></div>
 </section>
 
 <section aria-labelledby="c-h">
@@ -138,6 +176,8 @@ const DATA = __DATA__;
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ORG = ["cavern wall (−x)", "floor", "other side (+x)", "elsewhere"];
 const MT = ["bounced", "selected", "other"];
+const PNM = { 211: "π⁺", "-211": "π⁻", 321: "K⁺", "-321": "K⁻", 2212: "p", "-2212": "p̄", 11: "e⁻", "-11": "e⁺", 13: "μ⁻", "-13": "μ⁺", 0: "?" };
+const PN = k => PNM[k] ?? String(k);
 const fmt = x => x === 0 ? "0" : Math.abs(x) >= 100 ? x.toFixed(0) : Math.abs(x) >= 1 ? x.toFixed(2) : x.toPrecision(2);
 const TN = { "mu x mu": "muon × muon", "mu x rock": "muon × rock", "rock x rock": "rock × rock" };
 let D = "R1_ubt_only";
@@ -162,7 +202,9 @@ function cards() {
   document.getElementById("hlead").textContent = `Weighted over all ${d.n.toLocaleString("en")} surviving pairs (pairs per 15 years per bin, total ${fmt(d.total)}).`;
   bars("origin", d.origin, ORG, k => `var(--o${k})`);
   bars("mtype", d.mu_type, MT, () => "var(--mu)");
-  document.querySelector("#top tbody").innerHTML = d.top.map((r, i) => `<tr><td>${i + 1}</td><td>${fmt(r.w)}</td><td>${r.vz.toFixed(1)}, ${r.vx.toFixed(2)}, ${r.vy.toFixed(2)}</td><td>${r.ip.toFixed(3)}</td><td>${ORG[r.org]}</td><td>${r.rz.toFixed(1)}</td><td>${r.prock.toFixed(1)}</td><td>${MT[r.mtype] ?? "?"}</td><td>${r.pmu.toFixed(1)}</td></tr>`).join("");
+  const sp = Object.entries(d.species).sort((a, b) => b[1] - a[1]);
+  bars("species", sp.map(x => x[1]), sp.map(x => PN(x[0])), () => "var(--rock)");
+  document.querySelector("#top tbody").innerHTML = d.top.map((r, i) => `<tr><td>${i + 1}</td><td>${fmt(r.w)}</td><td>${r.vz.toFixed(1)}, ${r.vx.toFixed(2)}, ${r.vy.toFixed(2)}</td><td>${r.ip.toFixed(3)}</td><td>${PN(r.pid)}</td><td>${ORG[r.org]}</td><td>${r.rz.toFixed(1)}</td><td>${r.prock.toFixed(1)}</td><td>${MT[r.mtype] ?? "?"}</td><td>${r.pmu.toFixed(1)}</td></tr>`).join("");
 }
 function bars(id, vals, names, col) {
   const tot = vals.reduce((a, b) => a + b, 0) || 1;
@@ -225,7 +267,7 @@ function view(cv, ax) {
 }
 function info(i) { const ev = DATA[D].ev;
   return `<b>${fmt(ev.w[i])} pairs / 15 y</b> · vertex z = ${ev.vz[i].toFixed(1)} m (x ${ev.vx[i].toFixed(2)}, y ${ev.vy[i].toFixed(2)}), IP ${ev.ip[i].toFixed(3)} m · ` +
-    `<b style="color:var(--rock)">rock track</b> p = ${ev.prock[i]} GeV, leaves the ${ORG[ev.org[i]]} at z = ${ev.raz[i].toFixed(1)} m · ` +
+    `<b style="color:var(--rock)">rock ${PN(ev.rpid[i])}</b> p = ${ev.prock[i]} GeV, leaves the ${ORG[ev.org[i]]} at z = ${ev.raz[i].toFixed(1)} m · ` +
     `<b style="color:var(--mu)">shield muon</b> (${MT[ev.mtype[i]] ?? "?"}) p = ${ev.pmu[i]} GeV`; }
 function seg(mx, my, pts) { let bd = Infinity; for (let k = 0; k < pts.length - 1; k++) { const [x1, y1] = pts[k], [x2, y2] = pts[k + 1];
   const dx = x2 - x1, dy = y2 - y1, t = Math.max(0, Math.min(1, ((mx - x1) * dx + (my - y1) * dy) / (dx * dx + dy * dy || 1)));
@@ -252,14 +294,91 @@ for (const k of Object.keys(HX)) document.getElementById("h-" + k).addEventListe
   const i = Math.floor((e.clientX - r.left - b.X0) / b.bw); if (!b || i < 0 || i >= b.n) return;
   document.getElementById("hinfo").textContent = `${e.currentTarget.getAttribute("aria-label")} ${HX[k](h.edges[i])} – ${HX[k](h.edges[i + 1])}: ${fmt(h.h[i])} pairs / 15 y`; });
 
-function draw() { view(document.getElementById("cx"), 0); view(document.getElementById("cy"), 1); for (const k of Object.keys(HX)) hdraw(k); }
+// ---- pair explorer
+let P = 0;
+function entryZ(i) { const ev = DATA[D].ev, z0 = ev.raz[i];
+  for (let k = 0; k <= 800; k++) { const z = Math.max(Z0, z0) + (Z1 - Math.max(Z0, z0)) * k / 800, f = (z - z0) / (82.08 - z0);
+    const x = ev.rax[i] + f * (ev.rbx[i] - ev.rax[i]), y = ev.ray[i] + f * (ev.rby[i] - ev.ray[i]);
+    if (Math.abs(x) < hw(z, 0) && Math.abs(y) < hw(z, 1)) return [z, x, y]; } return null; }
+function ringOf(z) { if (z < Z0 || z > Z1) return null; for (let k = 0; k < 10; k++) { const b = Math.min(Z0 + 0.8 + 0.82 * 6 * (k + 1), Z1); if (z <= b) return k + 1; } return 10; }
+function pview(cv, ax) {
+  const [c, W, H] = setup(cv), ev = DATA[D].ev, i = P;
+  const zlo = 27, zhi = 84;
+  const pts = [ev.rvx[i], ev.rax[i], ev.rbx[i], ev.max[i], ev.mbx[i], ev.vx[i]].map((v, k) => ax === 0 ? v : [ev.rvy[i], ev.ray[i], ev.rby[i], ev.may[i], ev.mby[i], ev.vy[i]][k]).filter(v => v != null);
+  const wall = ax === 0 ? -4.56 : -3.36;
+  let lo = Math.min(...pts, -2.2, ax === 0 ? -5 : -3.6) - .3, hi = Math.max(...pts, ax === 0 ? 2.2 : 3.2) + .3;
+  const L = 38, Rm = 10, T = 8, B = 22;
+  const X = z => L + (z - zlo) / (zhi - zlo) * (W - L - Rm), Y = v => T + (hi - v) / (hi - lo) * (H - T - B);
+  c.save(); c.beginPath(); c.rect(L, T, W - L - Rm, H - T - B); c.clip();
+  c.fillStyle = css("--rockhall"); c.fillRect(L, Y(wall), W - L - Rm, Y(lo) - Y(wall));
+  c.lineWidth = 1; c.strokeStyle = css("--grid");
+  for (let z = 30; z <= zhi; z += 5) { c.beginPath(); c.moveTo(X(z), T); c.lineTo(X(z), H - B); c.stroke(); }
+  const st = hi - lo > 6 ? 1 : 0.5;
+  for (let v = Math.ceil(lo / st) * st; v <= hi; v += st) { c.beginPath(); c.moveTo(L, Y(v)); c.lineTo(W - Rm, Y(v)); c.stroke(); }
+  c.strokeStyle = css("--ink-3"); c.setLineDash([5, 4]); c.beginPath(); c.moveTo(L, Y(wall)); c.lineTo(W - Rm, Y(wall)); c.stroke(); c.setLineDash([]);
+  if (D === "R2_sbt_ubt") for (let k = 0; k < 10; k++) { const a = k === 0 ? Z0 : Z0 + 0.8 + 0.82 * (6 * k), b = Math.min(Z0 + 0.8 + 0.82 * (6 * (k + 1)), Z1);
+    c.fillStyle = css(k % 2 ? "--ring-b" : "--ring-a");
+    for (const s of [1, -1]) { c.beginPath(); c.moveTo(X(a), Y(s * hw(a, ax))); c.lineTo(X(b), Y(s * hw(b, ax))); c.lineTo(X(b), Y(s * (hw(b, ax) + .216))); c.lineTo(X(a), Y(s * (hw(a, ax) + .216))); c.closePath(); c.fill(); } }
+  c.strokeStyle = css("--vessel"); c.lineWidth = 1.2; c.beginPath(); for (const s of [1, -1]) { c.moveTo(X(Z0), Y(s * hw(Z0, ax))); c.lineTo(X(Z1), Y(s * hw(Z1, ax))); } c.stroke();
+  c.fillStyle = css("--gap"); c.globalAlpha = .7; c.fillRect(X(Z1), Y(hi), X(82.08) - X(Z1), Y(wall) - Y(hi)); c.globalAlpha = 1;
+  c.lineWidth = 3; c.strokeStyle = css("--ink-2"); const sh = ax === 0 ? .5 : 1.35; c.beginPath(); c.moveTo(X(30.73), Y(sh)); c.lineTo(X(30.73), Y(-sh)); c.stroke();
+  c.strokeStyle = css("--accent"); c.beginPath(); c.moveTo(X(31.13), Y(2)); c.lineTo(X(31.13), Y(-2)); c.stroke();
+  c.strokeStyle = css("--sst"); c.beginPath(); c.moveTo(X(82.08), Y(ax === 0 ? 2 : 3)); c.lineTo(X(82.08), Y(ax === 0 ? -2 : -3)); c.stroke();
+  c.fillStyle = css("--iron"); c.globalAlpha = .5; const ih = ax === 0 ? 1.71 : 1.27; c.fillRect(X(29.39), Y(ih), X(29.89) - X(29.39), Y(-ih) - Y(ih)); c.globalAlpha = 1;
+  const V = ax === 0 ? [ev.rvx[i], ev.rax[i], ev.rbx[i], ev.max[i], ev.mbx[i], ev.vx[i], ev.mkx[i]] : [ev.rvy[i], ev.ray[i], ev.rby[i], ev.may[i], ev.mby[i], ev.vy[i], ev.mky[i]];
+  // rock: interaction point -> exit (guide), exit -> SST1
+  c.strokeStyle = css("--rock"); c.lineWidth = 2; c.globalAlpha = .5; c.setLineDash([3, 3]);
+  if (ev.rvz[i] != null) { c.beginPath(); c.moveTo(X(ev.rvz[i]), Y(V[0])); c.lineTo(X(ev.raz[i]), Y(V[1])); c.stroke(); }
+  c.setLineDash([]); c.globalAlpha = 1; c.beginPath(); c.moveTo(X(ev.raz[i]), Y(V[1])); c.lineTo(X(82.08), Y(V[2])); c.stroke();
+  if (ev.rvz[i] != null) { c.fillStyle = css("--rock"); c.save(); c.translate(X(ev.rvz[i]), Y(V[0])); c.rotate(Math.PI / 4); c.fillRect(-4, -4, 8, 8); c.restore(); }
+  const en = entryZ(i);
+  if (en) { const f = (en[0] - ev.raz[i]) / (82.08 - ev.raz[i]), v = V[1] + f * (V[2] - V[1]); c.strokeStyle = css("--rock"); c.lineWidth = 2; c.beginPath(); c.arc(X(en[0]), Y(v), 6, 0, 7); c.stroke(); }
+  // muon
+  c.strokeStyle = css("--mu"); c.lineWidth = 2; c.beginPath(); c.moveTo(X(30.6), Y(V[3]));
+  if (ev.mkz[i] != null && ev.mkz[i] > 30.6 && ev.mkz[i] < 82.08) c.lineTo(X(ev.mkz[i]), Y(V[6])); c.lineTo(X(82.08), Y(V[4])); c.stroke();
+  c.fillStyle = css("--vtx"); c.beginPath(); c.arc(X(ev.vz[i]), Y(V[5]), 4.5, 0, 7); c.fill();
+  c.restore();
+  c.font = "11px " + css("--f-mono"); c.fillStyle = css("--ink-3");
+  for (let z = 30; z <= zhi; z += 10) c.fillText(z, X(z) - 6, H - 6);
+  for (let v = Math.ceil(lo / st) * st; v <= hi; v += st) if (Math.abs(v - Math.round(v)) < 1e-6) c.fillText(v, 8, Y(v) + 4);
+  c.fillStyle = css("--ink-2"); c.fillText(ax === 0 ? "rock (−x wall)" : "rock (floor)", L + 6, Math.min(Y(wall) + 14, H - B - 4));
+}
+function pinfo() {
+  const ev = DATA[D].ev, i = P, en = entryZ(i), d3 = (a, b, c) => `${a.toFixed(2)}, ${b.toFixed(2)}, ${c.toFixed(2)}`;
+  const depth = ev.rvz[i] != null ? Math.hypot(ev.rax[i] - ev.rvx[i], ev.ray[i] - ev.rvy[i], ev.raz[i] - ev.rvz[i]) : null;
+  const rows = [
+    ["grp", "This pair", `${fmt(ev.w[i])} pairs / 15 y`],
+    ["fake vertex (x, y, z)", `${d3(ev.vx[i], ev.vy[i], ev.vz[i])} m`], ["impact parameter", `${(100 * ev.ip[i]).toFixed(1)} cm (cut 10 cm)`],
+    ["grp", `<i class="sw" style="background:var(--rock)"></i>Rock track`, ""],
+    ["particle", `${PN(ev.rpid[i])}, p = ${ev.prock[i]} GeV`],
+    ["muon interacted at", ev.rvz[i] != null ? `${d3(ev.rvx[i], ev.rvy[i], ev.rvz[i])} m` : "–"],
+    ["leaves the rock at", `${d3(ev.rax[i], ev.ray[i], ev.raz[i])} m${depth != null ? ` (${(100 * depth).toFixed(0)} cm from the interaction)` : ""}`],
+    ["enters the vessel", en ? `z = ${en[0].toFixed(1)} m (x ${en[1].toFixed(2)}, y ${en[2].toFixed(2)})${D === "R2_sbt_ubt" ? `, SBT ring ${ringOf(en[0])}` : ", no detector (R1)"}` : "does not enter"],
+    ["at SST1 (x, y)", `${ev.rbx[i].toFixed(2)}, ${ev.rby[i].toFixed(2)} m`],
+    ["grp", `<i class="sw" style="background:var(--mu)"></i>Shield muon`, ""],
+    ["type, momentum", `${MT[ev.mtype[i]] ?? "?"}, p = ${ev.pmu[i]} GeV`],
+    ["at z = 30.6 m (x, y)", `${ev.max[i].toFixed(2)}, ${ev.may[i].toFixed(2)} m`],
+    ...(ev.mkz[i] != null ? [["bounce", `z = ${ev.mkz[i].toFixed(1)} m`]] : []),
+    ["at SST1 (x, y)", `${ev.mbx[i].toFixed(2)}, ${ev.mby[i].toFixed(2)} m`],
+  ];
+  document.getElementById("pinfo").innerHTML = rows.map(r => r[0] === "grp" ? `<div class="grp">${r[1]}${r[2] ? `<span style="margin-left:auto;font-family:var(--f-body);font-weight:500;font-size:13px">${r[2]}</span>` : ""}</div>` : `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join("");
+}
+function pfill() { const ev = DATA[D].ev, n = ev.w.length, sel = document.getElementById("psel");
+  sel.innerHTML = ev.w.map((w, k) => `<option value="${k}">#${k + 1} · ${fmt(w)} / 15 y · ${PN(ev.rpid[k])} ${ev.prock[k]} GeV</option>`).join("");
+  P = Math.min(P, n - 1); sel.value = P; document.getElementById("pcount").textContent = `${n} pairs`; }
+function pdraw() { document.getElementById("psel").value = P; pview(document.getElementById("px"), 0); pview(document.getElementById("py"), 1); pinfo(); }
+document.getElementById("psel").addEventListener("change", e => { P = +e.target.value; pdraw(); });
+document.getElementById("pp").addEventListener("click", () => { P = (P - 1 + DATA[D].ev.w.length) % DATA[D].ev.w.length; pdraw(); });
+document.getElementById("pn").addEventListener("click", () => { P = (P + 1) % DATA[D].ev.w.length; pdraw(); });
+
+function draw() { pdraw(); view(document.getElementById("cx"), 0); view(document.getElementById("cy"), 1); for (const k of Object.keys(HX)) hdraw(k); }
 for (const name of Object.keys(DATA)) { const b = document.getElementById("d-" + name); if (!b) continue;
-  b.addEventListener("click", () => { D = name; for (const n2 of Object.keys(DATA)) document.getElementById("d-" + n2)?.setAttribute("aria-pressed", n2 === D); cards(); draw();
+  b.addEventListener("click", () => { D = name; P = 0; pfill(); for (const n2 of Object.keys(DATA)) document.getElementById("d-" + n2)?.setAttribute("aria-pressed", n2 === D); cards(); draw();
     document.getElementById("info").textContent = "Hover a track to see its pair. Thicker lines carry more weight."; }); }
 document.getElementById("zr").addEventListener("change", draw);
 document.getElementById("nshow").addEventListener("change", draw);
 hover(document.getElementById("cx")); hover(document.getElementById("cy"));
-cards(); draw();
+pfill(); cards(); draw();
 let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(draw, 120); });
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
 new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
