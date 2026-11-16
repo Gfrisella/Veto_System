@@ -81,6 +81,23 @@ def dis_tracks(store):
     return out, info
 
 
+def merge_terms(parts):
+    """Sum the veto_term results of blocks of DIS tracks (pair weights w_mu x w_DIS: blocks add up)."""
+    if len(parts) == 1:
+        return parts[0]
+    out = {k: sum(p_.get(k, 0) for p_ in parts) for k in ("n_candidates", "candidates_15y", "selected_15y", "n_selected",
+                                                          "after_15y", "n_after", "opposite_pairs")}
+    out["after_err_15y"] = float(np.sqrt(sum(p_.get("after_err_15y", 0.0) ** 2 for p_ in parts)))
+    ups = [p_.get("after_upper_15y") for p_ in parts if p_.get("after_upper_15y") is not None]
+    out["after_upper_15y"] = (max(ups) if ups else None) if out["n_after"] == 0 else None
+    sel = [p_ for p_ in parts if p_.get("leg_explained") and p_["selected_15y"] > 0]
+    if sel:
+        tot = sum(p_["selected_15y"] for p_ in sel)
+        out["leg_explained"] = [sum(p_["selected_15y"] * p_["leg_explained"][i] for p_ in sel) / tot for i in (0, 1)]
+    out["blocks"] = len(parts)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--design", required=True)
@@ -89,6 +106,8 @@ def main():
     ap.add_argument("--inputs", default=paths.RECO_INPUTS)
     ap.add_argument("--mu-sample", type=int, default=2_000_000, help="random SST1 muon rows (weights scaled); 0 = all")
     ap.add_argument("--block", type=int, default=4096)
+    ap.add_argument("--dis-block", type=int, default=0,
+                    help="process the DIS tracks in blocks of this many rows (memory: the vessel store needed > 128 GB in one go, S7 16 Nov 2026); 0 = all at once")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     t0 = time.time()
@@ -110,14 +129,26 @@ def main():
         infos[st] = info
         print(f"{st}: {info['single_track_events']:,} single-track events ({info['single_rate_per_spill']:.4g} tracks / spill), "
               f"{info['multi_track_events']:,} multi-track events rejected (D9), {time.time() - t0:.0f} s", flush=True)
-        ia, ib, v, n_pairs, pre = cross_pairs(mu, B, dev, a.block, sel=cfg)      # streaming IP cut (memory)
-        tr = {k: np.concatenate([np.asarray(mu[k], float), np.asarray(B[k], float)]) for k in KEYS}
-        cand = np.stack([ia, ib + len(mu["ax"])], 1)
-        w = mu["weight"][ia] * B["weight"][ib]
-        r = veto_term(tr, cand, w, v, design, inp, cfg, np.random.default_rng(2), pre=pre)
-        r.pop("_surv", None)
-        r.update(opposite_pairs=n_pairs, bound_15y=r["selected_15y"] * mu_ineff)
-        del tr, cand, w, ia, ib, v, pre
+        nb = len(B["ax"])
+        step = a.dis_block if a.dis_block > 0 else nb
+        parts = []
+        for k0 in range(0, nb, step):                   # blocks of DIS tracks: pairs, IP cut and veto, then free the memory
+            Bk = {k: v_[k0:k0 + step] for k, v_ in B.items()}
+            ia, ib, v, n_pairs, pre = cross_pairs(mu, Bk, dev, a.block, sel=cfg)      # streaming IP cut (memory)
+            tr = {k: np.concatenate([np.asarray(mu[k], float), np.asarray(Bk[k], float)]) for k in KEYS}
+            cand = np.stack([ia, ib + len(mu["ax"])], 1)
+            w = mu["weight"][ia] * Bk["weight"][ib]
+            rk = veto_term(tr, cand, w, v, design, inp, cfg, np.random.default_rng(2 + k0 // step), pre=pre)
+            rk.pop("_surv", None)
+            rk["opposite_pairs"] = n_pairs
+            parts.append(rk)
+            del tr, cand, w, ia, ib, v, pre, Bk
+            if step < nb:
+                print(f"    DIS rows {k0:,}-{min(k0 + step, nb):,}: selected {rk['selected_15y']:.3g}, after veto "
+                      f"{rk.get('after_15y', 0):.3g} ({rk.get('n_after', 0)} MC), {time.time() - t0:.0f} s", flush=True)
+        r = merge_terms(parts)
+        n_pairs = r["opposite_pairs"]
+        r.update(bound_15y=r["selected_15y"] * mu_ineff)
         res[st] = r
         print(f"  {n_pairs:.3g} opposite-charge pairs, {r['n_candidates']:,} candidates; selected {r['selected_15y']:.3g} / 15 y "
               f"(bound x mu inefficiency {mu_ineff:.2e}: {r['bound_15y']:.3g}), after veto {r.get('after_15y', 0):.3g} "
