@@ -990,3 +990,6 @@ draws x10-70, more seeds), waiting for the go.
 - Closure on `ms7_nu2026`: IP < 10 cm 9.86 / 15 y = S7 eval; no-IP sum 1.42e3 = S7 ip_tail "all".
 - Array 2089733 (`batch/S6b_cutflow.cmd`, outputs `reco/cutflow_notag_*.json`) -> report Section 6 tables.
   MS7 muon V0 row waits for the V0-statistics production (other session); mu x product / rock pairs wait for S7 3, 8, 11.
+- S7 task 11 (rock x mu on the old D6_straw_mod design + D6 rock draws of 8 Nov, 300 seeds) had already failed (OOM,
+  146 GB > 128 GB). Dropped: Guglielmo, 16 Nov: only R1 / R2 / R3 anywhere. Rock pairs to be redone on R2 with draws from
+  the Nov-4 full sample (rock_apply on nov4_pool/shell/train, 3220 seed files) - waiting for his go.
