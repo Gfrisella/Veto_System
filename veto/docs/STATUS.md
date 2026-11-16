@@ -1055,3 +1055,4 @@ draws x10-70, more seeds), waiting for the go.
 - D19 agent done (1b1eef5 pushed, 4ac6a71 not): SBT material term ~780 / 15 y at IP<10 cm after R2 (muon K_L), decisions a-d pending (ISSUES D19).
 - ACTS vs baseline (same code, job 2095763 *_basenow): R1 signal loss 3.14 -> 2.82 %, single tagged 65.8 -> 65.0; R2 signal 3.24 both, single 92.1 -> 94.3; pairs ~0 in all. ISSUES D14.
 - 17 Nov, Guglielmo: ACTS stays an option (D14 closed). D19: (a) SBT-material term in the budget, (b) v0_line + selftag_hits on, (c) zone rule on; (d) open.
+- D19 (d), Guglielmo: material_scattering ON in R2/R3 + shell-scattering term in the SBT window (agent).

@@ -1154,7 +1154,8 @@ D19. SBT cell model: missing ingredients
       term may be overestimated; CH2 for LAB; parametrised deposits. Decisions (Guglielmo): (a) adopt the ~780 term,
       (b) v0_line / selftag_hits on, (c) zone rule, (d) material_scattering on.
     17 Nov 2026, Guglielmo: (a) YES, the SBT-material term enters the background budget; (b) YES, v0_line and selftag_hits
-      on; (c) YES, zone rule adopted; (d) not decided (material_scattering stays off). Implementation: D19 agent.
+      on; (c) YES, zone rule adopted; (d) YES, material_scattering on + a shell-scattering term in the SBT pointing window (asked again 17 Nov).
+      Implementation: D19 agent.
 
 D16. V0 production in the MS7 muon chain: checked against data (10 Nov 2026, branch veto-v0-production)
     STATUS: IN PROGRESS (PRIORITY B)
