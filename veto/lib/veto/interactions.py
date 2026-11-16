@@ -190,6 +190,7 @@ def evaluate(inter, part, design, maps, cfg, rng, muons=None, levels=("a", "b"),
         sel, pair, vertex = sel[keep], pair[keep], vertex[keep]
     w15 = inter["weight"] * SPILLS_15Y
     survive = {}
+    strip_tagged = None
     if len(sel):
         trk, ev, z_a, z_b, _ = event_tracks(inter, tr, sel, pair, vertex, muons)
         for lev, z in (("a", z_a), ("b", z_b)):
@@ -197,6 +198,16 @@ def evaluate(inter, part, design, maps, cfg, rng, muons=None, levels=("a", "b"),
                 r = reco.run_events(trk, ev, z, design, maps, cfg, rng)
                 survive[lev] = ~r["vetoed"][:len(sel)]
         survive["c"] = ~parent_crossed(inter, sel, muons, design) if muons is not None else np.ones(len(sel), bool)
+        strips = getattr(design, "shield_strips", None)
+        if strips is not None and len(strips["stations"]):   # silicon strip stations at the MS7 exit (16 Nov 2026)
+            from . import shield_strips
+            pos = np.full(n_inter, -1); pos[sel] = np.arange(len(sel))
+            he, hx, hy = shield_strips.own_hits(strips, part["int"], part["pdg"], part["p"], part["v"], rng)
+            k = pos[he] >= 0
+            st = shield_strips.tag(strips, vertex, tr["p"][pair[:, 0]] + tr["p"][pair[:, 1]], rng, hits=(pos[he[k]], hx[k], hy[k]))
+            strip_tagged = st["tagged"]
+            for lev in list(survive):
+                survive[lev] = survive[lev] & ~strip_tagged
     groups = inter["evt_n"] if "evt_n" in inter else np.arange(n_inter)
     diag = {}
     if len(sel) and muons is not None:           # why level b misses: per selected event
@@ -219,6 +230,10 @@ def evaluate(inter, part, design, maps, cfg, rng, muons=None, levels=("a", "b"),
         row = dict(interactions=float(w15[m_all].sum()), n_interactions=int(m_all.sum()),
                    selected=float(w15[sel][m_sel].sum()), n_selected=int(m_sel.sum()),
                    selected_err=bootstrap(w15[sel][m_sel], groups[sel][m_sel], rng=rng))
+        if strip_tagged is not None:
+            ws_ = w15[sel][m_sel]
+            row["strip_tagged_frac"] = float((ws_ * strip_tagged[m_sel]).sum() / max(ws_.sum(), 1e-300))
+            row["strip_tagged_15y"] = float((ws_ * strip_tagged[m_sel]).sum())
         for lev, s in survive.items():
             mm = m_sel & s
             row[f"survive_{lev}"] = float(w15[sel][mm].sum())

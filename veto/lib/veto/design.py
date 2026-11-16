@@ -180,16 +180,24 @@ class Design:
         return sbt.config(self.raw)
 
     @property
+    def shield_strips(self):
+        """Silicon strip stations at the MS7 exit (veto.shield_strips.config) or None (16 Nov 2026)."""
+        from . import shield_strips
+        return shield_strips.config(self.raw)
+
+    @property
     def n_channels(self):
-        from . import sbt
-        s = self.sbt
-        return sum(p.n_channels for p in self.planes) + (sbt.n_cells(s) * sbt.CHANNELS_PER_CELL if s else 0)
+        from . import sbt, shield_strips
+        s, ss = self.sbt, self.shield_strips
+        return (sum(p.n_channels for p in self.planes) + (sbt.n_cells(s) * sbt.CHANNELS_PER_CELL if s else 0)
+                + (shield_strips.n_channels(ss) if ss else 0))
 
     @property
     def cost(self):
-        from . import sbt
-        s = self.sbt
-        return sum(p.cost for p in self.planes) + (sbt.cost_kchf(s, s["budget_kchf"]) if s else 0.0)
+        from . import sbt, shield_strips
+        s, ss = self.sbt, self.shield_strips
+        return (sum(p.cost for p in self.planes) + (sbt.cost_kchf(s, s["budget_kchf"]) if s else 0.0)
+                + (shield_strips.cost_kchf(ss) if ss else 0.0))
 
     @property
     def rel_cost(self):

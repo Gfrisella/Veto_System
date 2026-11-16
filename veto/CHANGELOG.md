@@ -4,6 +4,12 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-16 (afternoon) — silicon strip stations at the MS7 exit (branch `veto-nov4-source`)
+
+- `lib/veto/shield_strips.py` (new): stations, rate map, own / random hits, back-trace tagging (rules point / vertex);
+  `design.shield_strips`, channels and cost; `interactions.evaluate` and `run_reco` apply it.
+- `bin/strip_study.py` (new): theta calibration, layouts, tagged background vs signal loss.
+
 ## 2026-11-16 — SBT pointing window along the wall (branch `veto-nov4-source`)
 
 - `lib/veto/sbt.py`: pointing window z +- r / sin(alpha) along the wall, per-ring hit timing (`window_z`, `sin_min`;

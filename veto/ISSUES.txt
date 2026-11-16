@@ -1013,6 +1013,8 @@ D19. SBT cell model: missing ingredients
       cells, SBT Al + LS as interaction target and scattering material (B1), position inside a cell (WOM ratio),
       cavern back-scatter / e-gamma random rate (scale factor for now). Remaining: 7.6 % of single SST1 muons fire the
       SBT but are not associated (median p 0.27 GeV; half of them the measured line meets no side wall).
+    16 Nov: rate scale study (R2 pointing): x1 / x5 / x13 -> signal loss 0.54 / 0.53 / 0.78 %, SST1 tagged 90.2 / 89.6 /
+      89.4 %: the pointing rule is robust to the back-scatter rate (Guglielmo: "go for 4").
     Next: rate model (scale or simulated back-scatter), neutrals for D2, SBT material in the interaction targets; decide
       on the soft untagged muons after the re-run gives their effect on the combinatorial pairs.
 

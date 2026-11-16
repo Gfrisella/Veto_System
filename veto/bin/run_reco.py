@@ -27,6 +27,7 @@ import numpy as np
 
 from veto import vertex_selection as vsel  # noqa: E402
 from veto import design as dsg
+from veto import shield_strips
 from veto import paths, reco
 from veto.config import DEFAULT_CONFIG
 
@@ -114,6 +115,9 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
                 per[name] = dict(acc_b, FP_frac=None)
                 continue
             s = reco.run_events(sig, ev, z_v, design, inp, cfg, rng, with_own_hits=False)
+            st = shield_strips.signal_tag(design, sig, ev, z_v, len(s["vetoed"]), rng)
+            if st is not None:                                     # silicon strip stations at the MS7 exit
+                s["vetoed"] = s["vetoed"] | st
             fp = float((w_ev * s["vetoed"]).sum() / w_ev.sum())
             per[name] = dict(acc_b, FP_frac=fp, n=len(w_ev))
             fp_sum, w_sum, n_tot = fp_sum + wb * fp, w_sum + wb, n_tot + len(w_ev)
@@ -142,6 +146,9 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
     if signal_model != "eventcalc":
         t0 = time.perf_counter()
         s = reco.run_events(sig, ev, z_v, design, inp, cfg, rng, with_own_hits=False)
+        st = shield_strips.signal_tag(design, sig, ev, z_v, len(s["vetoed"]), rng)
+        if st is not None:
+            s["vetoed"] = s["vetoed"] | st
         t_sig = time.perf_counter() - t0
         n_ev = len(s["vetoed"])
         res["signal"] = dict(n=n_ev, FP_frac=float(s["vetoed"].mean()), TN_frac=float(1 - s["vetoed"].mean()),

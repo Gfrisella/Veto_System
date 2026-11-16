@@ -896,3 +896,20 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   missed 9.4 -> 3.3 %. Remaining SBT misses: soft (median 0.27 GeV); 49 % of them the measured line meets no side wall,
   20 % a different face, rest a median 7 m away.
 - The queued S7 (2085945) runs this code (default "projected"), so the batch R2 numbers include the fix.
+
+## 2026-11-16 (afternoon) — D19 rate study; silicon strip stations at the MS7 exit (Guglielmo: "go for 4", "implement silicon strips in the Muon Shield")
+
+- **D19 SBT random rate (R2, pointing r/sin alpha, 300-spill test):** x1 (2.1 MHz) signal loss 0.541 %, SST1 tagged 90.2 %;
+  x5 0.534 % / 89.6 %; x13 (SR-389 27 MHz) 0.781 % / 89.4 %. The pointing rule is robust to the unknown back-scatter rate
+  (+0.24 points of signal at 27 MHz); `results_test/reco/reco_R2_sbt_ubt_rate{5,13}.json`.
+- **Silicon strips (`lib/veto/shield_strips.py`):** stations (20 x 20 cm default) at the MS7 exit face z = 29.90 m,
+  superimposed (no field / material in the transport); UT-outer-like 187.5 um strips spanning the station, 2 views, 25 ns,
+  99 %, 1 MHz/strip limit; own hits = charged products of the iron interaction at the exit plane; random hits from a map
+  of the MS7 parents (straight from 29.20 m: 4.62e8 / spill) + EM debris (e+- 1.25e8, converting gamma 5.2e6); peak
+  0.23 MHz/cm^2 at x = -1.73 m; strips <= 85 kHz; up to 41-48 MHz per station (~1 random hit per 25 ns slot). Rule: V0
+  vertex traced back along the visible momentum to z = 29.90 m, hits within r0 + theta dz; "point" >= 1 hit, "vertex" >= 2.
+  Wired into design (channels, placeholder cost 0.4 straw-channel units / channel, C6), interactions.evaluate (background,
+  strip_tagged_frac per target) and run_reco (signal loss, random hits). Cavern-side yoke face (48 stations, 1.9 m^2):
+  102 k channels, ~15 % of the budget. Not yet: the kink (station upstream of the iron), the field in the stations.
+- **Study** `bin/strip_study.py` (job 2086899): back-trace error -> theta, layouts (cavern-side yoke, both yokes,
+  hottest 10 / 25 cells of the selected parents), rule x theta -> tagged MS7 V0 / MS7 nu background and signal loss.
