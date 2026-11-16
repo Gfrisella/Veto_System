@@ -213,7 +213,7 @@ def draw(kind, par, n, rng, per_track=False, mu_lib=None, mu_split=None, v0_only
         m = np.nonzero(ok & ((inter["pdg_parent"] == code) if code is not None else True))[0]
         if not len(m):
             continue
-        o = lb.sample("iron", E[m], u[m], vtx[m], inter["pdg_parent"][m], rng, **({"v0_only": True} if v0_only else {}))
+        o = lb.sample("iron", E[m], u[m], vtx[m], inter["pdg_parent"][m], rng, **({"v0_only": v0_only} if v0_only else {}))
         o["int"] = m[o["int"]]
         inter["component"][m] = o["component"]
         inter["E_lib"][m] = o["E_lib"]
@@ -227,7 +227,8 @@ def draw(kind, par, n, rng, per_track=False, mu_lib=None, mu_split=None, v0_only
     summ = dict(parents=len(P), parents_per_spill=float(par["weight"].sum()),
                 interactions_per_spill=S, pot_per_spill=POT_PER_SPILL, interactions_15y=S * SPILLS_15Y, draws=n, dropped_low_E=int((~ok).sum()),
                 sampling=("one per track, weight w P" if per_track else "proportional to w P, weight S / N")
-                + ("; V0-only final states, weight x P(V0 | E) (importance sampling, 16 Nov 2026)" if v0_only else ""))
+                + ({True: "; V0 final states only, weight x P(V0 | E)", "nov0": "; V0-free final states only, weight x P(no V0 | E)"}
+                   .get(v0_only, "")))
     return inter, part, summ
 
 
@@ -404,8 +405,9 @@ def generate(a):
     par = parents(a.kind)
     print(f"{a.kind}: {len(par['p']):,} parents cross the iron ({par['weight'].sum():.4g} per spill), {time.time() - t0:.0f} s",
           flush=True)
-    inter, part, summ = draw(a.kind, par, a.n, rng, a.per_track, a.mu_lib, a.mu_split, v0_only=a.v0_only)
-    summ["v0_only"] = bool(a.v0_only)
+    fs = {"all": False, "v0": True, "nov0": "nov0"}[a.final_state if not a.v0_only else "v0"]
+    inter, part, summ = draw(a.kind, par, a.n, rng, a.per_track, a.mu_lib, a.mu_split, v0_only=fs)
+    summ["final_state"] = {False: "all", True: "v0", "nov0": "nov0"}[fs]
     summ["lib_v0_fraction"] = float(inter["lib_v0"].mean())
     summ["mu_library"] = str(a.mu_lib or MU_LIB)
     summ["mu_split"] = a.mu_split or MU_SPLIT
@@ -467,6 +469,10 @@ def main():
     g.add_argument("--v0-copies", type=int, default=1, help="forced vessel decays per V0 at the plane (weight / copies)")
     g.add_argument("--v0-acc-cut", action="store_true", help="keep only V0 copies with >= 2 charged products > 1 GeV into the "
                                                              "SST1 aperture (+10 %%): the others never pass the selection")
+    g.add_argument("--final-state", choices=["all", "v0", "nov0"], default="all",
+                   help="muons, importance sampling (16 Nov 2026): 'v0' only library final states with a V0 (weight x P(V0|E)), "
+                        "'nov0' only those without (weight x P(no V0|E); their V0 come from the Geant4 transport); "
+                        "'v0' + 'nov0' = the unbiased chain")
     g.add_argument("--v0-only", action="store_true", help="muons: draw only library final states with a V0, weight x P(V0 | E) "
                                                           "(importance sampling of the MS7 V0 chain; secondary V0 made in the "
                                                           "Geant4 transport of V0-free final states are not in it)")

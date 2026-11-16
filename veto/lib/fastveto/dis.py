@@ -100,6 +100,11 @@ class MuonLibrary:
             order_v = kv[np.argsort(key[kv], kind="stable")]
             ksv, firstv, cntv = np.unique(key[order_v], return_index=True, return_counts=True)
             self.groups_v0[name] = (order_v, {int(k): (f, c) for k, f, c in zip(ksv, firstv, cntv)})
+            kn = kept[~has[kept]]
+            order_n = kn[np.argsort(key[kn], kind="stable")]
+            ksn, firstn, cntn = np.unique(key[order_n], return_index=True, return_counts=True)
+            self.groups_nov0 = getattr(self, "groups_nov0", {})
+            self.groups_nov0[name] = (order_n, {int(k): (f, c) for k, f, c in zip(ksn, firstn, cntn)})
             n_v = np.bincount(key[kv], minlength=2000)
             self.f_v0[name] = np.divide(n_v, n_keep, out=np.zeros(2000), where=n_keep > 0)
 
@@ -119,7 +124,8 @@ class MuonLibrary:
         return a + b
 
     def _pick(self, name, tgt, ie, rng, v0_only=False):
-        order, g = (self.groups_v0 if v0_only else self.groups)[name]
+        groups = self.groups_nov0 if v0_only == "nov0" else self.groups_v0 if v0_only else self.groups
+        order, g = groups[name]
         out = np.empty(len(ie), np.int64)
         keys = tgt.astype(np.int64) * 1000 + ie
         for k in np.unique(keys):
@@ -154,10 +160,12 @@ class MuonLibrary:
         sp, sn = self.p6_sigma[0, ie] * za, self.p6_sigma[1, ie] * (1 - za)
         tgt = np.where(comp == 0, (rng.random(n) * (sp + sn) >= sp).astype(np.int64), 0)
         w_factor = np.ones(n)
-        if v0_only:
+        if v0_only:                                       # True / "v0": V0 final states; "nov0": the complement
             fp, fn = self.f_v0["p6"][ie], self.f_v0["p6"][1000 + ie]
             gg = self.g4[material][ie]
             fg = self.f_v0[material][ie]
+            if v0_only == "nov0":
+                fp, fn, fg = 1 - fp, 1 - fn, 1 - fg
             a6p, a6n, ag = sp * fp, sn * fn, gg * fg
             tot = sp + sn + gg
             w_factor = np.divide(a6p + a6n + ag, tot, out=np.zeros(n), where=tot > 0)
