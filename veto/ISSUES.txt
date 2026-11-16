@@ -1002,6 +1002,14 @@ D18. Search window not aware of the material crossed
     windows is ~1.2 mrad GeV -> r_ms = 6 is ~5x; with the 0.95 m of air before SST1 ~1.37 -> ~4.4x. Check which
     material sum the report uses.
 
+D20. Gap between the vessel end and SST1 (no tagger there)
+    STATUS: OPEN (PRIORITY B; logged 16 Nov 2026)
+    R2 on the full 3220-spill inputs: 25 % of the bounced SST1 muons with p > 1 GeV are untagged, 69 % of them cross no
+    detector at all: they bounce off the cavern wall late (k_z ~ 79 m, k_x ~ -6 m) and enter the acceptance through the
+    0.95 m between the vessel end (81.13 m) and SST1 (82.08 m). Bounced x selected pairs are 3 % of the pairs.
+    Options: an SBT-like ring / a plane closing the gap (cost in drachmas), or the A2 bounce search on the last ring;
+    measure the effect on the pairs first (n_eff 8: statistics).
+
 D19. SBT cell model: missing ingredients
     STATUS: OPEN (PRIORITY B; logged 16 Nov 2026)
     lib/veto/sbt.py (12 Nov) models the SBT of R2: 854 cells (61 rings x 4/3 across), muon path in the 20 cm LS shell per

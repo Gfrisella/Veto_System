@@ -929,3 +929,22 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   2087009); `ix.veto` applies the strips to the MS7 cache.
 - Next: trial run, 5 generations x 8 children, `--inputs inputs_nov4full.npz --prep-tag _nov4full`, after the caches and
   the strip study (theta default).
+
+## 2026-11-16 (late) — drachmas, strip study, R2 misses on the full inputs, V0 event display
+
+- **Drachma** (Guglielmo): 1 drachma = one 0.5 x 0.5 m module of 4 x 4 cm tiles (cheapest station); budget = R2 = 333.5;
+  R1 99.7; strip station 1.26; SBT ring 15.9-32.5; full SBT 233.8. Report: definition (named in honour of Archimedes,
+  Syracusia), price table, all costs in drachmas (0428bcc). Code: budget.drachma(), outputs and optimiser prompt.
+- **Caches** `prepared_*_nov4full` (job 2087009): muon 1 452 events (2.0e3 / 15 y before veto), nu 402 (4.1), MS7 nu 121
+  (9.9), **MS7 muon V0: only 2 events at full selection carrying 6.1e4 / 15 y** -> would saturate the objective on 2 events;
+  the trial run waits until this source is handled (more statistics / partial selection / mass cut, Q3 pending).
+- **Strip study** (`results_rerun/reco/strip_study.json`, job 2086899): back-trace error theta (68 / 90 %): MS7 mu V0
+  25 / 37 mrad (missing neutrino), MS7 nu 14 / 21 (partial), 2 / 10 (full). Best trade: 10 stations on the hottest cells,
+  rule point, theta 10 mrad (12.6 drachmas): MS7 nu tagged 74 % (full) / 36 % (partial), MS7 mu V0 23 % (partial), signal
+  loss 0.2 % (full) / 0.9 % (partial); 25 stations: 84 / 57 / 41 %, 0.3 / 1.8 %. theta >= 20 mrad costs 2-40 % signal.
+- **R2 misses, full 3220-spill inputs** (`diag_untagged_R2_full.json`): pairs are 97 % selected x selected, 3 % bounced x
+  selected; the soft "other" muons never form pairs. Selected muons untagged 2.2 % (n_eff 3: a few heavy muons, p ~1.1
+  GeV, entering from below, y ~ -2.3 at 30.6 m; 65 % SBT pointing missed, 35 % UBT window). Bounced p > 1 GeV untagged
+  25 % (n_eff 8): 69 % cross NO detector: they bounce off the cavern wall late (k_z ~ 79 m, k_x ~ -6 m) and reach SST1
+  through the 0.95 m gap between the vessel end (81.13 m) and SST1 (82.08 m), where there is no SBT.
+- **V0 event display**: bin/v0_examples.py (job 2087343) -> page.
