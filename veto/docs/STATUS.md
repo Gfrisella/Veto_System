@@ -968,3 +968,10 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   V0-parent cells (-1.1, +-0.1), (1.3, -0.1); 15 stations, 18.8 drachmas; R3 = 352.3 drachmas (5.6 % over the R2 budget).
   Strip layers: products back from the exit face to layers downstream of the interaction, the parent muon to layers upstream.
 - Test on the full sample: maps job 2087758, then 2087759 (r123_study + run_reco R1 / R2 / R3 x full / partial).
+
+## 2026-11-16 (end of session) — HANDOFF.md
+Session closed by Guglielmo (chat too long). Everything needed to continue is in `HANDOFF.md` (overview, conventions,
+full-sample R1 / R2 results, jobs, next steps, Shah Rukh's open requests) and `docs/r3_shield_strips_v0rule.md`.
+R3 final: 3 layers 29.39 / 29.59 / 29.79 m x 8 stations 30 x 30 cm (|x| 0.75-1.35, |y| < 0.3), 82 % of the V0 points,
+<= 34 MHz per station, 378.7 drachmas. Report pushed (Appendix G). MS7 V0 statistics plan proposed (x20 copies, V0-only
+draws x10-70, more seeds), waiting for the go.
