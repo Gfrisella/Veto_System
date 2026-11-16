@@ -28,6 +28,9 @@ Read this first in a new session. Details: `docs/STATUS.md` (dated log), `ISSUES
 | R2 | 2.5e-6 | 0.0011 +- 0.001 | 2.87 / 2.62 % | 90 % |
 
 Signal loss is dominated by the UBT straws (EM debris in the 25 ns window). R3: not run yet.
+Pair numbers are DIRECT counts (A1 decided 16 Nov: direct everywhere, also in the optimiser). The R2 2.5e-6 rests on 9
+pairs; the closure check (no EM debris) gets 7 pairs and ~5e-4 on the same candidates: a few heavy pairs decide the
+weighted R2 value. run_reco now saves FN_frac_err (weighted), n_eff_survive and the heaviest survivors.
 Other: R2 misses 2.1 % of selected muons (n_eff ~3); late-bounced muons via the vessel-end gap never form pairs (D20, C).
 MS7 V0: 399 selected events (partial) but only **2** at full selection carrying 6.1e4 / 15 y (statistics, see below).
 
@@ -37,11 +40,14 @@ MS7 V0: 399 selected events (partial) but only **2** at full selection carrying 
 - MS7 V0 event display + strip tagging: https://claude.ai/artifact/5hYk9446RtEnLkFePxW8AY
 - R2 coverage, untagged muons by category (full sample): https://claude.ai/artifact/3ejSJY4v9pPTVg75rMUVQq
 - (older, 300-spill) R2 untagged muons / r-sin(alpha) fix: https://claude.ai/artifact/FnWCuP3xHpYcQewWnZ17U8
+- A1 explained (product rule vs direct count, weak-spot toy, closure numbers): https://claude.ai/artifact/RkWTjSXM8gHe4yWWg5Sg2P
 
 ## Jobs
 
-- S7 (2085945): tasks 0-2, 4-6 done; 3, 7, 8 running, 9-11 pending (event-store eval, DIS x mu, D2 self-veto, closure,
-  rock x mu). Check: `sacct -j 2085945 -X`; logs `results_rerun/batch/logs/S7_eval_*.log`.
+- S7 (2085945): all done except 3 and 8 (DIS x mu, R1 / R2), running. Task 11 (rock x mu, D6) failed OOM and is dropped
+  (D7 closed: not needed). Check: `sacct -j 2085945 -X`; logs `results_rerun/batch/logs/S7_eval_*.log`.
+- S6b cut flow without tagging (2089733, `bin/cutflow_notag.py`): done, `results_rerun/reco/cutflow_notag_*.json`
+  (per target, nu flavour, V0 species; interactions / >= 2 tracks / pair no IP / IP < 10 cm / IP < 2.5 m) for Section 6.
 - R1 / R2 / R3 test: cancelled before running (R3 changed). Resubmit (layer maps for 29.39 / 29.59 / 29.79 are cached):
   ```
   cd <worktree>/veto && export VETO_CODE=$PWD && source bin/batch/env.sh && R=$VETO_RESULTS
@@ -61,7 +67,8 @@ MS7 V0: 399 selected events (partial) but only **2** at full selection carrying 
    iron interactions have a K_L / K_S / Lambda; needs code in `bin/shield_dis.py`); more seeds (x10). Target x1e3.
    Then rebuild `prepared_ms7_nov4full` (`bin/prepare_interactions.py --ms7 ...`, now with strip layer data).
 2. Run the R1 / R2 / R3 test (above); fill report Table `tab:tag:refeval` (R3 row, MS7 V0 columns).
-3. When S7 finishes: fill the report's Section 6 yields and the per-class table from `results_rerun`.
+3. Report Section 6 (no-tagging yields): from the S6b cut flow + S7 3 / 8 (this session); MS7 muon V0 row after step 1.
+   Rock pairs: one sentence (negligible, not re-evaluated).
 4. Optimiser trial (`evolve/evolve_designs.py --generations 5 --children 8 --inputs inputs_nov4full.npz
    --prep-tag _nov4full`, host slurm, seeds R1 / R2; add R3): only after 1 (the MS7 V0 source would dominate on 2 events).
 5. Strips: kink rule, MS7 field in the stations, EM shower inside the iron; V0 time of flight in the simulation.
@@ -79,5 +86,6 @@ MS7 V0: 399 selected events (partial) but only **2** at full selection carrying 
 
 ## Open issues (ISSUES.txt)
 
-A1 (figure of merit), A2 (bounce search: knob, start 0.21), B1, C1 (ghosts), C2/C6 (detector parameters), C5, C7, C8,
-D2, D3, D6 (nu library rebuild hung on GENIE), D7, D9, D14, D16, D18, D19 (SBT model), D20 (gap, C).
+Closed 16 Nov: A1 (direct count), A5, C1 (no ghosts with one-view straws), C5 (3220 spills), D7 (no rock pairs), D20.
+Still open: A2 (bounce search), B1 (scatter check), C3 (deferred: FairShip validation of the optimum), C7, C8, D2, D3,
+D6 (nu library rebuild hung on GENIE), D9, D14, D16, D18, D19 (SBT model). Finalisation proposal per issue: STATUS.md.

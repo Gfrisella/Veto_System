@@ -420,7 +420,7 @@ C. DETECTOR AND BOOKKEEPING: second order
       comparison); the missing dark photon 4 GeV c tau 100 m is accepted.
 
 C1. Detector response simplifications
-    STATUS: IN PROGRESS (11 Nov 2026: analytic ghosts in, +4.1 / +2.6 points of signal loss straw / fibre; option a pending)
+    STATUS: DONE (16 Nov 2026: option b in; option a not needed for R1 / R2 / R3)
       - sigma_x is not used (the 5 cm search window r0 is much larger);
       - no ghost hits from combining views when several muons share a time window;
       - straw time = uniform smearing in the 50 ns drift window; with a tile t0 the drift radius
@@ -441,6 +441,8 @@ C1. Detector response simplifications
       independent random hits the tile-marginal product IS the exact ghost distribution of a 2-view plane; a full
       combination adds only the position-dependent third-view coincidence (straws) and the event-by-event correlation
       with the real hits. Not counted: ghosts of a track's own hit with random hits; the ghost time window = the veto one.
+    16 Nov 2026: closed. R1 / R2 / R3 use only straw_v (one view, SR-389) and tiles: no strip crossing, no ghosts;
+      option a (full view combination) only matters for 2-view strip planes (fibres, x/u/v straws), not in the references.
 
 C2. Dead material and dead regions
     STATUS: DONE (5 Nov 2026: dead frames, placeholder widths to be confirmed; frame material not added)

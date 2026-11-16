@@ -995,3 +995,5 @@ draws x10-70, more seeds), waiting for the go.
   the Nov-4 full sample: NOT needed (Guglielmo, 16 Nov: mu x rock already shown negligible, ISSUES line ~752);
   Section 6 drops the rock pair rows and says so in one sentence.
 - A1 explainer page (product rule vs direct count, weak-spot toy, closure numbers): https://claude.ai/artifact/RkWTjSXM8gHe4yWWg5Sg2P
+- A1 decided: direct count everywhere (objective / optimiser / helpers), weighted error + heaviest survivors in run_reco.
+  Closed A1, A5, C1, C5, D7, D20. HANDOFF, CHANGELOG updated. S6b cut flow (2089733) done.

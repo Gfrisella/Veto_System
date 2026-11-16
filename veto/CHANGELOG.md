@@ -4,6 +4,20 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-16 (evening) — pair estimate = direct count; Section 6 cut flow; issues closed (branch `veto-nov4-source`)
+
+- ISSUES A1 decided (Guglielmo, "I prefer direct"): `objective.ObjectiveConfig.bkg_estimate` default `direct` (was
+  `factorised`; the optimiser used `max`): `evolve/objective.py`, `evolve_designs --bkg-estimate`, `end_to_end`, `scan_cone`.
+  Reason: the full-sample closure fails for R2 (7 surviving pairs vs 1.3 from eps x eps; cross-run 37 vs 5.2).
+- `run_reco` background block: `FN_frac_err` = sqrt(sum w_surv^2) / sum w (weighted error of the direct count),
+  `n_eff_survive`, `survivors` (20 heaviest surviving pairs: pair, muons, w_15y, share). `objective` uses the weighted error.
+- `bin/cutflow_notag.py` (new): cut flow without tagging per target / nu flavour / V0 species (interactions, >= 2 tracks,
+  pair cuts no IP, IP < 10 cm, IP < 2.5 m) on event stores; job 2089733 -> `results_rerun/reco/cutflow_notag_*.json`.
+  The nu store's meta declares `flavour` but `events.npz` lacks it: taken from `apply2026_R2_sbt_ubt.npz` (rows aligned).
+- S7 task 11 (rock x mu) is NOT rerun (correction to the entry below): D7 closed, mu x rock already shown negligible;
+  its line in `S7_eval.cmd` is an echo.
+- ISSUES closed: A1, A5, C1 (R1 / R2 / R3 straws have one view: no ghosts), C5, D7, D20.
+
 ## 2026-11-16 (evening) — old designs removed (branch `veto-nov4-source`)
 
 - Guglielmo: "remove these old designs from everywhere, only R1, R2, R3". Deleted `designs/D0-D6*`, `designs/E1-E5*`,
