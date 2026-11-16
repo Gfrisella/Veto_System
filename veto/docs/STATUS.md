@@ -1028,3 +1028,7 @@ draws x10-70, more seeds), waiting for the go.
   to the inner crossing + r_z (sbt.tag), then re-run R2.
 - D14.1 debris in time result (2090726): negligible (R2 pairs 9->8, B unchanged; R1 singles +0.16 pts); flag default off.
 - Other session committed b87da94 (SBT shell_window, default on): affects R2 runs started after 16:32.
+- shell_window (b87da94) on R2, full sample (job 2091195; old outputs *_prewin.*): single SST1 muons tagged 90.5 -> 93.3 %
+  (selected 99.37 -> 99.69 %, bounced 87.3 -> 90.5 %, other 87.5 -> 91.7 %); signal loss full 2.866 -> 2.882 %, partial
+  2.616 -> 2.634 % (+0.02 points); pairs: full 2.5e-6 (unchanged), partial 0.00106 (24 -> 23 MC). D2 self-veto unchanged
+  (helium nu DIS 3.6 -> 3.55, signal 0 %). Closure re-run done. Still running: evstore_eval R2, D9 R2, rock x mu R2.
