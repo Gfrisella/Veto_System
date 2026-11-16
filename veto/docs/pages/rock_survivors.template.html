@@ -108,7 +108,7 @@ footer { font-size: 12px; color: var(--ink-3); display: grid; gap: 4px; }
   <p class="lead" id="hlead"></p>
   <div class="grid2">
     <div class="panel hbox"><h3>Origin of the rock track</h3><div class="bars" id="origin"></div><div class="cap">Surface the rock track leaves: cavern wall at −x, floor, the opposite side (+x), elsewhere.</div></div>
-    <div class="panel hbox"><h3>Which shield muon</h3><div class="bars" id="mtype"></div><div class="cap">Type of the muon leg at SST1 (bounced off the wall or floor, straight, other).</div></div>
+    <div class="panel hbox"><h3>Which shield muon</h3><div class="bars" id="mtype"></div><div class="cap">Type of the shield-muon leg: bounced off the wall or floor, selected (p &gt; 1 GeV, reaching the timing detector), other.</div></div>
     <div class="panel hbox"><h3>Fake vertex z</h3><canvas id="h-vz" height="170" aria-label="Fake vertex z"></canvas><div class="cap">Decay vessel 31.13 – 81.13 m.</div></div>
     <div class="panel hbox"><h3>Rock-track origin z</h3><canvas id="h-rz" height="170" aria-label="Rock-track origin z"></canvas><div class="cap">Where along the cavern the track leaves the rock.</div></div>
     <div class="panel hbox"><h3>Rock-track momentum</h3><canvas id="h-prock" height="170" aria-label="Rock-track momentum"></canvas><div class="cap">At SST1, log scale, 1 – 400 GeV.</div></div>
@@ -137,7 +137,7 @@ footer { font-size: 12px; color: var(--ink-3); display: grid; gap: 4px; }
 const DATA = __DATA__;
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const ORG = ["cavern wall (−x)", "floor", "other side (+x)", "elsewhere"];
-const MT = ["bounced", "straight", "other"];
+const MT = ["bounced", "selected", "other"];
 const fmt = x => x === 0 ? "0" : Math.abs(x) >= 100 ? x.toFixed(0) : Math.abs(x) >= 1 ? x.toFixed(2) : x.toPrecision(2);
 const TN = { "mu x mu": "muon × muon", "mu x rock": "muon × rock", "rock x rock": "rock × rock" };
 let D = "R1_ubt_only";
