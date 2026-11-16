@@ -911,7 +911,7 @@ D13. Protons per spill: one convention
     15-year totals agree; per-spill rates differ by 0.8.
 
 D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_inventory.md, moved here 9 Nov 2026)
-    STATUS: DEFERRED (16 Nov 2026: debris in time + ACTS parametrisation; the rest done)
+    STATUS: IN PROGRESS (16 Nov 2026: debris in time implemented, R1 / R2 runs 2090726; ACTS scan started)
     9 Nov 2026 (Shah Rukh): neutrino DIS in the vessel with the 2026 flux + GENIE v2, D6_straw_mod, per 15 y:
       interactions helium 2.9e4, air 6.6e4, wall 5.8e4, planes 5.8e3; after selection + veto 3.3 (nu_e 1.37, nu_mu 1.02,
       anti-nu_mu 0.51, anti-nu_e 0.39, nu_tau 0.04), all but ~0.07 in helium; air / wall < 0.1 - 0.2 per flavour.
@@ -1002,6 +1002,14 @@ D14. Open items from the full-simulation inventory (PR #13 docs/full_sim_invento
       (1) debris IN TIME: EM debris is in the accidental rate maps only (run_reco --em-debris), not attached to its parent
       muon (em_debris keeps the parent row, not used yet); (2) ACTS resolution / efficiency parametrisation for
       reco.measure (FairShip pixi 26.10, PR #1545); the analytic resolution stays until then.
+    16 Nov 2026, Guglielmo: do both now. (1) lib/veto/debris_in_time.py + RecoConfig.debris_in_time / run_reco
+      --debris-in-time: each muon's own shield-end e / gamma on the UBT planes, in time. No row link between the reco inputs
+      and the em_debris parents -> kinematic match (one of the 5 nearest of the 2e6 simulated parents in x, y at 31.13 m,
+      slopes, ln p; none beyond 10 cm / 0.3 in ln p), crossings shifted by the muon - parent offset; straws get them
+      projected back 0.40 m; detection as em_debris (e: efficiency, gamma: conversion); own random stream. Test (20 000
+      single SST1 muons, R2): 18 % get >= 1 detected debris hit, at the muon's own time; bounced muons none.
+      R1 / R2 x full / partial with --em-debris --debris-in-time: job 2090726 (results_rerun/reco/reco_*_dit.json),
+      compare with S7. (2) ACTS particle-gun scan: separate session, files bin/acts_*, data/acts, docs/acts_resolution.md.
 
 D15. CVMFS library loading under load (shield_dis / shield_natural workers)
     STATUS: DONE (11 Nov 2026: Geant4 loaded in the parent, forked workers, retry + completeness check)

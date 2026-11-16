@@ -1012,3 +1012,5 @@ draws x10-70, more seeds), waiting for the go.
 - => The earlier "mu x rock negligible" (D6_straw_mod, 0.023: its side fins tagged 99.99 % of rock legs) does NOT hold for
   R1 (no fins / SBT: rock tracks enter through the walls untagged) and rock > mu x mu also for R2. D7 should be reopened
   and Section 6 should keep the rock rows (pending Guglielmo). Survivor dump + page in progress.
+- D6: nu_library fixed (hung gevgen = failed attempt; cache by energy), neutrino 5 % library job 2090354 (branch veto-d6-energy-rescale).
+- D14.1 debris in time implemented (866d086, ceb0e34), R1/R2 runs 2090726; D14.2 ACTS scan in a separate session.
