@@ -583,7 +583,8 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
                                                                    ("event", "track", "plane", "u", "y", "t")}
     if with_own_hits and getattr(cfg, "debris_in_time", False):   # D14.1: the muons' own debris, in time with them
         from . import debris_in_time
-        deb = debris_in_time.hits(tr_true, event, design, rng,
+        deb = debris_in_time.hits(tr_true, event, design, np.random.default_rng(cfg.seed + 1414),   # own stream: the
+                                  # rest of the event (random hits, measurement) stays identical to a run without it
                                   muon_time_at=lambda pl: -true_crossing(tr_true, pl)[2] / C)
         own = {k: np.concatenate([own[k], deb[k]]) for k in own}
         timing["debris_hits"] = len(deb["event"])
