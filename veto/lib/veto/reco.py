@@ -99,6 +99,8 @@ def own_hits(tr, event, design, rng, tracks_mask=None):
                 crossed &= (tr["apz"] > 0) & (tr["az"] < plane.z + mt.A_TOLERANCE)
             u, y = u + (dx if plane.kind in ("ubt", "tiles") else plane.sign * dx), y + dy
             ok = crossed & plane.inside(u, y)
+        if "_eloss" in tr:                      # D19 shell_energy_loss: nothing beyond the stopping point
+            ok = ok & (length > tr["_eloss"]["s_rem_stop"])
         ok &= sel & (rng.random(len(ok)) < plane.efficiency)
         uc, yc = plane.cell_centre(u[ok], y[ok])
         t = -length[ok] / C + rng.normal(0, plane.sigma_t * 1e9, ok.sum())
@@ -622,6 +624,13 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
     timing = {}
     n_events = int(event.max()) + 1 if len(event) else 0
     t0 = time.perf_counter()
+    sbt_cfg = getattr(design, "sbt", None)
+    if sbt_cfg and sbt_cfg.get("shell_energy_loss") and "ax" in tr:   # D19: mean energy loss in the SBT shell
+        from . import sbt_material
+        el = sbt_material.shell_energy_loss(tr, sbt_cfg.get("shell_eloss_beta", True))
+        tr = sbt_material.with_energy_loss(tr, el)
+        if el["stopped"].any():                 # a stopped track never reaches SST1: no measured track, no search
+            z_limit = np.where(el["stopped"], -np.inf, z_limit)
     if cfg.multiple_scattering:
         kicks = scattering.kicks(tr, design, rng, media=cfg.msc_media, tails=cfg.msc_tails)
         tr_true, tr = dict(tr, _kicks=kicks), scattering.scattered_tracks(tr, kicks)   # tr: as measured
@@ -660,7 +669,6 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
         v0_veto, _ = v0_tag(hits, design, v0, rule, cfg, n_events)
         n_v0 = int((v0_veto & ~vetoed).sum())
         vetoed |= v0_veto
-    sbt_cfg = getattr(design, "sbt", None)
     n_sbt = 0
     if sbt_cfg:                                  # Surrounding Background Tagger (veto.sbt, 12 Nov 2026): OR with the planes
         from . import sbt

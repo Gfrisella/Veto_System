@@ -66,8 +66,62 @@ def containment(tr, rows, design, cfg, rng):
     return {TYPE_NAMES[k]: float(inside[k] / max(total[k], 1)) for k in range(3)}
 
 
+def shell_loss_populations(tr, inp, scfg):
+    """D19 (17 Nov 2026, sbt cfg shell_energy_loss): with the mean energy loss in the SBT shell along the stored paths, a muon
+    that stops in the shell never reaches SST1: it leaves the single SST1 population and the pair candidates. The others reach
+    SST1 with less momentum: a pair muon that now fails p > 1 GeV or the timing-detector acceptance (through the field) drops
+    its pair; a single of type "p > 1 GeV & timing" that fails them becomes "SST1 other". Returns tr, inp (filtered) and info."""
+    from veto import muon_types as mt
+    from veto import sbt_material as sm
+    el = sm.shell_energy_loss(tr, scfg.get("shell_eloss_beta", True))
+    st = el["stopped"]
+    p_old = np.sqrt(tr["bpx"] ** 2 + tr["bpy"] ** 2 + tr["bpz"] ** 2)
+    crossed = el["de_mip"] > 0
+    p_new = np.where(st, 0.0, np.where(crossed, np.sqrt(np.maximum(el["E_B"] ** 2 - sm.M_MU ** 2, 0.0)), p_old))
+    with np.errstate(invalid="ignore", divide="ignore"):
+        sc = np.where(p_old > 0, p_new / p_old, 1.0)
+    acc = ~st & (p_new > 1) & (tr["bpz"] > 0)
+    ty = tr["type"].astype(int)
+    used = np.zeros(len(st), bool); used[inp["cand"].ravel()] = True; used[inp["single"]] |= ty[inp["single"]] == 1
+    chk = np.nonzero(acc & used & crossed)[0]                   # only muons that lost energy can change
+    if len(chk):
+        b = np.stack([tr["bx"][chk], tr["by"][chk], tr["bz"][chk]], 1)
+        pb = np.stack([tr["bpx"][chk], tr["bpy"][chk], tr["bpz"][chk]], 1) * sc[chk, None]
+        acc[chk] = mt.timing_ok(b, pb, mt.charge_from_pdg_column(tr["pdg"][chk]))
+    acc |= ~crossed & used                                     # untouched muons keep their selection
+    cand, cw = inp["cand"], inp["cand_w"]
+    keep_c = acc[cand[:, 0]] & acc[cand[:, 1]]
+    single, sw = np.asarray(inp["single"]), np.asarray(inp["single_w"], float)
+    keep_s = ~st[single]
+    new_ty = ty.copy()
+    retype = (ty == 1) & ~acc & ~st
+    new_ty[retype] = 2
+    s_ty = ty[single]
+    T_old = np.sqrt(p_old ** 2 + sm.M_MU ** 2) - sm.M_MU
+    info = dict(beta=bool(scfg.get("shell_eloss_beta", True)),
+                single_stopped_w_frac=float(sw[~keep_s].sum() / sw.sum()),
+                single_stopped_w_frac_by_type={TYPE_NAMES[k]: float(sw[~keep_s & (s_ty == k)].sum() / max(sw[s_ty == k].sum(), 1e-300))
+                                               for k in range(3)},
+                single_n_stopped=int((~keep_s).sum()),
+                single_retyped_w_frac=float(sw[keep_s & retype[single]].sum() / sw.sum()),
+                single_old_rangeout_w_frac=float(sw[el["de_mip"][single] >= T_old[single]].sum() / sw.sum()),
+                pairs_removed_n=int((~keep_c).sum()), pairs_n=int(len(cand)),
+                pairs_removed_w_frac=float(cw[~keep_c].sum() / max(cw.sum(), 1e-300)),
+                pair_muons_stopped=int(st[np.unique(cand.ravel())].sum()))
+    info["_old_rangeout"] = el["de_mip"] >= T_old                # per tr row, for the split of the single result
+    inp = dict(inp, cand=cand[keep_c], cand_w=cw[keep_c], cand_vertex=inp["cand_vertex"][keep_c],
+               single=single[keep_s], single_w=sw[keep_s])
+    return dict(tr, type=new_ty.astype(tr["type"].dtype)), inp, info
+
+
 def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
     rng = np.random.default_rng(cfg.seed)
+    eloss = None
+    if design.sbt and design.sbt.get("shell_energy_loss"):     # D19: stopped muons are not SST1 muons
+        tr, inp, eloss = shell_loss_populations(tr, inp, design.sbt)
+        print(f"    shell energy loss: single SST1 weight stopped {100 * eloss['single_stopped_w_frac']:.1f} %, "
+              f"pairs removed {eloss['pairs_removed_n']:,} of {eloss['pairs_n']:,} ({100 * eloss['pairs_removed_w_frac']:.2f} % "
+              f"of the weight)", flush=True)
     res = {"design": design.name, "description": design.raw.get("description", ""), "notes": design.notes,
            "area_m2": design.area, "n_cells": design.n_cells, "n_planes": len(design.planes),
            "technologies": sorted({p.technology or "generic" for p in design.planes}),
@@ -187,6 +241,12 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
     ty = tr["type"][single].astype(int)
     res["single"] = {TYPE_NAMES[k]: float((sw * m["vetoed"])[ty == k].sum() / sw[ty == k].sum()) for k in range(3)}
     res["single"]["all SST1"] = float((sw * m["vetoed"]).sum() / sw.sum())
+    if eloss is not None:                # split as 17 Nov (flags17/phys_single.py): MIP shell loss < / >= T at SST1 (stored)
+        ro = eloss.pop("_old_rangeout")[single]
+        f = lambda k: float((sw * m["vetoed"])[k].sum() / max(sw[k].sum(), 1e-300))
+        eloss.update(single_tagged_physical=f(~ro), single_tagged_old_rangeout_kept=f(ro),
+                     single_w_frac_old_rangeout_kept=float(sw[ro].sum() / sw.sum()))
+        res["shell_energy_loss"] = eloss
     res["single"]["us_per_event"] = 1e6 * (time.perf_counter() - t0) / len(single)
     res["window_containment"] = containment(tr, rng.choice(single, 50_000, replace=False), design, cfg, rng)
 

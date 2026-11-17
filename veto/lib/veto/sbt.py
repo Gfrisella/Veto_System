@@ -49,7 +49,12 @@ DEFAULT = dict(threshold_mev=30.0, efficiency=0.993, sigma_t=1.0e-9, n_sigma=3.0
                selftag_hits=False,     # own SBT deposits of an interaction (sbt_material.deposits, passed as v0["sbt_hits"])
                zone_rule=False, zone_up=1.0, zone_extra_ns=1.0,   # D19 (c, Guglielmo 17 Nov): a hit in a cell with ring
                # centre > z_vertex - zone_up, in time with light from the vertex (+- window + zone_extra_ns) tags the event
-               shell_ms_k=0.0)         # D19 (d): k sigma of the scattering in the shell added to the pointing radius (0 = off)
+               shell_ms_k=0.0,         # D19 (d): k sigma of the scattering in the shell added to the pointing radius (0 = off)
+               shell_energy_loss=False,   # D19 (17 Nov 2026, Guglielmo "mean momentum loss"): the stored muon paths lose the
+               # mean energy of the shell (sbt_material.shell_energy_loss): momentum reduced along the path (scattering, the
+               # spectrometer), a muon whose energy runs out STOPS there (no hits beyond it, not an SST1 muon: dropped from the
+               # single / pair populations of run_reco; SBT-material interactions beyond it dropped in sbt_eval / sbt_prepare)
+               shell_eloss_beta=True)  # ... with dE/dx = MIP / beta^2 (False: constant MIP loss)
                # window_z "projected": r / sin(alpha) of the crossing (alpha: line vs the wall face; sin floored at sin_min) and each hit timed against
                # the line's time inside its ring; "r" = the first version (rings within r, time at the crossing): our cells see muons only (Nov-4: 2.07 MHz > 30 MeV); SR-389 quotes
                                  # 27 MHz > 30 MeV with the particles scattered from the cavern walls and e / gamma -> 13
@@ -239,7 +244,7 @@ def shell_pieces(p, q):
         pieces.append((i, ta[i], tb[i]))
     seg = np.concatenate([x[0] for x in pieces]); ta = np.concatenate([x[1] for x in pieces]); tb = np.concatenate([x[2] for x in pieces])
     if not len(seg):
-        return {k: np.zeros(0) for k in ("seg", "face", "ring", "cellseg", "length", "z", "t_mid")}
+        return {k: np.zeros(0) for k in ("seg", "face", "ring", "cellseg", "length", "z", "t_mid", "ta", "tb")}
     # split at the ring edges (z linear in t)
     za, zb = p[seg, 2] + ta * d[seg, 2], p[seg, 2] + tb * d[seg, 2]
     zlo, zhi = np.minimum(za, zb), np.maximum(za, zb)
@@ -264,7 +269,7 @@ def shell_pieces(p, q):
     face = np.where(xface, np.where(mid[:, 0] > 0, 0, 1), np.where(mid[:, 1] > 0, 2, 3))
     ring, cseg = cell_of(face, np.clip(mid[:, 0], -hx, hx), np.clip(mid[:, 1], -hy, hy), mid[:, 2])
     length = (tb - ta) * L[sg] * T_LS / T_SHELL                      # the scintillator part of the shell path
-    return dict(seg=sg, face=face, ring=ring, cellseg=cseg, length=length, z=mid[:, 2], t_mid=tm)
+    return dict(seg=sg, face=face, ring=ring, cellseg=cseg, length=length, z=mid[:, 2], t_mid=tm, ta=ta, tb=tb)
 
 
 def own_hits(tr, event, cfg, rng):
@@ -274,6 +279,14 @@ def own_hits(tr, event, cfg, rng):
     if not len(c["seg"]):
         return dict(event=np.zeros(0, int), track=np.zeros(0, int), cell=np.zeros(0, int), t=np.zeros(0))
     s = c["seg"].astype(int)
+    el = tr.get("_eloss")
+    if el is not None:          # D19 shell_energy_loss: only the part of each piece upstream of the stopping point
+        seglen = np.linalg.norm(q[s] - p[s], axis=1)
+        rem_a, rem_b = seglen * (1 - c["ta"]) + after[s], seglen * (1 - c["tb"]) + after[s]   # path left to B
+        with np.errstate(invalid="ignore", divide="ignore"):
+            keep = np.clip((rem_a - el["s_rem_stop"][row[s]]) / (rem_a - rem_b), 0, 1)
+        keep = np.where(np.isfinite(keep), keep, 1.0)
+        c = dict(c, length=c["length"] * keep, t_mid=c["ta"] + 0.5 * keep * (c["tb"] - c["ta"]))
     ok = (c["ring"] >= 0) & instrumented(cfg, c["face"], c["ring"]) & (DEDX_LS * c["length"] > cfg["threshold_mev"])
     ok &= rng.random(len(ok)) < cfg["efficiency"]
     s = s[ok]

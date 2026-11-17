@@ -58,6 +58,12 @@ def prepare_store(path, cfg, muons, rng):
     del ev, tr
     pr = ix.prepare(inter, part, cfg, muons, codes=CODES)
     sel = pr["event_inter"]
+    # D19 shell_energy_loss (17 Nov 2026): events whose interaction lies beyond the parent muon's stopping point in the shell
+    # (mean energy loss along the stored path); interactions.veto drops them for designs with the flag on
+    pr["event_beyond_stop"] = np.zeros(len(sel), bool)
+    if muons is not None and len(sel):
+        vtx_int = np.stack([inter["x"], inter["y"], inter["z"]], 1)[sel]
+        pr["event_beyond_stop"] = sm.beyond_stop(muons, inter["muon"][sel], vtx_int)[0]
     if len(sel):
         # pair arrival at SST1: the earliest charged start within 2 cm of the vertex + light speed along the pair line
         vtx, pv = pr["event_vtx"], pr["event_pvis"]
@@ -114,7 +120,8 @@ def main():
         is_mu = s.name.startswith("store_mu_")
         pr = prepare_store(str(s), cfg, muons if is_mu else None, rng)
         parts.append(pr)
-        print(f"{s.name}: {len(pr['event_weight15']):,} selected, {pr['event_weight15'].sum():.4g} / 15 y before the veto, "
+        print(f"{s.name}: {len(pr['event_weight15']):,} selected, {pr['event_weight15'].sum():.4g} / 15 y before the veto "
+              f"({pr['event_weight15'][pr['event_beyond_stop']].sum():.4g} beyond the parent's stopping point), "
               f"{time.time() - t0:.0f} s", flush=True)
     out = merge(parts)
     f = paths.results_dir() / "interactions" / f"prepared_sbt{a.tag}{'_partial' if a.ip_cut == 'partial' else ''}.npz"

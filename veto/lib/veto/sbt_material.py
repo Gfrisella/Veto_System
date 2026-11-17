@@ -163,6 +163,209 @@ def split_rings(p, d, seg, ta, tb):
     return sg, a, b, face, ring, cseg
 
 
+# ---------------------------------------------------------------- mean energy loss of the muons in the shell
+# D19 (17 Nov 2026, Guglielmo: "mean momentum loss"; sbt cfg shell_energy_loss, default off). The stored muon paths come from
+# a transport without the vessel / SBT material: they glide along the shell without losing energy. Along the stored path, in
+# path order, every shell piece (inner Al, LS with the ribs smeared, outer Al) takes the mean loss dE/ds = k / beta^2 (k the
+# MIP value, Al 0.436, LS 0.150 GeV/m, as deposits()). With F(E) = E + m^2 / E this is dF/ds = -k: F falls linearly along a
+# piece and the muon stops where F reaches F(m) = 2 m (range (E - m)^2 / (E k)). The stored energy is the one at B (z = 82 m)
+# after K and, before the bounce point K of a bounced muon, the one at A (pz_30 along A -> K); the rock loss at K
+# (E_A - E_B) is subtracted from the real energy there. sbt cfg shell_eloss_beta = False: a constant MIP loss instead (the
+# 1 / beta^2 form overestimates the Bethe loss by ~10 % near p 0.3 GeV and underestimates the relativistic rise above ~2 GeV).
+M_MU = 0.10566
+N_SLOT = 6                  # shell pieces per straight segment: 3 layers x (way in, way out)
+
+
+def _F(E, beta=True):
+    """The variable that falls linearly along a shell piece: E + m^2 / E with the 1 / beta^2 loss, E for a constant loss."""
+    return E + M_MU ** 2 / E if beta else np.asarray(E, float)
+
+
+def _invF(F, beta=True):
+    if not beta:
+        return np.maximum(F, M_MU)
+    F = np.maximum(F, 2 * M_MU)
+    return 0.5 * (F + np.sqrt(np.maximum(F * F - 4 * M_MU ** 2, 0.0)))
+
+
+def shell_energy_loss(tr, beta=True):
+    """Mean energy loss in the SBT shell along the stored paths A -> (K) -> B of the tracks tr (reco's track format: ax.., kx..,
+    bx.., bpx.., optional apz). Returns dict (per track): stopped, s_stop (path length from A where it stops, NaN), s_tot,
+    s_rem_stop (path from the stopping point to B; -1 if it does not stop), x_stop (n, 3), E_B (energy at B with the loss;
+    m for stopped), de_mip (MIP loss along the whole stored path without 1/beta^2, GeV: the 17 Nov "range-out" criterion),
+    and the per-segment profile (seg_*) for energy_at_path / p_at_z."""
+    a = np.stack([tr["ax"], tr["ay"], tr["az"]], 1).astype(np.float64)
+    b = np.stack([tr["bx"], tr["by"], tr["bz"]], 1).astype(np.float64)
+    k = np.stack([tr["kx"], tr["ky"], tr["kz"]], 1).astype(np.float64) if "kx" in tr else np.full_like(a, np.nan)
+    n = len(a)
+    bounced = np.isfinite(k[:, 2])
+    pB = np.sqrt(np.asarray(tr["bpx"], float) ** 2 + np.asarray(tr["bpy"], float) ** 2 + np.asarray(tr["bpz"], float) ** 2)
+    EB = np.sqrt(pB ** 2 + M_MU ** 2)
+    EA = EB.copy()
+    if "apz" in tr and bounced.any():
+        dk = k - a
+        with np.errstate(invalid="ignore", divide="ignore"):
+            pA = np.asarray(tr["apz"], float) * np.linalg.norm(dk, axis=1) / dk[:, 2]
+        ok = bounced & np.isfinite(pA) & (pA > pB)
+        EA[ok] = np.sqrt(pA[ok] ** 2 + M_MU ** 2)
+    pk = np.where(bounced[:, None], k, b)
+    starts = (a, pk)                                      # segment 0: A -> K (or B), segment 1: K -> B (bounced)
+    ends = (pk, b)
+    S0 = np.full((n, 2, N_SLOT), np.inf); S1 = np.full((n, 2, N_SLOT), np.inf); DF = np.zeros((n, 2, N_SLOT))
+    Lseg = np.zeros((n, 2)); de_mip = np.zeros(n)
+    for si in range(2):
+        rows = np.arange(n) if si == 0 else np.nonzero(bounced)[0]
+        if not len(rows):
+            continue
+        p, q = starts[si][rows], ends[si][rows]
+        d = q - p
+        L = np.linalg.norm(d, axis=1)
+        Lseg[rows, si] = L
+        off = np.zeros(len(rows)) if si == 0 else Lseg[rows, 0]
+        TA = np.full((len(rows), N_SLOT), np.inf); TB = np.full((len(rows), N_SLOT), np.inf); KC = np.zeros((len(rows), N_SLOT))
+        for li, (g0, g1, kind) in enumerate(((0.0, G_LS0, "al"), (G_LS0, G_LS1, "ls"), (G_LS1, G_OUT, "al"))):
+            seg, ta, tb = layer_pieces(p, q, g0, g1)
+            if not len(seg):
+                continue
+            o = np.lexsort((ta, seg)); seg, ta, tb = seg[o], ta[o], tb[o]
+            slot = 2 * li + (~np.r_[True, seg[1:] != seg[:-1]]).astype(int)
+            if kind == "ls":
+                mid = p[seg] + (0.5 * (ta + tb))[:, None] * d[seg]
+                f = rib_fraction(face_of(mid), mid[:, 2])
+                kc = (DEDX_LS * (1 - f) + DEDX_AL * f) * 1e-3
+            else:
+                kc = np.full(len(seg), DEDX_AL * 1e-3)
+            TA[seg, slot], TB[seg, slot], KC[seg, slot] = ta, tb, kc
+        o = np.argsort(TA, axis=1, kind="stable")
+        TA, TB, KC = (np.take_along_axis(x, o, 1) for x in (TA, TB, KC))
+        filled = np.isfinite(TA)
+        with np.errstate(invalid="ignore"):
+            dl = np.where(filled, (TB - TA) * L[:, None], 0.0)
+        with np.errstate(invalid="ignore"):
+            S0[rows, si] = np.where(filled, off[:, None] + TA * L[:, None], np.inf)
+            S1[rows, si] = np.where(filled, off[:, None] + TB * L[:, None], np.inf)
+        DF[rows, si] = KC * dl
+        de_mip[rows] += (KC * dl).sum(1)
+    # walk: segment 0 from E_A, the rock loss at K, segment 1
+    F0 = np.zeros((n, 2))
+    stopped = np.zeros(n, bool); s_stop = np.full(n, np.nan)
+    F_stop = _F(M_MU, beta)
+    F0[:, 0] = _F(EA, beta)
+
+    def walk(si, rows):
+        cum = np.cumsum(DF[rows, si], 1)
+        Fend = F0[rows, si][:, None] - cum
+        hit = (Fend <= F_stop) & (DF[rows, si] > 0)
+        st = hit.any(1)
+        j = np.argmax(hit, 1)
+        r_st = rows[st]; j = j[st]
+        Fbefore = F0[r_st, si] - (cum[st, j] - DF[r_st, si, j])
+        frac = np.clip((Fbefore - F_stop) / np.maximum(DF[r_st, si, j], 1e-30), 0, 1)
+        s_stop[r_st] = S0[r_st, si, j] + frac * (S1[r_st, si, j] - S0[r_st, si, j])
+        stopped[r_st] = True
+        return F0[rows, si] - cum[:, -1]
+    F_after0 = walk(0, np.arange(n))
+    E_end = _invF(F_after0, beta)
+    rb = np.nonzero(bounced & ~stopped)[0]
+    if len(rb):
+        E_K = E_end[rb] - np.maximum(EA[rb] - EB[rb], 0.0)          # the rock at K
+        rock = E_K <= M_MU * (1 + 1e-9)
+        stopped[rb[rock]] = True; s_stop[rb[rock]] = Lseg[rb[rock], 0]
+        rb2 = rb[~rock]
+        F0[rb2, 1] = _F(E_K[~rock], beta)
+        if len(rb2):
+            E_end[rb2] = _invF(walk(1, rb2), beta)
+    s_tot = Lseg.sum(1)
+    E_B = np.where(stopped, M_MU, E_end)
+    dvec = np.stack([pk - a, b - pk], 1)                  # (n, 2, 3)
+    lvec = np.maximum(np.linalg.norm(dvec, axis=2, keepdims=True), 1e-12)
+    x_stop = np.full((n, 3), np.nan)
+    if stopped.any():
+        r = np.nonzero(stopped)[0]
+        in1 = bounced[r] & (s_stop[r] > Lseg[r, 0])
+        si = in1.astype(int)
+        s_loc = s_stop[r] - np.where(in1, Lseg[r, 0], 0.0)
+        x_stop[r] = np.where(in1[:, None], pk[r], a[r]) + (dvec[r, si] / lvec[r, si]) * s_loc[:, None]
+    return dict(stopped=stopped, s_stop=s_stop, s_tot=s_tot, s_rem_stop=np.where(stopped, s_tot - s_stop, -1.0),
+                x_stop=x_stop, E_B=E_B, E_B_stored=EB, de_mip=de_mip, bounced=bounced, beta=beta,
+                seg_S0=S0, seg_S1=S1, seg_DF=DF, seg_F0=F0, seg_L=Lseg, seg_start=np.stack([a, pk], 1), seg_u=dvec / lvec)
+
+
+def energy_at_path(el, rows, s):
+    """Energy of tracks `rows` at path length s from A (same shape as rows; arrays broadcast) with the shell loss."""
+    rows = np.asarray(rows); s = np.asarray(s, float)
+    L0 = el["seg_L"][rows, 0]
+    si = (el["bounced"][rows] & (s > L0)).astype(int)
+    F = el["seg_F0"][rows, si].copy()
+    for j in range(N_SLOT):
+        s0, s1, df = el["seg_S0"][rows, si, j], el["seg_S1"][rows, si, j], el["seg_DF"][rows, si, j]
+        with np.errstate(invalid="ignore", divide="ignore"):
+            f = np.clip((s - s0) / (s1 - s0), 0, 1)
+        F = F - np.where(np.isfinite(s0), df * np.nan_to_num(f), 0.0)
+    return _invF(F, el.get("beta", True))
+
+
+def p_at_z(el, z, p_default):
+    """Momentum (n, S) at the planes z (n, S) on each track's LAST straight segment (K -> B or A -> B: where the scatterers
+    are, scattering._segments); NaN z -> p_default (n,)."""
+    n = len(p_default)
+    si = el["bounced"].astype(int)
+    r = np.arange(n)
+    z0 = el["seg_start"][r, si, 2]; uz = el["seg_u"][r, si, 2]
+    off = np.where(si == 1, el["seg_L"][:, 0], 0.0)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        s = off[:, None] + (z - z0[:, None]) / uz[:, None]
+    s = np.clip(np.nan_to_num(s, nan=0.0, posinf=0.0, neginf=0.0), off[:, None], (off + el["seg_L"][r, si])[:, None])
+    E = energy_at_path(el, np.broadcast_to(r[:, None], z.shape), s)
+    p = np.sqrt(np.maximum(E ** 2 - M_MU ** 2, 0.0))
+    return np.where(np.isfinite(z), p, p_default[:, None])
+
+
+def with_energy_loss(tr, el):
+    """Copy of the tracks with the momentum at B reduced by the shell loss (direction kept) and the loss attached as "_eloss"
+    (reco.own_hits / sbt.own_hits cut the hits beyond the stopping point; scattering.kicks uses the momentum along the path).
+    Stopped tracks keep a nominal 0.05 GeV (they do not reach SST1: callers drop them or exclude them from the search)."""
+    out = dict(tr)
+    pB = np.sqrt(tr["bpx"] ** 2 + tr["bpy"] ** 2 + tr["bpz"] ** 2)
+    p_new = np.where(el["stopped"], 0.05, np.where(el["de_mip"] > 0, np.sqrt(np.maximum(el["E_B"] ** 2 - M_MU ** 2, 0.0)), pB))
+    with np.errstate(invalid="ignore", divide="ignore"):
+        sc = np.where(pB > 0, p_new / pB, 1.0)
+    for c in ("bpx", "bpy", "bpz"):
+        out[c] = tr[c] * sc
+    out["_eloss"] = el
+    return out
+
+
+def path_length_to(a, k, x):
+    """Path length from A to the point x lying on the stored path A -> (K) -> B (after K if bounced and x_z > K_z)."""
+    bounced = np.isfinite(k[:, 2]) & (x[:, 2] > k[:, 2])
+    return np.where(bounced, np.linalg.norm(k - a, axis=1) + np.linalg.norm(x - k, axis=1), np.linalg.norm(x - a, axis=1))
+
+
+def beyond_stop(muons, mrow, vtx, chunk=1_000_000, beta=True):
+    """For interactions at vtx (n, 3) on the stored paths of the muons `mrow` (rows of a muon store, fastveto columns):
+    True where the vertex lies beyond the parent's stopping point in the shell (shell_energy_loss), and the parent's energy at
+    the vertex with the loss (E_true) and without it (E_stored, at B or, before K, at A)."""
+    mrow = np.asarray(mrow, np.int64); vtx = np.asarray(vtx, float)
+    out_b, out_e, out_e0 = np.zeros(len(mrow), bool), np.zeros(len(mrow)), np.zeros(len(mrow))
+    for s0 in range(0, len(mrow), chunk):
+        sl = slice(s0, min(s0 + chunk, len(mrow)))
+        u, inv = np.unique(mrow[sl], return_inverse=True)
+        col = lambda c: np.asarray(muons[c][u], float)
+        tr = dict(ax=col("x_30"), ay=col("y_30"), az=col("z_30"), kx=col("kx"), ky=col("ky"), kz=col("kz"),
+                  bx=col("x_82"), by=col("y_82"), bz=col("z_82"), bpx=col("px_82"), bpy=col("py_82"), bpz=col("pz_82"),
+                  apz=col("pz_30"))
+        el = shell_energy_loss(tr, beta)
+        a = np.stack([tr["ax"], tr["ay"], tr["az"]], 1)[inv]; k = np.stack([tr["kx"], tr["ky"], tr["kz"]], 1)[inv]
+        s_v = path_length_to(a, k, vtx[sl])
+        out_b[sl] = el["stopped"][inv] & (s_v > el["s_stop"][inv])
+        out_e[sl] = energy_at_path(el, inv, s_v)
+        prof0 = dict(el, seg_DF=np.zeros_like(el["seg_DF"]),      # without the loss: the stored energy (A before K, B after)
+                     seg_F0=np.stack([el["seg_F0"][:, 0], _F(el["E_B_stored"], el["beta"])], 1))
+        out_e0[sl] = energy_at_path(prof0, inv, s_v)
+    return out_b, out_e, out_e0
+
+
 # ---------------------------------------------------------------- interaction targets
 
 def crossings(d):

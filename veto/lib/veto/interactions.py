@@ -325,6 +325,9 @@ def veto(prep, design, maps, cfg, rng, level="b", muons=None):
         else:
             ring = np.clip(np.searchsorted(_sbt.RING_EDGES, prep["event_zint"], side="right") - 1, 0, _sbt.N_RING - 1)
             exists = np.isin(ring, scfg["cell_rings"])
+    exists_ring = exists.copy()
+    if "event_beyond_stop" in prep and scfg and scfg.get("shell_energy_loss"):   # D19: beyond the parent's stopping point
+        exists &= ~np.asarray(prep["event_beyond_stop"], bool)
     if n:
         trk = {k[4:]: prep[k] for k in prep if k.startswith("trk_")}
         z = prep["track_z_b" if level == "b" else "track_z_a"]
@@ -350,7 +353,7 @@ def veto(prep, design, maps, cfg, rng, level="b", muons=None):
     out = {}
     for i, c in enumerate(prep["codes"]):
         m = code == c
-        out[CODE_NAMES.get(int(c), str(int(c)))] = dict(interactions=float(prep["interactions15"][i]) * float(exists.mean() if n else 1.0),
+        out[CODE_NAMES.get(int(c), str(int(c)))] = dict(interactions=float(prep["interactions15"][i]) * float(exists_ring.mean() if n else 1.0),
                                        selected=float(w[m].sum()),
                                        n_selected=int(m.sum()), survive=float(w[m & surv].sum()),
                                        survive_err=bootstrap(w[m & surv], grp[m & surv], rng=rng),

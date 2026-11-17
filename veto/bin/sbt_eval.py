@@ -38,7 +38,9 @@ from veto import vertex_selection as vsel
 from veto.config import SPILLS_15Y
 
 ZONE_UP = 1.0          # m: zone rule cells from z_vertex - ZONE_UP downstream
-D19_OFF = dict(v0_line=False, selftag_hits=False, zone_rule=False, material_scattering=False, shell_ms_k=0.0)
+D19_OFF = dict(v0_line=False, selftag_hits=False, zone_rule=False, material_scattering=False, shell_ms_k=0.0,
+               shell_energy_loss=False)   # "off": the reco without the flags (the shell_energy_loss truncation of the sample,
+# a property of the muon paths, stays: it acts on the store, see evaluate_store)
 D19_ON_DESIGN = lambda d: bool(d.sbt) and any(d.sbt.get(k) for k in ("v0_line", "selftag_hits", "zone_rule"))
 # designs with the D19 flags on (R2 / R3 since 17 Nov 2026): columns "off" (flags off) and "std" (the design as it is)
 
@@ -129,6 +131,25 @@ def evaluate_store(path, design, maps, cfg, muons, rng, codes, only_unflagged=Fa
         kl_dropped = float(inter["weight"][sel][from_kl].sum() * SPILLS_15Y)
         sel, pair, vertex = sel[~from_kl], pair[~from_kl], vertex[~from_kl]
     out = dict(meta=dict(source=meta.get("source"), n_events=meta.get("n_events")), kl_natural_dropped_15y=kl_dropped)
+    beyond = None
+    if muons is not None and design.sbt and design.sbt.get("shell_energy_loss"):
+        # D19 shell_energy_loss: the parent loses the mean shell energy along its stored path and stops where it runs out;
+        # interactions beyond its stopping point do not happen (sampled along the whole stored path: dropped here, which is
+        # the truncated sampling in expectation). The final states stay those drawn at the stored energy (caveat).
+        vtx_all = np.stack([inter["x"], inter["y"], inter["z"]], 1)
+        beyond, e_true, e_st = sm.beyond_stop(muons, inter["muon"], vtx_all, beta=design.sbt.get("shell_eloss_beta", True))
+        w15_all = inter["weight"] * SPILLS_15Y
+        out["shell_energy_loss"] = dict(
+            interactions_beyond_stop_15y={ix.CODE_NAMES.get(int(c), str(c)): float(w15_all[(inter["code"] == c) & beyond].sum())
+                                          for c in np.unique(inter["code"])},
+            interactions_15y={ix.CODE_NAMES.get(int(c), str(c)): float(w15_all[inter["code"] == c].sum()) for c in np.unique(inter["code"])},
+            selected_beyond_stop_15y=float(w15_all[sel][beyond[sel]].sum()), n_selected_beyond_stop=int(beyond[sel].sum()),
+            selected_before_15y=float(w15_all[sel].sum()))
+        k = ~beyond[sel]
+        sel, pair, vertex = sel[k], pair[k], vertex[k]
+        inter["weight"] = np.where(beyond, 0.0, inter["weight"])
+        inter["E_stored"] = inter["E"].copy()
+        inter["E"] = np.where(beyond, inter["E"], np.maximum(e_true, sm.M_MU))     # parent energy at the vertex (deposits)
     # enrichment check: selected events whose final state has no strange hadron and no displaced root (should be none)
     if len(sel):
         root = np.asarray(tr["parent"]) < 0
@@ -166,6 +187,14 @@ def evaluate_store(path, design, maps, cfg, muons, rng, codes, only_unflagged=Fa
                 continue
             r = reco.run_events(trk, evx, z_b, dv, maps, cfg, np.random.default_rng(cfg.seed), v0=v0)
             surv[name] = ~r["vetoed"][:len(sel)]
+        if beyond is not None:          # how far the interaction energies are off: E with the loss / stored E at the vertex
+            ws_ = inter["weight"][sel]
+            ratio = inter["E"][sel] / np.maximum(inter["E_stored"][sel], 1e-9)
+            out["shell_energy_loss"].update(
+                E_ratio_selected_wmean=float((ws_ * ratio).sum() / max(ws_.sum(), 1e-300)),
+                E_ratio_selected_w_below_0p8=float(ws_[ratio < 0.8].sum() / max(ws_.sum(), 1e-300)),
+                E_ratio_std_survivors_wmean=float((ws_ * ratio * surv["std"]).sum() / max((ws_ * surv["std"]).sum(), 1e-300))
+                if "std" in surv else None)
         own_any = np.zeros(len(sel), bool); own_any[hits["pid"]] = True
         surv["own_any"] = surv.get("std", np.ones(len(sel), bool)) & ~own_any
         window = scfg["n_sigma"] * np.hypot(scfg["sigma_t"] * 1e9, cfg.sigma_t_track)

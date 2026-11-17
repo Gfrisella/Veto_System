@@ -17,7 +17,8 @@
   "selftag_hits": true,
   "zone_rule": true,
   "material_scattering": true,
-  "shell_ms_k": 1.0
+  "shell_ms_k": 1.0,
+  "shell_energy_loss": true
  },
  "detector": {
   "v0_rule": {

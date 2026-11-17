@@ -6,6 +6,7 @@
   "ubt": {"y_lo": -1.35, "y_hi": 1.35},
   "fins": [],
   "sbt": {"threshold_mev": 30.0, "efficiency": 0.993, "sigma_t": 1e-9, "mode": "pointing",
-          "v0_line": true, "selftag_hits": true, "zone_rule": true, "material_scattering": true, "shell_ms_k": 1.0},
+          "v0_line": true, "selftag_hits": true, "zone_rule": true, "material_scattering": true, "shell_ms_k": 1.0,
+          "shell_energy_loss": true},
   "detector": {}
 }
