@@ -1162,8 +1162,10 @@ D20. Gap between the vessel end and SST1 (no tagger there)
     16 Nov 2026: closed (Guglielmo): the gap muons never form a vertex in the vessel; nothing to add.
 
 D19. SBT cell model: missing ingredients
-    STATUS: IN PROGRESS (17 Nov 2026: decisions a-f implemented, flags on in R2 / R3 (19b2a0b, 3851a5a, e61e12e); range-out
-      muons treated by the mean shell energy loss; open: item-2 / response caveats)
+    STATUS: CLOSED (17 Nov 2026, Guglielmo): decisions a-f implemented, flags on in R2 / R3 and fixed by the optimiser's
+      evaluator (19b2a0b, 3851a5a, e61e12e, 9f82b79); range-out muons by the mean shell energy loss; zone rule at rate x4;
+      shell kick at the exit confirmed. Remaining caveats carried as systematics (report): parametrised cell response
+      (item 2, no Geant4 check), SBT random rate (x1 .. x13, x4 used), no straggling / re-tracking in the shell.
     lib/veto/sbt.py (12 Nov) models the SBT of R2: 854 cells (61 rings x 4/3 across), muon path in the 20 cm LS shell per
     ring, 1.5 MeV/cm, threshold 30 MeV, 99.3 %, 1 ns; random hits from the store cell rates (2.07 MHz > 30 MeV, muons
     only; SR-389: 27 MHz incl. cavern back-scatter and e/gamma -> rate_scale 13); tagging "pointing" (default) or "any".
