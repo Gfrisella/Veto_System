@@ -33,6 +33,8 @@ C = 0.299792458   # m / ns
 @dataclass
 class RecoConfig:
     spill_s: float = 1.0               # spill length [s]: occupancy scales with 1 / spill_s
+    plane_rate_scale: float = 1.0      # x random-hit rate on the design's planes (UBT straws / tiles), e.g. 2 for the
+                                       # UBT-rate systematic (Guglielmo 17 Nov 2026); SBT (sbt rate_scale) and strips separate
     sigma_t_track: float = 0.1         # spectrometer / timing detector time resolution [ns]
     sigma_pos: float = 1e-3            # spectrometer position resolution at z = 82 m [m]
     sigma_slope: float = 1e-4          # spectrometer slope resolution, high momentum [rad]
@@ -379,7 +381,7 @@ def accidental_hits(design, maps, n_events, window_ns, cfg, rng):
         rate = h.sum()
         if rate <= 0:
             continue
-        mean = rate * (2 * window_ns * 1e-9) / cfg.spill_s
+        mean = rate * getattr(cfg, "plane_rate_scale", 1.0) * (2 * window_ns * 1e-9) / cfg.spill_s
         n = rng.poisson(mean, n_events)
         total = int(n.sum())
         prob = (h / rate).ravel()

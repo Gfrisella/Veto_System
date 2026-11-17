@@ -307,6 +307,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("designs", nargs="*", help="design names or json files (default: all in designs/)")
     parser.add_argument("--spill", type=float, default=1.0, help="spill length [s]")
+    parser.add_argument("--plane-rate-scale", type=float, default=1.0, help="x random-hit rate on the UBT planes (systematic)")
     parser.add_argument("--n-signal", type=int, default=100_000)
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--signal", choices=("target", "old", "eventcalc"), default="target",
@@ -329,7 +330,7 @@ def main():
     parser.add_argument("--no-ghosts", action="store_true", help="C1: no analytic ghost hits in strip planes (as before 2026-11-11)")
     args = parser.parse_args()
     names = args.designs or sorted(p.stem for p in dsg.DESIGN_DIR.glob("*.json"))
-    cfg = reco.RecoConfig(spill_s=args.spill, seed=args.seed, time_window_ns=args.time_window,
+    cfg = reco.RecoConfig(spill_s=args.spill, plane_rate_scale=args.plane_rate_scale, seed=args.seed, time_window_ns=args.time_window,
                           multiple_scattering=args.multiple_scattering, ip_max=vsel.IP_CUTS[args.ip_cut],
                           ghost_hits=not args.no_ghosts, debris_in_time=args.debris_in_time,
                           acts_resolution=args.acts_resolution)
