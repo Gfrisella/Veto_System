@@ -528,7 +528,9 @@ def match(queries, hits, design, cfg):
     return found, int(counts.sum()), hit_of_query
 
 
-V0_RULE_DEFAULT = dict(theta=0.025, r0=0.05, early_ns=3.0, min_hits=1, skip_tech=())
+V0_RULE_DEFAULT = dict(theta=0.025, r0=0.05, early_ns=3.0, min_hits=1, skip_tech=(),
+                       p_max=None)   # 17 Nov 2026: apply the rule only to candidates with visible momentum below p_max [GeV]
+                                     # (MS7 V0 selected at p_vis 3-9 GeV, signal 43-94 GeV); None = all candidates
 
 
 def v0_rule_config(design):
@@ -571,6 +573,10 @@ def v0_tag(hits, design, v0, rule, cfg, n_events):
         w = win[plane.index]
         good = ok & ((hits["u"][m] - u) ** 2 + (hits["y"][m] - y) ** 2 <= r ** 2) & (dt > -w - rule["early_ns"]) & (dt < w)
         n_hit += np.bincount(e[good], minlength=n_events)[:n_events]
+    if rule.get("p_max") is not None:                     # momentum gate: fast candidates are not treated as V0
+        slow = np.zeros(n_events, bool)
+        slow[:len(pv)] = np.linalg.norm(pv, axis=1) < rule["p_max"]
+        n_hit = np.where(slow, n_hit, 0)
     return n_hit >= rule["min_hits"], n_hit
 
 

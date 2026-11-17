@@ -45,9 +45,20 @@ def make_maps(rec, w_per_spill, maps):
     w = w_per_spill[rec["ev"]]
     kinds = {"e": np.abs(rec["pdg"]) == 11, "g": rec["pdg"] == 22}
     ub, yb, zs, uyb = maps["u_bins"], maps["y_bins"], maps["z_slices"], maps["ubt_y_bins"]
+    # UBT straw plane (17 Nov 2026, fix): the crossings are recorded at the first EM plane z = Z_UBT (the tile plane), the
+    # straws sit at Z_UBT_STRAW, 40 cm upstream; the debris comes in steeply from the flames, so project each crossing back
+    # along its direction (air, no field) before the window cut (was: the tile-plane crossings, ~1.6x too many electrons).
+    dz_straw = geo.Z_UBT - getattr(geo, "Z_UBT_STRAW", geo.Z_UBT)
+    if dz_straw > 0 and "px" in rec:
+        with np.errstate(divide="ignore", invalid="ignore"):
+            x_straw = rec["x"] - rec["px"] / rec["pz"] * dz_straw
+            y_straw = rec["y"] - rec["py"] / rec["pz"] * dz_straw
+        fwd = rec["pz"] > 0
+    else:
+        x_straw, y_straw, fwd = rec["x"], rec["y"], np.ones(len(rec["x"]), bool)
     for k, m in kinds.items():
-        at_ubt = m & (rec["plane"] == 0) & (np.abs(rec["x"]) < geo.UBT_HALF_X)
-        out[f"em_ubt_{k}"] = np.histogram(rec["y"][at_ubt], uyb, weights=w[at_ubt])[0]
+        at_ubt = m & (rec["plane"] == 0) & fwd & (np.abs(x_straw) < geo.UBT_HALF_X)
+        out[f"em_ubt_{k}"] = np.histogram(y_straw[at_ubt], uyb, weights=w[at_ubt])[0]
         fin = np.zeros((2, len(zs), len(ub) - 1, len(yb) - 1))
         for iz, z in enumerate(zs):
             ip = np.nonzero(np.abs(z_planes - z) <= 0.51)[0]   # nearest EM plane (old inputs: slices from 30.6 m)

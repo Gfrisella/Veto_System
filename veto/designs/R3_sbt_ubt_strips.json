@@ -1,6 +1,6 @@
 {
  "name": "R3_sbt_ubt_strips",
- "description": "Reference 3 (Guglielmo 16 Nov 2026): R2 (full SBT + UBT) + the V0 rule (candidate traced back as a neutral, any hit within 5 cm + 25 mrad x distance, time window opened 3 ns early) + silicon strips in the MS7 magnet: 3 layers in the 50 cm iron at the entrance, the middle and 10 cm before the end (29.39, 29.59, 29.79 m), each 8 stations of 30 x 30 cm on the inner part of both return-yoke legs (|x| 0.75-1.35 m, |y| < 0.3 m; the legs span |x| 0.70-1.75 m): 82 % of the selected V0 interaction points, at most 34 MHz per station; superimposed on the iron and field.",
+ "description": "Reference 3 (Guglielmo 16 Nov 2026): R2 (full SBT + UBT) + the V0 rule (candidate traced back as a neutral, any hit within 5 cm + 25 mrad x distance, time window opened 3 ns early) + silicon strips in the MS7 magnet: 3 layers in the 50 cm iron at the entrance, the middle and 10 cm before the end (29.39, 29.59, 29.79 m), each 8 stations of 30 x 30 cm on the inner part of both return-yoke legs (|x| 0.75-1.35 m, |y| < 0.3 m; the legs span |x| 0.70-1.75 m): 82 % of the selected V0 interaction points, at most 34 MHz per station; superimposed on the iron and field. 17 Nov 2026 (Guglielmo): V0 rule only for p_vis < 20 GeV; strip window 3 ns (+-1.5 ns) instead of 25 ns.",
  "frame": "fairship-2026",
  "ubt_layout": "2026-11-11",
  "ubt": {
@@ -20,7 +20,9 @@
   "shell_ms_k": 1.0
  },
  "detector": {
-  "v0_rule": true
+  "v0_rule": {
+   "p_max": 20.0
+  }
  },
  "shield_strips": {
   "layers": [
@@ -64,6 +66,7 @@
   ],
   "size": 0.3,
   "rule": "point",
-  "theta": 0.01
+  "theta": 0.01,
+  "time_window_ns": 1.5
  }
 }
