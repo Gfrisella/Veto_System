@@ -425,7 +425,7 @@ class OpenRouter:
 
 
 # ------------------------------------------------------------------ evaluation on the cluster
-EVAL_DATA = dict(inputs=paths.RECO_INPUTS, prep_tag="_nov4full,ms7=_v0statk,sbt=_nov4full_eloss")   # which reco inputs / interaction caches (--inputs, --prep-tag)
+EVAL_DATA = dict(inputs=paths.RECO_INPUTS, prep_tag="_nov4full_d19,ms7=_v0statk,sbt=_nov4full_eloss")   # which reco inputs / interaction caches (--inputs, --prep-tag)
 
 
 def evaluate_slurm(designs, workers, n_signal, seed=1):

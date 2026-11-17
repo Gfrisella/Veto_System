@@ -66,7 +66,7 @@ def bounce_knobs(raw):
 
 # Interaction caches per kind (17 Nov 2026): vessel muon / neutrino interactions of the Nov-4 sample, the V0-enriched MS7
 # samples (_v0statk) and the SBT-material term with the shell energy loss (D19, _eloss). --prep-tag "<default>[,kind=tag...]".
-PREP_TAGS = "_nov4full,ms7=_v0statk,sbt=_nov4full_eloss"
+PREP_TAGS = "_nov4full_d19,ms7=_v0statk,sbt=_nov4full_eloss"
 
 # Physics model of the SBT (D19, Guglielmo 17 Nov 2026): fixed for every design, as in R2 / R3; a design chooses only the
 # layout ("ring_set" / "rings" / "faces"), "threshold_mev" and "mode". Without this a design could switch the model off.
