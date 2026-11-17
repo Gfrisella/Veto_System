@@ -198,3 +198,64 @@ before using it.
    bound is 0: every surviving SBT-material event and 74 % of nu-He have own fired cells), e.g. the zone rule, at
    0.6-2.4 % signal; (d) `material_scattering` on by default (it lowers the single-muon tagging 90.6 -> 84.5 %
    unless the SBT window gets an r_ms term for the shell).
+
+## 7. 17 Nov 2026: decisions (a)-(d) implemented, flags on in R2 / R3 (commit 19b2a0b)
+
+Guglielmo: (a) the SBT-material term enters the background budget, (b) `v0_line` + `selftag_hits` on, (c) zone rule on,
+(d) `material_scattering` on + a shell-scattering term in the SBT pointing window. Code defaults stay off; the flags are in
+the `"sbt"` block of `designs/R2_sbt_ubt.json` and `designs/R3_sbt_ubt_strips.json` (`shell_ms_k: 1.0`).
+
+- (a) `bin/sbt_prepare.py` -> `results_rerun/interactions/prepared_sbt_nov4full[_partial].npz` (kind `sbt` in
+  `evolve/evaluate_designs.py`, summed by `veto.objective` with `w_src_muon` = 1; the events exist only where the design has
+  SBT cells, R1 gets none). `bin/evstore_eval.py --muons` evaluates SBT-material stores and prints the class total.
+- (c) zone rule in `sbt.tag` (cfg `zone_rule`, `zone_up` 1 m, `zone_extra_ns` 1 ns); the own LS deposits of an interaction
+  reach it through `interactions.evaluate` / `interactions.veto` (`v0["sbt_hits"]`).
+- (d) shell term: `shell_ms_k` x Highland(x/X0 of the backward line's shell path) x path / sqrt(3), in quadrature with r;
+  the b87da94 window is otherwise unchanged. `scattering.py`: the shell kick now sits at the END of each shell piece along
+  the motion (was its middle). The SBT own hits stay on the stored straight path, so the measured line has to meet it
+  where the muon leaves the shell, as a real track (tangent at its exit) does. With the kick at the middle of a grazing
+  piece (median 8 m of LS) the line missed the exit by theta0 x 4 m (3 GeV, x/X0 21: 23 mrad x 4 m = 9 cm) and in 80 % of
+  the misses met no side wall at all.
+
+### Choice of k (`bin/sbt_shell_ms_check.py`, `results_rerun/sbt_d19/shell_ms_check_R2.json`)
+Single SST1 muons with an own fired cell, random hits off, efficiency 1 (window coverage), weighted as run_reco. "Physical":
+the energy loss in the shell along the stored path (Al 0.436, LS 0.150 GeV/m) is below the kinetic energy at SST1.
+
+| | no shell scattering | k 0 | k 1 | k 2-10 |
+|---|---|---|---|---|
+| physical muons (63 % of the weight) | 94.46 % | 93.04 % | 93.26 % | 93.26 % |
+| range-out muons (37 %) | 77.0 % | 58.2 % | 58.8 % | 59.8-64.2 % |
+
+k saturates at 1 on the physical muons -> `shell_ms_k = 1`. With the kick at the middle (first version): weighted coverage
+80.5 % at k 0, 82.6 % at k 10 (`shell_ms_check_R2_kickmid.json`).
+
+### Results, R2 (`results_rerun/sbt_d19/flags17/summary_R2.json`; per 15 y; flags off -> R2 as is)
+Single SST1 muons tagged (run_reco, 19b2a0b, tile-plane em_maps): full 92.1 -> 85.1 %, partial 93.9 -> 85.4 %; physical
+muons 96.5 -> 93.3 %, range-out muons 84.3 -> 66.1 % (`flags17/phys_single.json`). The range-out muons (p 0.2-0.7 GeV, shell
+x/X0 5-25, mostly "SST1 other") cannot exist with the paths they are stored with (caveat 1 of section 6).
+
+| source | layer | IP < 10 cm: off -> as is | IP < 2.5 m: off -> as is |
+|---|---|---|---|
+| mu | inner Al | 32 -> 0 | 3.2e3 -> 12.5 |
+| mu | LS | 468 -> 43 +- 19 | 1.53e5 -> 1.84e4 |
+| mu | ribs | 30 -> 4.3 +- 2.1 | 1.52e4 -> 1.84e3 |
+| mu | outer Al | 253 -> 66 +- 16 | 1.04e5 -> 1.87e4 |
+| mu | **sum** | **783 -> 113 +- 25** | **2.75e5 -> 3.9e4** |
+| nu | inner Al / LS / ribs / outer Al | 0.074 / 0.25 / 0.034 / 0.015 -> 0.026 / 0.048 / 0.011 / 0.006 | 154 / 177 / 20 / 16 -> 9.4 / 30 / 3.4 / 3.6 |
+| nu | **sum** | **0.37 -> 0.091** | **367 -> 47** |
+| nu He (item 2) | helium | 3.55 -> 0.96 | 410 -> 32 |
+
+Signal cost (B4 set, no EM debris): full 0.87 -> 1.40 %, partial 0.66 -> 1.21 % (zone 0.58 %, V0 line 0.08 % accidental).
+run_reco with EM debris (19b2a0b, old em_maps): full 3.24 -> 4.08 %, partial 2.87 -> 3.52 %; signal loss numbers after the
+straw-plane em_maps fix are the main session's (`reco_R*_fix1622.json`).
+
+### Results, R3 (`flags17/summary_R3.json`)
+Muon stores evaluated on 1622cf7 (R3 V0 rule p_max 20 GeV, strips +-1.5 ns), neutrino stores on 19b2a0b. Per 15 y, flags
+off -> R3 as is: IP < 10 cm mu 47 -> 0 (0 MC events: the R3 V0 rule already tags most SBT-material K_L), nu 0.30 -> 0.078,
+nu-He 3.49 -> 0.96; IP < 2.5 m mu 2.76e4 -> 4.3e3, nu 334 -> 38, nu-He 373 -> 24. Signal (B4, no EM debris, 19b2a0b R3):
+full 5.82 -> 6.16 %, partial 7.73 -> 8.49 %.
+
+### Objective cache
+`prepared_sbt_nov4full.npz`: 1 633 selected events, 1.29e4 / 15 y before tagging (partial: 369 135 events, 1.79e6).
+Closure through `interactions.veto` (the objective's path): R1 0, R2 125 +- 26 / 15 y (sbt_eval: 113 +- 25 muons + 0.09 nu).
+

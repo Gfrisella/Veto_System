@@ -1056,3 +1056,8 @@ draws x10-70, more seeds), waiting for the go.
 - ACTS vs baseline (same code, job 2095763 *_basenow): R1 signal loss 3.14 -> 2.82 %, single tagged 65.8 -> 65.0; R2 signal 3.24 both, single 92.1 -> 94.3; pairs ~0 in all. ISSUES D14.
 - 17 Nov, Guglielmo: ACTS stays an option (D14 closed). D19: (a) SBT-material term in the budget, (b) v0_line + selftag_hits on, (c) zone rule on; (d) open.
 - D19 (d), Guglielmo: material_scattering ON in R2/R3 + shell-scattering term in the SBT window (agent).
+- D19 (a)-(d) implemented (19b2a0b, flags on in R2 / R3, shell_ms_k = 1; docs/d19_sbt.md section 7): R2 SBT-material
+  background IP < 10 cm mu 783 -> 113, nu 0.37 -> 0.091, nu-He 3.55 -> 0.96; IP < 2.5 m mu 2.75e5 -> 3.9e4, nu 367 -> 47;
+  signal +0.5 points. Shell kick moved to the exit of each shell piece. R2 single muons 92.1 -> 85.1 %: 37 % of the weight
+  are muons that would range out in the shell they are stored with (physical ones 96.5 -> 93.3 %); decision pending.
+  R3: IP < 10 cm mu 47 -> 0, nu 0.30 -> 0.078; IP < 2.5 m mu 2.76e4 -> 4.3e3. Objective cache prepared_sbt_nov4full (R2 125 / 15 y).

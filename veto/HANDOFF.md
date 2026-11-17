@@ -72,11 +72,11 @@ Read this first in a new session. Details: `docs/STATUS.md` (dated log), `ISSUES
 ## Shah Rukh's requests still open (`docs/plan_evolution_sbt_shieldend.md`)
 
 - Q3 (mass cut on the MS7 V0 in the objective): explained, decision pending.
-- C3-C8 (traditional SBT as a material): D19 work in the other session (flags default off).
+- C3-C8 (traditional SBT as a material): D19 (a)-(d) implemented 17 Nov, flags on in R2 / R3 (docs/d19_sbt.md section 7).
 - D (the comparison): we use R1 / R2 / R3. Done: strips (R3), tagging rule (V0 rule + strips), SBT from the reports, B4.
 
 ## Open issues (ISSUES.txt)
 
 D7 REOPENED 16 Nov evening (rock x mu not negligible for R1; partial selection pending). D16 (MS7 V0: statistics done,
-K+- copies running), D19 (SBT model, other session). Closed 16 Nov: A1, A2, A5, B1, C1, C5, C7, C8, D2, D3, D9, D18, D20.
+K+- copies running), D19 (SBT model: a-d in, open: muons ranging out in the shell). Closed 16 Nov: A1, A2, A5, B1, C1, C5, C7, C8, D2, D3, D9, D18, D20.
 Deferred: C3, D14 (ACTS, other session). Closed 17 Nov: D6 (muon 5 % libraries agree; nu library v2 kept).

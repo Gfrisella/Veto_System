@@ -1161,7 +1161,8 @@ D20. Gap between the vessel end and SST1 (no tagger there)
     16 Nov 2026: closed (Guglielmo): the gap muons never form a vertex in the vessel; nothing to add.
 
 D19. SBT cell model: missing ingredients
-    STATUS: IN PROGRESS (16 Nov 2026 night: SBT as a material implemented, flags off (1b1eef5, 4ac6a71); decisions pending)
+    STATUS: IN PROGRESS (17 Nov 2026: decisions a-d implemented, flags on in R2 / R3 (19b2a0b); open: the muons that range out
+      in the shell (see 17 Nov, implemented), item-2 / response caveats)
     lib/veto/sbt.py (12 Nov) models the SBT of R2: 854 cells (61 rings x 4/3 across), muon path in the 20 cm LS shell per
     ring, 1.5 MeV/cm, threshold 30 MeV, 99.3 %, 1 ns; random hits from the store cell rates (2.07 MHz > 30 MeV, muons
     only; SR-389: 27 MHz incl. cavern back-scatter and e/gamma -> rate_scale 13); tagging "pointing" (default) or "any".
@@ -1187,6 +1188,41 @@ D19. SBT cell model: missing ingredients
     17 Nov 2026, Guglielmo: (a) YES, the SBT-material term enters the background budget; (b) YES, v0_line and selftag_hits
       on; (c) YES, zone rule adopted; (d) YES, material_scattering on + a shell-scattering term in the SBT pointing window (asked again 17 Nov).
       Implementation: D19 agent.
+    17 Nov 2026 (implemented, 19b2a0b; results_rerun/sbt_d19/flags17, summary_R2.json; jobs 2098980 / 2098981):
+      (a) bin/sbt_prepare.py -> interactions/prepared_sbt_nov4full[_partial].npz (kind "sbt", read by evaluate_designs, summed
+          by the objective with w_src_muon = 1; only where the design has SBT cells); evstore_eval prints the class total.
+      (b) v0_line + selftag_hits, (c) zone_rule (now in sbt.tag), (d) material_scattering + shell_ms_k = 1 in the "sbt"
+          block of R2 / R3 (code defaults off).
+      (d) details: scattering.py put the shell kick at the MIDDLE of each shell piece while the SBT own hits stay on the
+          straight path: for a grazing muon (median 8 m of LS) the measured line missed the exit point by theta0 x 4 m
+          (3 GeV, x/X0 21: 23 mrad x 4 m = 9 cm), 80 % of the misses had a backward line meeting NO side wall (no window can
+          recover them). Kick moved to the END of each piece (a real track is tangent to its path at the exit). Coverage
+          (bin/sbt_shell_ms_check.py, 2e5 singles, random hits off): k chosen on the muons that can cross their shell path
+          (energy loss in the shell < kinetic energy at SST1): no scattering 94.46 %, k 0 93.04 %, k >= 1 93.26 % (saturated)
+          -> shell_ms_k = 1. 37 % of the single-muon weight (mostly "SST1 other", p 0.2-0.7 GeV, shell x/X0 5-25) CANNOT
+          cross the shell they are stored with (they would range out: muon transport without SBT material, caveat 1);
+          they carry 86 % of the tagging loss from the scattering.
+      R2 single SST1 muons tagged (run_reco, 19b2a0b, em_maps tile-plane version): full 92.1 -> 85.1 %, partial 93.9 ->
+        85.4 %; split (flags off -> on): physical muons 96.5 -> 93.3 %, range-out muons 84.3 -> 66.1 % (37 % of the weight).
+        The ~90.6 % target is reached only if the range-out muons are treated (pending Guglielmo, see below).
+      R2 SBT-material background per 15 y (flags off -> R2 as is; MC events in brackets):
+        IP < 10 cm  mu: inner Al 32 -> 0 (0), LS 468 -> 43 +- 19 (5), ribs 30 -> 4.3 +- 2.1 (4), outer Al 253 -> 66 +- 16 (17);
+                    sum 783 -> 113 +- 25.  nu: inner Al 0.074 -> 0.026, LS 0.25 -> 0.048, ribs 0.034 -> 0.011,
+                    outer Al 0.015 -> 0.006; sum 0.37 -> 0.091.  nu-He (item 2, zone rule) 3.55 -> 0.96.
+        IP < 2.5 m  mu: inner Al 3.2e3 -> 12.5, LS 1.53e5 -> 1.84e4, ribs 1.52e4 -> 1.84e3, outer Al 1.04e5 -> 1.87e4;
+                    sum 2.75e5 -> 3.9e4.  nu: inner Al 154 -> 9.4, LS 177 -> 30, ribs 20 -> 3.4, outer Al 16 -> 3.6;
+                    sum 367 -> 47.  nu-He 410 -> 32.
+        Decay-in-flight complement (unenriched stores): 0 after R2 at both cuts.
+      Signal cost of the rules (B4 set, no EM debris): full 0.87 -> 1.40 %, partial 0.66 -> 1.21 % (zone 0.58 %, V0 line
+        0.08 %); run_reco with EM debris (19b2a0b, old em_maps): full 3.24 -> 4.08 %, partial 2.87 -> 3.52 % (superseded by
+        the main session's *_fix1622 runs for the signal loss).
+      R3 (muon stores on 1622cf7: V0 rule p_max 20 GeV, strips +-1.5 ns; nu stores on 19b2a0b): IP < 10 cm mu 47 -> 0 (0 MC;
+        the R3 V0 rule already tags most SBT-material K_L), nu 0.30 -> 0.078, nu-He 3.49 -> 0.96; IP < 2.5 m mu 2.76e4 -> 4.3e3,
+        nu 334 -> 38, nu-He 373 -> 24 (flags17/summary_R3.json). Signal (B4, no EM debris, 19b2a0b R3): full 5.82 -> 6.16 %,
+        partial 7.73 -> 8.49 %.
+      Objective cache closure (interactions.veto on prepared_sbt_nov4full, 1 633 events, 1.29e4 / 15 y before tagging): R1 0,
+        R2 125 +- 26 / 15 y (sbt_eval 113 +- 25 + nu 0.09).
+      Open (Guglielmo): the range-out muons (energy loss in the muon transport / scattering momentum) - see the report.
 
 D16. V0 production in the MS7 muon chain: checked against data (10 Nov 2026, branch veto-v0-production)
     STATUS: IN PROGRESS (PRIORITY B)
