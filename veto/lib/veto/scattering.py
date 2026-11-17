@@ -201,7 +201,12 @@ def scatterers(tr, design, media=None):
 
 
     # D19 (16 Nov 2026, default off): the SBT shell as a scatterer, sbt config "material_scattering": inner Al 0.8 cm, LS
-    # 20 cm (ribs smeared), outer Al 0.8 cm (0.57 X0 at normal incidence); one thin scatterer per layer piece, at its middle
+    # 20 cm (ribs smeared), outer Al 0.8 cm (0.57 X0 at normal incidence); one thin scatterer per layer piece, at the END of
+    # the piece along the motion (17 Nov 2026; was its middle): the SBT own hits stay on the unscattered path, so the measured
+    # line must meet that path where the muon leaves the shell (as a real track does, tangent at its exit point). With the
+    # kick at the middle of a grazing piece (median 8 m of LS) the measured line missed the exit by theta0 x 4 m (~9 cm at
+    # 3 GeV) and often met no side wall at all (bin/sbt_shell_ms_check.py). The deposits upstream of the exit are covered
+    # by the SBT window's shell term (sbt cfg shell_ms_k).
     sbt_cfg = getattr(design, "sbt", None)
     if sbt_cfg and sbt_cfg.get("material_scattering"):
         from . import sbt_material as sm
@@ -215,7 +220,7 @@ def scatterers(tr, design, media=None):
                 first = np.r_[True, seg[1:] != seg[:-1]] if len(seg) else np.zeros(0, bool)
                 pick = first if piece == 0 else ~first
                 sg = seg[pick]
-                zc[sg] = p[sg, 2] + 0.5 * (ta[pick] + tb[pick]) * d[sg, 2]
+                zc[sg] = p[sg, 2] + tb[pick] * d[sg, 2]         # end of the piece (the segments run along the motion)
                 xx[sg] = (tb[pick] - ta[pick]) * L[sg] / x0_m
                 zs.append(zc); xs.append(xx)
 

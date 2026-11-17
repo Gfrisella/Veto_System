@@ -193,10 +193,15 @@ def evaluate(inter, part, design, maps, cfg, rng, muons=None, levels=("a", "b"),
     strip_tagged = None
     if len(sel):
         trk, ev, z_a, z_b, _ = event_tracks(inter, tr, sel, pair, vertex, muons)
+        v0 = dict(vtx=vertex, pvis=tr["p"][pair[:, 0]] + tr["p"][pair[:, 1]])
+        scfg = getattr(design, "sbt", None)
+        if scfg and (scfg.get("selftag_hits") or scfg.get("zone_rule")):   # D19: the interaction's own LS deposits
+            from . import sbt_material
+            v0["sbt_hits"] = sbt_material.own_hits_from_part(sel, inter, part, tr, pair, scfg,
+                                                             np.random.default_rng(int(rng.integers(2 ** 31))), muons)
         for lev, z in (("a", z_a), ("b", z_b)):
             if lev in levels:
-                r = reco.run_events(trk, ev, z, design, maps, cfg, rng,
-                                    v0=dict(vtx=vertex, pvis=tr["p"][pair[:, 0]] + tr["p"][pair[:, 1]]))
+                r = reco.run_events(trk, ev, z, design, maps, cfg, rng, v0=v0)
                 survive[lev] = ~r["vetoed"][:len(sel)]
         survive["c"] = ~parent_crossed(inter, sel, muons, design) if muons is not None else np.ones(len(sel), bool)
         strips = getattr(design, "shield_strips", None)
@@ -288,6 +293,7 @@ def prepare(inter, part, cfg, muons=None, codes=DESIGN_FREE_CODES, g4=None):
                event_zint=inter["z"][sel], event_muon=(inter["muon"][sel] if "muon" in inter else np.full(len(sel), -1)),
                interactions15={int(c): float(inter["weight"][inter["code"] == c].sum() * SPILLS_15Y) for c in codes})
     out["interactions15"] = np.array([out["interactions15"].get(c, 0.0) for c in codes])
+    out["event_inter"] = idx[sel]                         # row of each selected event in the input inter (D19: own deposits)
     out["codes"] = np.array(codes)
     if len(sel):
         trk, ev, z_a, z_b, _ = event_tracks(inter, tr, sel, pair, vertex, muons)
@@ -309,10 +315,25 @@ def veto(prep, design, maps, cfg, rng, level="b", muons=None):
     w, code, grp = prep["event_weight15"], prep["event_code"], prep["event_group"]
     n = len(w)
     surv = np.zeros(0, bool)
+    scfg = getattr(design, "sbt", None)
+    exists = np.ones(n, bool)
+    if "sbt_material" in prep:          # D19 (bin/sbt_prepare.py): the SBT material exists only where the design has SBT cells
+        from . import sbt as _sbt, sbt_material as _sm
+        _sm.register()                               # target names 9101-9104
+        if not scfg:
+            exists[:] = False
+        else:
+            ring = np.clip(np.searchsorted(_sbt.RING_EDGES, prep["event_zint"], side="right") - 1, 0, _sbt.N_RING - 1)
+            exists = np.isin(ring, scfg["cell_rings"])
     if n:
         trk = {k[4:]: prep[k] for k in prep if k.startswith("trk_")}
         z = prep["track_z_b" if level == "b" else "track_z_a"]
         v0 = dict(vtx=prep["event_vtx"], pvis=prep["event_pvis"]) if "event_vtx" in prep else None
+        if v0 is not None and "sbt_dep_event" in prep and scfg and (scfg.get("selftag_hits") or scfg.get("zone_rule")):
+            from . import sbt_material
+            d = sbt_material.fired(dict(pid=prep["sbt_dep_event"], cell=prep["sbt_dep_cell"], edep=prep["sbt_dep_edep"],
+                                        t=prep["sbt_dep_t"]), scfg, np.random.default_rng(int(rng.integers(2 ** 31))))
+            v0["sbt_hits"] = dict(event=d["pid"].astype(np.int64), cell=d["cell"].astype(np.int64), t=d["t"])
         surv = ~reco.run_events(trk, prep["track_event"], z, design, maps, cfg, rng, v0=v0)["vetoed"][:n]
         strips = getattr(design, "shield_strips", None)
         if strips is not None and len(strips["stations"]) and "event_vtx" in prep:     # shield-end strip stations
@@ -324,10 +345,13 @@ def veto(prep, design, maps, cfg, rng, level="b", muons=None):
             else:                                         # older caches: exit-face hits only
                 hits = shield_strips.on_stations(strips, prep["strip_hit_event"], prep["strip_hit_x"], prep["strip_hit_y"], rng)
             surv &= ~shield_strips.tag(strips, prep["event_vtx"], prep["event_pvis"], rng, hits=hits)["tagged"]
+    if n and not exists.all():                       # no SBT material there: those events do not exist for this design
+        w = np.where(exists, w, 0.0)
     out = {}
     for i, c in enumerate(prep["codes"]):
         m = code == c
-        out[CODE_NAMES[int(c)]] = dict(interactions=float(prep["interactions15"][i]), selected=float(w[m].sum()),
+        out[CODE_NAMES.get(int(c), str(int(c)))] = dict(interactions=float(prep["interactions15"][i]) * float(exists.mean() if n else 1.0),
+                                       selected=float(w[m].sum()),
                                        n_selected=int(m.sum()), survive=float(w[m & surv].sum()),
                                        survive_err=bootstrap(w[m & surv], grp[m & surv], rng=rng),
                                        n_survive=int((m & surv).sum()))

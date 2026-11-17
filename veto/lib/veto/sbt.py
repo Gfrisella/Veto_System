@@ -46,8 +46,11 @@ DEFAULT = dict(threshold_mev=30.0, efficiency=0.993, sigma_t=1.0e-9, n_sigma=3.0
                                        # leaves the vessel: tags V0 made in the SBT material / walls by their own cell
                v0_line_r0=0.05, v0_line_theta=0.025, v0_line_early_ns=3.0,   # window r0 + theta x distance; time opened early
                material_scattering=False,   # the SBT shell (Al / LS / Al) as a scatterer of the tracks crossing it (scattering.py)
-               selftag_hits=False)     # own SBT deposits of an interaction (sbt_material.deposits, passed as v0["sbt_hits"])
-               # r / sin(alpha) of the crossing (alpha: line vs the wall face; sin floored at sin_min) and each hit timed against
+               selftag_hits=False,     # own SBT deposits of an interaction (sbt_material.deposits, passed as v0["sbt_hits"])
+               zone_rule=False, zone_up=1.0, zone_extra_ns=1.0,   # D19 (c, Guglielmo 17 Nov): a hit in a cell with ring
+               # centre > z_vertex - zone_up, in time with light from the vertex (+- window + zone_extra_ns) tags the event
+               shell_ms_k=0.0)         # D19 (d): k sigma of the scattering in the shell added to the pointing radius (0 = off)
+               # window_z "projected": r / sin(alpha) of the crossing (alpha: line vs the wall face; sin floored at sin_min) and each hit timed against
                # the line's time inside its ring; "r" = the first version (rings within r, time at the crossing): our cells see muons only (Nov-4: 2.07 MHz > 30 MeV); SR-389 quotes
                                  # 27 MHz > 30 MeV with the particles scattered from the cavern walls and e / gamma -> 13
 # shell_window (16 Nov 2026, evening): the pointing window spans the whole shell crossing, from the backward line's crossing
@@ -192,6 +195,7 @@ def path_segments(tr):
 
 
 T_SHELL = T_LS + 0.016       # m, scintillator + the two 0.8 cm AlMg walls: the cell shell outside the balloon
+X0_SHELL_EFF = T_SHELL / (T_LS / 0.5168 + 0.016 / 0.0890)   # m, radiation length of the shell mix (LS 51.7 cm, Al 8.9 cm): 0.38
 
 
 def _frustum_interval(p, d, grow):
@@ -387,6 +391,29 @@ def v0_line_tag(h_ev, h_cell, h_t, v0, cfg, n_events, window, early):
     return out
 
 
+def zone_tag(h_ev, h_cell, h_t, v0, cfg, n_events, window):
+    """D19 zone rule (sbt cfg zone_rule): any hit (own tracks, own deposits of the interaction, random) in a cell whose ring
+    centre is downstream of z_vertex - zone_up, in time with light from the vertex: |t - t_vtx - |z_cell - z_vtx| / c| <
+    window + zone_extra_ns, t_vtx = the light-speed back-extrapolation of the pair line from SST1 (t = 0) to the vertex.
+    For the neutral products of helium interactions (photons, neutrons) and SBT-material vertices; its signal cost is the
+    random-hit probability in those cells."""
+    out = np.zeros(n_events, bool)
+    vtx, pv = np.asarray(v0["vtx"], float)[:n_events], np.asarray(v0["pvis"], float)[:n_events]
+    m = h_ev < len(vtx)
+    if not m.any():
+        return out
+    e, c, t = h_ev[m], h_cell[m], h_t[m]
+    ring = np.clip(c // 10 % 1000, 0, N_RING - 1)
+    zc = 0.5 * (RING_EDGES[ring] + RING_EDGES[ring + 1])
+    k_path = np.sqrt(1 + (pv[:, 0] / pv[:, 2]) ** 2 + (pv[:, 1] / pv[:, 2]) ** 2)
+    t_vtx = -(geo.Z_SST1 - vtx[:, 2]) * k_path / C
+    zv = vtx[e, 2]
+    dt = t - t_vtx[e] - np.abs(zc - zv) / C
+    good = (zc > zv - cfg.get("zone_up", 1.0)) & (np.abs(dt) < window + cfg.get("zone_extra_ns", 1.0))
+    out[np.unique(e[good])] = True
+    return out
+
+
 def tag(tr_true, meas, event, z_limit, cfg, reco_cfg, rng, n_events, with_own_hits=True, v0=None):
     """SBT decision per event (and per track for "pointing"). Returns dict vetoed (n_events), explained (n_tracks).
     v0 (optional, D19): dict vtx, pvis per event (the vertex candidate) and sbt_hits (event, cell, t: extra own hits of the
@@ -397,7 +424,7 @@ def tag(tr_true, meas, event, z_limit, cfg, reco_cfg, rng, n_events, with_own_hi
     use_line = bool(cfg.get("v0_line")) and v0 is not None and len(v0.get("vtx", [])) > 0
     early = cfg.get("v0_line_early_ns", 3.0) if use_line else 0.0
     acc = random_hits(n_events, cfg, reco_cfg.spill_s, rng, window + 2.0 + early)
-    extra = (v0 or {}).get("sbt_hits") if cfg.get("selftag_hits") else None
+    extra = (v0 or {}).get("sbt_hits") if (cfg.get("selftag_hits") or cfg.get("zone_rule")) else None
     if extra is None or not len(extra["event"]):
         extra = dict(event=np.zeros(0, int), cell=np.zeros(0, int), t=np.zeros(0))
     h_ev = np.concatenate([own["event"], acc["event"], extra["event"]]).astype(np.int64)
@@ -405,6 +432,8 @@ def tag(tr_true, meas, event, z_limit, cfg, reco_cfg, rng, n_events, with_own_hi
     h_t = np.concatenate([own["t"], acc["t"], extra["t"]])
     # D19 V0 line: its own association (v0_line_tag); the events it tags start as vetoed (OR with the tracks below)
     vetoed = v0_line_tag(h_ev, h_cell, h_t, v0, cfg, n_events, window, early) if use_line else np.zeros(n_events, bool)
+    if cfg.get("zone_rule") and v0 is not None and len(v0.get("vtx", [])) > 0:
+        vetoed |= zone_tag(h_ev, h_cell, h_t, v0, cfg, n_events, window)
     explained = np.zeros(len(event), bool)
     if cfg["mode"] == "any":                       # any hit in time (relative to the cell's nominal time)
         zc = 0.5 * (RING_EDGES[h_cell // 10 % 1000] + RING_EDGES[h_cell // 10 % 1000 + 1])
@@ -448,6 +477,13 @@ def tag(tr_true, meas, event, z_limit, cfg, reco_cfg, rng, n_events, with_own_hi
             elif int(co["face"][k_]) == int(c["face"][j_]):
                 z_out[j_] = co["z"][k_]
                 c_out[j_] = co["y"][k_] if c["face"][j_] in (0, 1) else co["x"][k_]
+    if cfg.get("shell_ms_k", 0.0) > 0:     # D19 (d): scattering in the shell along the backward line's shell path (from the
+        # inner-wall to the outer-shell crossing): k x Highland theta0(x/X0 of that path) x path / sqrt(3), in quadrature
+        from .scattering import highland
+        ell = np.maximum(np.abs(z_out - c["z"]) * (k_path if projected else 1.0), T_SHELL)   # m of shell along the line (>= its depth)
+        sig = highland(np.maximum(meas["p"][s], 0.1), ell / X0_SHELL_EFF) * ell / np.sqrt(3)
+        r = np.sqrt(r ** 2 + (cfg["shell_ms_k"] * sig) ** 2)
+        r_z = r / np.maximum(c["cos"], cfg.get("sin_min", 0.05)) if projected else r
     # candidate cells: the ring range and segment range within r of the crossing point
     hits_by_ev = {}
     order = np.argsort(h_ev)

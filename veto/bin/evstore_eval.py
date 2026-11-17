@@ -46,6 +46,9 @@ def main():
     ap.add_argument("--out", default=None)
     ap.add_argument("--export-roots", default=None, help="write the store's roots as an int_/part_ npz (for bin/g4_vessel_transport.py) and stop")
     ap.add_argument("--g4", default=None, help="bin/g4_vessel_transport.py output for the (single) store: evaluate with the Geant4 tracks")
+    ap.add_argument("--ip-cut", choices=("full", "partial"), default="full")
+    ap.add_argument("--muons", action="store_true", help="D19: the stores' parent_row are rows of the muon dataset (parent paths "
+                    "from z = 30.6 m: their own hits upstream of the vertex, e.g. through the SBT cell of an SBT-material vertex)")
     a = ap.parse_args()
     a.store = [str(paths.evstore(s)) for s in a.store]   # bare process names resolve under paths.EVSTORE_DIR
     if a.export_roots:
@@ -58,14 +61,27 @@ def main():
     p = Path(a.design)
     design = dsg.load(p if p.exists() else a.design)
     _, maps = load_inputs()
-    cfg = reco.RecoConfig(seed=a.seed, multiple_scattering=True, ip_max=vsel.IP_CUTS["full"])
+    cfg = reco.RecoConfig(seed=a.seed, multiple_scattering=True, ip_max=vsel.IP_CUTS[a.ip_cut])
+    from veto import sbt_material
+    sbt_material.register()                                # names of the SBT-material targets (D19), if any
+    muons = None
+    if a.muons:
+        from veto import io
+        muons = io.open_store(paths.store_dir(paths.MUON_DATASET))[0]
     res = {}
     for s in a.store:
         t0 = time.time()
         meta, ev, tr = es.read(s)
         g4 = dict(np.load(a.g4)) if a.g4 else None
-        inter, part = es.roots_to_fastveto(ev, tr) if g4 is not None else es.to_fastveto(ev, tr)
-        r = ix.evaluate(inter, part, design, maps, cfg, np.random.default_rng(a.seed), g4=g4)
+        if g4 is not None:
+            inter, part = es.roots_to_fastveto(ev, tr)
+        else:                       # with the start times (D19: own SBT deposits timed against the pair, if the design uses them)
+            from sbt_eval import store_inputs
+            inter, part = store_inputs(ev, tr)
+            inter["E"] = np.asarray(ev["E"], float)
+        if muons is not None:
+            inter["muon"] = np.asarray(ev["parent_row"])
+        r = ix.evaluate(inter, part, design, maps, cfg, np.random.default_rng(a.seed), g4=g4, muons=muons)
         print(f"\n{s}: {meta['source']} ({meta['n_events']:,} events, {meta['n_tracks']:,} tracks), {time.time() - t0:.0f} s")
         print(f"  {'target':<22}{'interactions/15y':>17}{'selected':>11}{'after a':>11}{'after b':>11}   (n selected)")
         for name, v in r.items():
@@ -76,6 +92,18 @@ def main():
             print("  passing all but the IP cut: " + ", ".join(f"IP<{c}: {v[0]:.3g} ({v[1]})" for c, v in t.items()))
             out["ip_tail"] = {str(k): v for k, v in t.items()}
         res[s] = out
+    # background budget per class over all stores (after level b): the SBT-material targets (D19 (a), Guglielmo 17 Nov 2026:
+    # codes 9101-9104, a class of their own) and the rest by target name
+    tot = {}
+    for out in res.values():
+        for name, v in out["per_target"].items():
+            cls = "sbt_material" if name in set(sbt_material.CODES.values()) else name
+            t = tot.setdefault(cls, dict(selected=0.0, survive_b=0.0))
+            t["selected"] += v["selected"]; t["survive_b"] += v.get("survive_b", 0.0)
+    if tot:
+        print("\nbackground per class, all stores, per 15 y: " + ", ".join(f"{k} {v['selected']:.3g} -> {v['survive_b']:.3g}" for k, v in tot.items())
+              + f"; total after b {sum(v['survive_b'] for v in tot.values()):.3g}")
+        res["_total_by_class"] = tot
     if a.out:
         json.dump(res, open(a.out, "w"), indent=1, default=float)
         print(f"wrote {a.out}")

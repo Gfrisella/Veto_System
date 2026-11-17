@@ -15,13 +15,14 @@ from pathlib import Path
 
 import numpy as np
 
-COLS = ("selected", "std", "v0line", "v0line_self", "own_any", "zone")
+COLS = ("selected", "off", "std", "v0line", "v0line_self", "own_any", "zone")   # off: D19 flags off (flagged designs)
 
 
 def add(acc, key, row):
-    a = acc.setdefault(key, {c: [0.0, 0.0, 0] for c in COLS})
+    a = acc.setdefault(key, {c: [0.0, 0.0, 0, False] for c in COLS})
     for c in COLS:
         if c in row:
+            a[c][3] = True
             a[c][0] += row[c]
             a[c][1] += row.get(f"{c}_err", 0.0) ** 2
             a[c][2] += row.get(f"n_{c}" if c != "selected" else "n_selected", 0)
@@ -30,11 +31,12 @@ def add(acc, key, row):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dir", required=True); ap.add_argument("--design", default="R2_sbt_ubt"); ap.add_argument("--out", default=None)
+    ap.add_argument("--sub", default="per_store", help="subdirectory of the per-store muon evaluations")
     a = ap.parse_args()
     d = Path(a.dir)
     acc = {}
     short = a.design.split("_")[0]                     # per-store and unflagged files carry the short name (R2)
-    files = glob.glob(str(d / "per_store" / f"eval_mu_*_{short}_*.json")) + glob.glob(str(d / f"eval_nu_{a.design}_*.json")) \
+    files = glob.glob(str(d / a.sub / f"eval_mu_*_{short}_*.json")) + glob.glob(str(d / f"eval_nu_{a.design}_*.json")) \
         + glob.glob(str(d / f"eval_*_unflagged_{short}_*.json"))
     for f in sorted(files):
         r = json.load(open(f))
@@ -51,12 +53,12 @@ def main():
     out = {}
     for ip in ("full", "partial"):
         print(f"\n### IP cut {ip} ({a.design}), per 15 y\n")
-        print("| source | layer | selected | std (as is) | + V0 line | + V0 line + own deposits | bound: no own fired cell | zone |")
-        print("|---|---|---|---|---|---|---|---|")
+        print("| source | layer | selected | D19 flags off | design as is | + V0 line | + V0 line + own deposits | bound: no own fired cell | zone |")
+        print("|---|---|---|---|---|---|---|---|---|")
         for (ip_, src, t), v in sorted(acc.items()):
             if ip_ != ip:
                 continue
-            cell = lambda c: f"{v[c][0]:.3g} +- {np.sqrt(v[c][1]):.2g} ({v[c][2]})" if v[c][1] > 0 or v[c][0] > 0 else f"0 ({v[c][2]})"
+            cell = lambda c: (f"{v[c][0]:.3g} +- {np.sqrt(v[c][1]):.2g} ({v[c][2]})" if v[c][1] > 0 or v[c][0] > 0 else f"0 ({v[c][2]})") if v[c][3] else "-"
             print(f"| {src} | {t} | " + " | ".join(cell(c) for c in COLS) + " |")
             out[f"{ip}/{src}/{t}"] = {c: dict(value=v[c][0], err=float(np.sqrt(v[c][1])), n=v[c][2]) for c in COLS}
     if a.out:

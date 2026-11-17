@@ -485,3 +485,54 @@ def fired(dep, cfg, rng):
     """Cells above the threshold, with the efficiency (sbt config)."""
     ok = (dep["edep"] > cfg["threshold_mev"]) & (rng.random(len(dep["edep"])) < cfg["efficiency"])
     return {k: v[ok] for k, v in dep.items()}
+
+
+def own_deposits_of_events(sel, inter, part, t_arr, rng, muons=None):
+    """Raw LS deposits (pid = index into sel, cell, edep [MeV], t) of the selected interactions sel: every particle of part
+    (fastveto format; straight lines from its start, 120 m) except the scattered beam particle (its hits come from the reco
+    tracks), plus the parent muon (A or K -> vertex) when muons are given. Times relative to t_arr (n_sel,), the arrival
+    of the vertex pair at SST1, on the clock of part["t0"] if present (e.g. evstore, ns from the target), else of the
+    interaction (t = 0, products start at |v - x_int| / c)."""
+    sel = np.asarray(sel)
+    n_int = len(inter["weight"])
+    pos = np.full(n_int, -1); pos[sel] = np.arange(len(sel))
+    rows = np.nonzero(pos[part["int"]] >= 0)[0]
+    x_int = np.stack([inter["x"], inter["y"], inter["z"]], 1)
+    v_all = np.asarray(part["v"], float)
+    t_ref = np.asarray(inter["t"], float) if ("t0" in part and "t" in inter) else np.zeros(n_int)
+    keep = rows[~np.asarray(part["beam"], bool)[rows]]
+    P = dict(pid=[pos[part["int"][keep]]], pdg=[np.asarray(part["pdg"])[keep]], v=[v_all[keep]],
+             p=[np.asarray(part["p"], float)[keep, :3]], t0=[part_t0(part, inter, keep)], L=[np.full(len(keep), 120.0)])
+    if muons is not None and "muon" in inter:
+        mrow = np.asarray(inter["muon"])[sel]
+        a = np.stack([np.asarray(muons[f"{c}_30"][mrow], float) for c in "xyz"], 1)
+        k = np.stack([np.asarray(muons[f"k{c}"][mrow], float) for c in "xyz"], 1)
+        vtx = x_int[sel]
+        a = np.where((np.isfinite(k[:, 2]) & (k[:, 2] < vtx[:, 2]))[:, None], k, a)
+        dv = vtx - a
+        L = np.linalg.norm(dv, axis=1)
+        E = np.asarray(inter["E"], float)[sel] if "E" in inter else np.full(len(sel), 10.0)
+        P["pid"].append(np.arange(len(sel))); P["pdg"].append(np.full(len(sel), 13)); P["v"].append(a)
+        P["p"].append(dv / np.maximum(L, 1e-9)[:, None] * E[:, None]); P["t0"].append(t_ref[sel] - L / sbt.C)
+        P["L"].append(np.minimum(L, 200.0))
+    P = {k_: np.concatenate(x) for k_, x in P.items()}
+    d = deposits(P["pid"], P["pdg"], P["v"], P["p"], P["t0"], rng, length=P["L"])
+    d["t"] = d["t"] - np.asarray(t_arr, float)[d["pid"]]
+    return d
+
+
+def part_t0(part, inter, rows):
+    """Start times of part rows: part["t0"] if present, else light speed from the interaction point (t = 0 there)."""
+    if "t0" in part:
+        return np.asarray(part["t0"], float)[rows]
+    x_int = np.stack([inter["x"], inter["y"], inter["z"]], 1)
+    return np.linalg.norm(np.asarray(part["v"], float)[rows] - x_int[np.asarray(part["int"])[rows]], axis=1) / sbt.C
+
+
+def own_hits_from_part(sel, inter, part, tc, pair, cfg, rng, muons=None):
+    """Fired LS cells of the selected interactions (D19 selftag_hits / zone_rule in interactions.evaluate): own_deposits_of_
+    events with the arrival time of the first vertex track, then the threshold / efficiency of the sbt cfg."""
+    r0 = tc["row"][pair[:, 0]]
+    t_arr = part_t0(part, inter, r0) + np.linalg.norm(tc["b"][pair[:, 0]] - tc["v"][pair[:, 0]], axis=1) / sbt.C
+    d = fired(own_deposits_of_events(sel, inter, part, t_arr, rng, muons), cfg, rng)
+    return dict(event=d["pid"].astype(np.int64), cell=d["cell"].astype(np.int64), t=d["t"])

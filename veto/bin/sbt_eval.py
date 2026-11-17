@@ -38,6 +38,9 @@ from veto import vertex_selection as vsel
 from veto.config import SPILLS_15Y
 
 ZONE_UP = 1.0          # m: zone rule cells from z_vertex - ZONE_UP downstream
+D19_OFF = dict(v0_line=False, selftag_hits=False, zone_rule=False, material_scattering=False, shell_ms_k=0.0)
+D19_ON_DESIGN = lambda d: bool(d.sbt) and any(d.sbt.get(k) for k in ("v0_line", "selftag_hits", "zone_rule"))
+# designs with the D19 flags on (R2 / R3 since 17 Nov 2026): columns "off" (flags off) and "std" (the design as it is)
 
 
 def variant(design, **flags):
@@ -155,8 +158,8 @@ def evaluate_store(path, design, maps, cfg, muons, rng, codes, only_unflagged=Fa
         dep = event_deposits(sel, inter, tr, ev_index, t_arr, muons, np.random.default_rng(cfg.seed + 19))
         scfg = design.sbt or dict(sbt.DEFAULT)
         hits = sm.fired(dep, scfg, np.random.default_rng(cfg.seed + 20))
-        variants = dict(std=design, v0line=variant(design, v0_line=True),
-                        v0line_self=variant(design, v0_line=True, selftag_hits=True))
+        variants = dict(off=variant(design, **D19_OFF), std=design) if D19_ON_DESIGN(design) else \
+            dict(std=design, v0line=variant(design, v0_line=True), v0line_self=variant(design, v0_line=True, selftag_hits=True))
         v0 = dict(vtx=vertex, pvis=pv, sbt_hits=dict(event=hits["pid"], cell=hits["cell"], t=hits["t"]))
         for name, dv in variants.items():
             if dv.sbt is None:
@@ -174,7 +177,7 @@ def evaluate_store(path, design, maps, cfg, muons, rng, codes, only_unflagged=Fa
         dt = hits["t"] - t_vtx[hits["pid"]] - dist / sbt.C
         z_ok = zc > vertex[hits["pid"], 2] - ZONE_UP
         zone = np.zeros(len(sel), bool); zone[hits["pid"][z_ok & (np.abs(dt) < window + 1.0)]] = True
-        surv["zone"] = surv.get("std", np.ones(len(sel), bool)) & ~zone
+        surv["zone"] = surv.get("off", surv.get("std", np.ones(len(sel), bool))) & ~zone
         out["deposit_stats"] = dict(n_cells_fired=int(len(hits["pid"])), events_with_own_fired=int(own_any.sum()))
     for code in codes if codes else np.unique(inter["code"]):
         m_all = inter["code"] == code
@@ -199,7 +202,9 @@ def signal_loss(design, maps, cfg, n_signal):
     out = {}
     scfg = design.sbt or dict(sbt.DEFAULT)
     window = scfg["n_sigma"] * np.hypot(scfg["sigma_t"] * 1e9, cfg.sigma_t_track)
-    for vname, dv in (("std", design), ("v0line", variant(design, v0_line=True))):
+    pairs = (("off", variant(design, **D19_OFF)), ("std", design)) if D19_ON_DESIGN(design) else \
+        (("std", design), ("v0line", variant(design, v0_line=True)))
+    for vname, dv in pairs:
         fp_sum, w_sum, per = 0.0, 0.0, {}
         for name, wb in se.BENCHMARK_SET.items():
             sig, z_v, evs, w_ev, _ = se.selected_signal(name, cfg, np.random.default_rng(779), n_max=n_signal)
@@ -210,7 +215,7 @@ def signal_loss(design, maps, cfg, n_signal):
                                 v0=dict(vtx=vtx, pvis=pv))
             fp = float((w_ev * s["vetoed"]).sum() / w_ev.sum())
             per[name] = fp
-            if vname == "std":
+            if vname == pairs[0][0]:
                 pz = zone_rate(scfg, vtx[:, 2], window + 1.0)
                 per[name + "_zone_accidental"] = float((w_ev * pz).sum() / w_ev.sum())
                 pz4 = zone_rate(dict(scfg, rate_scale=4.0 * scfg.get("rate_scale", 1.0)), vtx[:, 2], window + 1.0)
@@ -226,10 +231,11 @@ def signal_loss(design, maps, cfg, n_signal):
                     per[name + "_v0line_alone" + lab] = float((w_ev * lt).sum() / w_ev.sum())
             fp_sum, w_sum = fp_sum + wb * fp, w_sum + wb
         out[vname] = dict(FP_frac=fp_sum / max(w_sum, 1e-300), per_benchmark=per)
-    zs = [v for k, v in out["std"]["per_benchmark"].items() if k.endswith("_zone_accidental")]  # equal-weight mean
+    base = pairs[0][0]
+    zs = [v for k, v in out[base]["per_benchmark"].items() if k.endswith("_zone_accidental")]  # equal-weight mean
     out["zone_accidental_mean"] = float(np.mean(zs)) if zs else None
     for key in ("_zone_accidental_x4", "_v0line_alone", "_v0line_alone_x4"):
-        v = [x for k, x in out["std"]["per_benchmark"].items() if k.endswith(key)]
+        v = [x for k, x in out[base]["per_benchmark"].items() if k.endswith(key)]
         out[key.strip("_") + "_mean"] = float(np.mean(v)) if v else None
     return out
 
@@ -264,7 +270,7 @@ def main():
         print(f"\n{s} ({time.time() - t1:.0f} s), K_L natural pairs dropped {r['kl_natural_dropped_15y']:.3g} / 15 y")
         for name, v in r["per_target"].items():
             print(f"  {name:<14} int {v['interactions']:.3g}  sel {v['selected']:.3g} +- {v['selected_err']:.2g} ({v['n_selected']})  "
-                  + "  ".join(f"{k} {v[k]:.3g}" for k in ("std", "v0line", "v0line_self", "own_any", "zone") if k in v), flush=True)
+                  + "  ".join(f"{k} {v[k]:.3g}" for k in ("off", "std", "v0line", "v0line_self", "own_any", "zone") if k in v), flush=True)
     if a.signal:
         res["signal"] = signal_loss(design, maps, cfg, a.signal)
         print("signal loss:", json.dumps(res["signal"], indent=None, default=float))

@@ -68,7 +68,7 @@ def _init(n_signal, seed, inputs=paths.RECO_INPUTS, prep_tag="", signal="eventca
     _STATE["tr"], _STATE["inp"] = load_inputs(inputs)
     _STATE["n_signal"], _STATE["seed"], _STATE["signal"] = n_signal, seed, signal
     _STATE["prep"] = {}
-    for kind in ("muon", "nu", "ms7"):           # bin/prepare_interactions.py: selected events, ready for the veto
+    for kind in ("muon", "nu", "ms7", "sbt"):    # bin/prepare_interactions.py (sbt: bin/sbt_prepare.py, D19): selected events
         f = paths.results_dir() / "interactions" / f"prepared_{kind}{prep_tag}.npz"
         if f.exists():
             _STATE["prep"][kind] = dict(np.load(f))
