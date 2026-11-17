@@ -1162,8 +1162,8 @@ D20. Gap between the vessel end and SST1 (no tagger there)
     16 Nov 2026: closed (Guglielmo): the gap muons never form a vertex in the vessel; nothing to add.
 
 D19. SBT cell model: missing ingredients
-    STATUS: IN PROGRESS (17 Nov 2026: decisions a-d implemented, flags on in R2 / R3 (19b2a0b); open: the muons that range out
-      in the shell (see 17 Nov, implemented), item-2 / response caveats)
+    STATUS: IN PROGRESS (17 Nov 2026: decisions a-f implemented, flags on in R2 / R3 (19b2a0b, 3851a5a, e61e12e); range-out
+      muons treated by the mean shell energy loss; open: item-2 / response caveats)
     lib/veto/sbt.py (12 Nov) models the SBT of R2: 854 cells (61 rings x 4/3 across), muon path in the 20 cm LS shell per
     ring, 1.5 MeV/cm, threshold 30 MeV, 99.3 %, 1 ns; random hits from the store cell rates (2.07 MHz > 30 MeV, muons
     only; SR-389: 27 MHz incl. cavern back-scatter and e/gamma -> rate_scale 13); tagging "pointing" (default) or "any".
@@ -1224,6 +1224,30 @@ D19. SBT cell model: missing ingredients
       Objective cache closure (interactions.veto on prepared_sbt_nov4full, 1 633 events, 1.29e4 / 15 y before tagging): R1 0,
         R2 125 +- 26 / 15 y (sbt_eval 113 +- 25 + nu 0.09).
       Open (Guglielmo): the range-out muons (energy loss in the muon transport / scattering momentum) - see the report.
+    17 Nov 2026, Guglielmo: (e) "mean momentum loss": keep all muons, mean energy loss of the shell along the stored path;
+      (f) SBT random-hit rate x4 (rate_scale 4: back-scatter, e / gamma).
+    17 Nov 2026 (implemented, 3851a5a flag shell_energy_loss + e61e12e rate_scale 4, both on in R2 / R3; docs/d19_sbt.md
+      section 8; results_rerun/sbt_d19/rangeout, Slurm 2112324 / closure 2112330, snapshot snap_e61e12e):
+      sbt_material.shell_energy_loss: shell pieces in path order, dE/ds = MIP (Al 0.436, LS 0.150 GeV/m, ribs smeared) / beta^2
+        (shell_eloss_beta false: constant MIP); later scatterers use the reduced p; a muon that runs out stops (no hits beyond,
+        not an SST1 muon: out of the singles and the pairs; pair muons now < 1 GeV / out of the TD acceptance drop their pair);
+        SBT-material interactions beyond the parent's stopping point dropped (sbt_eval; prepared cache event_beyond_stop).
+      Example: 0.4 GeV muon, 3 m LS: loses 0.45 GeV (MIP) -> stops after 2.05 m (1.53 m with 1/beta^2). Only 0.32 % of the
+        2.3e10 LS interactions / 15 y lie beyond stopping points (they come from ~240 GeV muons).
+      Single SST1 muons: 45.4 % of the weight stops (38.1 % with constant MIP = the 17 Nov range-out set); R2 tagged (run_reco,
+        EM debris) full 85.5 -> 95.0 %, partial 85.5 -> 94.1 %; R3 86.0 -> 94.4 %, 84.2 -> 95.3 %. Pairs: 33 % of the weight
+        removed (R2 before tagging 2.36 -> 1.14 / 15 y full, 34.4 -> 23.4 partial); after tagging 0 (R2, R3).
+      Signal loss (run_reco, EM debris; fix1622 -> eloss + rate x4; eloss + rate x1 in brackets): R2 full 3.15 -> 5.00 (2.89) %,
+        partial 2.81 -> 5.19 (2.92) %; R3 full 5.28 -> 6.83 (5.04) %, partial 9.35 -> 10.16 (8.40) %. The x4 cost is the
+        zone rule (accidental 0.58 -> 2.28 %).
+      SBT-material background after tagging, per 15 y: R2 mu 113 +- 25 -> 112 +- 25 (IP < 10 cm), 3.9e4 -> 3.95e4 (2.5 m); nu
+        0.091 -> 0.092, 47 -> 46; nu-He 0.96 -> 0.96, 32 -> 32. R3 mu 0 -> 0, 4.3e3 -> 382 +- 27 (2.5 m; the change is the
+        31ca042 V0 rule), nu 0.054, 29; nu-He 0.97, 29. No selected event at IP < 10 cm lies beyond a stopping point: the
+        SBT-material term is unchanged by the energy loss.
+      Objective cache prepared_sbt_nov4full_eloss[_partial].npz (new tag, old files kept): closure R1 0, R2 119 +- 23 (full) /
+        4.3e4 (partial), R3 2.9 +- 2.9 / 403 +- 32, as sbt_eval.
+      Caveats: mean loss only (no straggling), paths not re-tracked, final states at the stored E (< 1 % off), cell / plane
+        rate maps from the full stored paths.
 
 D16. V0 production in the MS7 muon chain: checked against data (10 Nov 2026, branch veto-v0-production)
     STATUS: IN PROGRESS (PRIORITY B)

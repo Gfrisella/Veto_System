@@ -259,3 +259,74 @@ full 5.82 -> 6.16 %, partial 7.73 -> 8.49 %.
 `prepared_sbt_nov4full.npz`: 1 633 selected events, 1.29e4 / 15 y before tagging (partial: 369 135 events, 1.79e6).
 Closure through `interactions.veto` (the objective's path): R1 0, R2 125 +- 26 / 15 y (sbt_eval: 113 +- 25 muons + 0.09 nu).
 
+
+## 8. 17 Nov 2026 (evening): mean energy loss in the shell (`shell_energy_loss`) and SBT random rate x4
+
+Guglielmo: keep all muons, apply the MEAN energy loss of the SBT shell along the stored path ("mean momentum loss"); random
+SBT hit rate x4 (`rate_scale: 4.0`, cavern back-scatter and e / gamma). Commits 3851a5a (flag, code default off, on in the
+`"sbt"` block of R2 / R3) and e61e12e (`rate_scale` 4 in R2 / R3). Results: `results_rerun/sbt_d19/rangeout/`
+(Slurm 2112324, 55 tasks, snapshot `snap_e61e12e`; closure 2112330).
+
+Model (`sbt_material.shell_energy_loss`): the stored path A -> (K) -> B is cut into its shell pieces (inner Al, LS with the
+ribs smeared, outer Al) in path order; dE/ds = k / beta^2 with k = 0.436 (Al) / 0.150 (LS) GeV/m (as `deposits`); with
+F = E + m^2/E, F falls by k x length per piece, the muon stops where F = 2m (range (E - m)^2 / (E k)). Stored energy: E_B
+after K, E_A (pz_30 along A -> K) before it, the rock loss E_A - E_B taken at K. `shell_eloss_beta: false` = constant MIP.
+- momentum: reduced at B (direction kept: spectrometer, windows); `scattering.kicks` takes each scatterer's Highland with
+  the momentum at its z (middle of a shell piece), Highland on the total x/X0 shared as before.
+- a stopped muon: no plane / SBT own hits beyond the stopping point (`reco.own_hits`, `sbt.own_hits`), no search; run_reco
+  drops it from the single SST1 muons and from the pair candidates; pair muons now below p 1 GeV or out of the timing
+  acceptance (RK4 with the reduced p) drop their pair; type-1 singles failing that become "SST1 other".
+- SBT-material interactions: those beyond the parent's stopping point are dropped (`sbt_eval`; `sbt_prepare` stores
+  `event_beyond_stop`, applied by `interactions.veto` for designs with the flag). The final states stay the ones drawn at
+  the stored energy (caveat below: E at the vertex changes by < 1 %).
+- flag off: identical to 31ca042 (20 000 singles: kicks and vetoes bit-identical).
+
+Numeric example: a 0.4 GeV muon (T = 0.31 GeV) with 3 m of LS loses 0.45 GeV (MIP): it stops, after 2.05 m (MIP) or 1.53 m
+(1 / beta^2). Of the 2.3e10 LS interactions per 15 y only 7.3e7 (0.32 %) lie beyond stopping points (inner Al 0.86 %, ribs
+0.32 %, outer Al 0.12 %; `mu_*_noenrich` samples): the interaction rate goes with sigma(E) and is carried by
+high-energy muons (median E at the vertex 237 GeV); E at the kept vertices is 98-99 % of the stored one on average.
+
+Single SST1 muons (R2, 2e5 singles of inputs_nov4full): stopped 45.4 % of the weight (bounced 61 %, p > 1 GeV & timing 4.7 %,
+other 58 %); constant MIP: 38.1 % (= the 17 Nov "range-out" set exactly); 2.6 % of the weight moves from type 1 to "other".
+Pairs: 29 425 of 215 500 candidates removed (33 % of the weight): R2 pairs before tagging 2.36 -> 1.14 / 15 y (IP < 10 cm),
+34.4 -> 23.4 (IP < 2.5 m); after R2 / R3: 0 (as before).
+
+| R2 / R3, run_reco (EM debris, EventCalc, MS) | fix1622 (no eloss, rate x1) | eloss, rate x1 | eloss, rate x4 (design) |
+|---|---|---|---|
+| R2 single SST1 tagged, full / partial | 85.5 / 85.5 % | 95.4 / 94.7 % | 95.0 / 94.1 % |
+| R2 split (17 Nov run): physical / range-out | 93.3 / 66.1 % (37 % of the weight) | all kept muons physical | 95.0 % / stopped (45 %) |
+| R3 single SST1 tagged, full / partial | 86.0 / 84.2 % | 95.0 / 96.0 % | 94.4 / 95.3 % |
+| R2 signal loss, full / partial | 3.15 / 2.81 % | 2.89 / 2.92 % | 5.00 / 5.19 % |
+| R3 signal loss, full / partial | 5.28 / 9.35 % | 5.04 / 8.40 % | 6.83 / 10.16 % |
+| pairs after tagging (R2, R3) | 0 | 0 | 0 |
+
+(R2 constant-MIP variant, rate x4, full: tagged 92.8 %, stopped 38.1 %. The single-muon gain is the removal of the soft
+muons that the shell scattering made untaggable; the bounced class stays at ~86-87 %.)
+
+SBT-material background per 15 y (sbt_eval, design as is; 17 Nov flags17 -> now):
+
+| | R2 IP < 10 cm | R2 IP < 2.5 m | R3 IP < 10 cm | R3 IP < 2.5 m |
+|---|---|---|---|---|
+| mu, selected | 1.2e4 -> 1.18e4 | 1.79e6 -> 1.78e6 | same | same |
+| mu, after tagging | 113 +- 25 -> 112 +- 25 | 3.9e4 -> 3.95e4 | 0 -> 0 | 4.3e3 -> 382 +- 27 (*) |
+| nu, after tagging | 0.091 -> 0.092 | 47 -> 46 | 0.078 -> 0.054 (*) | 38 -> 29 (*) |
+| nu-He, zone rule | 0.96 -> 0.96 | 32 -> 32 | 0.96 -> 0.97 | 24 -> 29 |
+
+(*) R3 now on the 31ca042 V0 rule (theta_p, early_tof); before on 1622cf7 / 19b2a0b: the R3 change is that rule, not the
+energy loss. Selected events beyond a stopping point: none at IP < 10 cm, 5.5 / 15 y (5 MC events) of 1.8e6 at IP < 2.5 m.
+Rate x4 does not change the background terms (random hits only add tags). Signal (B4, no EM debris, sbt_eval):
+R2 1.40 -> 3.29 % (full), 1.21 -> 3.52 % (partial); R3 6.16 -> 4.06 %, 8.49 -> 5.88 % (31ca042 V0 rule); zone rule
+accidental 0.58 -> 2.28 % (full) at x4.
+
+Objective cache: `prepared_sbt_nov4full_eloss[_partial].npz` (new tag; the old `_nov4full` files are untouched, rename to
+switch the objective): 1 633 / 369 135 events, none beyond a stopping point. Closure through `interactions.veto`
+(`rangeout/closure_prepared.json`): R1 0; R2 119 +- 23 (IP < 10 cm; sbt_eval 112 + nu 0.09), 4.3e4 (2.5 m; sbt_eval 4.0e4);
+R3 2.9 +- 2.9 (sbt_eval 0 + nu 0.05), 403 +- 32 (sbt_eval 411).
+
+Caveats: (1) mean loss only (no straggling, no range-out fluctuations, no delta rays; 1 / beta^2 overestimates the Bethe
+loss by ~10 % near p 0.3 GeV -> the MIP variant brackets it: 38-45 % stopped); (2) the muons are still not deflected by the
+shell beyond the scattering kicks (paths stay the stored lines); (3) SBT-material final states drawn at the stored energy
+(E changes by < 1 % at the selected vertices: not redrawn); products of shell vertices lose energy in the rest of the shell
+in run_events but the event selection was made without it; (4) the SBT cell rates (random hits) and the plane rate maps
+still use the full stored paths (stopped muons slightly overcount the downstream cells; covered by rate_scale);
+(5) signal daughters: no loss (they do not cross the shell).
