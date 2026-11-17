@@ -18,7 +18,8 @@
   "zone_rule": true,
   "material_scattering": true,
   "shell_ms_k": 1.0,
-  "shell_energy_loss": true
+  "shell_energy_loss": true,
+  "rate_scale": 4.0
  },
  "detector": {
   "v0_rule": {
