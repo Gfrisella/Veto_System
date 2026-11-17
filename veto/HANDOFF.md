@@ -65,7 +65,7 @@ Read this first in a new session. Details: `docs/STATUS.md` (dated log), `ISSUES
    one was deleted).
 3. Optimiser trial (`evolve/evolve_designs.py --generations 5 --children 8 --inputs inputs_nov4full.npz --prep-tag
    _v0statk`, host slurm, seeds R1 / R2 / R3) — the MS7 source now has statistics.
-4. Check the rock library's antiproton yield (7.5 % of the R1 rock survivors are pbar of 1-5 GeV: suspicious).
+4. DONE 17 Nov: rock pbar = statistics artefact (4-5 reused library pbar), not physics; ISSUES D7. R1 rock x mu 0.591 / 15 y.
 5. Strips: kink rule, MS7 field in the stations, EM shower inside the iron; V0 time of flight in the simulation.
 6. Signal loss: UBT straws with EM debris (~2.8 %) + the wider tile window (+0.3-0.5): check the debris map / straw window.
 

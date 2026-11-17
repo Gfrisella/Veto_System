@@ -858,6 +858,15 @@ D7. Interactions upstream of z = 30.6 m not simulated
       the 30.6 m states in the real cavern only if the redone mu x rock is not negligible.
     16 Nov 2026, Guglielmo: closed without redoing mu x rock ("we already evaluated that there is no need"); rock
       pairs dropped from the report's Section 6 with one sentence. S7 task 11 (D6 design) had failed (OOM) and is not rerun.
+    17 Nov 2026 (rock pbar check, analysis only; scripts /tmp/claude-21615/rock_pbar/): the "7.5 % pbar among the R1 rock
+      survivors" is a statistics artefact, not physics or bookkeeping. Library (rock_library.npz, 2.66e6 events): 436 pbar
+      exits, 98 % from the Pythia-6 part; pbar / pi- ~1 % at the concrete surface (Pythia generator level 0.7-2 % at
+      W = 4-8 GeV, pp-like), plausible. Survivors: pbar = 4-5 distinct library exits reused in many draws (n_eff ~2); one
+      3.5 GeV pbar carries 68 % of the pbar weight. Charge / pdg checked on all 7 593 current survivors (partners mu+).
+      Current R1 rock x mu after tagging (+-3 sigma tiles, rock_comb_R1_ubt_only.json): 0.591 +- 0.036 / 15 y (the 35.0
+      above is the old +-200 ps result); without pbar 0.564. The quoted error counts pairs: the survivors are 145 distinct
+      library exits (n_eff 44), real statistical error ~15 %. Limitation (all species): rock hadrons are straight lines,
+      no interaction in the vessel wall, no decay in flight.
 
 D8. Results computed with the old PVC vessel wall
     STATUS: DONE (11 Nov 2026: key wall in the code, pvc accepted; numbers regenerate with the re-run batch)
