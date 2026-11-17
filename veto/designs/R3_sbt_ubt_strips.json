@@ -21,7 +21,9 @@
  },
  "detector": {
   "v0_rule": {
-   "p_max": 20.0
+   "p_max": 20.0,
+   "theta_p": 0.25,
+   "early_tof": true
   }
  },
  "shield_strips": {
