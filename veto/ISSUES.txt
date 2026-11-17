@@ -822,7 +822,8 @@ D6. Interaction-library approximations
       concrete 1-2 GeV points taken from v2 or skipped): not started.
 
 D7. Interactions upstream of z = 30.6 m not simulated
-    STATUS: REOPENED (16 Nov 2026 evening, Guglielmo). The "negligible" came from D6_straw_mod, whose side fins tagged
+    STATUS: CLOSED (17 Nov 2026, Guglielmo: rock x muon on R1 / R2 / R3 in the report, Section 6: R1 0.59 / 2.2, R2 / R3 0
+      per 15 y full / partial; rock x rock no candidates). Was REOPENED (16 Nov 2026 evening, Guglielmo). The "negligible" came from D6_straw_mod, whose side fins tagged
       99.99 % of the rock legs. On the reference designs (bin/rock_combinatorial.py, Nov-4, full selection): mu x rock
       634 candidates / 211 IP < 10 cm per 15 y before tagging (mu x mu 2.36); after tagging R1 35.0 (rock legs tagged 16 %),
       R2 2.3e-6 (shell window b87da94). Rock x rock dropped (no candidates). Pending: re-run with the +-3 sigma tiles and the
@@ -1226,6 +1227,8 @@ D19. SBT cell model: missing ingredients
 
 D16. V0 production in the MS7 muon chain: checked against data (10 Nov 2026, branch veto-v0-production)
     STATUS: IN PROGRESS (PRIORITY B)
+    17 Nov 2026, Guglielmo: not a blocker for the optimisation; the Geant4 V0 yield (within ~6 % of data at W = 6.2 GeV, low W
+      not compared) is carried as a systematic on the MS7 term.
     Analysis: bin/v0_production.py (existing files only) -> docs/v0_production.md (figures docs/figures/v0_production/).
     Found (per spill at 4e13): made at the vertex (Geant4 muonNuclear, V0-stable library, PR #15 vertex spectrum)
       K_L 7.9e3, K_S 7.8e3, Lambda 5.4e3, anti-Lambda 260 (~1 % per interaction, median W 1.3 GeV); at the exit plane
