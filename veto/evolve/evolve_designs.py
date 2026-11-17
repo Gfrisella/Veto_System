@@ -124,8 +124,9 @@ CONTINUOUS_FORMAT = f"""DESIGN JSON (all lengths in metres; omit a block to get 
                             {{"x": [-2.0, -1.0], "y": [-0.6, 0.6], "technology": "tile2"}}, ...]}},
   "fins": [{{"side": "right"|"left", "z": 46.13, "length": 3.0, "y_lo": -3.0, "y_hi": 3.0, "tilt": 0, "technology": "tile"}}, ...],
   "sbt": {{"ring_set": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "threshold_mev": 30.0, "mode": "pointing"}},
-  "shield_strips": {{"stations": [[-1.5, 0.0], [-1.3, 0.0], ...], "size": 0.20, "rule": "point", "theta": 0.01}},
-  "detector": {{}}}}
+  "shield_strips": {{"layers": [29.39, 29.59, 29.79], "stations": [[-1.2, 0.15], [-0.9, 0.15], ...], "size": 0.3,
+                    "rule": "point", "theta": 0.01, "time_window_ns": 1.5}},
+  "detector": {{"v0_rule": {{"p_max": 20.0, "theta_p": 0.25, "early_tof": true}}}}}}
 - "ubt": the vertical-straw station at z = {geo.Z_UBT_STRAW:.2f} on the window (|x| < 0.5); y extent at least -1.35 .. 1.35.
   Two optional straw upgrades (off by default and in R1 / R2 / R3): "straw_t0_sigma_ns": 3.0 (segment t0 from the drift
   times: time window +- 3 sigma instead of the 50 ns drift window; ~-0.6 points of signal loss) and "segment_cut": true
@@ -138,13 +139,34 @@ CONTINUOUS_FORMAT = f"""DESIGN JSON (all lengths in metres; omit a block to get 
   covering about z = 31.1 + 5 k .. 36.1 + 5 k m; "ring_set" lists the instrumented rings (any subset; each ring is a full
   ring around the vessel). Cost scales with the instrumented area (ring 0 ~16, ring 9 ~33 drachmas).
   "mode": "pointing" (recommended; "any" vetoes on any SBT hit in time and loses ~15 % of the signal).
-- "shield_strips": silicon strip stations (size x size m, 3 cm deep) at the MS7 exit face z = 29.90 m, superimposed on the
-  shield; centres [x, y] (the MS7 iron box is |x| < 1.71, |y| < 1.27; the V0 parents are in the return yokes, 1 < |x| < 1.7,
+  The SBT physics model is FIXED by the evaluator for every design, as in R2 / R3 (D19): v0_line, selftag_hits, zone rule,
+  scattering and mean energy loss of the muons in the shell, random-hit rate x4 (cavern back-scatter, e / gamma). Only
+  "ring_set" / "faces", "threshold_mev" and "mode" are yours; other keys in the "sbt" block are ignored.
+- "shield_strips": silicon strip stations (size x size m), the same x-y layout repeated on each z in "layers" (inside the
+  MS7 iron 29.39 .. 29.89, default one layer at the exit face 29.90), superimposed on the shield; centres [x, y] (the MS7 iron box is |x| < 1.71, |y| < 1.27; the V0 parents are in the return yokes, 1 < |x| < 1.7,
   more on the cavern-wall side -x). They tag the MS7 V0 background (a muon interacting in the last iron, a K_L / K_S /
   Lambda decaying in the vessel): the V0 vertex is traced back along its visible momentum to z = 29.90 and the products
   of the interaction are looked for within r0 + theta x distance; "rule" "point" (>= 1 hit) or "vertex" (>= 2 hits).
   Each 20 x 20 cm station ~2 100 channels, ~1.3 drachmas; up to ~45 MHz per station (random hits cost signal only
-  if a signal vertex traces back onto a station, which is rare: signal points to the target)."""
+  if a signal vertex traces back onto a station, which is rare: signal points to the target). "time_window_ns" is the
+  half window of a strip hit (R3: 1.5).
+- "detector": {{"v0_rule": {{...}}}}: the V0 rule on the planes (UBT): every vertex candidate is also traced back as a NEUTRAL
+  from its vertex along its visible momentum to every plane upstream, and ANY hit within r0 + theta_ev x distance, in a
+  window opened early_ns before a light-speed back-extrapolation, tags it (the other products of the interaction that made
+  a K_L / K_S / Lambda). Keys (defaults): "theta" 0.025 rad, "r0" 0.05 m, "early_ns" 3.0, "min_hits" 1, "p_max" null
+  (apply only to candidates with visible momentum below p_max GeV), "theta_p" null (theta_ev = max(theta, theta_p / p_vis):
+  wider for slow candidates, whose missing neutrino makes the largest angle), "early_tof" false (open the early window by
+  the K_L time of flight from the return yoke at the candidate's momentum, up to 6 ns), "yoke" false with "yoke_theta" 0.08
+  (also try back-trace lines toward the two return-yoke legs; costly in signal). Omit "v0_rule" for no rule. The rule
+  removes the MS7 K_L and the K_L made in the SBT material, but its disc is large far from the UBT (R3: 0.6-2.9 m for
+  vertices 23-50 m downstream), so it costs signal through the random UBT hits in that disc.
+
+REFERENCE DESIGNS (full Nov-4 sample, per 15 years, full selection; signal lost full / partial):
+- R1 (UBT only, 99.7 drachmas): MS7 muon V0 1.70e4, neutrinos in MS7 2.6, signal lost 2.5 / 2.2 %.
+- R2 (R1 + full SBT, 333.5 = the budget): MS7 muon V0 1.42e4, SBT-material K_L ~110, neutrinos in helium 0.96, signal 3.2 / 2.8 %.
+- R3 (R2 + 3 x 8 strip stations in MS7 + V0 rule p_max 20, theta_p 0.25, early_tof; 378.7, over the budget): MS7 muon V0
+  0.7, SBT-material 0, neutrinos in helium 0.98 and in MS7 0.70, signal 5.0 / 8.4 %. (17 Nov 2026, before the D19 energy
+  loss and the x4 SBT rate; the reports of your designs use the current model.)"""
 GRID = "continuous"   # 16 Nov 2026: the reference designs are continuous ("modules": the 50 cm module grid of A7)   # A7 (2026-11-05): designs on the 50 cm module grid ("continuous": the old free lengths)
 
 MODULE_FORMAT = f"""DESIGN JSON (module grid, ISSUES A7):
@@ -403,7 +425,7 @@ class OpenRouter:
 
 
 # ------------------------------------------------------------------ evaluation on the cluster
-EVAL_DATA = dict(inputs=paths.RECO_INPUTS, prep_tag="")   # which reco inputs / interaction caches (--inputs, --prep-tag)
+EVAL_DATA = dict(inputs=paths.RECO_INPUTS, prep_tag="_nov4full,ms7=_v0statk,sbt=_nov4full_eloss")   # which reco inputs / interaction caches (--inputs, --prep-tag)
 
 
 def evaluate_slurm(designs, workers, n_signal, seed=1):
@@ -496,7 +518,7 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--inputs", default=paths.RECO_INPUTS, help="results/reco file (inputs_delta.npz: the enriched dataset); "
                                                          "needed here too, for the pair statistics of the objective")
-    ap.add_argument("--prep-tag", default="", help="interaction caches prepared_<kind><tag>.npz (_delta: enriched)")
+    ap.add_argument("--prep-tag", default=EVAL_DATA["prep_tag"], help="interaction caches prepared_<kind><tag>.npz: '<default>[,kind=tag,...]' (evaluate_designs.PREP_TAGS)")
     args = ap.parse_args()
     global GRID
     GRID = args.grid
