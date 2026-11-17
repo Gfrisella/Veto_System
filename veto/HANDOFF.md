@@ -79,4 +79,4 @@ Read this first in a new session. Details: `docs/STATUS.md` (dated log), `ISSUES
 
 D7 REOPENED 16 Nov evening (rock x mu not negligible for R1; partial selection pending). D16 (MS7 V0: statistics done,
 K+- copies running), D19 (SBT model, other session). Closed 16 Nov: A1, A2, A5, B1, C1, C5, C7, C8, D2, D3, D9, D18, D20.
-Deferred: C3, D6, D14 (ACTS, other session).
+Deferred: C3, D14 (ACTS, other session). Closed 17 Nov: D6 (muon 5 % libraries agree; nu library v2 kept).

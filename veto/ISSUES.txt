@@ -777,7 +777,8 @@ D5. Muon source: enriched input disagrees with the old sample
       the MS7 K_L tail needs K_L-enriched generation (10 Nov). Not switched yet: make_peak_maps.py (reads the one-run
       Full_dataset pickle; to be fed from the store) and build_dis_parent_store.py (gamma + zeta) -> in the re-run batch.
 D6. Interaction-library approximations
-    STATUS: IN PROGRESS (16 Nov 2026: muon 5 % libraries done and agree; nu library rebuilding, job 2090354, after the hang fix)
+    STATUS: CLOSED (17 Nov 2026, Guglielmo: muon 5 % libraries agree with the current ones; neutrino library v2 kept, the
+      concrete 1-2 GeV GENIE hang is a known limitation of the rock-neutrino class only; see 17 Nov below)
     Final states not rescaled to the exact muon energy (15 % grid); no nuclear effects (Fermi motion,
     shadowing, re-interactions) in the Pythia part; no tau library (~1 % nu_tau in the flux)
     (docs/fastveto_physics.md "Open").
@@ -815,7 +816,7 @@ D6. Interaction-library approximations
       the background budget depends on them. Library comparison (as bin/d6_compare_libraries.py for muons) not possible:
       there is no new neutrino library. Muon side done 12 Nov (5 % grid, energy mismatch 5.8 -> 2.0 % rms, V0 and charged
       yields within ~1.5 sigma per energy bin, rescaling no visible effect).
-      PROPOSAL (Claude, pending Guglielmo): close D6 for the budget. Muons: no change needed (comparison above). Neutrinos:
+      DECISION (17 Nov 2026, Guglielmo: close): close D6 for the budget. Muons: no change needed (comparison above). Neutrinos:
       keep library v2 (vessel, walls, iron unaffected); record the concrete low-E GENIE hang as a known limitation of the
       rock-neutrino class. Finishing the 5 % neutrino library would be a new production (~12 h+ x 64 cores, with the
       concrete 1-2 GeV points taken from v2 or skipped): not started.
