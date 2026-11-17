@@ -532,8 +532,20 @@ def match(queries, hits, design, cfg):
 
 
 V0_RULE_DEFAULT = dict(theta=0.025, r0=0.05, early_ns=3.0, min_hits=1, skip_tech=(),
-                       p_max=None)   # 17 Nov 2026: apply the rule only to candidates with visible momentum below p_max [GeV]
+                       p_max=None,   # (comment below)
+                       theta_p=None,      # 17 Nov 2026 options (R3 escapes study, off by default): cone theta = max(theta,
+                                          # theta_p / p_vis) [GeV]: the missing neutrino / pi0 angle grows as 1 / p
+                       yoke=None,         # list of x [m] of yoke hypotheses at z = YOKE_Z, y = 0: also search around the line
+                                          # from the vertex to each, if its direction is within the cone of p_vis
+                       early_tof=False,   # (comment above)
+                       yoke_theta=0.08)   # max angle between a yoke hypothesis and p_vis [rad] (the escapes: 25-56 mrad)   # open the window early by the K_L time of flight from MS7 (p_vis, m_K) + 0.5 ns,
+                                          # instead of the flat early_ns   # 17 Nov 2026: apply the rule only to candidates with visible momentum below p_max [GeV]
                                      # (MS7 V0 selected at p_vis 3-9 GeV, signal 43-94 GeV); None = all candidates
+
+
+YOKE_Z = 29.64       # middle of the last 50 cm of MS7 (V0 production in the return-yoke legs)
+M_K0 = 0.497611
+EARLY_TOF_MAX = 6.0  # ns, cap of the time-of-flight opening (also the widening of the random-hit window)
 
 
 def v0_rule_config(design):
@@ -557,6 +569,16 @@ def v0_tag(hits, design, v0, rule, cfg, n_events):
     win = time_window(design, cfg)
     n_hit = np.zeros(n_events, int)
     k_path = np.sqrt(1 + (pv[:, 0] / pv[:, 2]) ** 2 + (pv[:, 1] / pv[:, 2]) ** 2)
+    p_abs = np.linalg.norm(pv, axis=1)
+    theta_ev = np.full(len(pv), rule["theta"])
+    if rule.get("theta_p"):
+        theta_ev = np.maximum(theta_ev, rule["theta_p"] / np.maximum(p_abs, 1e-6))
+    early_ev = np.full(len(pv), rule["early_ns"])
+    if rule.get("early_tof"):
+        beta = p_abs / np.hypot(p_abs, M_K0)
+        early_ev = np.minimum((vtx[:, 2] - YOKE_Z) * k_path / C * (1 / np.maximum(beta, 1e-6) - 1) + 0.5, EARLY_TOF_MAX)
+    yoke = rule.get("yoke") or []
+    u_hat = pv / np.maximum(p_abs, 1e-12)[:, None]
     for plane in design.planes:
         if plane.technology in rule["skip_tech"]:
             continue
@@ -570,11 +592,21 @@ def v0_tag(hits, design, v0, rule, cfg, n_events):
             x = vtx[e, 0] - pv[e, 0] / pv[e, 2] * dz
             y = vtx[e, 1] - pv[e, 1] / pv[e, 2] * dz
         u = plane.to_local(x)
-        r = rule["r0"] + rule["theta"] * dz + 0.5 * np.hypot(plane.cell_u, plane.cell_y)
+        r = rule["r0"] + theta_ev[e] * dz + 0.5 * np.hypot(plane.cell_u, plane.cell_y)
         t_pred = -(geo.Z_SST1 - plane.z) * k_path[e] / C
         dt = hits["t"][m] - t_pred
         w = win[plane.index]
-        good = ok & ((hits["u"][m] - u) ** 2 + (hits["y"][m] - y) ** 2 <= r ** 2) & (dt > -w - rule["early_ns"]) & (dt < w)
+        near = (hits["u"][m] - u) ** 2 + (hits["y"][m] - y) ** 2 <= r ** 2
+        for xk in yoke:                                   # yoke hypotheses: line vertex -> (xk, 0, YOKE_Z)
+            d = np.stack([xk - vtx[e, 0], -vtx[e, 1], YOKE_Z - vtx[e, 2]], 1)
+            d_n = np.linalg.norm(d, axis=1)
+            cosang = -(d * u_hat[e]).sum(1) / np.maximum(d_n, 1e-12)        # back-direction vs -p_vis
+            inside = np.arccos(np.clip(cosang, -1, 1)) < np.maximum(theta_ev[e], rule.get("yoke_theta") or 0.08)
+            f = dz / np.maximum(vtx[e, 2] - YOKE_Z, 1e-6)
+            xh, yh = vtx[e, 0] + d[:, 0] * f, vtx[e, 1] + d[:, 1] * f
+            near |= inside & ((hits["u"][m] - plane.to_local(xh)) ** 2 + (hits["y"][m] - yh) ** 2
+                              <= (rule["r0"] + rule["theta"] * dz + 0.15 + 0.5 * np.hypot(plane.cell_u, plane.cell_y)) ** 2)
+        good = ok & near & (dt > -w - early_ev[e]) & (dt < w)
         n_hit += np.bincount(e[good], minlength=n_events)[:n_events]
     if rule.get("p_max") is not None:                     # momentum gate: fast candidates are not treated as V0
         slow = np.zeros(n_events, bool)
@@ -609,7 +641,7 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
     window = time_window(design, cfg) + ACC_MARGIN_NS        # each plane its own window
     rule = v0_rule_config(design) if v0 is not None else None
     if rule:                                                 # the V0 rule looks earlier: draw random hits there too
-        window = window + rule["early_ns"]
+        window = window + (max(rule["early_ns"], EARLY_TOF_MAX) if rule.get("early_tof") else rule["early_ns"])
     acc = accidental_hits(design, maps, n_events, window, cfg, rng)
     acc["track"] = np.full(len(acc["event"]), -1)            # accidental: no track of this event
     hits = {k: np.concatenate([own[k], acc[k]]) for k in own}
