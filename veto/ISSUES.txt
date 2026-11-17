@@ -805,6 +805,20 @@ D6. Interaction-library approximations
       bin/d6_compare_libraries.py old vs new before switching.
     16 Nov 2026, Guglielmo: deferred. Branch veto-d6-energy-rescale keeps the job; the current libraries stay the default
       (nearest-point error 7-9 % in energy, a documented systematic).
+    17 Nov 2026 (neutrino 5 % library, job 2090354_2): TIMEOUT at 12 h, no library written. It reached E = 2.2 GeV of the
+      1-400 GeV grid (gst cache by energy in data/interactions/genie/lib_gst, 1285 files, reusable). 1465 gevgen timeouts,
+      448 points dropped after 3 attempts: ALL on the five concrete nuclei (Na23, Mg24, Al27, K39, Ca40), all six
+      flavours, all at E = 1.00-1.98 GeV (15 grid points x 6 x 5, 2 missing). No helium, wall, air or iron point dropped.
+      Rate they carry (2026 flux, 3e6 rows, GENIE sigma(E) shape of Si28 as proxy for concrete): 27 % of the neutrino
+      interactions in concrete (nu_mu 33 %, anti-nu_mu 27 %, nu_e 10 %, anti-nu_e 7 %, nu_tau 1.5 %); 61 % of the nu_mu
+      flux is at 1-2 GeV. Concrete enters only the cavern-rock neutrino class (D7: 0 selected, IP >= 6.8 m), so nothing in
+      the background budget depends on them. Library comparison (as bin/d6_compare_libraries.py for muons) not possible:
+      there is no new neutrino library. Muon side done 12 Nov (5 % grid, energy mismatch 5.8 -> 2.0 % rms, V0 and charged
+      yields within ~1.5 sigma per energy bin, rescaling no visible effect).
+      PROPOSAL (Claude, pending Guglielmo): close D6 for the budget. Muons: no change needed (comparison above). Neutrinos:
+      keep library v2 (vessel, walls, iron unaffected); record the concrete low-E GENIE hang as a known limitation of the
+      rock-neutrino class. Finishing the 5 % neutrino library would be a new production (~12 h+ x 64 cores, with the
+      concrete 1-2 GeV points taken from v2 or skipped): not started.
 
 D7. Interactions upstream of z = 30.6 m not simulated
     STATUS: REOPENED (16 Nov 2026 evening, Guglielmo). The "negligible" came from D6_straw_mod, whose side fins tagged
@@ -884,6 +898,13 @@ D9. DIS x mu pairs not redone with the V0-stable library
       selected (IP < 10 cm, before tagging) 0.0037 / 15 y. After the veto: R1 5.4e-4 (3.1 M MC, job 2091067_0,
       reco/dis_comb_vessel_R1_ubt_only.json), R2 1.3e-6 (6 938 MC, job 2091195_5 of the other session, new SBT window,
       reco/dis_comb_R2_sbt_ubt.json). Negligible for every design: closed.
+    17 Nov 2026 (tile3s tasks 3 / 8, job 2095750, +-3 sigma tile window, full sample): after the veto, per 15 y
+      (before tagging unchanged: vessel-DIS x mu 0.0037, MS7-V0 x mu 62.7, IP < 10 cm):
+        vessel muon-DIS track x mu: R1 (1.04 +- 0.04)e-5 (55 199 MC; was 5.4e-4 with +-200 ps),
+                                    R2 (3.3 +- 3.0)e-7 (128 MC; was 1.3e-6)
+        MS7 V0 product x mu:        R1 0.0187 +- 0.0019 (4 622 MC),  R2 (1.1 +- 0.6)e-4 (31 MC; was 0.0083 with +-200 ps)
+      Partner-muon inefficiency R1 0.373, R2 0.062. reco/dis_comb_R1_ubt_only.json, reco/dis_comb_R2_sbt_ubt.json
+      (the +-200 ps R2 file is kept as dis_comb_R2_sbt_ubt_w200.json). Still negligible; stays closed.
 
 D10. Geant4 built-in neutrino physics unusable
     STATUS: DONE
