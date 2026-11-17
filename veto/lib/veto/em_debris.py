@@ -27,6 +27,7 @@ DEPTH_X0 = 0.5 / X0_FE           # the whole last 50 cm of MS7 (28.5 X0, 29.39 -
                                  # showers, MeV photons ~3.4 X0), same run time -> Guglielmo: full 50 cm. --depth to vary.
 Z_PLANES = tuple(geo.Z_UBT + np.arange(0, 10.001, 1.0))
 EM_FILE = "em_maps.npz"          # results/em_debris/
+SEG_DTX = 0.2                    # straw segment direction cut |tx_segment - tx_track| (option "segment_cut", 17 Nov 2026)
 
 
 def detection_probability(plane):
@@ -56,9 +57,15 @@ def make_maps(rec, w_per_spill, maps):
         fwd = rec["pz"] > 0
     else:
         x_straw, y_straw, fwd = rec["x"], rec["y"], np.ones(len(rec["x"]), bool)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        tx_straw = np.where(fwd, rec["px"] / rec["pz"], np.inf) if "px" in rec else np.zeros(len(rec["x"]))
     for k, m in kinds.items():
         at_ubt = m & (rec["plane"] == 0) & fwd & (np.abs(x_straw) < geo.UBT_HALF_X)
         out[f"em_ubt_{k}"] = np.histogram(y_straw[at_ubt], uyb, weights=w[at_ubt])[0]
+        # optimiser option "segment_cut" of the straw UBT (17 Nov 2026): only debris whose x-slope is within SEG_DTX of a
+        # near-axis track (signal back-traces and SST1 muons have |tx| < ~0.05) forms a matching 6-layer segment
+        seg = at_ubt & (np.abs(tx_straw) < SEG_DTX)
+        out[f"em_ubt_{k}_seg"] = np.histogram(y_straw[seg], uyb, weights=w[seg])[0]
         fin = np.zeros((2, len(zs), len(ub) - 1, len(yb) - 1))
         for iz, z in enumerate(zs):
             ip = np.nonzero(np.abs(z_planes - z) <= 0.51)[0]   # nearest EM plane (old inputs: slices from 30.6 m)

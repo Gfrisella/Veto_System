@@ -166,7 +166,10 @@ def plane_rate_map(plane, maps):
         ub = np.array([0.0, plane.u_max])
         h = maps["ubt_hist"][None, :]
         if em:
-            h = h + (p_e * maps["em_ubt_e"] + p_g * maps["em_ubt_g"])[None, :]
+            sfx = "_seg" if getattr(plane, "segment_cut", False) else ""   # straw option segment_cut (17 Nov 2026)
+            if sfx and "em_ubt_e_seg" not in maps:
+                raise RuntimeError("segment_cut needs em_maps.npz with em_ubt_*_seg (rebuild with em_debris.make_maps)")
+            h = h + (p_e * maps["em_ubt_e" + sfx] + p_g * maps["em_ubt_g" + sfx])[None, :]
     else:
         side = 0 if plane.sign > 0 else 1
         iz = int(np.clip(np.round(plane.z - maps["z_slices"][0]), 0, len(maps["z_slices"]) - 1))

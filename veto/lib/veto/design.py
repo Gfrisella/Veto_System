@@ -71,6 +71,7 @@ class Plane:
     sub_dead: float = 0.0
     n_modules: int = 0
     x_half: float = None        # "ubt" / "tiles": u = x + x_half - u_off (None: the window half width UBT_HALF_X)
+    segment_cut: bool = False   # straw UBT option (17 Nov 2026): >= 4 of 6 layers form a segment whose x-slope matches the track
 
     @property
     def area(self):
@@ -446,7 +447,18 @@ def from_dict(raw):
     if "modules" in raw["ubt"]:
         planes += module_planes("UBT", "ubt", z_ubt, 0, raw["ubt"])
     else:
-        planes.append(plane(0, "UBT", "ubt", z_ubt, 0, 2 * geo.UBT_HALF_X, raw["ubt"], "cell_x"))
+        p = plane(0, "UBT", "ubt", z_ubt, 0, 2 * geo.UBT_HALF_X, raw["ubt"], "cell_x")
+        # optimiser options of the straw UBT (Guglielmo, 17 Nov 2026; off in R1 / R2 / R3):
+        #  "straw_t0_sigma_ns": segment t0 from the drift times (mean-timer / segment fit): the hit time is the t0 with this
+        #                       Gaussian sigma instead of anywhere in the 50 ns drift window (window +- n_sigma_t x sigma)
+        #  "segment_cut": true:  >= 4 of 6 layers with a segment x-slope within em_debris.SEG_DTX of the track; the EM debris
+        #                       rate becomes the slope-matched part (em_ubt_*_seg), straw efficiency x P(>= 4 of 6) = 0.9995
+        t0 = raw["ubt"].get("straw_t0_sigma_ns")
+        if t0:
+            p.time_window, p.sigma_t = None, float(t0) * 1e-9
+        if raw["ubt"].get("segment_cut"):
+            p.segment_cut, p.efficiency = True, p.efficiency * 0.9995
+        planes.append(p)
     if raw.get("ubt_tiles"):                           # default layout (11 Nov 2026): 4 x 4 m^2 tile plane on the window
         t = raw["ubt_tiles"]
         hx = t["half_x"]

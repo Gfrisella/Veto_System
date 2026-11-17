@@ -127,6 +127,10 @@ CONTINUOUS_FORMAT = f"""DESIGN JSON (all lengths in metres; omit a block to get 
   "shield_strips": {{"stations": [[-1.5, 0.0], [-1.3, 0.0], ...], "size": 0.20, "rule": "point", "theta": 0.01}},
   "detector": {{}}}}
 - "ubt": the vertical-straw station at z = {geo.Z_UBT_STRAW:.2f} on the window (|x| < 0.5); y extent at least -1.35 .. 1.35.
+  Two optional straw upgrades (off by default and in R1 / R2 / R3): "straw_t0_sigma_ns": 3.0 (segment t0 from the drift
+  times: time window +- 3 sigma instead of the 50 ns drift window; ~-0.6 points of signal loss) and "segment_cut": true
+  (>= 4 of 6 layers with a segment slope matching the track: rejects ~95 % of the steep EM debris; ~-1 point). No extra
+  cost in the model (same channels; t0 needs drift-time readout).
 - "ubt_tiles": the tile plane at z = {geo.Z_UBT_TILES:.2f}, |x| < half_x, y_lo .. y_hi; "regions" are non-overlapping rectangles
   that tile it, each "tile" (4 x 4 cm) or "tile2" (2 x 2 cm, for the flames at 1 < |x| < 2, |y| < 0.6). Default: R1's plane.
 - Fins at the entrance z are dropped (the tile plane covers it); fins further downstream are allowed.
