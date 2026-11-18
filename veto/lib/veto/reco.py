@@ -146,6 +146,21 @@ def tile_rate_map(z, half_x, half_y, dataset=None):
     return xe, ye, h
 
 
+def _em_tile_on(maps, xe, ye):
+    """The EM-debris tile maps (e, gamma) on the bins (xe, ye) of a tile plane's own map: the same edges, or a sub-range
+    of the EM map's edges (a narrower plane, e.g. half_x 1.7 m); None if the bins do not line up."""
+    ex, ey = np.asarray(maps["em_tile_x_edges"]), np.asarray(maps["em_tile_y_edges"])
+    def sub(e, x):
+        if len(x) > len(e):
+            return None
+        i = int(np.argmin(np.abs(e - x[0])))
+        return slice(i, i + len(x) - 1) if i + len(x) <= len(e) and np.allclose(e[i:i + len(x)], x, atol=1e-6) else None
+    sx, sy = sub(ex, np.asarray(xe)), sub(ey, np.asarray(ye))
+    if sx is None or sy is None:
+        return None
+    return maps["em_tile_e"][sx, sy], maps["em_tile_g"][sx, sy]
+
+
 def plane_rate_map(plane, maps):
     """Rate map of a plane: bin edges in u, y and muons per spill per bin, clipped to the plane."""
     if plane.kind == "tiles":                                     # UBT tile plane (11 Nov 2026): its own (x, y) map
@@ -153,10 +168,11 @@ def plane_rate_map(plane, maps):
             xe, ye, h = maps["tile_x_edges"], maps["tile_y_edges"], maps["tile_hist"]
         else:
             xe, ye, h = tile_rate_map(plane.z, plane.half_x, max(plane.half_x, geo.UBT_TILES_HALF_Y))   # the whole plane's map
-        if "em_tile_e" in maps and np.allclose(maps["em_tile_x_edges"], xe) and np.allclose(maps["em_tile_y_edges"], ye):
-            from .em_debris import detection_probability     # B2 / tile plane: EM debris of the shield end, same binning
+        em_t = _em_tile_on(maps, xe, ye) if "em_tile_e" in maps else None
+        if em_t is not None:                                 # B2 / tile plane: EM debris of the shield end, same bins
+            from .em_debris import detection_probability     # (cut to the plane's own map when it is narrower, 18 Nov 2026)
             p_e, p_g = detection_probability(plane)
-            h = h + p_e * maps["em_tile_e"] + p_g * maps["em_tile_g"]
+            h = h + p_e * em_t[0] + p_g * em_t[1]
         ub = xe + plane.half_x - plane.u_off
         uc, yc = 0.5 * (ub[1:] + ub[:-1]), 0.5 * (ye[1:] + ye[:-1])
         keep = ((uc >= 0) & (uc <= plane.u_max))[:, None] & ((yc >= plane.y_lo) & (yc <= plane.y_hi))[None, :]
