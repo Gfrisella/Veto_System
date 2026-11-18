@@ -161,12 +161,16 @@ CONTINUOUS_FORMAT = f"""DESIGN JSON (all lengths in metres; omit a block to get 
   removes the MS7 K_L and the K_L made in the SBT material, but its disc is large far from the UBT (R3: 0.6-2.9 m for
   vertices 23-50 m downstream), so it costs signal through the random UBT hits in that disc.
 
-REFERENCE DESIGNS (full Nov-4 sample, per 15 years, full selection; signal lost full / partial):
-- R1 (UBT only, 99.7 drachmas): MS7 muon V0 1.70e4, neutrinos in MS7 2.6, signal lost 2.5 / 2.2 %.
-- R2 (R1 + full SBT, 333.5 = the budget): MS7 muon V0 1.42e4, SBT-material K_L ~110, neutrinos in helium 0.96, signal 3.2 / 2.8 %.
+REFERENCE DESIGNS (full Nov-4 sample, per 15 years, full selection; signal lost full / partial; code 0eb5209, 18 Nov 2026):
+- R1 (UBT only, 99.7 drachmas): MS7 muon V0 1.70e4, muon interactions in the vessel 69.5, neutrinos in the vessel 3.4 and
+  in MS7 2.6, rock x muon pairs 0.59; signal lost 2.45 / 2.24 %; single SST1 muons tagged 64 %.
+- R2 (R1 + full SBT, 333.5 = the budget): MS7 muon V0 1.42e4, SBT-material K_L 112, muon interactions in the vessel 1.3,
+  neutrinos in the vessel 1.15 and in MS7 1.7; signal lost 5.0 / 5.2 %; single SST1 muons tagged 95 %.
 - R3 (R2 + 3 x 8 strip stations in MS7 + V0 rule p_max 20, theta_p 0.25, early_tof; 378.7, over the budget): MS7 muon V0
-  0.7, SBT-material 0, neutrinos in helium 0.98 and in MS7 0.70, signal 5.0 / 8.4 %. (17 Nov 2026, before the D19 energy
-  loss and the x4 SBT rate; the reports of your designs use the current model.)"""
+  0.7, SBT-material 0, muon interactions in the vessel 1.3, neutrinos in the vessel 1.13 and in MS7 0.70; signal lost
+  6.8 / 10.2 % (9.2 / 14.9 % if the UBT random rate is twice the model's: the V0 rule's large disc is the cost).
+Combinatorial muon pairs: none left in R2 / R3 (statistics: < 0.05 at 90 % CL). The score counts a class with no simulated
+survivor as 0."""
 GRID = "continuous"   # 16 Nov 2026: the reference designs are continuous ("modules": the 50 cm module grid of A7)   # A7 (2026-11-05): designs on the 50 cm module grid ("continuous": the old free lengths)
 
 MODULE_FORMAT = f"""DESIGN JSON (module grid, ISSUES A7):
