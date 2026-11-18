@@ -1073,3 +1073,7 @@ draws x10-70, more seeds), waiting for the go.
   2054 (cavern-side tile2 flame block 2.76 MHz / channel with the EM debris, limit 2.5), and the GA cut the tile plane to
   |x| < 1.62 m to avoid it. Guglielmo chose option B: rate limits WITHOUT the EM debris (signal loss keeps it); the
   2.76 MHz is a warning to report. Restarted (8 x 12).
+- 18 Nov night, CORRECTION: option B changes nothing. Without the EM debris the cavern-side tile2 flame block
+  (x -2.0..-1.0, |y| < 0.6) is still at 2.75 MHz per channel (2.76 with it; SR-389 limit 2.5): the excess is from the
+  MUONS (Nov-4 flux), not from the debris. Rate penalty 2006 on R1 / R2 / R3; 4 x 4 cm tiles there: 11 MHz.
+  Second run (ga_20261118_223546) stopped after generation 1; decision on the rate rule pending (Guglielmo).
