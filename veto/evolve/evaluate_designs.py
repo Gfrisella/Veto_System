@@ -91,8 +91,12 @@ def fix_model(raw):
     return raw
 
 
-def _init(n_signal, seed, inputs=paths.RECO_INPUTS, prep_tag=PREP_TAGS, signal="eventcalc"):
+def _init(n_signal, seed, inputs=paths.RECO_INPUTS, prep_tag=PREP_TAGS, signal="eventcalc", em_debris=True):
     _STATE["tr"], _STATE["inp"] = load_inputs(inputs)
+    if em_debris:                                   # B2: e / gamma from the shield end in the UBT rate maps (as run_reco
+        from veto import em_debris as emd           # --em-debris; the reference numbers include them, 18 Nov 2026)
+        e = np.load(paths.results_dir() / "em_debris" / emd.EM_FILE)
+        _STATE["inp"] = dict(_STATE["inp"], **{k: e[k] for k in e.files if k.startswith("em_")})
     _STATE["n_signal"], _STATE["seed"], _STATE["signal"] = n_signal, seed, signal
     _STATE["prep"] = {}
     for kind, tag in prep_tags(prep_tag).items():    # bin/prepare_interactions.py (sbt: bin/sbt_prepare.py, D19): selected events
@@ -135,9 +139,10 @@ def main():
                     help="ISSUES B4 (11 Nov 2026): the equal-weight EventCalc benchmark set (default) or the old toy (target)")
     ap.add_argument("--prep-tag", default=PREP_TAGS, help="interaction caches results/interactions/prepared_<kind><tag>.npz: "
                     "'<default>[,kind=tag,...]'")
+    ap.add_argument("--no-em-debris", action="store_true", help="leave out the EM debris of the shield end (B2)")
     args = ap.parse_args()
     designs = json.load(sys.stdin if args.input == "-" else open(args.input))
-    with Pool(min(args.workers, len(designs)), initializer=_init, initargs=(args.n_signal, args.seed, args.inputs, args.prep_tag, args.signal)) as pool:
+    with Pool(min(args.workers, len(designs)), initializer=_init, initargs=(args.n_signal, args.seed, args.inputs, args.prep_tag, args.signal, not args.no_em_debris)) as pool:
         reports = pool.map(report, designs)
     print(json.dumps(reports, default=lambda o: None if o != o else float(o)))
 
