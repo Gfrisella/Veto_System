@@ -12,7 +12,10 @@ what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20)
   bounce_r_slope). Tournament selection, uniform crossover, mutation, (mu + lambda) truncation; same evaluate_slurm,
   objective, history / best / confirm files as evolve_designs.py (runs in results/evolve/ga_<date>). Children above the
   budget (333.5 drachmas, `--max-cost`) or rejected by the loader are dropped before Slurm. Seeds R1 / R2 / R3. `--dry-run`
-  shows generation-1 children; `--resume` continues a run. UBT tile plane and SBT physics model fixed; no fins.
+  shows generation-1 children; `--resume` continues a run. SBT physics model fixed; no fins.
+- `ga_designs.py` UBT tile genes (Guglielmo: "it can change also the UBT tiles size"): plane half_x 1-3 m, y_lo / y_hi
+  1.35-3 m, flame block xin 0.5-1.5 m and half-height 0.2-1.2 m, tile2 / tile for the flames and for the rest
+  (design.default_tile_regions); R1 / R2 / R3 round-trip to the same cost.
 - `evolve/evolve_designs.py`: prompt's R2 reference now includes the V0 rule (04cd1d5, Slurm 2125101): MS7 V0 0.67,
   SBT-material < 13, vessel mu 1.3, nu 1.09 / MS7 0.70, signal lost 6.7 / 9.7 % (9.3 / 14.1 % at 2x UBT rate).
 

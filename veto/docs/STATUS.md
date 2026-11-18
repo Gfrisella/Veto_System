@@ -1067,3 +1067,5 @@ draws x10-70, more seeds), waiting for the go.
   budget 333.5 drachmas enforced before submission. Dry run OK (12 valid children per generation, 99.7-333.5 drachmas).
   Not launched yet: `evolve/ga_designs.py --generations 8 --children 12` = 9 Slurm jobs + 2 confirm jobs (<= 4 h each).
 - LLM prompt: R2 reference numbers with the V0 rule (r2v0 results, Slurm 2125101).
+- 18 Nov (Guglielmo: "it can change also the UBT tiles size"): ga_designs.py also varies the UBT tile plane (size, flame
+  blocks, 2 x 2 / 4 x 4 cm per part); dry run OK (78.6-333.5 drachmas). Still not launched.

@@ -7,12 +7,15 @@ by mutation and crossover of a fixed list of named genes instead of being propos
 
   SBT        on / off, which of the ten rings (10 bits), threshold_mev 10 .. 60
   UBT        straw y_lo -2.0 .. -1.35, y_hi 1.35 .. 2.0, straw_t0_sigma_ns (3 ns) on / off, segment_cut on / off
+  UBT tiles  plane half_x 1.0 .. 3.0, y_lo -3.0 .. -1.35, y_hi 1.35 .. 3.0; flame blocks from |x| = xin 0.5 .. 1.5 to half_x,
+             |y| < fy 0.2 .. 1.2; tile type of the flame blocks (tile2 2 x 2 cm / tile 4 x 4 cm) and of the rest (18 Nov 2026,
+             Guglielmo: "it can change also the UBT tiles size"); layout as design.default_tile_regions
   V0 rule    on / off, theta 5 .. 50 mrad, r0 2 .. 15 cm, early_ns 1 .. 5, min_hits 1 / 2, p_max on / off and 5 .. 60 GeV,
              theta_p on / off and 0.05 .. 0.6, early_tof on / off
   strips     on / off, which of the three R3 layers (3 bits) and the eight R3 stations (8 bits), theta 3 .. 30 mrad,
              rule point / vertex, time_window_ns 0.5 .. 5
   detector   bounce_r_slope 0.105 .. 0.42 (ISSUES A2 range)
-The UBT tile plane and the SBT physics model stay as in R1 / R2 / R3 (evaluate_designs.fix_model); no fins.
+The SBT physics model stays as in R1 / R2 / R3 (evaluate_designs.fix_model); no fins.
 
 Each generation: tournament selection (size 3) on the population, uniform crossover (prob --crossover), then mutation
 (every gene with prob --mutation; reals take a Gaussian step of --sigma x their range, at least one gene changes).
@@ -46,6 +49,7 @@ import objective  # noqa: E402
 from evaluate_designs import fix_model  # noqa: E402
 from veto import budget  # noqa: E402
 from veto import design as dsg  # noqa: E402
+from veto import geometry as geo  # noqa: E402
 from veto import paths  # noqa: E402
 
 print = ev.print
@@ -59,6 +63,9 @@ STRIP_STATIONS = [[-0.9, -0.15], [-0.9, 0.15], [-1.2, -0.15], [-1.2, 0.15],
 GENES = {
     "sbt_on": ("bool",), **{f"ring{k}": ("bool",) for k in range(10)}, "sbt_thr": ("real", 10.0, 60.0),
     "ubt_ylo": ("real", -2.0, -1.35), "ubt_yhi": ("real", 1.35, 2.0), "straw_t0": ("bool",), "segment_cut": ("bool",),
+    "tiles_hx": ("real", 1.0, 3.0), "tiles_ylo": ("real", -3.0, -1.35), "tiles_yhi": ("real", 1.35, 3.0),
+    "tiles_xin": ("real", 0.5, 1.5), "tiles_fy": ("real", 0.2, 1.2),
+    "tiles_fine": ("choice", ["tile2", "tile"]), "tiles_coarse": ("choice", ["tile", "tile2"]),
     "v0_on": ("bool",), "v0_theta": ("real", 0.005, 0.05), "v0_r0": ("real", 0.02, 0.15), "v0_early_ns": ("real", 1.0, 5.0),
     "v0_min_hits": ("choice", [1, 2]), "v0_pmax_on": ("bool",), "v0_pmax": ("real", 5.0, 60.0),
     "v0_thetap_on": ("bool",), "v0_thetap": ("real", 0.05, 0.6), "v0_early_tof": ("bool",),
@@ -67,7 +74,10 @@ GENES = {
     "bounce_slope": ("real", 0.105, 0.42),
 }
 DEFAULTS = dict(sbt_on=False, **{f"ring{k}": True for k in range(10)}, sbt_thr=30.0, ubt_ylo=-1.35, ubt_yhi=1.35,
-                straw_t0=False, segment_cut=False, v0_on=False, v0_theta=0.025, v0_r0=0.05, v0_early_ns=3.0,
+                straw_t0=False, segment_cut=False,
+                tiles_hx=geo.UBT_TILES_HALF_X, tiles_ylo=-geo.UBT_TILES_HALF_Y, tiles_yhi=geo.UBT_TILES_HALF_Y,
+                tiles_xin=geo.UBT_TILES_FLAME_X_IN, tiles_fy=geo.UBT_TILES_FLAME_Y, tiles_fine="tile2", tiles_coarse="tile",
+                v0_on=False, v0_theta=0.025, v0_r0=0.05, v0_early_ns=3.0,
                 v0_min_hits=1, v0_pmax_on=False, v0_pmax=20.0, v0_thetap_on=False, v0_thetap=0.25, v0_early_tof=False,
                 strips_on=False, **{f"layer{k}": True for k in range(3)}, **{f"station{k}": True for k in range(8)},
                 strip_theta=0.01, strip_rule="point", strip_tw=1.5, bounce_slope=0.21)
@@ -79,6 +89,11 @@ def encode(d):
     ubt = d.get("ubt") or {}
     g.update(ubt_ylo=ubt.get("y_lo", -1.35), ubt_yhi=ubt.get("y_hi", 1.35),
              straw_t0=bool(ubt.get("straw_t0_sigma_ns")), segment_cut=bool(ubt.get("segment_cut")))
+    t = d.get("ubt_tiles") or {}
+    for gk, tk in (("tiles_hx", "half_x"), ("tiles_ylo", "y_lo"), ("tiles_yhi", "y_hi"), ("tiles_xin", "flame_x_in"),
+                   ("tiles_fy", "flame_y"), ("tiles_fine", "flame_technology"), ("tiles_coarse", "technology")):
+        if tk in t:
+            g[gk] = t[tk]
     s = d.get("sbt")
     if s:
         rings = s.get("ring_set", list(range(10)))
@@ -106,6 +121,11 @@ def decode(g, name):
     r = lambda x, n=3: round(float(x), n)  # noqa: E731
     d = {"name": name, "description": "", "frame": "fairship-2026", "ubt_layout": "2026-11-11",
          "ubt": {"y_lo": r(g["ubt_ylo"], 2), "y_hi": r(g["ubt_yhi"], 2)}, "fins": [], "detector": {}}
+    hx, ylo, yhi = r(g["tiles_hx"], 2), r(g["tiles_ylo"], 2), r(g["tiles_yhi"], 2)
+    xin = r(min(g["tiles_xin"], hx - 0.1), 2)                 # flame blocks inside the plane
+    fy = r(min(g["tiles_fy"], -ylo - 0.1, yhi - 0.1), 2)
+    d["ubt_tiles"] = {"half_x": hx, "y_lo": ylo, "y_hi": yhi, "technology": g["tiles_coarse"],
+                      "regions": dsg.default_tile_regions(hx, ylo, yhi, xin, fy, g["tiles_fine"], g["tiles_coarse"])}
     if g["straw_t0"]:
         d["ubt"]["straw_t0_sigma_ns"] = 3.0
     if g["segment_cut"]:
@@ -137,7 +157,10 @@ def describe(d):
     ss = d.get("shield_strips")
     return ("GA: " + (f"SBT rings {s['ring_set']} thr {s['threshold_mev']} MeV" if s else "no SBT")
             + f", UBT straws {d['ubt']['y_lo']}..{d['ubt']['y_hi']}"
-            + (", t0" if d["ubt"].get("straw_t0_sigma_ns") else "") + (", seg" if d["ubt"].get("segment_cut") else "")
+            + (", t0" if d["ubt"].get("straw_t0_sigma_ns") else "")
+            + f", tiles |x|<{d['ubt_tiles']['half_x']} y {d['ubt_tiles']['y_lo']}..{d['ubt_tiles']['y_hi']} flames "
+              f"{d['ubt_tiles']['regions'][2]['x']}x{d['ubt_tiles']['regions'][2]['y']} {d['ubt_tiles']['regions'][2]['technology']}"
+              f" rest {d['ubt_tiles']['technology']}" + (", seg" if d["ubt"].get("segment_cut") else "")
             + (f", V0 rule {v}" if v else ", no V0 rule")
             + (f", strips {len(ss['layers'])} x {len(ss['stations'])} {ss['rule']}" if ss else ", no strips")
             + f", bounce {d['detector'].get('bounce_r_slope')}")
@@ -163,7 +186,7 @@ def mutate(g, rng, p_mut, sigma):
 
 def crossover(a, b, rng):
     """Uniform crossover; the ring / layer / station bits of a block travel together half of the time."""
-    blocks = {"ring": [f"ring{k}" for k in range(10)], "layer": [f"layer{k}" for k in range(3)],
+    blocks = {"tiles": [k for k in GENES if k.startswith("tiles_")], "ring": [f"ring{k}" for k in range(10)], "layer": [f"layer{k}" for k in range(3)],
               "station": [f"station{k}" for k in range(8)]}
     child = {}
     for k in GENES:
