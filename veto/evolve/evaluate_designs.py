@@ -132,7 +132,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--input", default="-")
     ap.add_argument("--workers", type=int, default=16)
-    ap.add_argument("--n-signal", type=int, default=40_000)
+    ap.add_argument("--n-signal", type=int, default=100_000)   # 18 Nov 2026: 40k read 0.5 points low (closure)
     ap.add_argument("--seed", type=int, default=1, help="same seed for every design: common random numbers")
     ap.add_argument("--inputs", default=paths.RECO_INPUTS, help="results/reco file (Nov-4, charge-fixed; *_xrun for cross-run pairs)")
     ap.add_argument("--signal", choices=("eventcalc", "target"), default="eventcalc",

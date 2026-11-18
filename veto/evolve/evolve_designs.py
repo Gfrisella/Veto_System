@@ -170,7 +170,8 @@ REFERENCE DESIGNS (full Nov-4 sample, per 15 years, full selection; signal lost 
   0.7, SBT-material 0, muon interactions in the vessel 1.3, neutrinos in the vessel 1.13 and in MS7 0.70; signal lost
   6.8 / 10.2 % (9.2 / 14.9 % if the UBT random rate is twice the model's: the V0 rule's large disc is the cost).
 Combinatorial muon pairs: none left in R2 / R3 (statistics: < 0.05 at 90 % CL). The score counts a class with no simulated
-survivor as 0."""
+survivor as 0. The one muon interaction in the helium left by R2 and R3 (1.3 / 15 y) is a 157 GeV muon kinked by
+~5 mrad at z = 73.8 m: its straight backward line misses its own UBT hit by 20 cm; a vertex cone of ~5 mrad would catch it."""
 GRID = "continuous"   # 16 Nov 2026: the reference designs are continuous ("modules": the 50 cm module grid of A7)   # A7 (2026-11-05): designs on the 50 cm module grid ("continuous": the old free lengths)
 
 MODULE_FORMAT = f"""DESIGN JSON (module grid, ISSUES A7):
@@ -512,7 +513,7 @@ def main():
     ap.add_argument("--bkg-estimate", choices=["max", "factorised", "direct"], default="direct",
                     help="false vertices: direct count of surviving pairs (default, A1 16 Nov 2026), factorised, or the max of both")
     ap.add_argument("--inspirations", type=int, default=3)
-    ap.add_argument("--n-signal", type=int, default=40_000)
+    ap.add_argument("--n-signal", type=int, default=100_000)   # 18 Nov 2026: 40k read 0.5 points low (closure)
     ap.add_argument("--temperature", type=float, default=0.9, help="openrouter only")
     ap.add_argument("--max-tokens", type=int, default=6000)
     ap.add_argument("--env-file", default=str(Path.home() / "workspace/uzh/supply2/.env"))
