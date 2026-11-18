@@ -164,11 +164,14 @@ CONTINUOUS_FORMAT = f"""DESIGN JSON (all lengths in metres; omit a block to get 
 REFERENCE DESIGNS (full Nov-4 sample, per 15 years, full selection; signal lost full / partial; code 0eb5209, 18 Nov 2026):
 - R1 (UBT only, 99.7 drachmas): MS7 muon V0 1.70e4, muon interactions in the vessel 69.5, neutrinos in the vessel 3.4 and
   in MS7 2.6, rock x muon pairs 0.59; signal lost 2.45 / 2.24 %; single SST1 muons tagged 64 %.
-- R2 (R1 + full SBT, 333.5 = the budget): MS7 muon V0 1.42e4, SBT-material K_L 112, muon interactions in the vessel 1.3,
-  neutrinos in the vessel 1.15 and in MS7 1.7; signal lost 5.0 / 5.2 %; single SST1 muons tagged 95 %.
-- R3 (R2 + 3 x 8 strip stations in MS7 + V0 rule p_max 20, theta_p 0.25, early_tof; 378.7, over the budget): MS7 muon V0
-  0.7, SBT-material 0, muon interactions in the vessel 1.3, neutrinos in the vessel 1.13 and in MS7 0.70; signal lost
-  6.8 / 10.2 % (9.2 / 14.9 % if the UBT random rate is twice the model's: the V0 rule's large disc is the cost).
+- R2 (R1 + full SBT + V0 rule p_max 20, theta_p 0.25, early_tof; 333.5 = the budget; V0 rule added 18 Nov 2026, Slurm
+  2125101): MS7 muon V0 0.67, SBT-material K_L < 13, muon interactions in the vessel 1.3, neutrinos in the vessel 1.09 and
+  in MS7 0.70; signal lost 6.7 / 9.7 % (9.3 / 14.1 % if the UBT random rate is twice the model's); single SST1 muons
+  tagged 95 %. Without the V0 rule R2 left MS7 muon V0 1.42e4 and SBT-material K_L 112 for 5.0 / 5.2 % signal lost: the
+  rule is now R2's main signal cost, so cheaper / narrower ways to kill the V0 background are worth exploring.
+- R3 (R2 + 3 x 8 strip stations in MS7; 378.7, over the budget): MS7 muon V0 0.7, SBT-material 0, muon interactions in
+  the vessel 1.3, neutrinos in the vessel 1.13 and in MS7 0.70; signal lost 6.8 / 10.2 % (9.2 / 14.9 % if the UBT random
+  rate is twice the model's: the V0 rule's large disc is the cost). With the V0 rule in R2 the strips add little.
 Combinatorial muon pairs: none left in R2 / R3 (statistics: < 0.05 at 90 % CL). The score counts a class with no simulated
 survivor as 0. The one muon interaction in the helium left by R2 and R3 (1.3 / 15 y, a single simulated event) is a
 157 GeV muon kinked by ~5 mrad at z = 73.8 m."""

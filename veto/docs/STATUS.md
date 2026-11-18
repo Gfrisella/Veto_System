@@ -1061,3 +1061,9 @@ draws x10-70, more seeds), waiting for the go.
   signal +0.5 points. Shell kick moved to the exit of each shell piece. R2 single muons 92.1 -> 85.1 %: 37 % of the weight
   are muons that would range out in the shell they are stored with (physical ones 96.5 -> 93.3 %); decision pending.
   R3: IP < 10 cm mu 47 -> 0, nu 0.30 -> 0.078; IP < 2.5 m mu 2.76e4 -> 4.3e3. Objective cache prepared_sbt_nov4full (R2 125 / 15 y).
+
+## 2026-11-18 (evening) — token-free optimiser (Guglielmo: "ok for R2 modification. Can we optimise with a way in which I don't use token?")
+- `evolve/ga_designs.py`: genetic algorithm in place of the LLM (no tokens), same scoring on Slurm; seeds R1 / R2 / R3,
+  budget 333.5 drachmas enforced before submission. Dry run OK (12 valid children per generation, 99.7-333.5 drachmas).
+  Not launched yet: `evolve/ga_designs.py --generations 8 --children 12` = 9 Slurm jobs + 2 confirm jobs (<= 4 h each).
+- LLM prompt: R2 reference numbers with the V0 rule (r2v0 results, Slurm 2125101).
