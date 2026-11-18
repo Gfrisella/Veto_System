@@ -34,13 +34,18 @@ def main():
     ap.add_argument("--threads", type=int, default=48)
     ap.add_argument("--surface-tol", type=float, default=1.0)
     ap.add_argument("--out", default=str(paths.results_dir() / "nov4_flow"))
+    ap.add_argument("--sample", type=int, default=0, help="random subsample of the SST1 rows (weights scaled up)")
     a = ap.parse_args()
     t0 = time.time()
     st, meta = io.open_store(paths.store_dir(a.dataset))
     typ = np.asarray(st["type"])
     rows = np.flatnonzero(np.isin(typ, (0, 1, 2)))
+    scale = 1.0
+    if a.sample and a.sample < len(rows):
+        scale = len(rows) / a.sample
+        rows = np.sort(np.random.default_rng(3).choice(rows, a.sample, replace=False))
     g = lambda c: np.asarray(st[c])[rows]
-    w, kind, kx, ky = g("weight").astype(float), typ[rows], g("kx").astype(float), g("ky").astype(float)
+    w, kind, kx, ky = g("weight").astype(float) * scale, typ[rows], g("kx").astype(float), g("ky").astype(float)
     pos = np.stack([g(c) for c in ("x_82", "y_82", "z_82")], 1).astype(float)
     mom = np.stack([g(c) for c in ("px_82", "py_82", "pz_82")], 1).astype(float)
     q = mt.charge_from_pdg_column(g("pdg"))
@@ -67,7 +72,7 @@ def main():
                            n_eff_st34_p1=float(w[m & (n_st >= 3) & (pb > 1)].sum() ** 2 / max((w[m & (n_st >= 3) & (pb > 1)] ** 2).sum(), 1e-300)))
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     s = dict(dataset=a.dataset, sst1_kHz=tot * 1e-3, categories=table, by_type_kHz={int(t): float(w[kind == t].sum() * 1e-3) for t in (0, 1, 2)})
-    (out / "sst1_categories_nov4.json").write_text(json.dumps(s, indent=1))
+    (out / f"sst1_categories_nov4{'_s' + str(a.sample) if a.sample else ''}.json").write_text(json.dumps(s, indent=1))
     print(json.dumps(s, indent=1))
 
 
