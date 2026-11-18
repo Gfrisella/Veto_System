@@ -29,6 +29,11 @@ what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20)
 - REVERTED (Guglielmo 18 Nov 2026, "revert B decision (place back the em debris)"): rate limits again WITH the EM
   debris; `rate_em` / `RATE_EM` removed (the debris adds only 0.01 MHz to the 2.75 MHz flame-block peak anyway).
 
+- `ga_designs.py`: gene `tiles_fine_side` (fine tiles in both / right = -x cavern side / left flame block) and `--seeds` taking
+  .json files of study designs. Seeds of the run of 18 Nov night: R1 / R2 / R3 + `results_rerun/evolve/seeds_tiles_x34_2x2right.json`
+  (R1 / R2 with the tile plane |x| < 1.7 m, 4 x 4 cm, 2 x 2 cm only in the cavern-side flame block; 70.0 / 303.8 drachmas;
+  Guglielmo: "place the 2x2 where is needed and then go for optimization"; 4 x 4 limit stays 1 MHz per channel).
+
 ## 2026-11-16 (night) — rock pairs, SBT shell window, tile 3-sigma window, MS7 statistics, forced K+- (branch `veto-nov4-source`)
 
 - `bin/rock_combinatorial.py`: veto in chunks (`--veto-chunk`), streaming IP cut in `cross_pairs(sel=cfg)` (also used by

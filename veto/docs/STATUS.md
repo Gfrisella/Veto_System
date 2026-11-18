@@ -1084,3 +1084,6 @@ draws x10-70, more seeds), waiting for the go.
   2126935): flame channels 1.18 MHz (cavern side) / 0.92 MHz vs the code's 4 x 4 limit 1.0 MHz (2 x 2: 2.5 MHz SR-389);
   the 690 kHz/cm^2 hot spot is at |x| 1.7-2.0 m, outside. Signal lost R1 2.45 -> 1.68 %, R2 6.74 -> 5.66 %; single SST1
   tagged R1 64 -> 57 % (bounced 34 -> 18 %), R2 unchanged; -40 drachmas. Reference designs unchanged.
+- 18 Nov night, Guglielmo: "place the 2x2 where is needed and then go for optimization": 4 x 4 limit stays 1 MHz; study
+  seeds R1 / R2 with the 3.4 m plane and 2 x 2 cm only in the cavern-side flame block (+x block 0.92 MHz stays 4 x 4);
+  GA restarted from R1 / R2 / R3 + these two (8 x 12, rates with the EM debris).

@@ -9,7 +9,9 @@ by mutation and crossover of a fixed list of named genes instead of being propos
   UBT        straw y_lo -2.0 .. -1.35, y_hi 1.35 .. 2.0, straw_t0_sigma_ns (3 ns) on / off, segment_cut on / off
   UBT tiles  plane half_x 1.0 .. 3.0, y_lo -3.0 .. -1.35, y_hi 1.35 .. 3.0; flame blocks from |x| = xin 0.5 .. 1.5 to half_x,
              |y| < fy 0.2 .. 1.2; tile type of the flame blocks (tile2 2 x 2 cm / tile 4 x 4 cm) and of the rest (18 Nov 2026,
-             Guglielmo: "it can change also the UBT tiles size"); layout as design.default_tile_regions
+             Guglielmo: "it can change also the UBT tiles size"); layout as design.default_tile_regions; which flame block
+             gets the fine tiles: both / right (-x, cavern side) / left (+x) (18 Nov 2026: 4 x 4 cm limit 1 MHz per channel,
+             the cavern-side block is over it in the 3.4 m plane, the +x one is not)
   V0 rule    on / off, theta 5 .. 50 mrad, r0 2 .. 15 cm, early_ns 1 .. 5, min_hits 1 / 2, p_max on / off and 5 .. 60 GeV,
              theta_p on / off and 0.05 .. 0.6, early_tof on / off
   strips     on / off, which of the three R3 layers (3 bits) and the eight R3 stations (8 bits), theta 3 .. 30 mrad,
@@ -66,6 +68,7 @@ GENES = {
     "tiles_hx": ("real", 1.0, 3.0), "tiles_ylo": ("real", -3.0, -1.35), "tiles_yhi": ("real", 1.35, 3.0),
     "tiles_xin": ("real", 0.5, 1.5), "tiles_fy": ("real", 0.2, 1.2),
     "tiles_fine": ("choice", ["tile2", "tile"]), "tiles_coarse": ("choice", ["tile", "tile2"]),
+    "tiles_fine_side": ("choice", ["both", "right", "left"]),
     "v0_on": ("bool",), "v0_theta": ("real", 0.005, 0.05), "v0_r0": ("real", 0.02, 0.15), "v0_early_ns": ("real", 1.0, 5.0),
     "v0_min_hits": ("choice", [1, 2]), "v0_pmax_on": ("bool",), "v0_pmax": ("real", 5.0, 60.0),
     "v0_thetap_on": ("bool",), "v0_thetap": ("real", 0.05, 0.6), "v0_early_tof": ("bool",),
@@ -77,6 +80,7 @@ DEFAULTS = dict(sbt_on=False, **{f"ring{k}": True for k in range(10)}, sbt_thr=3
                 straw_t0=False, segment_cut=False,
                 tiles_hx=geo.UBT_TILES_HALF_X, tiles_ylo=-geo.UBT_TILES_HALF_Y, tiles_yhi=geo.UBT_TILES_HALF_Y,
                 tiles_xin=geo.UBT_TILES_FLAME_X_IN, tiles_fy=geo.UBT_TILES_FLAME_Y, tiles_fine="tile2", tiles_coarse="tile",
+                tiles_fine_side="both",
                 v0_on=False, v0_theta=0.025, v0_r0=0.05, v0_early_ns=3.0,
                 v0_min_hits=1, v0_pmax_on=False, v0_pmax=20.0, v0_thetap_on=False, v0_thetap=0.25, v0_early_tof=False,
                 strips_on=False, **{f"layer{k}": True for k in range(3)}, **{f"station{k}": True for k in range(8)},
@@ -90,10 +94,19 @@ def encode(d):
     g.update(ubt_ylo=ubt.get("y_lo", -1.35), ubt_yhi=ubt.get("y_hi", 1.35),
              straw_t0=bool(ubt.get("straw_t0_sigma_ns")), segment_cut=bool(ubt.get("segment_cut")))
     t = d.get("ubt_tiles") or {}
-    for gk, tk in (("tiles_hx", "half_x"), ("tiles_ylo", "y_lo"), ("tiles_yhi", "y_hi"), ("tiles_xin", "flame_x_in"),
-                   ("tiles_fy", "flame_y"), ("tiles_fine", "flame_technology"), ("tiles_coarse", "technology")):
+    for gk, tk in (("tiles_hx", "half_x"), ("tiles_ylo", "y_lo"), ("tiles_yhi", "y_hi"), ("tiles_coarse", "technology")):
         if tk in t:
             g[gk] = t[tk]
+    rg = t.get("regions")
+    if rg and len(rg) == 7:          # default_tile_regions order: centre, -x (lo, flame, hi), +x (lo, flame, hi)
+        coarse, fm, fp = rg[0]["technology"], rg[2]["technology"], rg[5]["technology"]
+        g.update(tiles_coarse=coarse, tiles_xin=rg[0]["x"][1], tiles_fy=rg[2]["y"][1])
+        if fm == fp:
+            g.update(tiles_fine=fm, tiles_fine_side="both")
+        elif fm != coarse:
+            g.update(tiles_fine=fm, tiles_fine_side="right")
+        else:
+            g.update(tiles_fine=fp, tiles_fine_side="left")
     s = d.get("sbt")
     if s:
         rings = s.get("ring_set", list(range(10)))
@@ -126,6 +139,9 @@ def decode(g, name):
     fy = r(min(g["tiles_fy"], -ylo - 0.1, yhi - 0.1), 2)
     d["ubt_tiles"] = {"half_x": hx, "y_lo": ylo, "y_hi": yhi, "technology": g["tiles_coarse"],
                       "regions": dsg.default_tile_regions(hx, ylo, yhi, xin, fy, g["tiles_fine"], g["tiles_coarse"])}
+    if g["tiles_fine_side"] != "both":           # fine tiles only in one flame block (right = -x, cavern side)
+        other = 5 if g["tiles_fine_side"] == "right" else 2
+        d["ubt_tiles"]["regions"][other]["technology"] = g["tiles_coarse"]
     if g["straw_t0"]:
         d["ubt"]["straw_t0_sigma_ns"] = 3.0
     if g["segment_cut"]:
@@ -159,7 +175,7 @@ def describe(d):
             + f", UBT straws {d['ubt']['y_lo']}..{d['ubt']['y_hi']}"
             + (", t0" if d["ubt"].get("straw_t0_sigma_ns") else "")
             + f", tiles |x|<{d['ubt_tiles']['half_x']} y {d['ubt_tiles']['y_lo']}..{d['ubt_tiles']['y_hi']} flames "
-              f"{d['ubt_tiles']['regions'][2]['x']}x{d['ubt_tiles']['regions'][2]['y']} {d['ubt_tiles']['regions'][2]['technology']}"
+              f"{d['ubt_tiles']['regions'][2]['x']}x{d['ubt_tiles']['regions'][2]['y']} {d['ubt_tiles']['regions'][2]['technology']} (-x) / {d['ubt_tiles']['regions'][5]['technology']} (+x)"
               f" rest {d['ubt_tiles']['technology']}" + (", seg" if d["ubt"].get("segment_cut") else "")
             + (f", V0 rule {v}" if v else ", no V0 rule")
             + (f", strips {len(ss['layers'])} x {len(ss['stations'])} {ss['rule']}" if ss else ", no strips")
@@ -261,9 +277,15 @@ def main():
         print(f"resume {run}: {len(hist)} candidates, next generation {start}")
     else:
         seeds = []
-        for n in args.seeds:
-            raw = json.loads((dsg.DESIGN_DIR / f"{n}.json").read_text())
-            seeds.append(dict(id=n, gen=0, design=raw, genes=encode(raw), cost_drachma=cost_drachma(raw), parent=None))
+        raws = []
+        for n in args.seeds:             # a designs/ name, or a .json file with one design or a list (study variants)
+            if n.endswith(".json"):
+                x = json.loads(Path(n).read_text())
+                raws += x if isinstance(x, list) else [x]
+            else:
+                raws.append(json.loads((dsg.DESIGN_DIR / f"{n}.json").read_text()))
+        for raw in raws:
+            seeds.append(dict(id=raw["name"], gen=0, design=raw, genes=encode(raw), cost_drachma=cost_drachma(raw), parent=None))
         if args.dry_run:
             population, start = [dict(c, score=0.0) for c in seeds], 1
         else:
