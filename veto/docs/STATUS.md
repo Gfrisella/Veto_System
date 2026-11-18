@@ -1077,3 +1077,6 @@ draws x10-70, more seeds), waiting for the go.
   (x -2.0..-1.0, |y| < 0.6) is still at 2.75 MHz per channel (2.76 with it; SR-389 limit 2.5): the excess is from the
   MUONS (Nov-4 flux), not from the debris. Rate penalty 2006 on R1 / R2 / R3; 4 x 4 cm tiles there: 11 MHz.
   Second run (ga_20261118_223546) stopped after generation 1; decision on the rate rule pending (Guglielmo).
+- 18 Nov night, Guglielmo: "revert B decision (place back the em debris) then use tiles with aperture 3.4 m total in x and
+  evaluate if this are ok (4x4cm^2)". Option B reverted (rates with the debris again). Next: R1 / R2 with the tile plane
+  |x| < 1.7 m, all 4 x 4 cm tiles, evaluated (rates per region, tagging, signal loss).

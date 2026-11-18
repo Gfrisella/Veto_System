@@ -39,8 +39,6 @@ from veto.config import DEFAULT_CONFIG  # noqa: E402
 _STATE = {}
 
 
-RATE_EM = False   # Guglielmo 18 Nov 2026 (option B): rate limits checked WITHOUT the shield-end EM debris (signal loss keeps it);
-                  # with the debris the R1 / R2 / R3 cavern-side 2 x 2 cm flame block is at 2.76 MHz per channel (limit 2.5)
 CONE_MAX_MRAD = 0.0   # Guglielmo 18 Nov 2026: no vertex cone (it costs signal); was 50
 # ISSUES A2 (11 Nov 2026): the bounce search is a design knob ("detector": {"bounce_r_slope", "bounce_r0"}), kept inside
 # a range around the start value of bin/scan_bounce.py (results/reco/bounce_scan.json); defaults if no scan yet.
@@ -115,8 +113,7 @@ def report(raw):
         cone = float(min(max((raw.get("detector") or {}).get("cone_mrad", 0.0), 0.0), CONE_MAX_MRAD))
         slope, r0 = bounce_knobs(raw)
         cfg = reco.RecoConfig(seed=_STATE["seed"], multiple_scattering=True, cone=cone * 1e-3, bounce_r_slope=slope, bounce_r0=r0)
-        r = evaluate(design, _STATE["tr"], _STATE["inp"], cfg, _STATE["n_signal"], DEFAULT_CONFIG["time_window"], _STATE["signal"],
-                     rate_em=RATE_EM)
+        r = evaluate(design, _STATE["tr"], _STATE["inp"], cfg, _STATE["n_signal"], DEFAULT_CONFIG["time_window"], _STATE["signal"])
         r["cone_mrad"] = cone
         r["bounce_r_slope"], r["bounce_r0"] = slope, r0
         r["interactions"] = {kind: ix.veto(prep, design, _STATE["inp"], cfg, np.random.default_rng(_STATE["seed"] + 7))

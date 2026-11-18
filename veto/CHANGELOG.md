@@ -26,6 +26,9 @@ what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20)
   (limit 2.5) -> rate penalty 2054 on every reference design, and the first GA run (ga_20261118_221746, stopped after
   generation 1) just cut the plane to |x| < 1.62 m to avoid it.
 
+- REVERTED (Guglielmo 18 Nov 2026, "revert B decision (place back the em debris)"): rate limits again WITH the EM
+  debris; `rate_em` / `RATE_EM` removed (the debris adds only 0.01 MHz to the 2.75 MHz flame-block peak anyway).
+
 ## 2026-11-16 (night) — rock pairs, SBT shell window, tile 3-sigma window, MS7 statistics, forced K+- (branch `veto-nov4-source`)
 
 - `bin/rock_combinatorial.py`: veto in chunks (`--veto-chunk`), streaming IP cut in `cross_pairs(sel=cfg)` (also used by
