@@ -8,5 +8,5 @@
   "sbt": {"threshold_mev": 30.0, "efficiency": 0.993, "sigma_t": 1e-9, "mode": "pointing",
           "v0_line": true, "selftag_hits": true, "zone_rule": true, "material_scattering": true, "shell_ms_k": 1.0,
           "shell_energy_loss": true, "rate_scale": 4.0},
-  "detector": {}
+  "detector": {"v0_rule": {"p_max": 20.0, "theta_p": 0.25, "early_tof": true}}
 }
