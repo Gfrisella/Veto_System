@@ -1069,3 +1069,7 @@ draws x10-70, more seeds), waiting for the go.
 - LLM prompt: R2 reference numbers with the V0 rule (r2v0 results, Slurm 2125101).
 - 18 Nov (Guglielmo: "it can change also the UBT tiles size"): ga_designs.py also varies the UBT tile plane (size, flame
   blocks, 2 x 2 / 4 x 4 cm per part); dry run OK (78.6-333.5 drachmas). Still not launched.
+- 18 Nov night: first GA run (ga_20261118_221746) stopped after generation 1: every reference design paid a rate penalty of
+  2054 (cavern-side tile2 flame block 2.76 MHz / channel with the EM debris, limit 2.5), and the GA cut the tile plane to
+  |x| < 1.62 m to avoid it. Guglielmo chose option B: rate limits WITHOUT the EM debris (signal loss keeps it); the
+  2.76 MHz is a warning to report. Restarted (8 x 12).

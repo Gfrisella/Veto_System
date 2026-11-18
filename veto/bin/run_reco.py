@@ -114,7 +114,10 @@ def shell_loss_populations(tr, inp, scfg):
     return dict(tr, type=new_ty.astype(tr["type"].dtype)), inp, info
 
 
-def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
+def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target", rate_em=True):
+    """rate_em False (the optimiser, Guglielmo 18 Nov 2026, option B): the plane rates and rate-limit flags come from the
+    maps WITHOUT the shield-end EM debris (em_* keys); the accidental hits (signal loss) still include it. The rates
+    with the debris are kept per plane as peak_*_with_em."""
     rng = np.random.default_rng(cfg.seed)
     eloss = None
     if design.sbt and design.sbt.get("shell_energy_loss"):     # D19: stopped muons are not SST1 muons
@@ -252,6 +255,12 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
     res["window_containment"] = containment(tr, rng.choice(single, 50_000, replace=False), design, cfg, rng)
 
     rates = reco.plane_rates(design, inp, cfg.spill_s)
+    if not rate_em and any(k.startswith("em_") for k in inp):
+        with_em = rates
+        rates = reco.plane_rates(design, {k: v for k, v in inp.items() if not k.startswith("em_")}, cfg.spill_s)
+        for r, e in zip(rates, with_em):
+            r.update(peak_hz_cm2_with_em=e["peak_hz_cm2"], peak_channel_hz_with_em=e["peak_channel"] / cfg.spill_s,
+                     channel_over_limit_with_em=e["channel_over_limit"], density_over_limit_with_em=e.get("density_over_limit"))
     res["planes"] = [dict(r, peak_cell_hz=r["peak_cell"] / cfg.spill_s, mean_cell_hz=r["mean_cell"] / cfg.spill_s,
                           peak_channel_hz=r["peak_channel"] / cfg.spill_s, mean_channel_hz=r["mean_channel"] / cfg.spill_s)
                      for r in rates]

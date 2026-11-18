@@ -19,6 +19,13 @@ what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20)
 - `evolve/evolve_designs.py`: prompt's R2 reference now includes the V0 rule (04cd1d5, Slurm 2125101): MS7 V0 0.67,
   SBT-material < 13, vessel mu 1.3, nu 1.09 / MS7 0.70, signal lost 6.7 / 9.7 % (9.3 / 14.1 % at 2x UBT rate).
 
+- Rate limits in the optimiser WITHOUT the shield-end EM debris (Guglielmo 18 Nov 2026, option B): `run_reco.evaluate(...,
+  rate_em=True)` (default unchanged for run_reco); `evaluate_designs.RATE_EM = False` -> plane rates / over-limit flags from the
+  maps without em_* keys, accidental hits (signal loss) still with them; the with-debris peaks kept per plane
+  (`peak_*_with_em`). Reason: with the debris R1 / R2 / R3's cavern-side 2 x 2 cm flame block is at 2.76 MHz per channel
+  (limit 2.5) -> rate penalty 2054 on every reference design, and the first GA run (ga_20261118_221746, stopped after
+  generation 1) just cut the plane to |x| < 1.62 m to avoid it.
+
 ## 2026-11-16 (night) — rock pairs, SBT shell window, tile 3-sigma window, MS7 statistics, forced K+- (branch `veto-nov4-source`)
 
 - `bin/rock_combinatorial.py`: veto in chunks (`--veto-chunk`), streaming IP cut in `cross_pairs(sel=cfg)` (also used by
