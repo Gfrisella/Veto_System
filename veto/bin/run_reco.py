@@ -226,7 +226,8 @@ def evaluate(design, tr, inp, cfg, n_signal, dt_pair, signal_model="target"):
     # rates are fractions of selected signal decays.
     w15 = w * SPILLS_15Y
     b_after = float(w15[surv].sum())
-    b_err = float(np.sqrt((w15[surv] ** 2).sum())) if surv.any() else float(2.3 * w15.mean())
+    from veto.interactions import ul90
+    b_err = float(np.sqrt((w15[surv] ** 2).sum())) if surv.any() else ul90(w15)   # none left: 90 % CL limit
     eff = 1 - res["signal"]["FP_frac"]
     res["fom"] = dict(TPR=res["background"]["TP_frac"], FNR=res["background"]["FN_frac"],
                       FPR=res["signal"]["FP_frac"], TNR=eff, B_15y=b_after, B_15y_err=b_err,
@@ -352,7 +353,7 @@ def main():
         f, b = r["fom"], r["background"]
         lim = "<" if f["B_15y_is_upper_limit"] else ""
         print(f"{r['design']:<15}{r['area_m2']:>8.0f}{100 * f['TPR']:>10.4f}{100 * f['FNR']:>9.4f}{100 * f['FPR']:>8.3f}"
-              f"{100 * f['TNR']:>8.3f}{b['n_survive']:>11,}{lim + format(f['B_15y'], '.2g') + ' ± ' + format(f['B_15y_err'], '.1g'):>18}"
+              f"{100 * f['TNR']:>8.3f}{b['n_survive']:>11,}{(('< ' + format(f['B_15y_err'], '.2g') + ' 90%CL') if f['B_15y_is_upper_limit'] else (format(f['B_15y'], '.2g') + ' ± ' + format(f['B_15y_err'], '.1g'))):>18}"
               f"{f['punzi']:>7.3f}{budget.drachma(r['cost_kchf']):>11.1f}{r['n_channels']:>14,}")
     name = args.out or f"results{tag(cfg)}{'_oldsignal' if args.signal == 'old' else ''}.json"
     out = paths.results_dir() / "reco" / name

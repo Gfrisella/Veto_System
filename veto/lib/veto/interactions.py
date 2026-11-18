@@ -163,6 +163,16 @@ def parent_crossed(inter, sel, muons, design):
     return hit
 
 
+CL90 = 2.30   # Poisson 90 % CL upper limit for 0 observed events
+
+
+def ul90(w):
+    """90 % CL upper limit [same units as w] when none of the weighted events w survives (Guglielmo 18 Nov 2026):
+    2.30 x the effective weight of one event, sum(w^2) / sum(w), of the sample before tagging."""
+    w = np.asarray(w, float)
+    return float(CL90 * (w ** 2).sum() / w.sum()) if len(w) and w.sum() > 0 else 0.0
+
+
 def bootstrap(w, groups, n_boot=200, rng=None):
     """1-sigma error of sum(w), resampling the groups (input muons) with replacement; at least sum / sqrt(number of
     groups), so that a sum resting on one input muon gets 100 % (the bootstrap cannot vary a single group)."""
@@ -360,4 +370,5 @@ def veto(prep, design, maps, cfg, rng, level="b", muons=None):
                                        n_survive=int((m & surv).sum()))
     total = sum(r["survive"] for r in out.values())
     err = bootstrap(w[surv], grp[surv], rng=rng) if n else 0.0
-    return dict(per_target=out, total=float(total), total_err=float(err), n_events=int(n), n_survive=int(surv.sum()))
+    return dict(per_target=out, total=float(total), total_err=float(err), n_events=int(n), n_survive=int(surv.sum()),
+                ul90=(ul90(w[exists]) if n else 0.0) if not (n and (surv & exists).any()) else None)   # 90 % CL if none left

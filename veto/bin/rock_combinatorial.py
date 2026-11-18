@@ -20,6 +20,8 @@ import time
 from pathlib import Path
 
 import numpy as np
+
+from veto.interactions import ul90
 import torch
 
 from benchmark_designs import _pair_cut
@@ -153,7 +155,7 @@ def veto_term(tr, cand, cand_w, cand_v, design, inp, cfg, rng, chunk=200_000, pr
     out["_surv"] = dict(rows=cand[sk], w15=w[sk], vtx=cand_v[sk], ip=ip[sk], explained=expl[surv])
     out.update(after_15y=float(wk[surv].sum()), n_after=int(surv.sum()),
                after_err_15y=float(np.sqrt((wk[surv] ** 2).sum())),
-               after_upper_15y=float(2.3 * wk.max()) if not surv.any() else None,
+               after_upper_15y=ul90(wk) if not surv.any() else None,   # 90 % CL (interactions.ul90; was 2.3 x max weight)
                leg_explained=[float((wk * expl[:, 0]).sum() / wk.sum()), float((wk * expl[:, 1]).sum() / wk.sum())])
     return out
 
