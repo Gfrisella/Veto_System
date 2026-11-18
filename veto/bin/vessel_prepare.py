@@ -31,6 +31,7 @@ def main():
     a = ap.parse_args()
     t0 = time.time()
     sp.CODES = VESSEL_CODES
+    sp.KEEP_NATURAL_KL = a.kind == "nu"     # the neutrino store has no forced-decay companion: keep its natural K_L decays
     cfg = reco.RecoConfig(multiple_scattering=True, ip_max=vsel.IP_CUTS[a.ip_cut])
     muons = io.open_store(paths.store_dir(a.dataset))[0] if a.kind == "muon" else None
     rng = np.random.default_rng(a.seed)

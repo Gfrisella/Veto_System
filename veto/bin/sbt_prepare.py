@@ -30,6 +30,7 @@ from veto import sbt_material as sm
 from veto import vertex_selection as vsel
 
 CODES = tuple(sm.CODES)
+KEEP_NATURAL_KL = False   # True for stores without a forced-decay (_kl) companion (bin/vessel_prepare.py, neutrinos)
 
 
 def flagged_events(ev, tr, inter):
@@ -52,7 +53,7 @@ def prepare_store(path, cfg, muons, rng):
         inter["muon"] = np.asarray(ev["parent_row"])
     if "noenrich" in name:                               # only the complement of the enriched stores
         inter["weight"] = np.where(flagged_events(ev, tr, inter), 0.0, inter["weight"])
-    elif "_kl" not in name:                              # natural K_L decays: carried by the forced-decay store
+    elif "_kl" not in name and not KEEP_NATURAL_KL:     # natural K_L decays: carried by the forced-decay store
         keep = part["parent_pdg"] != 130
         part = {k: v[keep] for k, v in part.items()}
     del ev, tr
