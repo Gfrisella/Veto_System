@@ -1080,3 +1080,7 @@ draws x10-70, more seeds), waiting for the go.
 - 18 Nov night, Guglielmo: "revert B decision (place back the em debris) then use tiles with aperture 3.4 m total in x and
   evaluate if this are ok (4x4cm^2)". Option B reverted (rates with the debris again). Next: R1 / R2 with the tile plane
   |x| < 1.7 m, all 4 x 4 cm tiles, evaluated (rates per region, tagging, signal loss).
+- 18 Nov night: tile plane |x| < 1.7 m all 4 x 4 cm (study variants only, results_rerun/reco/tiles_x34/README.md, Slurm
+  2126935): flame channels 1.18 MHz (cavern side) / 0.92 MHz vs the code's 4 x 4 limit 1.0 MHz (2 x 2: 2.5 MHz SR-389);
+  the 690 kHz/cm^2 hot spot is at |x| 1.7-2.0 m, outside. Signal lost R1 2.45 -> 1.68 %, R2 6.74 -> 5.66 %; single SST1
+  tagged R1 64 -> 57 % (bounced 34 -> 18 %), R2 unchanged; -40 drachmas. Reference designs unchanged.
