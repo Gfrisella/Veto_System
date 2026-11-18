@@ -39,7 +39,7 @@ from veto.config import DEFAULT_CONFIG  # noqa: E402
 _STATE = {}
 
 
-CONE_MAX_MRAD = 50.0
+CONE_MAX_MRAD = 0.0   # Guglielmo 18 Nov 2026: no vertex cone (it costs signal); was 50
 # ISSUES A2 (11 Nov 2026): the bounce search is a design knob ("detector": {"bounce_r_slope", "bounce_r0"}), kept inside
 # a range around the start value of bin/scan_bounce.py (results/reco/bounce_scan.json); defaults if no scan yet.
 BOUNCE_DEFAULT = dict(bounce_r_slope=dict(start=0.21, lo=0.05, hi=0.5), bounce_r0=dict(start=None, lo=0.02, hi=0.5))

@@ -226,10 +226,7 @@ OBJECTIVE (the reward; higher is better):
 
 {MODULE_FORMAT if GRID == "modules" else CONTINUOUS_FORMAT}
 BUDGET: the cost of the full SBT + UBT configuration (R2), ~334 drachmas; above it a design is penalised like a rate violation.
-"detector": {{"cone_mrad": 0 .. 50}} sets the vertex cone of the veto (default 0): the tracks of a vertex also search
-r0 + cone x (distance from the vertex to the plane) on every plane upstream, which catches the parents of muon
-interactions (bent by a few mrad at the vertex) but picks up random hits, so it costs signal on busy planes:
-on the small-fin designs ~0.9 % signal at 10 mrad, ~3.7 % at 20 mrad, much more with large tile fins.
+"detector": {{"cone_mrad": ..}} (the vertex cone) is FIXED at 0 by the evaluator (Guglielmo 18 Nov 2026: it costs signal).
 "detector": {{"bounce_r_slope": .., "bounce_r0": ..}} tune the second search window for muons that bounced off the cavern
 wall / floor (ISSUES A2): mirrored line from the bounce point, radius bounce_r0 (m; default the track's own window) +
 bounce_r_slope x distance from the bounce point. Wider catches more bounced muons but more random hits (signal).
