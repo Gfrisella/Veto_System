@@ -4,6 +4,11 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-19 — GA run ga_20261118_225224 result (branch `veto-nov4-source`, results only)
+
+- No code change. 8 x 12 run from R1 / R2 / R3 + 3.4 m tile-plane seeds; best ga8c4 (198.5 drachmas, score -37.3 vs
+  -77.4 for the R2 x34 seed). Gain is one vessel mu-DIS MC event removed by switching off the V0 p_max cut; see STATUS.
+
 ## 2026-11-18 — token-free optimiser (genetic algorithm); R2 reference in the LLM prompt (branch `veto-nov4-source`)
 
 - `evolve/ga_designs.py` (new, Guglielmo: "optimise in a way in which I don't use tokens"): genetic algorithm over named

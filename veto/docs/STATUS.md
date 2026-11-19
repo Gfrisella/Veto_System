@@ -1087,3 +1087,10 @@ draws x10-70, more seeds), waiting for the go.
 - 18 Nov night, Guglielmo: "place the 2x2 where is needed and then go for optimization": 4 x 4 limit stays 1 MHz; study
   seeds R1 / R2 with the 3.4 m plane and 2 x 2 cm only in the cavern-side flame block (+x block 0.92 MHz stays 4 x 4);
   GA restarted from R1 / R2 / R3 + these two (8 x 12, rates with the EM debris).
+- 19 Nov: GA run ga_20261118_225224 finished (8 x 12, 23:28). Best ga8c4 -37.3 (confirm mean -39.3 +- 1.6), 198.5
+  drachmas: R2 x34 2x2-right seed minus SBT rings 0, 4, 8, 9, UBT segment cut ON, V0 p_max cut OFF, tiles y -2.0..1.72.
+  Terms vs seed (-77.4, 303.8 dr): background_untagged 56.9 -> 23.6, signal_vetoed 5.94 -> 5.71, cost 14.5 -> 8.0.
+  CAVEAT: the background gain is ONE MC event (vessel helium mu DIS, weight 1.28 / 15 y) removed by dropping p_max;
+  0 survivors -> 90 % UL 8.6 / 15 y (wall weights), so it is not a measured improvement. Also single SST1 bounced
+  tagged 83 -> 21 % (rings 8-9 removed; the objective barely sees it). Runner-up ga8c8 (275 dr, rings 5 removed only)
+  keeps bounced 83 %. Not adopted; designs/ unchanged.
