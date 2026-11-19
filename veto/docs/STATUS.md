@@ -1099,4 +1099,13 @@ draws x10-70, more seeds), waiting for the go.
   signal terms; MC error +-2.4 points, 287 effective events). ga_designs --pin v0_pmax_on=1 --w-single-bounced 100;
   seeds R1 / R2 / R3, the two 3.4 m variants, last run's top 3 (results_rerun/evolve/seeds_ga1118_top3.json) rebuilt
   with p_max on (*_pin). Offline rescore of the last run at weight 100: ga8c8 (275 dr, bounced 83 %) first, ga8c4 out
-  of the top 4. Run ga_20261119_112015 (log results_rerun/evolve/ga_run2.log), started 11:20.
+  of the top 4. Run ga_20261119_112015 FAILED (launched without --inputs: default inputs_nov4_q.npz missing, workers
+  crash-looped 34 min, nothing scored; killed, removed). Relaunched with --inputs inputs_nov4full.npz as
+  ga_20261119_115533 (a duplicate launch ga_20261119_115821 was stopped and removed).
+- 19 Nov 13:00: ga_20261119_115533 finished (8 x 12). Best ga7c3 -71.1 (confirm -71.0 +- 0.5), 225.3 drachmas (68 % of
+  budget): SBT rings 2, 5-9 (no 0, 1, 3, 4) 30 MeV, UBT straws +-1.35 with t0 + segment cut, tiles |x| < 1.7 y -2.0..1.7,
+  2x2 only in the -x flame block, V0 rule theta 15.7 mrad, r0 5.3 cm, early 2.33 ns, p_max 20, theta_p 0.25, no early_tof.
+  vs R2 x34 seed (-94.3, 303.8 dr): signal lost 5.94 -> 2.71 %, bounced SST1 tagged 83 -> 84 %, all SST1 94 -> 91 %,
+  SBT-material 2.95 +- 2.99 -> 0.004 (ONE heavy SBT-LS MC event, not a measured gain), MS7 0.59 -> 0.80, vessel mu 1.28
+  (same one event), nu He 1.08 -> 1.13. Runner-ups ga8c8 (244.7 dr, sig 3.0 %), ga6c9 (245.3 dr, 3.7 %); top 3 share the
+  ring / straw / V0 changes. Solid: signal loss halved, -79 drachmas, no rate penalty. Not adopted; designs/ unchanged.

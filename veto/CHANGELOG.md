@@ -4,6 +4,13 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-19 — GA rerun ga_20261119_115533 result (branch `veto-nov4-source`, results only)
+
+- p_max pinned on, bounced-SST1 weight 100: best ga7c3, 225.3 drachmas, score -71.1 (seed R2 x34 -94.3); signal lost
+  5.9 -> 2.7 %, bounced SST1 tagging kept (84 %). See STATUS for the one-event caveat on the SBT-material term.
+- First launch failed (no --inputs, default inputs_nov4_q.npz missing); the GA should take its default from
+  evaluate_designs.EVAL_DATA, not paths.RECO_INPUTS (to do).
+
 ## 2026-11-19 — bounced-SST1 term in the objective; gene pinning in the GA (branch `veto-nov4-source`)
 
 - `lib/veto/objective.py`: ObjectiveConfig.w_single_bounced (default 0 = off, earlier scores unchanged); when set, the
