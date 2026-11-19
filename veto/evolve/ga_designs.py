@@ -218,6 +218,18 @@ def cost_drachma(d):
     return budget.drachma(dsg.from_dict(fix_model(d)).cost)
 
 
+def parse_pins(items):
+    """["v0_pmax_on=1", "sbt_thr=30"] -> {gene: value} typed as in GENES."""
+    pins = {}
+    for it in items:
+        k, v = it.split("=", 1)
+        spec = GENES[k]
+        pins[k] = (v.lower() in ("1", "true", "on", "yes")) if spec[0] == "bool" else v if spec[0] == "choice" else float(v)
+        if spec[0] == "choice" and v not in spec[1]:
+            raise SystemExit(f"--pin {k}: {v} not in {spec[1]}")
+    return pins
+
+
 def tournament(pop, rng, k=3):
     return max(rng.sample(pop, min(k, len(pop))), key=lambda c: c["score"])
 
@@ -243,11 +255,16 @@ def main():
     ap.add_argument("--resume", default=None, help="an earlier ga_ run directory: continue from its history")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--dry-run", action="store_true", help="make and check generation-1 children, evaluate nothing")
+    ap.add_argument("--pin", nargs="*", default=[], metavar="GENE=VALUE",
+                    help="genes held fixed in the seeds and every child, e.g. v0_pmax_on=1 (19 Nov 2026)")
+    ap.add_argument("--w-single-bounced", type=float, default=0.0,
+                    help="objective weight of the untagged single bounced-SST1 fraction (0 = off)")
     args = ap.parse_args()
 
     ev.EVAL_DATA.update(inputs=args.inputs, prep_tag=args.prep_tag)
     objective.INPUTS = args.inputs
-    objective.configure(bkg_estimate=args.bkg_estimate)
+    objective.configure(bkg_estimate=args.bkg_estimate, w_single_bounced=args.w_single_bounced)
+    pins = parse_pins(args.pin)
     rng = random.Random(args.seed)
     max_cost = args.max_cost if args.max_cost is not None else budget.budget_drachma()
 
@@ -285,7 +302,11 @@ def main():
             else:
                 raws.append(json.loads((dsg.DESIGN_DIR / f"{n}.json").read_text()))
         for raw in raws:
-            seeds.append(dict(id=raw["name"], gen=0, design=raw, genes=encode(raw), cost_drachma=cost_drachma(raw), parent=None))
+            g = encode(raw)
+            if pins and any(g[k] != v for k, v in pins.items()):          # pinned seed: rebuilt from its genes
+                g.update(pins)
+                raw = decode(g, raw["name"] + "_pin")
+            seeds.append(dict(id=raw["name"], gen=0, design=raw, genes=g, cost_drachma=cost_drachma(raw), parent=None))
         if args.dry_run:
             population, start = [dict(c, score=0.0) for c in seeds], 1
         else:
@@ -309,6 +330,7 @@ def main():
             a = tournament(population, rng)
             g = crossover(a["genes"], tournament(population, rng)["genes"], rng) if rng.random() < args.crossover else a["genes"]
             g = mutate(g, rng, args.mutation, args.sigma)
+            g.update(pins)
             d = decode(g, f"ga{gen}c{len(children)}")
             key = ev.design_key(dict(d, name=""))
             if key in seen or ev.valid_locally(d):

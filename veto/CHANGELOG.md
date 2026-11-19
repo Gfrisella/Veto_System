@@ -4,6 +4,14 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-19 — bounced-SST1 term in the objective; gene pinning in the GA (branch `veto-nov4-source`)
+
+- `lib/veto/objective.py`: ObjectiveConfig.w_single_bounced (default 0 = off, earlier scores unchanged); when set, the
+  split-sensitivity reward gets the term sst1_bounced_untagged = w x (1 - res["single"]["SST1 bounced"]), error
+  w x sqrt(eff (1 - eff) / n_eff_single).
+- `evolve/ga_designs.py`: `--pin GENE=VALUE` (held fixed in seeds and children; seeds that change are renamed *_pin),
+  `--w-single-bounced`. Rerun ga_20261119_112015 with v0_pmax_on=1 and weight 100 (Guglielmo).
+
 ## 2026-11-19 — GA run ga_20261118_225224 result (branch `veto-nov4-source`, results only)
 
 - No code change. 8 x 12 run from R1 / R2 / R3 + 3.4 m tile-plane seeds; best ga8c4 (198.5 drachmas, score -37.3 vs

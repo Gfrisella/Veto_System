@@ -110,6 +110,9 @@ class ObjectiveConfig:
     split_sensitivity: bool = True
     w_bkg_tag: float = 100.0
     w_sig_veto: float = 100.0
+    # 19 Nov 2026 (Guglielmo: "count bounced SST1"): untagged fraction of the single-muon "SST1 bounced" sample
+    # (res["single"]), a term of its own: w_single_bounced * (1 - tagged). 0 = off (the default; earlier runs unchanged).
+    w_single_bounced: float = 0.0
 
     def __post_init__(self):
         if self.cost_budget_kchf is None or self.cost_max_kchf is None:
@@ -321,6 +324,11 @@ def score(res, stats, cfg=ObjectiveConfig()):
                      "background_untagged": (cfg.w_bkg_tag * (1 - r_bkg), cfg.w_bkg_tag * abs(dr_dn) * n_bkg_err),
                      "signal_vetoed": (cfg.w_sig_veto * sg["FP"], cfg.w_sig_veto * sg["FP_err"]),
                      "cost": (cost_points(cost, cfg), 0.0)}
+            if cfg.w_single_bounced:
+                eff = float((res.get("single") or {}).get(TYPES[0], 0.0))
+                n_eff = max(float(stats["n_eff_single"][0]), 1.0)
+                terms["sst1_bounced_untagged"] = (cfg.w_single_bounced * (1 - eff),
+                                                  cfg.w_single_bounced * math.sqrt(max(eff * (1 - eff), 0.0) / n_eff))
         else:
             terms = {"rate": (cfg.w_rate * p_rate, 0.0), "budget": (cfg.w_budget * p_budget, 0.0),
                      "sensitivity": (cfg.w_sens * (1 - sens), cfg.w_sens * sens_err), "cost": (cost_points(cost, cfg), 0.0)}

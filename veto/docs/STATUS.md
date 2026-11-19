@@ -1094,3 +1094,9 @@ draws x10-70, more seeds), waiting for the go.
   0 survivors -> 90 % UL 8.6 / 15 y (wall weights), so it is not a measured improvement. Also single SST1 bounced
   tagged 83 -> 21 % (rings 8-9 removed; the objective barely sees it). Runner-up ga8c8 (275 dr, rings 5 removed only)
   keeps bounced 83 %. Not adopted; designs/ unchanged.
+- 19 Nov, Guglielmo: "rerun with p_max on and count bounced SST1". New objective term sst1_bounced_untagged =
+  w_single_bounced x (1 - tagged fraction of single bounced SST1), weight 100 (Guglielmo; same scale as background /
+  signal terms; MC error +-2.4 points, 287 effective events). ga_designs --pin v0_pmax_on=1 --w-single-bounced 100;
+  seeds R1 / R2 / R3, the two 3.4 m variants, last run's top 3 (results_rerun/evolve/seeds_ga1118_top3.json) rebuilt
+  with p_max on (*_pin). Offline rescore of the last run at weight 100: ga8c8 (275 dr, bounced 83 %) first, ga8c4 out
+  of the top 4. Run ga_20261119_112015 (log results_rerun/evolve/ga_run2.log), started 11:20.
