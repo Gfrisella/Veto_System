@@ -1,0 +1,44 @@
+{
+ "design": "Z2_opt_ga7c3_full",
+ "dataset": "design-optimization-dataset-nov4-shell-3220seeds-2026-11-11",
+ "inputs": "inputs_nov4full.npz",
+ "mu_inefficiency": 0.10291648625338952,
+ "stores": {
+  "/disk/gfs_lhcb/gfrise/Study_on_Veto_System/Optimization_Veto_System/veto/results_rerun/evstore/ms7_muon_v0s": {
+   "store": "/disk/gfs_lhcb/gfrise/Study_on_Veto_System/Optimization_Veto_System/veto/results_rerun/evstore/ms7_muon_v0s",
+   "tracks": 46885853,
+   "companions": 1527306,
+   "tracks_after_v0_drop": 46885619,
+   "good": 241950,
+   "events_with_good": 215570,
+   "single_track_events": 193118,
+   "multi_track_events": 22452,
+   "single_rate_per_spill": 4944.043000553102
+  }
+ },
+ "terms": {
+  "/disk/gfs_lhcb/gfrise/Study_on_Veto_System/Optimization_Veto_System/veto/results_rerun/evstore/ms7_muon_v0s": {
+   "n_candidates": 7266391,
+   "candidates_15y": 695.9546532299935,
+   "selected_15y": 72.51961998173722,
+   "n_selected": 496874,
+   "after_15y": 0.025257464229480185,
+   "n_after": 297,
+   "after_err_15y": 0.010770562987625713,
+   "after_upper_15y": null,
+   "leg_explained": [
+    0.9987597366200824,
+    0.7283548775169032
+   ],
+   "opposite_pairs": 784288652,
+   "bound_15y": 7.4634644729514905
+  }
+ },
+ "options": {
+  "random_hits": false,
+  "companions": false,
+  "v0": true,
+  "companion_pmin": 0.1,
+  "mu_stopped_per_spill": 710.2083141593487
+ }
+}

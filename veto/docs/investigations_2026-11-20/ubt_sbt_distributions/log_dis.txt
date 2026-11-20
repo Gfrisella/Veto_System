@@ -1,0 +1,17 @@
+ms7_nu2026: 2,042,300 events, 26,289,307 tracks loaded, 16 s
+  selection: vtx 34,451 (0.00028/spill), sel 121 (6.57e-07/spill), 85 s
+  15,496,953 charged segments, 41,409,903 SBT pieces, 109 s
+  wrote hist_ms7_nu2026.npz, 160 s
+vessel_mu_R2_sbt_ubt: 5,800,000 events, 43,113,822 tracks loaded, 10 s
+  selection: vtx 63,820 (0.012/spill), sel 1,426 (0.000158/spill), 356 s
+  parent check: |vertex - parent line| median 0.00 cm, 90% 0.00 cm (non-bounced, 2,168,466)
+  29,823,834 charged segments, 146,917,515 SBT pieces, 422 s
+  wrote hist_vessel_mu_R2_sbt_ubt.npz, 1350 s
+ms7_muon_v0s: 20,721,340 events, 46,885,853 tracks loaded, 8 s
+  selection: vtx 807 (2.5/spill), sel 2 (0.00408/spill), 41 s
+  37,239,360 charged segments, 21,663,487 SBT pieces, 59 s
+  wrote hist_ms7_muon_v0s.npz, 176 s
+vessel_nu2026_R2_sbt_ubt: 3,299,527 events, 31,283,711 tracks loaded, 66 s
+  selection: vtx 59,046 (0.000163/spill), sel 101 (3.97e-07/spill), 172 s
+  15,132,386 charged segments, 29,423,490 SBT pieces, 188 s
+  wrote hist_vessel_nu2026_R2_sbt_ubt.npz, 306 s

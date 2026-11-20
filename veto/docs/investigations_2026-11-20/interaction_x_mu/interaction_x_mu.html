@@ -1,0 +1,242 @@
+<title>Interaction product × μ check</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Archivo:wght@600;700&display=swap">
+<style>
+/* Layout: one reading column (~760px) of findings, each finding = short text + one chart or table, detector schematic on top */
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --fg:#17202b; --muted:#5b6675; --rule:#d9dee5;
+  --accent:#0b5cad;            /* CERN-ish blue: the veto / our numbers */
+  --warn:#c2410c;              /* the bug: stopped muons */
+  --ok:#15803d;                /* after the fix */
+  --mu:#6d28d9;                /* the partner muon */
+  --soft:#e8eef6;
+  --display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --body:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f141b; --panel:#161d27; --fg:#e6ebf2; --muted:#9aa6b6; --rule:#2a3442;
+  --accent:#5ea2ec; --warn:#f08a4b; --ok:#4ade80; --mu:#a78bfa; --soft:#1c2633; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f141b; --panel:#161d27; --fg:#e6ebf2; --muted:#9aa6b6; --rule:#2a3442;
+  --accent:#5ea2ec; --warn:#f08a4b; --ok:#4ade80; --mu:#a78bfa; --soft:#1c2633; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 var(--body);margin:0}
+.wrap{max-width:800px;margin:0 auto;padding-block:28px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:30px}
+header{display:flex;flex-direction:column;gap:8px}
+.eyebrow{font:500 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font:700 30px/1.15 var(--display);margin:0;text-wrap:balance}
+h2{font:600 20px/1.25 var(--display);margin:0;text-wrap:balance}
+p{margin:0;max-width:68ch}
+.lede{font-size:16.5px;color:var(--fg)}
+section{display:flex;flex-direction:column;gap:12px}
+.panel{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:16px;min-width:0}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:14px}
+th,td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--rule);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{font:500 12px/1.3 var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+td.bad{color:var(--warn);font-weight:600}
+td.good{color:var(--ok);font-weight:600}
+.note{font-size:13px;color:var(--muted)}
+.callout{border-left:3px solid var(--accent);padding:4px 0 4px 14px}
+.callout.warn{border-color:var(--warn)}
+.callout.ok{border-color:var(--ok)}
+svg text{fill:var(--fg);font-family:var(--body)}
+svg .mut{fill:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted)}
+.sw{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+ol,ul{margin:0;padding-left:20px;max-width:68ch;display:flex;flex-direction:column;gap:6px}
+code{font:13px var(--mono);background:var(--soft);padding:1px 5px;border-radius:4px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.two{grid-template-columns:1fr}h1{font-size:25px}}
+</style>
+
+<div class="wrap">
+<header>
+  <span class="eyebrow">SHiP veto · combinatorial background · 20 Nov 2026</span>
+  <h1>Why “interaction product × μ” went up</h1>
+  <p class="lede">The 20 Nov full-chain runs gave Z2 = 0.041 and Z3 = 0.022 per 15 y after tagging, above R1 (0.019), and R2 without the V0 rule 8× above R2 with it. The cause is in the combinatorial script, not in the designs: it pairs with muons that the SBT-shell model stops before SST1, and it ignores the rest of the interaction that the veto would see.</p>
+</header>
+
+<section>
+  <h2>What the term is</h2>
+  <div class="panel scroll">
+  <svg viewBox="0 0 760 230" width="100%" style="min-width:560px" role="img" aria-label="Schematic: MS7 interaction with one track reaching SST1 and other products crossing the UBT, plus an independent muon">
+    <rect x="20" y="70" width="110" height="90" fill="var(--soft)" stroke="var(--rule)"/>
+    <text x="75" y="60" text-anchor="middle" class="mut" font-size="12">MS7 (last 50 cm iron)</text>
+    <line x1="168" y1="40" x2="168" y2="190" stroke="var(--accent)" stroke-width="3"/>
+    <text x="168" y="30" text-anchor="middle" font-size="12">UBT 30.7–31.1 m</text>
+    <path d="M200 70 L700 40 L700 190 L200 160 Z" fill="none" stroke="var(--rule)" stroke-width="1.5"/>
+    <text x="440" y="205" text-anchor="middle" class="mut" font-size="12">decay vessel + SBT walls (31.1–81.1 m)</text>
+    <line x1="715" y1="35" x2="715" y2="195" stroke="var(--fg)" stroke-width="3"/>
+    <text x="715" y="25" text-anchor="middle" font-size="12">SST1 82 m</text>
+    <circle cx="110" cy="115" r="5" fill="var(--warn)"/>
+    <line x1="30" y1="118" x2="110" y2="115" stroke="var(--mu)" stroke-width="2"/>
+    <line x1="110" y1="115" x2="715" y2="100" stroke="var(--accent)" stroke-width="2.4"/>
+    <text x="430" y="98" font-size="12">the one product that reaches SST1</text>
+    <line x1="110" y1="115" x2="190" y2="80" stroke="var(--warn)" stroke-width="1.6" stroke-dasharray="4 3"/>
+    <line x1="110" y1="115" x2="195" y2="140" stroke="var(--warn)" stroke-width="1.6" stroke-dasharray="4 3"/>
+    <line x1="110" y1="115" x2="190" y2="160" stroke="var(--warn)" stroke-width="1.6" stroke-dasharray="4 3"/>
+    <text x="205" y="148" font-size="12" fill="var(--warn)" style="fill:var(--warn)">other products: cross the UBT in time</text>
+    <line x1="20" y1="185" x2="715" y2="135" stroke="var(--mu)" stroke-width="2"/>
+    <text x="300" y="182" font-size="12" style="fill:var(--mu)">independent muon from another proton (±200 ps)</text>
+    <circle cx="560" cy="113" r="5" fill="none" stroke="var(--fg)" stroke-width="1.6"/>
+    <text x="560" y="130" text-anchor="middle" font-size="12">fake vertex</text>
+  </svg>
+  </div>
+  <p>A muon interaction in MS7 that leaves exactly one good track in SST1 is paired with an unrelated muon in the same ±200 ps window. Opposite charge, DOCA, vertex and IP cuts leave <b>62.7 per 15 y</b> such pairs. The pair is removed if the veto tags either leg.</p>
+</section>
+
+<section>
+  <h2>Finding 1 · the partner muons include muons that never reach SST1</h2>
+  <p>Since 17 Nov R2, R3, Z2 and Z3 use the SBT-shell energy loss. With it, low-momentum muons that come in through the vessel walls stop in the shell. <code>run_reco</code> drops them from the SST1 population; <code>dis_combinatorial</code> does not, so they count as untagged partners. They are only 1.3 % of the simulated rows but <b>45 % of the weight</b>.</p>
+  <div class="panel scroll">
+  <table>
+    <thead><tr><th>partner muon not tagged</th><th>as run (20 Nov)</th><th>stopped removed</th><th>+ own hits only</th><th>17 Nov reference</th></tr></thead>
+    <tbody>
+      <tr><td>R1 + V0 (no SBT)</td><td>37.3 %</td><td>37.3 %</td><td class="bad">46.5 %</td><td>37.3 %</td></tr>
+      <tr><td>R2, with or without V0</td><td class="bad">48.2 %</td><td>5.0 %</td><td class="good">5.9 %</td><td>6.2 %</td></tr>
+      <tr><td>Z2</td><td class="bad">50.0 %</td><td>10.1 %</td><td class="good">10.3 %</td><td>–</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="two">
+    <div class="panel">
+      <svg viewBox="0 0 340 190" width="100%" role="img" aria-label="Weight share stopped in the SBT shell by muon type">
+        <text x="0" y="14" font-size="13" font-weight="600">Stopped in the SBT shell (weight)</text>
+        <g font-size="12">
+          <text x="0" y="52">bounced</text><rect x="110" y="40" width="120" height="16" fill="var(--soft)"/><rect x="110" y="40" width="73.4" height="16" fill="var(--warn)"/><text x="190" y="53">61 %</text>
+          <text x="0" y="92">p &gt; 1 GeV &amp; timing</text><rect x="110" y="80" width="120" height="16" fill="var(--soft)"/><rect x="110" y="80" width="5.7" height="16" fill="var(--warn)"/><text x="122" y="93">5 %</text>
+          <text x="0" y="132">other SST1</text><rect x="110" y="120" width="120" height="16" fill="var(--soft)"/><rect x="110" y="120" width="69.3" height="16" fill="var(--warn)"/><text x="186" y="133">58 %</text>
+          <text x="0" y="172" font-weight="600">all</text><rect x="110" y="160" width="120" height="16" fill="var(--soft)"/><rect x="110" y="160" width="54.4" height="16" fill="var(--warn)"/><text x="171" y="173" font-weight="600">45 %</text>
+        </g>
+      </svg>
+    </div>
+    <div class="panel">
+      <svg viewBox="0 0 340 190" width="100%" role="img" aria-label="R2 untagged fraction per muon type before and after removing stopped muons">
+        <text x="0" y="14" font-size="13" font-weight="600">R2: untagged by muon type (own hits)</text>
+        <g font-size="12">
+          <text x="0" y="52">bounced</text>
+          <rect x="110" y="38" width="133.2" height="9" fill="var(--warn)"/><rect x="110" y="49" width="34.8" height="9" fill="var(--ok)"/><text x="250" y="47">67 → 17 %</text>
+          <text x="0" y="92">p &gt; 1 GeV &amp; timing</text>
+          <rect x="110" y="78" width="13" height="9" fill="var(--warn)"/><rect x="110" y="89" width="2.6" height="9" fill="var(--ok)"/><text x="130" y="88">6.5 → 1.3 %</text>
+          <text x="0" y="132">other SST1</text>
+          <rect x="110" y="118" width="119.2" height="9" fill="var(--warn)"/><rect x="110" y="129" width="6.2" height="9" fill="var(--ok)"/><text x="236" y="128">60 → 3 %</text>
+        </g>
+        <g font-size="11" class="mut"><rect x="110" y="160" width="10" height="10" fill="var(--warn)"/><text x="125" y="169" class="mut">as run</text><rect x="180" y="160" width="10" height="10" fill="var(--ok)"/><text x="195" y="169" class="mut">stopped removed</text></g>
+      </svg>
+    </div>
+  </div>
+  <p class="callout warn">The same muons are also in the pair sample itself (<code>rock_combinatorial.muon_tracks</code>), so the 20 Nov “after tagging” numbers for R2/R3 without V0, Z2 and Z3 are too high, and the pairs built with stopped muons should not exist at all.</p>
+</section>
+
+<section>
+  <h2>Finding 2 · the rest of the interaction is never used</h2>
+  <p>The script keeps only the product that reaches SST1 and drops the others. In <b>98 %</b> of the single-track MS7 interactions (by weight) another charged product crosses the 4 × 4 m UBT tile plane, in time with the candidate; <b>91 %</b> for the Z2/Z3 plane (|x| &lt; 1.7 m). Today none of these hits can tag the pair: only the SST1 track and the partner muon are looked at.</p>
+  <div class="two">
+    <div class="panel">
+      <svg viewBox="0 0 340 200" width="100%" role="img" aria-label="Number of other products with p above 0.1 GeV per single-track interaction">
+        <text x="0" y="14" font-size="13" font-weight="600">Other products per interaction (p &gt; 0.1 GeV)</text>
+        <g transform="translate(30,30)">
+          <line x1="0" y1="140" x2="300" y2="140" stroke="var(--rule)"/>
+          <g fill="var(--accent)">
+            <rect x="2" y="134.3" width="22" height="5.7"/>
+            <rect x="29" y="73.6" width="22" height="66.4"/>
+            <rect x="56" y="86.5" width="22" height="53.5"/>
+            <rect x="83" y="97.6" width="22" height="42.4"/>
+            <rect x="110" y="104.1" width="22" height="35.9"/>
+            <rect x="137" y="110" width="22" height="30"/>
+            <rect x="164" y="114" width="22" height="26"/>
+            <rect x="191" y="118.6" width="22" height="21.4"/>
+            <rect x="218" y="121.9" width="22" height="18.1"/>
+            <rect x="245" y="124.5" width="22" height="15.5"/>
+            <rect x="272" y="55" width="22" height="85"/>
+          </g>
+          <g font-size="11" text-anchor="middle" class="mut">
+            <text x="13" y="155" class="mut">0</text><text x="40" y="155" class="mut">1</text><text x="67" y="155" class="mut">2</text><text x="94" y="155" class="mut">3</text><text x="121" y="155" class="mut">4</text><text x="148" y="155" class="mut">5</text><text x="175" y="155" class="mut">6</text><text x="202" y="155" class="mut">7</text><text x="229" y="155" class="mut">8</text><text x="256" y="155" class="mut">9</text><text x="283" y="155" class="mut">≥10</text>
+          </g>
+          <text x="40" y="68" font-size="11" text-anchor="middle">17 %</text>
+          <text x="283" y="50" font-size="11" text-anchor="middle">21 %</text>
+          <text x="13" y="128" font-size="11" text-anchor="middle">1.4 %</text>
+        </g>
+      </svg>
+    </div>
+    <div class="panel">
+      <svg viewBox="0 0 340 200" width="100%" role="img" aria-label="Species of the other products, weighted rate per spill">
+        <text x="0" y="14" font-size="13" font-weight="600">Who they are (rate / spill, p &gt; 0.1 GeV)</text>
+        <g font-size="12">
+          <text x="0" y="40">π±</text><rect x="44" y="29" width="200" height="14" fill="var(--accent)"/><text x="250" y="41">9520</text>
+          <text x="0" y="60">μ</text><rect x="44" y="49" width="108.8" height="14" fill="var(--accent)"/><text x="158" y="61">5180</text>
+          <text x="0" y="80">e±</text><rect x="44" y="69" width="107.9" height="14" fill="var(--accent)"/><text x="157" y="81">5140</text>
+          <text x="0" y="100">γ</text><rect x="44" y="89" width="91.6" height="14" fill="var(--muted)"/><text x="141" y="101">4360</text>
+          <text x="0" y="120">p</text><rect x="44" y="109" width="58.4" height="14" fill="var(--accent)"/><text x="108" y="121">2780</text>
+          <text x="0" y="140">n</text><rect x="44" y="129" width="57.7" height="14" fill="var(--muted)"/><text x="107" y="141">2750</text>
+          <text x="0" y="160">K</text><rect x="44" y="149" width="17" height="14" fill="var(--accent)"/><text x="67" y="161">810</text>
+          <text x="0" y="180">other</text><rect x="44" y="169" width="8.1" height="14" fill="var(--muted)"/><text x="58" y="181">380</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <div class="panel scroll">
+  <table>
+    <thead><tr><th>interaction “seen” on the tile plane</th><th>charged, p&gt;0.01</th><th>charged, p&gt;0.1</th><th>charged, p&gt;1 GeV</th></tr></thead>
+    <tbody>
+      <tr><td>R1 / R2 tiles, 4 × 4 m</td><td>98.0 %</td><td>98.0 %</td><td>97.9 %</td></tr>
+      <tr><td>Z2 / Z3 tiles, |x| &lt; 1.7 m</td><td>91.0 %</td><td>90.7 %</td><td>88.9 %</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="note">Straight lines from the interaction point to the tile plane (z = 31.13 m), no bending in the last iron, no detector efficiency; the scattered muon counts as a product. Store ms7_muon_v0s (Nov-4 production), 193 118 single-track events, 4944 tracks / spill.</p>
+</section>
+
+<section>
+  <h2>Random coincidences</h2>
+  <p class="callout ok">Rule from now on: random hits only for the LLP signal loss. Background is tagged only by its own hits. New switch <code>RecoConfig.random_hits</code> (UBT planes, SBT, MS7 strips); default unchanged until the background scripts are switched.</p>
+  <p>Effect on the partner muon: small for R2 and Z2 (+0.9 and +0.2 points untagged), large for R1 (37 → 46 %): 9 points of R1's muon tagging came from random hits.</p>
+</section>
+
+<section>
+  <h2>How the term is computed now (implemented 20 Nov, farm rerun Slurm 2163917)</h2>
+  <ol>
+    <li><b>Partner muons:</b> good SST1 muons (p &gt; 1 GeV, SST1 and timing acceptance); for SBT designs the ones that stop in the shell are removed (710 / spill).</li>
+    <li><b>Interactions:</b> MS7 and vessel μ interactions with exactly one good SST1 track; the other charged products (p &gt; 0.1 GeV) stay with it.</li>
+    <li><b>Fake vertex:</b> opposite charge, DOCA &lt; 2 cm, vertex 5 cm inside the vessel, measured IP &lt; 10 cm; time coincidence 2 × 200 ps per 1 s spill.</li>
+    <li><b>Tagging:</b> the event holds the muon, the SST1 track and the rest of the interaction, each with its own hits on the UBT and SBT. No random hits. The two SST1 tracks are traced back; a hit in the window and in time tags the pair, also a hit of another product. V0 rule as in the design (p<sub>vis</sub> &lt; 20 GeV).</li>
+    <li><b>Signal loss:</b> unchanged, with random hits.</li>
+  </ol>
+  <div class="panel scroll">
+  <table>
+    <thead><tr><th>test: Z2, MS7 μ-DIS × μ, 20 000 muons</th><th>after tagging / 15 y</th><th>MC pairs</th></tr></thead>
+    <tbody>
+      <tr><td>20 Nov run</td><td class="bad">0.041</td><td>5122</td></tr>
+      <tr><td>stopped muons removed, old tagging</td><td>0.030</td><td>328</td></tr>
+      <tr><td>+ own hits only, + V0 rule</td><td>0.025</td><td>297</td></tr>
+      <tr><td>+ rest of the interaction</td><td class="good">0.015</td><td>154</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="note">The rest of the interaction removes about 40 % of the pairs, not the 91 % of the plane count: its hits tag only when they fall in the search window of a traced track.</p>
+  <div class="panel scroll">
+  <table>
+    <thead><tr><th>rough size, MS7 μ-DIS × μ per 15 y</th><th>selected</th><th>× μ untagged</th><th>× interaction not seen</th><th>≈ left</th></tr></thead>
+    <tbody>
+      <tr><td>R1 + V0</td><td>62.7</td><td>0.465</td><td>0.020</td><td>0.6</td></tr>
+      <tr><td>R2</td><td>62.7</td><td>0.059</td><td>0.020</td><td>0.07</td></tr>
+      <tr><td>Z2</td><td>62.7</td><td>0.103</td><td>0.09</td><td>0.6</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="note">First estimate, before the test: product of independent fractions with “seen” anywhere on the plane. Superseded by the test above.</p>
+</section>
+
+<section>
+  <h2>Sources</h2>
+  <ul class="note">
+    <li>veto/results_rerun/full_chain_extra/diag_mu_ineff/: mu_ineff_diag.py / .json, seen_interaction.py / .json</li>
+    <li>dis_comb_*.json (20 Nov, Slurm 2156964 / 2157083) and reco/dis_comb_R{1,2}_*.json (17 Nov reference)</li>
+    <li>Code: bin/dis_combinatorial.py (dis_tracks, mu_ineff), bin/run_reco.py shell_loss_populations, lib/veto/reco.py RecoConfig.random_hits (branch veto-nov4-source)</li>
+  </ul>
+</section>
+</div>

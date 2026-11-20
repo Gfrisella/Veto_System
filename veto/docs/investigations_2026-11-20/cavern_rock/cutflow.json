@@ -1,0 +1,115 @@
+{
+ "fac_15y": 0.006,
+ "rock_file": "/disk/lhcb_data/sqasim/rock_dis/apply_D6_straw_mod_draws.npz",
+ "seeds": 300,
+ "n_draws_file": 489521,
+ "interactions_per_spill_in_file": 2326639.4922462255,
+ "rates_per_spill": {
+  "muons_good": 8532.428562923065,
+  "rock_charged_downstream": 5900771.7554400405,
+  "rock_sst1_acc": 636218.506933741,
+  "rock_good": 18431.266113664155,
+  "rock_good_rows": 3887
+ },
+ "mu_x_rock": {
+  "all pairs": {
+   "per_spill2": 157263461.439064,
+   "per_15y": 943580.768634384,
+   "n": 1759143477
+  },
+  "opposite charge": {
+   "per_spill2": 74158225.08790293,
+   "per_15y": 444949.3505274176,
+   "n": 644801382
+  },
+  "DOCA < 2 cm": {
+   "per_spill2": 561497.7309620198,
+   "per_15y": 3368.986385772119,
+   "n": 7106748
+  },
+  "vertex z in vessel": {
+   "per_spill2": 147109.1604814258,
+   "per_15y": 882.6549628885548,
+   "n": 3375592
+  },
+  "vertex inside frustum": {
+   "per_spill2": 131300.01943248758,
+   "per_15y": 787.8001165949255,
+   "n": 3372764
+  },
+  "true IP < 3 m": {
+   "per_spill2": 107964.8684065622,
+   "per_15y": 647.7892104393732,
+   "n": 3361242
+  },
+  "measured IP < 2.5 m": {
+   "per_spill2": 106433.7771095763,
+   "per_15y": 638.6026626574578,
+   "n": 3358616
+  },
+  "measured IP < 10 cm": {
+   "per_spill2": 35885.05401692524,
+   "per_15y": 215.31032410155146,
+   "n": 1252545
+  },
+  "(fiducial 5 cm, true IP < 3 m)": {
+   "per_spill2": 106391.6085856169,
+   "per_15y": 638.3496515137014,
+   "n": null
+  }
+ },
+ "mu_x_mu": {
+  "all pairs": {
+   "per_spill2": 39018928.920236684,
+   "per_15y": 234113.5735214201,
+   "n": 2298657306
+  },
+  "opposite charge": {
+   "per_spill2": 19140765.410064172,
+   "per_15y": 114844.59246038503,
+   "n": 750784308
+  },
+  "DOCA < 2 cm": {
+   "per_spill2": 1015860.1541188088,
+   "per_15y": 6095.160924712853,
+   "n": 146907220
+  },
+  "vertex z in vessel": {
+   "per_spill2": 8029.437000103091,
+   "per_15y": 48.17662200061855,
+   "n": 32525
+  },
+  "vertex inside frustum": {
+   "per_spill2": 7966.886234835404,
+   "per_15y": 47.80131740901243,
+   "n": 19269
+  },
+  "true IP < 3 m": {
+   "per_spill2": 7888.102059514125,
+   "per_15y": 47.32861235708475,
+   "n": 19259
+  },
+  "measured IP < 2.5 m": {
+   "per_spill2": 7578.494932423555,
+   "per_15y": 45.47096959454133,
+   "n": 19231
+  },
+  "measured IP < 10 cm": {
+   "per_spill2": 76.79434312251176,
+   "per_15y": 0.4607660587350706,
+   "n": 3078
+  },
+  "(fiducial 5 cm, true IP < 3 m)": {
+   "per_spill2": 7878.673446299377,
+   "per_15y": 47.27204067779626,
+   "n": null
+  }
+ },
+ "mu_x_mu_official": {
+  "cand_15y": 35.81648066621705,
+  "sel_15y": 2.3640644183689874,
+  "n": 215500
+ },
+ "mu_sample": 1000000,
+ "mumu_sample": 150000
+}

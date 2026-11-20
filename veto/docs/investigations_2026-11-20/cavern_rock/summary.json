@@ -1,0 +1,95 @@
+{
+ "p_quantiles_10_50_90": {
+  "rock_good": [
+   1.1047049497292099,
+   1.6853747525959035,
+   3.5410471283407667
+  ],
+  "muon_good": [
+   1.606288419741182,
+   81.0683013283246,
+   252.92307281078098
+  ],
+  "rock_leg_sel": [
+   1.2350278110707613,
+   1.876190131349362,
+   2.8738849711255723
+  ],
+  "muon_leg_sel": [
+   155.1489188598501,
+   228.9514938127758,
+   269.296058860786
+  ]
+ },
+ "rock_good_frac_p_lt_3": 0.8686486977565133,
+ "rock_good_frac_p_lt_2": 0.648429606909196,
+ "species_fractions": {
+  "rock good": {
+   "e\u00b1": 0.050337615698896374,
+   "\u03bc\u00b1": 0.016251981202589243,
+   "\u03c0\u00b1": 0.4764293884096146,
+   "K\u00b1": 0.038815180737784734,
+   "p/p\u0304": 0.418165833951115,
+   "other": 0.0
+  },
+  "rock leg, candidates": {
+   "e\u00b1": 0.058840743884039017,
+   "\u03bc\u00b1": 0.006489621633624667,
+   "\u03c0\u00b1": 0.7541467695055993,
+   "K\u00b1": 0.09143051354990486,
+   "p/p\u0304": 0.08909235142683204,
+   "other": 0.0
+  },
+  "rock leg, IP < 10 cm": {
+   "e\u00b1": 0.0700172676811895,
+   "\u03bc\u00b1": 0.002850359692185876,
+   "\u03c0\u00b1": 0.7307359263925772,
+   "K\u00b1": 0.12130254285622397,
+   "p/p\u0304": 0.07509390337782357,
+   "other": 0.0
+  }
+ },
+ "rock_good_charge_frac_negative": 0.2763244514016476,
+ "rock_leg_sel_charge_frac_negative": 0.999011886418239,
+ "muon_good_charge_frac_positive": 0.5635874854260827,
+ "muon_leg_sel_charge_frac_positive": 0.999011886418239,
+ "theta_median": {
+  "rock_good": 0.21742264690432966,
+  "muon_good": 0.023772624916272685
+ },
+ "vessel_entry_face_frac": {
+  "side": 0.8492503121278352,
+  "top_bottom": 0.0004888796473866351,
+  "entrance": 0.0,
+  "never_inside": 0.15026080822477816
+ },
+ "good_from_wall_frac": 0.9981984108317817,
+ "ls_path_median_m": 1.001960325340346,
+ "ls_path_median_m_selected_rock_legs": 0.9183159830022697,
+ "p_interact_in_20cm_LS_median": 0.6517013854285684,
+ "mu_leg_ip_lt_10cm_frac_in_sel": 0.011272606559959934,
+ "mu_leg_ip_lt_30cm_frac_in_sel": 0.9928058381852906,
+ "muon_good_ip_lt_10cm_frac": 0.03508658895879096,
+ "muon_good_ip_lt_30cm_frac": 0.5001880633493154,
+ "prock_over_pmu_median_sel": 0.008769454794375511,
+ "opening_angle_median": {
+  "mu_x_rock": 0.23980751013232557,
+  "mu_x_mu": 0.05329213194321422
+ },
+ "mr_vertex_z_median_sel": 78.88849457245304,
+ "material_g_cm2_median_selected_rock_legs": 105.60633804526101,
+ "survival_no_interaction_selected_rock_legs": 0.35351792463583026,
+ "survival_no_interaction_good_rock": 0.41446106057431886,
+ "ip10_15y_scaled_by_survival": 76.11605892904845,
+ "rock_good_frac_px_positive": 0.998668024122302,
+ "mu_plus_x_at_target_median": -0.03415404299733438,
+ "mu_minus_x_at_target_median": -0.010637414634488529,
+ "rock_mc": {
+  "good_rows": 3887,
+  "draws_with_good": 3823,
+  "weight_per_draw_per_spill": 4.5740721358660315,
+  "selected_rock_rows": 602,
+  "top5_rock_rows_share_of_sel": 0.0803949423746264,
+  "n_eff_rock_rows_sel": 144.86974185427619
+ }
+}
