@@ -357,6 +357,7 @@ def veto(prep, design, maps, cfg, rng, level="b", muons=None):
                                                 prep.get("strip_parent_row", np.full(n, -1)), rng)
             else:                                         # older caches: exit-face hits only
                 hits = shield_strips.on_stations(strips, prep["strip_hit_event"], prep["strip_hit_x"], prep["strip_hit_y"], rng)
+            strips = dict(strips, random=getattr(cfg, "random_hits", True))
             surv &= ~shield_strips.tag(strips, prep["event_vtx"], prep["event_pvis"], rng, hits=hits)["tagged"]
     if n and not exists.all():                       # no SBT material there: those events do not exist for this design
         w = np.where(exists, w, 0.0)

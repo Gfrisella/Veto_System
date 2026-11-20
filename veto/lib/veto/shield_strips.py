@@ -254,7 +254,7 @@ def tag(cfg, vtx, p_vis, rng, hits=None, n_disc=16):
             m = hl == li
             d2 = (hx[m] - px[he[m]]) ** 2 + (hy[m] - py[he[m]]) ** 2
             n_own += np.bincount(he[m][d2 <= r[he[m]] ** 2], minlength=n)[:n]
-    n_rand = rng.poisson(mu_rand)
+    n_rand = rng.poisson(mu_rand) if cfg.get("random", True) else np.zeros(len(mu_rand), int)   # random=False: own hits only
     need = 2 if cfg["rule"] == "vertex" else 1
     return dict(tagged=(n_own + n_rand) >= need, on_station=on_any, n_own=n_own, mu_random=mu_rand, x=px, y=py, r=r)
 

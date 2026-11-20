@@ -436,7 +436,8 @@ def tag(tr_true, meas, event, z_limit, cfg, reco_cfg, rng, n_events, with_own_hi
                                                                          t=np.zeros(0), track=np.zeros(0, int))
     use_line = bool(cfg.get("v0_line")) and v0 is not None and len(v0.get("vtx", [])) > 0
     early = cfg.get("v0_line_early_ns", 3.0) if use_line else 0.0
-    acc = random_hits(n_events, cfg, reco_cfg.spill_s, rng, window + 2.0 + early)
+    acc = (random_hits(n_events, cfg, reco_cfg.spill_s, rng, window + 2.0 + early) if getattr(reco_cfg, "random_hits", True)
+           else dict(event=np.zeros(0, int), cell=np.zeros(0, int), t=np.zeros(0)))
     extra = (v0 or {}).get("sbt_hits") if (cfg.get("selftag_hits") or cfg.get("zone_rule")) else None
     if extra is None or not len(extra["event"]):
         extra = dict(event=np.zeros(0, int), cell=np.zeros(0, int), t=np.zeros(0))

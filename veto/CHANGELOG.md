@@ -6,6 +6,16 @@ what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20)
 
 ## 2026-11-20 — single-track DIS x independent muon, four rows (branch `veto-nov4-source`)
 
+- `RecoConfig.random_hits` (Guglielmo 20 Nov 2026: "random hits only for the LLP signal rejection"): False = no accidental
+  hits on the UBT planes (reco.accidental_hits), SBT (sbt.random_hits) or MS7 strips (shield_strips.tag, cfg random) -> background
+  tagged by its own hits only. Default True (unchanged); background scripts to be switched with the dis_combinatorial fix.
+- Interaction product x mu check (20 Nov 2026, results_rerun/full_chain_extra/diag_mu_ineff, page
+  https://claude.ai/artifact/7mp1KojngTYPHmUwJTVn5U): dis_combinatorial keeps the partner muons that stop in the SBT shell
+  (D19 shell_energy_loss, 45 % of the single-SST1 weight, 1.3 % of rows) -> mu inefficiency 0.48-0.50 for R2/R3 noV0, Z2, Z3
+  (stopped removed: R2 0.050 / 0.059 own hits, Z2 0.101 / 0.103; R1 0.373 / 0.465 own hits). It also drops the other products
+  of the single-track interaction: 98 % (R2 tiles) / 91 % (Z2 tiles) of MS7 single-track events have another charged product
+  on the tile plane (straight lines). The 20 Nov dis_comb_* "after" numbers are not usable; fix proposed, not run.
+
 - `bin/combi_single.py` (new): single-good-track events of an event store (D9 recipe, dis_combinatorial.dis_tracks) x the
   Nov-4 SST1 muons, all opposite-charge pairs, pair cuts (_pair_cut), measured IP < 2.5 m / 10 cm, x 2 dt / T x spills;
   scattered-muon flag (beam flag; MS7: parent-charge mu at the exit plane), with / without; per-code split; clustered
