@@ -4,6 +4,18 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-20 — SBT walls fired by nu DIS, mu DIS and mu x mu (branch `veto-nov4-source`)
+
+- `bin/sbt_firing.py` (new): R2, own deposits only. Per event store (vessel / MS7 / SBT-material nu and mu) the SBT cells
+  fired by the event's own particles (sbt_material.deposits summed per event and cell, threshold + efficiency), attributed
+  to products / scattered muon / parent muon; all events (subsample, per spill = rate per cell) and selected events (IP < 2.5 m
+  / < 10 cm, per 15 y). `mumu`: good SST1 muons and their pairs (combi_single cuts). `muonmap`: the cached muon-crossing map.
+  MS7 muon stores: scattered muon flagged with the combi_single charge rule (`ms7_beam_flag`).
+- `bin/sbt_firing_plots.py`: rate per ring, unrolled wall maps, multiplicity / dz / energy shapes, `summary.md`.
+- `bin/sbt_firing_hits.py`, `bin/sbt_firing_hits_plots.py`: mu x mu SBT entry points (top view, +x / -x walls) and, for the
+  selected DIS events, SBT fired cells + UBT crossings (straws 30.73 m, tiles 31.13 m; parent muon included) -> seen by
+  SBT / UBT / both / neither. Results: `results_rerun/sbt_firing` (README.md there).
+
 ## 2026-11-20 — single-track DIS x independent muon, four rows (branch `veto-nov4-source`)
 
 - `RecoConfig.random_hits` (Guglielmo 20 Nov 2026: "random hits only for the LLP signal rejection"): False = no accidental

@@ -1132,3 +1132,17 @@ draws x10-70, more seeds), waiting for the go.
   ~10 % of it at IP < 10 cm. Other DIS x DIS terms < 2e-3.
 - Note: _pair_cut (mu x mu 35.8, D9) has no 5 cm vertex margin; with it MS7 x mu x0.73 (pair cuts) / x0.89 (IP < 10 cm).
 - R2 after tagging (100 k-candidate subsample): all rows <= 1e-4 (MS7 0 MC, UL 0.08 subsample-limited).
+
+## 2026-11-20 (evening, Guglielmo) — SBT walls fired by nu DIS, mu DIS, mu x mu (results_rerun/sbt_firing)
+- R2, own deposits only, existing stores. Rate (products, per 1 s spill): mu DIS in the last 50 cm of MS7 +0.38 MHz of fired
+  cells (+18 % on the 2.07 MHz muon map; pi+- 49 %, p 18 %, mu from pi 12 %, e / gamma 8 % each, 1-2 GeV, 80 % on the +-x
+  walls), hottest cell 4.3 kHz; inside the x4 rate_scale, not in sbt.cell_rates. mu DIS in the SBT material 13.9 kHz, vessel
+  12 Hz; nu DIS 15 Hz.
+- Selected (before tagging) with >= 1 own fired cell: nu vessel 96 % (IP < 2.5 m) / 73 % (IP < 10 cm); nu MS7 94 / 99 %;
+  mu vessel 99.7 / 100 % (parent muon 82-86 %); mu x mu 97.7 / 98.0 %.
+- mu x mu entry points: mu+ legs enter the -x wall (87-90 %), mu- the +x wall (82 % at IP < 2.5 m); at IP < 10 cm 74 % of
+  the mu- legs never enter the SBT (entrance window).
+- Seen by SBT / UBT (UBT geometric, parent included): mu DIS always seen (vessel: UBT sees the parent in 87 %); nu vessel
+  IP < 10 cm: 26 % seen by neither (112 / 432 MC, 1.9 / 15 y before tagging); nu MS7 products cross the UBT (94-96 %).
+- Caveats: straight-line products (no interactions in air / vessel wall); MS7 mu at IP < 10 cm has 2 MC events in
+  ms7_muon_v0s (use the forced-decay stores). Deck: Presentation_Combinatorial/bt_beamer back-up pages 54-62.
