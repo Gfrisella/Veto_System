@@ -29,7 +29,7 @@ from veto import geometry as geo
 from veto import io, paths
 from veto import muon_types as mt
 
-DATASET = "design-optimization-dataset-alpha-14-oct-2026"
+DATASET = paths.MUON_DATASET                     # Nov-4 production (2026-11-11)
 COLS = {"ax": "x_30", "ay": "y_30", "az": "z_30", "apz": "pz_30", "kx": "kx", "ky": "ky", "kz": "kz",
         "bx": "x_82", "by": "y_82", "bz": "z_82", "bpx": "px_82", "bpy": "py_82", "bpz": "pz_82",
         "weight": "weight", "type": "type", "run": "run", "pdg": "pdg"}
@@ -41,8 +41,8 @@ def main():
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--seed", type=int, default=3)
     parser.add_argument("--dataset", default=DATASET)
-    parser.add_argument("--maps", default="sample.npz", help="rate maps: results/design_explorer/<this>")
-    parser.add_argument("--out", default="inputs.npz", help="file name in results/reco")
+    parser.add_argument("--maps", default=paths.RATE_MAPS, help="rate maps: results/design_explorer/<this>")
+    parser.add_argument("--out", default=paths.RECO_INPUTS, help="file name in results/reco")
     parser.add_argument("--pair-runs", type=int, default=0, help="> 0: candidate pairs from this many runs only (weights rescaled)")
     parser.add_argument("--pair-block", type=int, default=0, help="> 0: pairs in blocks of this many muons per spill (big spills)")
     args = parser.parse_args()

@@ -8,11 +8,11 @@ SST1 window enlarged by --margin), and carries every final-state particle with G
 walls, the air and the spectrometer field to SST1 (z = 82.08 m) and the timing detector (94.01 m). Writes
 <input>_g4.npz with the plane crossings (inter, row, plane, pdg, track, x, y, px, py, pz, t) and "transported" (the
 interaction ids that were sent; the others keep their straight-line tracks). Use it with
-    bin/run_interactions.py --design D6_straw --interactions <input>.npz --g4 <input>_g4.npz
+    bin/run_interactions.py --design R2_sbt_ubt --interactions <input>.npz --g4 <input>_g4.npz
 
 Runs in the Geant4 container (cpp/g4vessel must be built first):
     bin/g4.sh bash cpp/build.sh
-    bin/g4.sh python3 bin/g4_vessel_transport.py --interactions results/interactions/D6_straw_muon_interactions.npz --workers 32
+    bin/g4.sh python3 bin/g4_vessel_transport.py --interactions results/interactions/R2_sbt_ubt_muon_interactions_rerun.npz --workers 32
 """
 
 import _bootstrap  # noqa: F401
@@ -91,11 +91,14 @@ def main():
     print(f"{n_code:,} interactions with codes {args.codes}, {len(sel):,} pre-selected for Geant4", flush=True)
     jobs = [sel[i:i + args.chunk] for i in range(0, len(sel), args.chunk)]
     res = []
+    G.module()                                   # ISSUES D15: Geant4 libraries loaded once here, inherited by the forks
     with mp.get_context("fork").Pool(args.workers, initializer=_init, initargs=(args.seed, part)) as pool:
         for i, r in enumerate(pool.imap_unordered(_run, jobs)):
             res.append(r)
             if (i + 1) % max(1, len(jobs) // 20) == 0:
                 print(f"  {i + 1}/{len(jobs)} chunks, {time.time() - t0:.0f} s", flush=True)
+    if len(res) != len(jobs):                    # ISSUES D15: never a silent loss
+        raise RuntimeError(f"g4_vessel_transport: {len(res)} of {len(jobs)} chunks came back")
     keys = ("inter", "row", "plane", "pdg", "track", "x", "y", "px", "py", "pz", "t")
     out = {k: np.concatenate([r[k] for r in res]) if res else np.zeros(0) for k in keys}
     order = np.lexsort((out["track"], out["inter"])) if len(out["inter"]) else np.zeros(0, int)

@@ -8,7 +8,7 @@ Per selected event, straight lines from the vertex: charged (p > PMIN) and photo
 leaving through the side walls (outside the vessel cross-section at the exit window, or going backwards), and extra
 charged reaching SST1 outside the vertex pair. Fractions (weighted) of events with >= 1 such particle, per 15 years.
 
-    bin/remote.sh run bin/nu_activity.py --design designs/modules/D6_straw_mod.json --pot-spill 4e13 <apply npz> ...
+    bin/remote.sh run bin/nu_activity.py --design designs/R2_sbt_ubt.json --pot-spill 4e13 <apply npz> ...
 """
 import _bootstrap  # noqa: F401
 

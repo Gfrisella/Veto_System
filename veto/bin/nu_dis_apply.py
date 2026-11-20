@@ -1,6 +1,6 @@
 """Neutrino interactions in the vessel helium, the air, the PVC walls and the veto planes of one design (GENIE library).
 
-    bin/lcg.sh python3 bin/nu_dis_apply.py --design D6_straw [--lib data/genie/nu_library.npz]
+    bin/lcg.sh python3 bin/nu_dis_apply.py --design R2_sbt_ubt [--lib data/genie/nu_library.npz]
         [--helium 5e5] [--pvc 5e5] [--air 2e5] [--planes 1e5] [--flavours 14,-14] [--out data/genie/apply_<design>.npz]
 
 Per flavour: the flux store (bin/nu_prepare.py: straight lines at z = 30.6 / 82 m, weight per spill) through
@@ -30,12 +30,12 @@ from veto.config import SPILLS_15Y  # noqa: E402  (6e20 / 4e13 p.o.t.)
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--design", default="D6_straw")
-    ap.add_argument("--lib", default=str(paths.interactions_data() / "genie/nu_library.npz"))
-    ap.add_argument("--store", default=str(paths.interactions_data() / "neutrinos2026/store"))
-    ap.add_argument("--flavours", default="14,-14")
-    for g, v in (("helium", 5e5), ("pvc", 5e5), ("air", 2e5), ("planes", 1e5)):
-        ap.add_argument(f"--{g}", type=float, default=v, help=f"draws per flavour for {g} (planes: each plane)")
+    ap.add_argument("--design", default="R2_sbt_ubt")
+    ap.add_argument("--lib", default=str(paths.interactions_data() / "genie/nu_library_v2.npz"))   # GENIE v2: all 6 flavours (S5 failed on nu_tau with v1, 14 Nov)
+    ap.add_argument("--store", default=str(paths.NU_FLUX_PREFIX))   # 2026 flux, <prefix>_nu<pdg>
+    ap.add_argument("--flavours", default=",".join(map(str, paths.NU_FLAVOURS)))
+    for g, v in (("helium", 5e5), ("wall", 5e5), ("air", 2e5), ("planes", 1e5)):
+        ap.add_argument(f"--{g}", *(["--pvc"] if g == "wall" else []), type=float, default=v, help=f"draws per flavour for {g} (planes: each plane)")
     ap.add_argument("--workers", type=int, default=32)
     ap.add_argument("--chunk", type=int, default=2_000_000, help="rows per worker chunk (memory ~ workers x chunk)")
     ap.add_argument("--seed", type=int, default=1)
@@ -44,7 +44,7 @@ def main():
     t0 = time.time()
     p = Path(a.design)
     design = vdesign.load(p if p.exists() else a.design)          # a path, or a name in designs/
-    draws = {"helium": a.helium, "pvc": a.pvc, "air": a.air, "planes": a.planes}
+    draws = {"helium": a.helium, "wall": a.wall, "air": a.air, "planes": a.planes}
     rng = np.random.default_rng(a.seed)
     I, P, summary = [], [], {"design": design.name, "library": a.lib, "draws_per_flavour": draws, "flavours": {}}
     n_int = 0

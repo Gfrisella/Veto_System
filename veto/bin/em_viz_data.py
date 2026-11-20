@@ -5,7 +5,7 @@ crossing projected straight back to z = shield_iron.Z_PLANE; tracks made downstr
 point of their origin particle), species, energy band (|p| at the first crossing) and its crossing on every plane.
 Also the full-statistics face map (debris crossing the first plane, by face cell) and the geometry of a design.
 
-    bin/lcg.sh python3 bin/em_viz_data.py <em_raw.npz> --design designs/modules/D6_straw_mod.json --out <dir>/em_viz
+    bin/lcg.sh python3 bin/em_viz_data.py <em_raw.npz> --design designs/R2_sbt_ubt.json --out <dir>/em_viz
 Writes <out>.bin.gz (little-endian int16 / uint8 blocks, layout in the json) and <out>.json.
 """
 import _bootstrap  # noqa: F401

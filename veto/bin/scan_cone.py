@@ -5,7 +5,7 @@ For each design and cone: run_reco.evaluate (40 k signal decays, the 196 736 pai
 the muon interactions saved by bin/run_interactions.py (results/interactions/<design>_muon_interactions.npz)
 through interactions.evaluate (veto levels a and b). Writes results/interactions/cone_scan.json.
 
-  GPU_HOST=farm-gpu5 bin/remote.sh run bin/scan_cone.py --designs D6_tile2 E3_robust --cones 0 5 10 20 30 50
+  GPU_HOST=farm-gpu5 bin/remote.sh run bin/scan_cone.py --designs R1_ubt_only R2_sbt_ubt --cones 0 5 10 20 30 50
 """
 
 import _bootstrap  # noqa: F401
@@ -38,7 +38,7 @@ def job(arg):
     d = dsg.load(name)
     cfg = reco.RecoConfig(seed=1, multiple_scattering=True, cone=cone * 1e-3)
     r = evaluate(d, _S["tr"], _S["inp"], cfg, 40_000, DEFAULT_CONFIG["time_window"], "target")
-    s = objective.score(r, _S["stats"], objective.ObjectiveConfig(bkg_estimate="max"))
+    s = objective.score(r, _S["stats"], objective.ObjectiveConfig(bkg_estimate="direct"))
     inter, part = load_npz(paths.results_dir() / "interactions" / f"{name}_muon_interactions.npz")
     res = ix.evaluate(inter, part, d, _S["inp"], cfg, np.random.default_rng(1), muons=_S["muons"], max_tracks=_S["max_tracks"] if _S["max_tracks"] is not None else "cfg")
     tot = lambda k: sum(v.get(k, 0.0) for v in res.values())
@@ -50,7 +50,7 @@ def job(arg):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--designs", nargs="+", default=["D6_tile2", "E3_robust"])
+    ap.add_argument("--designs", nargs="+", default=["R1_ubt_only", "R2_sbt_ubt", "R3_sbt_ubt_strips"])
     ap.add_argument("--cones", type=float, nargs="+", default=[0, 5, 10, 20, 30, 50], help="mrad")
     ap.add_argument("--workers", type=int, default=12)
     ap.add_argument("--max-tracks", type=int, default=None, help="selection: at most this many tracks in SST1")

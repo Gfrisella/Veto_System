@@ -22,7 +22,7 @@ import time
 import numpy as np
 import torch
 
-from benchmark_designs import candidates
+from benchmark_designs import candidates, candidates_blocked
 from make_reco_inputs import COLS, DATASET
 from veto import geometry as geo
 from veto import io, paths
@@ -33,11 +33,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--shift", type=int, nargs="+", default=[1, 2], help="pair run r with run r + s")
     parser.add_argument("--device", default="cuda")
+    parser.add_argument("--pair-block", type=int, default=0,
+                        help="> 0: pairs in blocks of this many muons per spill (full 3220-seed store: 216 GB without, 14 Nov)")
     args = parser.parse_args()
     start = time.time()
 
     store, meta = io.open_store(paths.store_dir(DATASET))
-    n_runs = meta["sources"]["old"]["n_files"]
+    n_runs = meta["seeds"] if "seeds" in meta else meta["sources"]["old"]["n_files"]   # Nov-4 shell store: seeds
     types = np.asarray(store["type"])
     sst1 = np.where(types <= 2)[0]
     d = {k: np.asarray(store[c][sst1]) for k, c in COLS.items()}
@@ -61,7 +63,8 @@ def main():
              for k, c in (("x", "bx"), ("y", "by"), ("z", "bz"), ("px", "bpx"), ("py", "bpy"), ("pz", "bpz"))}
         t["pdg"] = torch.as_tensor(d["pdg"][idx].astype(np.float64), device=dev)
         t["file_index"] = torch.as_tensor(group, device=dev)
-        pairs, vertex, _ = candidates(t, dev, spill_chunk=100)
+        pairs, vertex, _ = (candidates_blocked(t, dev, args.pair_block) if args.pair_block
+                            else candidates(t, dev, spill_chunk=100))
         pairs, vertex = pairs.cpu().numpy(), vertex.cpu().numpy()
         cross = role[pairs[:, 0]] != role[pairs[:, 1]]               # one muon of run r, one of run r + s
         all_pairs.append(idx[pairs[cross]])
@@ -70,18 +73,19 @@ def main():
     pairs, vertex = np.concatenate(all_pairs), np.concatenate(all_vertex)
     w_pair = d["weight"][pairs[:, 0]].astype(np.float64) * d["weight"][pairs[:, 1]] * n_runs / (2 * len(args.shift))
 
-    ref = np.load(paths.results_dir() / "reco" / "inputs.npz")
+    ref = np.load(paths.results_dir() / "reco" / paths.RECO_INPUTS)
     print(f"{len(pairs):,} candidates, {w_pair.sum():.4g} pairs / spill before the time coincidence "
           f"(within-run sample: {len(ref['cand']):,}, {ref['cand_w'].sum():.4g})")
     # the same single muons as inputs.npz: make_reco_inputs.py's draw (seed 3), same SST1 index space
     single = np.sort(np.random.default_rng(3).choice(len(sst1), min(200_000, len(sst1)), replace=False))
     rows = np.unique(np.concatenate([pairs.ravel(), single]))
-    np.savez(paths.results_dir() / "reco" / "inputs_xrun.npz",
+    out = paths.RECO_INPUTS.replace(".npz", "_xrun.npz")
+    np.savez(paths.results_dir() / "reco" / out,
              **{f"tr_{k}": v[rows] for k, v in d.items()},
              cand=np.searchsorted(rows, pairs), cand_vertex=vertex, cand_w=w_pair,
              single=np.searchsorted(rows, single), single_w=ref["single_w"],
              **{k: ref[k] for k in ("fin_maps", "z_slices", "u_bins", "y_bins", "ubt_hist", "ubt_y_bins", "n_runs")})
-    print(f"saved inputs_xrun.npz: {len(rows):,} tracks, {time.time() - start:.0f} s")
+    print(f"saved {out}: {len(rows):,} tracks, {time.time() - start:.0f} s")
 
 
 if __name__ == "__main__":

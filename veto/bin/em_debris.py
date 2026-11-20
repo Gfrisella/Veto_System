@@ -3,7 +3,7 @@
 
     bin/g4ship.sh python3 bin/em_debris.py --n 20000 --workers 32        # stages 1 + 2, then the maps
 
-Stage 1: g4shield (MS7 last 50 cm, field) on --n muons of data/shield_dis/muons_iron.npz (drawn with replacement in
+Stage 1: g4shield (MS7 last 50 cm, field) on --n muons of paths.ms7_parents() (Nov-4) (drawn with replacement in
 proportion to their weight: each carries W / n per spill); e / gamma above 1 MeV at z = 29.90 m. Stage 2: g4vessel
 (air, window, helium) to the planes em_debris.Z_PLANES. Maps in the binning of results/reco/<--inputs>:
 results/em_debris/em_maps.npz (load with run_reco.py --em-debris). Each stage runs in its own worker processes.
@@ -47,10 +47,20 @@ def _run(job):
 
 
 def pool_run(init, seed, jobs, workers, extra=None):
+    """ISSUES D15: the Geant4 module of this stage is imported here (libraries loaded once) and the workers are FORKED
+    (they inherit it; each initialises its own run manager and seed); every job must come back."""
+    jobs = list(jobs)
+    if init is _init_shield:
+        si.g4shield_module()
+    else:
+        from veto import g4vessel
+        g4vessel.module()
     res = []
-    with mp.get_context("spawn").Pool(workers, initializer=init, initargs=(seed, extra)) as pool:
+    with mp.get_context("fork").Pool(workers, initializer=init, initargs=(seed, extra)) as pool:
         for r in pool.imap_unordered(_run, jobs):
             res.append(r)
+    if len(res) != len(jobs):
+        raise RuntimeError(f"em_debris: {len(res)} of {len(jobs)} Geant4 jobs came back")
     return {k: np.concatenate([r[k] for r in res]) for k in res[0]} if res else {}
 
 
@@ -71,12 +81,12 @@ def main():
     ap.add_argument("--chunk", type=int, default=200)
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--depth", type=float, default=em.DEPTH_X0, help="iron simulated in Geant4, radiation lengths")
-    ap.add_argument("--inputs", default="inputs.npz", help="results/reco file whose map binning is used")
-    ap.add_argument("--parents", default=None, help="MS7 parent muons (shield_dis.py prepare output; default data/shield_dis/muons_iron.npz)")
+    ap.add_argument("--inputs", default=paths.RECO_INPUTS, help="results/reco file whose map binning is used")
+    ap.add_argument("--parents", default=None, help="MS7 parent muons (default paths.ms7_parents(): Nov-4 transport)")
     ap.add_argument("--tag", default="", help="suffix of the output files")
     a = ap.parse_args()
     t0 = time.time()
-    parents = a.parents or (paths.PROJECT_DIR / "data" / "shield_dis" / "muons_iron.npz")     # shield_dis.py prepare
+    parents = a.parents or paths.ms7_parents()     # Nov-4 parents (2026-11-11)
     f = np.load(parents)
     w = f["weight"].astype(np.float64) * (POT_PER_SPILL / weights.source_pot(json.loads(str(f["meta"])), "muons_iron"))  # D13
     rng = np.random.default_rng(a.seed)

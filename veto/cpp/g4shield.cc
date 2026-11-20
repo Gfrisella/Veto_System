@@ -16,6 +16,10 @@
 //       Returns ev, pdg, track (track ID; primaries keep their input order + 1), primary (1 = an injected
 //       particle, unchanged identity), x, y (m, at the plane), px, py, pz (GeV), ekin (GeV), t (ns)
 //   layout() -> dict(z_iron0, z_iron1, half_x, half_y, z_plane)
+//   v0_tally() -> dict of every V0 (K_L, K_S, Lambda, anti-Lambda, Xi0) created since the last call, injected or made by
+//       the shower (ISSUES D16, 2026-11-10): ev, track, parent (0 = injected), pdg, creator (index into `processes`;
+//       -1 = injected), x, y, z (m, creation), px, py, pz, ekin (GeV), fate (0 below e_cut: never tracked, 1 decayed,
+//       2 hadronic interaction, 3 reached the plane, 4 left the world / other), z_end (m), end_process (index), processes
 
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
@@ -40,11 +44,16 @@
 #include "G4UImanager.hh"
 #include "G4UserStackingAction.hh"
 #include "G4UserSteppingAction.hh"
+#include "G4UserTrackingAction.hh"
+#include "G4UserEventAction.hh"
+#include "G4VProcess.hh"
 #include "G4VUserDetectorConstruction.hh"
 #include "G4VUserPrimaryGeneratorAction.hh"
 #include "Randomize.hh"
 
 #include <cmath>
+#include <map>
+#include <unordered_map>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -130,6 +139,42 @@ struct Out {
   std::vector<double> x, y, px, py, pz, ekin, t;
 } gOut;
 
+// ---- V0 tally (D16)
+struct V0Tally {
+  std::vector<int> ev, track, parent, pdg, creator, fate, end_process;
+  std::vector<double> x, y, z, px, py, pz, ekin, z_end;
+  std::vector<std::string> names;
+  std::map<std::string, int> idx;
+  std::unordered_map<int, size_t> row;          // track ID -> row, current event
+  int name(const std::string& n) {
+    auto it = idx.find(n);
+    if (it != idx.end()) return it->second;
+    names.push_back(n);
+    return idx[n] = int(names.size()) - 1;
+  }
+} gV0;
+
+bool isV0(int pdg) {
+  const int a = std::abs(pdg);
+  return a == 130 || a == 310 || a == 3122 || a == 3322;
+}
+
+int currentEvent() { return G4RunManager::GetRunManager()->GetCurrentEvent()->GetEventID(); }
+
+void tallyNew(const G4Track* t, bool tracked) {
+  const int pdg = t->GetDefinition()->GetPDGEncoding();
+  if (!isV0(pdg)) return;
+  const auto* cp = t->GetCreatorProcess();
+  const G4ThreeVector x = t->GetPosition(), p = t->GetMomentum();
+  gV0.ev.push_back(currentEvent()); gV0.track.push_back(t->GetTrackID()); gV0.parent.push_back(t->GetParentID());
+  gV0.pdg.push_back(pdg); gV0.creator.push_back(cp ? gV0.name(cp->GetProcessName()) : -1);
+  gV0.x.push_back(x.x() / m); gV0.y.push_back(x.y() / m); gV0.z.push_back(x.z() / m);        // world frame, shifted in v0_tally()
+  gV0.px.push_back(p.x() / GeV); gV0.py.push_back(p.y() / GeV); gV0.pz.push_back(p.z() / GeV);
+  gV0.ekin.push_back(t->GetKineticEnergy() / GeV);
+  gV0.fate.push_back(tracked ? 4 : 0); gV0.z_end.push_back(x.z() / m); gV0.end_process.push_back(-1);
+  if (tracked) gV0.row[t->GetTrackID()] = gV0.ev.size() - 1;
+}
+
 class Generator : public G4VUserPrimaryGeneratorAction {
  public:
   Generator() : gun_(std::make_unique<G4ParticleGun>(1)) {}
@@ -173,6 +218,8 @@ class Stepping : public G4UserSteppingAction {
     gOut.ekin.push_back((pre->GetKineticEnergy() + f * (post->GetKineticEnergy() - pre->GetKineticEnergy())) / GeV);
     gOut.t.push_back((pre->GetGlobalTime() + f * (post->GetGlobalTime() - pre->GetGlobalTime())) / ns);
     tr->SetTrackStatus(fStopAndKill);
+    auto it = gV0.row.find(tr->GetTrackID());
+    if (it != gV0.row.end()) { gV0.fate[it->second] = 3; gV0.z_end[it->second] = zp; gV0.end_process[it->second] = gV0.name("plane"); gV0.row.erase(it); }
   }
 };
 
@@ -182,8 +229,34 @@ class Stacking : public G4UserStackingAction {
     const int a = std::abs(t->GetDefinition()->GetPDGEncoding());
     if (a == 12 || a == 14 || a == 16 || a == 0) return fKill;
     if (t->GetDefinition()->GetParticleType() == "nucleus") return fKill;
-    return t->GetKineticEnergy() > gECut * GeV ? fUrgent : fKill;
+    const bool keep = t->GetKineticEnergy() > gECut * GeV;
+    tallyNew(t, keep);
+    return keep ? fUrgent : fKill;
   }
+};
+
+class Tracking : public G4UserTrackingAction {
+ public:
+  void PostUserTrackingAction(const G4Track* t) override {
+    auto it = gV0.row.find(t->GetTrackID());
+    if (it == gV0.row.end()) return;
+    const size_t r = it->second;
+    gV0.row.erase(it);
+    const G4StepPoint* post = t->GetStep() ? t->GetStep()->GetPostStepPoint() : nullptr;
+    const G4VProcess* pr = post ? post->GetProcessDefinedStep() : nullptr;
+    const std::string n = pr ? pr->GetProcessName() : "none";
+    gV0.end_process[r] = gV0.name(n);
+    gV0.z_end[r] = t->GetPosition().z() / m;
+    if (n == "Decay") gV0.fate[r] = 1;
+    else if (n.find("Inelastic") != std::string::npos || n.find("CaptureAtRest") != std::string::npos ||
+             n.find("hBertiniCaptureAtRest") != std::string::npos) gV0.fate[r] = 2;
+    else gV0.fate[r] = 4;
+  }
+};
+
+class EventAct : public G4UserEventAction {
+ public:
+  void BeginOfEventAction(const G4Event*) override { gV0.row.clear(); }
 };
 
 G4RunManager* gRun = nullptr;
@@ -212,6 +285,8 @@ void initialize(long seed, double z_iron0, double z_iron1, double half_x, double
   gRun->SetUserAction(new Generator);
   gRun->SetUserAction(new Stepping);
   gRun->SetUserAction(new Stacking);
+  gRun->SetUserAction(new Tracking);
+  gRun->SetUserAction(new EventAct);
   for (auto c : {"/control/verbose 0", "/run/verbose 0", "/event/verbose 0", "/tracking/verbose 0"})
     G4UImanager::GetUIpointer()->ApplyCommand(c);
   gRun->Initialize();
@@ -242,6 +317,27 @@ py::dict transport(py::array_t<long, py::array::c_style | py::array::forcecast> 
   return d;
 }
 
+py::dict v0_tally() {
+  py::dict d;
+  const double off = Detector::gOffset;          // world -> shield frame
+  std::vector<double> z(gV0.z), ze(gV0.z_end);
+  for (auto& v : z) v += off;
+  for (auto& v : ze) v += off;
+  d["ev"] = py::array(py::cast(gV0.ev)); d["track"] = py::array(py::cast(gV0.track));
+  d["parent"] = py::array(py::cast(gV0.parent)); d["pdg"] = py::array(py::cast(gV0.pdg));
+  d["creator"] = py::array(py::cast(gV0.creator)); d["fate"] = py::array(py::cast(gV0.fate));
+  d["end_process"] = py::array(py::cast(gV0.end_process));
+  d["x"] = py::array(py::cast(gV0.x)); d["y"] = py::array(py::cast(gV0.y)); d["z"] = py::array(py::cast(z));
+  d["px"] = py::array(py::cast(gV0.px)); d["py"] = py::array(py::cast(gV0.py)); d["pz"] = py::array(py::cast(gV0.pz));
+  d["ekin"] = py::array(py::cast(gV0.ekin)); d["z_end"] = py::array(py::cast(ze));
+  d["processes"] = gV0.names;
+  auto names = gV0.names;
+  auto idx = gV0.idx;
+  gV0 = V0Tally();
+  gV0.names = names; gV0.idx = idx;              // keep the process indices stable across calls
+  return d;
+}
+
 py::dict layout() {
   py::dict d;
   d["z_iron0"] = gZ0; d["z_iron1"] = gZ1; d["half_x"] = gHX; d["half_y"] = gHY; d["z_plane"] = gZPlane;
@@ -258,4 +354,5 @@ PYBIND11_MODULE(g4shield, mod) {
   mod.def("transport", &transport, py::arg("offsets"), py::arg("pdg"), py::arg("px"), py::arg("py"), py::arg("pz"),
           py::arg("vx"), py::arg("vy"), py::arg("vz"));
   mod.def("layout", &layout);
+  mod.def("v0_tally", &v0_tally);
 }

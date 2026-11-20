@@ -13,7 +13,7 @@ Plus results/reco/visualization/<design>_maps.png (rate maps, which planes veto 
 comparison.png over the designs.
 
   bin/visualize_reco.py                              # D0, D1, D2, D4
-  bin/visualize_reco.py D3_heavy_right D5_fine
+  bin/visualize_reco.py R1_ubt_only R2_sbt_ubt
 """
 
 import _bootstrap  # noqa: F401
@@ -28,7 +28,7 @@ from run_reco import TYPE_NAMES, load_inputs, tag, take
 from veto import design as dsg
 from veto import paths, plotting, reco, viz3d
 
-DEFAULT = ["D0_minimal", "D1_wide_ubt", "D2_default", "D4_dense"]
+DEFAULT = ["R1_ubt_only", "R2_sbt_ubt", "R3_sbt_ubt_strips"]
 N_SHOW = 8
 
 

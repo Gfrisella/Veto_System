@@ -10,6 +10,7 @@ spectrometer field and is lost in the magnet iron (|B| > spectrometer.YOKE_B).
     tracks_from_g4(res, part, n_inter)  charged tracks at SST1 in interactions.charged_tracks' format
 """
 
+import os
 import sys
 
 import numpy as np
@@ -23,14 +24,29 @@ Z_WORLD = (geo.Z_STATE_A - 1.6, geo.Z_TIMING + 1.0)   # 29.0 .. 95.0 m: from beh
 E_CUT = 0.1                           # GeV kinetic: below it a particle is not followed
 
 
+def module(retries=6):
+    """Import cpp/build[_ship]/g4vessel (loads the Geant4 libraries). ISSUES D15: call it in the parent before forking
+    the workers so they inherit the libraries instead of each loading them from CVMFS; import retried with backoff."""
+    import importlib
+    import time
+    for d in (paths.cpp_build(), paths.PROJECT_DIR / "cpp" / "build_ship"):
+        if str(d) not in sys.path:
+            sys.path.insert(0, str(d))
+    for k in range(retries + 1):
+        try:
+            return importlib.import_module("g4vessel")
+        except ImportError as e:
+            if k == retries or "No module named" in str(e):
+                raise
+            print(f"[pid {os.getpid()}] import g4vessel failed ({e}); retry {k + 1}/{retries}", file=sys.stderr, flush=True)
+            time.sleep(min(30.0, 0.5 * 2 ** k))
+
+
 def init(seed, e_cut=E_CUT, field=True, planes=PLANES):
     """Import and initialise cpp/build/g4vessel with the veto geometry."""
     # cpp/build: the container build (bin/g4.sh, Geant4 11.2.2); cpp/build_ship: host python + SHiP CVMFS Geant4 10.7.3
     # (bin/g4ship.sh). The Python-version suffix of the .so picks the right one.
-    for d in (paths.cpp_build(), paths.PROJECT_DIR / "cpp" / "build_ship"):
-        if str(d) not in sys.path:
-            sys.path.insert(0, str(d))
-    import g4vessel
+    g4vessel = module()
     from fastveto import vessel as V
     if field:
         f = spectrometer.field_map()

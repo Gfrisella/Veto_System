@@ -37,7 +37,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from veto import objective as vo  # noqa: E402
 
 
-CONFIG = vo.ObjectiveConfig(bkg_estimate="max", form="sensitivity", cost_budget_kchf=10000.0)
+CONFIG = vo.ObjectiveConfig(bkg_estimate="direct", form="sensitivity")   # A1: direct (16 Nov 2026)
 INPUTS = "inputs.npz"          # results/reco file the designs are evaluated on (evolve_designs --inputs)
 
 

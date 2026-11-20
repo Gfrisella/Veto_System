@@ -6,9 +6,9 @@ lines at their exit points on the rock surface. Weights per spill of 4e13 p.o.t.
 Grouped by rock region (muons: wall / floor; neutrinos: -x wall, +x wall, floor, ceiling, face).
 
     python3 bin/rock_select.py --kind muon --draws /disk/lhcb_data/sqasim/rock_dis/apply_D6_straw_mod_draws.npz \
-        --seeds 300 --design designs/modules/D6_straw_mod.json --out rock_select_mu.json
+        --seeds 300 --design designs/R2_sbt_ubt.json --out rock_select_mu.json
     python3 bin/rock_select.py --kind nu --draws /disk/lhcb_data/sqasim/nu_rock/nu_rock_D6_straw_mod_draws.npz \
-        --design designs/modules/D6_straw_mod.json --out rock_select_nu.json
+        --design designs/R2_sbt_ubt.json --out rock_select_nu.json
 """
 import _bootstrap  # noqa: F401
 

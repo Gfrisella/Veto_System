@@ -49,7 +49,7 @@ MATERIALS = {
     "iron": Material("iron", 13.84, 7.874, 26.0 / 55.845, 56.0),   # muon shield (veto.shield_iron)
 }
 
-TECH_MATERIAL = {"straw": "mylar", "fiber": "polystyrene", "pixel": "silicon", "tile": "pvt", "tile2": "pvt"}
+TECH_MATERIAL = {"straw": "mylar", "straw_v": "mylar", "fiber": "polystyrene", "pixel": "silicon", "tile": "pvt", "tile2": "pvt"}
 
 
 @dataclass(frozen=True)

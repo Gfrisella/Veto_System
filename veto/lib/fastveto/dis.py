@@ -4,9 +4,9 @@
     lib.sigma(material, E)                        # microbarn per nucleon
     ev = lib.sample(material, E, u, vertex, pdg_mu, rng)   # final states in the lab: particles of every interaction
 
-    out = run(columns, design, lib, draws={"helium": 1e6, "pvc": 1e6, "air": 2e5, "planes": 2e5}, rng=rng)
+    out = run(columns, design, lib, draws={"helium": 1e6, "wall": 1e6, "air": 2e5, "planes": 2e5}, rng=rng)
 
-Interactions are forced and importance sampled per target group (helium, air, pvc, each design plane): within a
+Interactions are forced and importance sampled per target group (helium, air, wall, each design plane): within a
 group the muon crossing is drawn with probability w P, P = n_area sigma(E) the interaction probability (<< 1),
 w the muon weight (per spill); every draw carries weight S_g / M_g, S_g = sum of w P over the group (interactions
 per spill), M_g the number of draws. The vertex is uniform along the crossing. The library event comes from the
@@ -65,6 +65,9 @@ class MuonLibrary:
         self.p6_sigma = np.zeros((2, nE))
         self.g4 = {}
         self.groups = {}
+        self.groups_v0 = {}       # the same groups restricted to final states with a V0 (K_L, K_S, Lambda) (16 Nov 2026)
+        self.f_v0 = {}            # per group key: fraction of its final states with a V0
+        V0_PDG = np.array([130, 310, 3122, -3122])
         for name, t in self.tables.items():
             ie = t["ev_ie"].astype(np.int64)
             if split == "crossover":
@@ -89,6 +92,21 @@ class MuonLibrary:
             order = kept[np.argsort(key[kept], kind="stable")]
             ks, first, cnt = np.unique(key[order], return_index=True, return_counts=True)
             self.groups[name] = (order, {int(k): (f, c) for k, f, c in zip(ks, first, cnt)})
+            # final states with a V0 among their products
+            ev_of_row = np.repeat(np.arange(len(ie)), t["ev_n"].astype(np.int64))
+            has = np.bincount(ev_of_row, weights=np.isin(t["pdg"][:len(ev_of_row)], V0_PDG), minlength=len(ie)) > 0
+            t["_has_v0"] = has
+            kv = kept[has[kept]]
+            order_v = kv[np.argsort(key[kv], kind="stable")]
+            ksv, firstv, cntv = np.unique(key[order_v], return_index=True, return_counts=True)
+            self.groups_v0[name] = (order_v, {int(k): (f, c) for k, f, c in zip(ksv, firstv, cntv)})
+            kn = kept[~has[kept]]
+            order_n = kn[np.argsort(key[kn], kind="stable")]
+            ksn, firstn, cntn = np.unique(key[order_n], return_index=True, return_counts=True)
+            self.groups_nov0 = getattr(self, "groups_nov0", {})
+            self.groups_nov0[name] = (order_n, {int(k): (f, c) for k, f, c in zip(ksn, firstn, cntn)})
+            n_v = np.bincount(key[kv], minlength=2000)
+            self.f_v0[name] = np.divide(n_v, n_keep, out=np.zeros(2000), where=n_keep > 0)
 
     def _interp(self, table, E):
         """Linear in log E on the grid; 0 below the grid, the last value above it."""
@@ -105,8 +123,9 @@ class MuonLibrary:
         a, b = self.sigma_parts(material, E)
         return a + b
 
-    def _pick(self, name, tgt, ie, rng):
-        order, g = self.groups[name]
+    def _pick(self, name, tgt, ie, rng, v0_only=False):
+        groups = self.groups_nov0 if v0_only == "nov0" else self.groups_v0 if v0_only else self.groups
+        order, g = groups[name]
         out = np.empty(len(ie), np.int64)
         keys = tgt.astype(np.int64) * 1000 + ie
         for k in np.unique(keys):
@@ -121,10 +140,13 @@ class MuonLibrary:
             out[m] = order[f + rng.integers(0, c, m.sum())]
         return out
 
-    def sample(self, material, E, u, vertex, pdg_mu, rng):
+    def sample(self, material, E, u, vertex, pdg_mu, rng, v0_only=False):
         """One final state per interaction (arrays of length n). Returns particles: interaction index, pdg,
         p (k,4) and production point (k,3) in the lab, beam flag (the scattered muon), and per interaction the
-        component (0 Pythia, 1 Geant4) and the library energy."""
+        component (0 Pythia, 1 Geant4), the library energy, lib_v0 (the final state has a V0) and w_factor.
+        v0_only (16 Nov 2026, importance sampling of the MS7 V0 chain): only final states with a K_L / K_S / Lambda are drawn,
+        the component and target in proportion to sigma x (their V0 fraction), and w_factor = the probability that an
+        interaction at that energy has a V0 final state (multiply the interaction weight by it); 1 otherwise."""
         n = len(E)
         p6, g4 = self.sigma_parts(material, E)
         comp = (rng.random(n) * (p6 + g4) >= p6).astype(np.int8)
@@ -137,13 +159,28 @@ class MuonLibrary:
         za = mat.MATERIALS[material].z_over_a
         sp, sn = self.p6_sigma[0, ie] * za, self.p6_sigma[1, ie] * (1 - za)
         tgt = np.where(comp == 0, (rng.random(n) * (sp + sn) >= sp).astype(np.int64), 0)
+        w_factor = np.ones(n)
+        if v0_only:                                       # True / "v0": V0 final states; "nov0": the complement
+            fp, fn = self.f_v0["p6"][ie], self.f_v0["p6"][1000 + ie]
+            gg = self.g4[material][ie]
+            fg = self.f_v0[material][ie]
+            if v0_only == "nov0":
+                fp, fn, fg = 1 - fp, 1 - fn, 1 - fg
+            a6p, a6n, ag = sp * fp, sn * fn, gg * fg
+            tot = sp + sn + gg
+            w_factor = np.divide(a6p + a6n + ag, tot, out=np.zeros(n), where=tot > 0)
+            r = rng.random(n) * (a6p + a6n + ag)
+            comp = (r >= a6p + a6n).astype(np.int8)
+            tgt = np.where(comp == 0, (r >= a6p).astype(np.int64), 0)
         parts = {k: [] for k in ("int", "pdg", "p", "v", "beam")}
+        lib_v0 = np.zeros(n, bool)
         for c, name in ((0, "p6"), (1, material)):
             m = np.nonzero(comp == c)[0]
             if not len(m):
                 continue
             t = self.tables[name]
-            ev = self._pick(name, tgt[m], ie[m], rng)
+            ev = self._pick(name, tgt[m], ie[m], rng, v0_only)
+            lib_v0[m] = t["_has_v0"][ev]
             rows, owner = _segments(t["ev_start"][ev], t["ev_n"][ev])
             k = m[owner]
             phi = rng.uniform(0, 2 * np.pi, n)[k]
@@ -161,11 +198,13 @@ class MuonLibrary:
         out = {kk: v[order] for kk, v in out.items()}
         out["component"] = comp
         out["E_lib"] = self.E[ie]
+        out["lib_v0"] = lib_v0
+        out["w_factor"] = w_factor
         return out
 
 
 def group_of(code):
-    return np.where(code >= tg.TARGET_PLANE0, code, np.minimum(code, tg.TARGET_PVC))
+    return np.where((code >= tg.TARGET_PLANE0) | (code == tg.TARGET_AIR_UP), code, np.minimum(code, tg.TARGET_PVC))
 
 
 def group_label(g, design=None):
@@ -230,15 +269,18 @@ def _pass2(job):
     return {k: np.concatenate(v) for k, v in out.items()}
 
 
-def run(columns, design, lib, draws, rng, chunk=2_000_000, include=("helium", "air", "pvc", "planes"), workers=1,
+def run(columns, design, lib, draws, rng, chunk=2_000_000, include=("helium", "air", "wall", "planes"), workers=1,
         verbose=True):
     """Forced interactions for a dataset (dict of column arrays, may be memory-mapped). draws: per group
-    {"helium": M, "air": M, "pvc": M, "planes": M (each plane)}; M > 0: M draws, crossing picked with probability
+    {"helium": M, "air": M, "wall": M, "planes": M (each plane)} ("pvc" = old name of "wall", ISSUES D8); M > 0: M draws, crossing picked with probability
     w P / S, weight S / M each; M = -k: k draws on EVERY crossing, weight w P / k each (each track contributes). Two passes over chunks of rows (workers: forked
     processes). Returns (interactions, particles, totals = interactions per spill per group)."""
     import multiprocessing as mp
     import time
     t0 = time.time()
+    draws = {("wall" if k == "pvc" else k): v for k, v in draws.items()}          # ISSUES D8: old key accepted
+    draws.setdefault("air_upstream", draws.get("air", 0))                          # C7 / D7: own group, default as air
+    include = tuple("wall" if g == "pvc" else g for g in include)
     n = len(columns["weight"])
     _CTX.update(columns=columns, design=design, lib=lib, include=include,
                 chunks=[(s, min(s + chunk, n)) for s in range(0, n, chunk)])

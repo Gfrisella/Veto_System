@@ -2,7 +2,7 @@
 """End-to-end figure of merit of designs on one muon dataset: every background source, before and after the veto.
 
 Sources (per 15 years, after the selection of RecoConfig: measured IP < 0.1 m, at most 2 tracks in SST1):
-  combinatorial        two unrelated SST1 muons in time (run_reco.evaluate + veto.objective, bkg_estimate "max")
+  combinatorial        two unrelated SST1 muons in time (run_reco.evaluate + veto.objective, bkg_estimate "direct")
   muon interactions    fastveto.dis.run on the muon dataset (library split crossover), per target: helium, air,
                        PVC walls and every plane of the design; veto level b (interactions.evaluate)
   neutrino interactions  bin/nu_dis_apply.py for the design (GENIE, --out results/end_to_end/<design>_nu.npz)
@@ -10,8 +10,8 @@ Plus the signal lost to random hits, the cost and the objective (veto.objective,
 Stage 1 (--stage generate) draws the muon interactions of each design (results/end_to_end/<design>_mu.npz);
 stage 2 (--stage evaluate) runs every (design, cone) and writes results/end_to_end/<tag>.json.
 
-  GPU_HOST=farm-gpu5 bin/remote.sh run bin/end_to_end.py --stage generate --designs E3_robust D6_tile2
-  GPU_HOST=farm-gpu5 bin/remote.sh run bin/end_to_end.py --stage evaluate --designs E3_robust D6_tile2 --cones 0 10 20
+  GPU_HOST=farm-gpu5 bin/remote.sh run bin/end_to_end.py --stage generate --designs R1_ubt_only R2_sbt_ubt
+  GPU_HOST=farm-gpu5 bin/remote.sh run bin/end_to_end.py --stage evaluate --designs R1_ubt_only R2_sbt_ubt --cones 0 10 20
 """
 
 import _bootstrap  # noqa: F401
@@ -32,7 +32,7 @@ from veto import interactions as ix
 from veto import io, objective, paths, reco
 from veto.config import DEFAULT_CONFIG
 
-DATASET = "design-optimization-dataset-delta-enriched-2026-10-19"
+DATASET = paths.MUON_DATASET                     # Nov-4 production (2026-11-11)
 OUT = paths.results_dir() / "end_to_end"
 _S = {}
 
@@ -46,7 +46,7 @@ def generate(args):
     from fastveto import dis
     lib = dis.MuonLibrary(str(paths.mu_library()), split="crossover")
     muons, _ = io.open_store(paths.store_dir(args.dataset))
-    draws = dict(zip(("helium", "pvc", "air", "planes"), args.draws))
+    draws = dict(zip(("helium", "wall", "air", "planes"), args.draws))
     for name in args.designs:
         t0 = time.time()
         design = load_design(name)
@@ -64,10 +64,11 @@ def _init(args):
 
 
 def group(res, design):
-    """Per-target rows of interactions.evaluate -> helium / air / pvc / planes (all planes of the design together)."""
+    """Per-target rows of interactions.evaluate -> helium / air / wall / planes (all planes of the design together)."""
     out = {}
     for name, r in res.items():
-        key = name if name in ("helium", "air", "pvc") else "planes"
+        name = "wall" if name == "pvc" else name                     # ISSUES D8: old files
+        key = name if name in ("helium", "air", "wall") else "planes"
         g = out.setdefault(key, dict(interactions=0.0, selected=0.0, after=0.0, after_err2=0.0, truth=0.0,
                                      n_selected=0, n_after=0))
         g["interactions"] += r["interactions"]; g["selected"] += r["selected"]; g["n_selected"] += r["n_selected"]
@@ -84,7 +85,7 @@ def job(arg):
     d = load_design(name)
     cfg = reco.RecoConfig(seed=1, multiple_scattering=True, cone=cone * 1e-3)
     r = evaluate(d, _S["tr"], _S["inp"], cfg, args.n_signal, DEFAULT_CONFIG["time_window"], "target")
-    comb = objective.score(r, _S["stats"], objective.ObjectiveConfig(bkg_estimate="max"))
+    comb = objective.score(r, _S["stats"], objective.ObjectiveConfig(bkg_estimate="direct"))
     mu = ix.evaluate(*load_npz(OUT / f"{d.name}{args.mu_suffix}_mu.npz"), d, _S["inp"], cfg, np.random.default_rng(1), muons=_S["muons"])
     nu_file = OUT / f"{d.name}_nu.npz"
     nu = ix.evaluate(*load_npz(nu_file), d, _S["inp"], cfg, np.random.default_rng(2)) if nu_file.exists() else {}
@@ -92,7 +93,7 @@ def job(arg):
     tot = lambda g: (sum(v["after"] for v in g.values()), math.sqrt(sum(v["after_err"] ** 2 for v in g.values())))
     r["interactions"] = {"muon": dict(zip(("total", "total_err"), tot(mu_g))),
                          "nu": dict(zip(("total", "total_err"), tot(nu_g)), per_target=nu_g)}   # helium split in the objective
-    s = objective.score(r, _S["stats"], objective.ObjectiveConfig(bkg_estimate="max", form="sensitivity", cost_budget_kchf=10000.0))
+    s = objective.score(r, _S["stats"], objective.ObjectiveConfig(bkg_estimate="direct", form="sensitivity"))
     cb = comb["confusion"]["background"]
     return dict(design=d.name, cone_mrad=cone, cost_kchf=s["cost_kchf"], n_channels=r["n_channels"],
                 feasible=s["feasible"], over_rate_limit=s["over_rate_limit"],
@@ -102,7 +103,7 @@ def job(arg):
                 muon=mu_g, nu=nu_g, total=s["bkg_events_15y"], total_err=s["bkg_events_15y_err"],
                 sensitivity=s["sensitivity"], reward=s["reward"], reward_err=s["reward_err"], terms={k: v[0] for k, v in s["terms"].items()},
                 per_plane_mu={k: dict(interactions=v["interactions"], selected=v["selected"], after=v.get("survive_b", 0.0))
-                              for k, v in mu.items() if k not in ("helium", "air", "pvc")},
+                              for k, v in mu.items() if k not in ("helium", "air", "wall", "pvc")},
                 planes=[dict(name=p["plane"], technology=p["technology"], peak_hz_cm2=p["peak_hz_cm2"],
                              peak_channel_hz=p["peak_channel_hz"]) for p in r["planes"]],
                 seconds=round(time.time() - t0, 1))
@@ -114,7 +115,7 @@ def main():
     ap.add_argument("--designs", nargs="+", required=True)
     ap.add_argument("--cones", type=float, nargs="+", default=[0, 10, 20], help="mrad")
     ap.add_argument("--dataset", default=DATASET)
-    ap.add_argument("--inputs", default="inputs_delta_s.npz")
+    ap.add_argument("--inputs", default=paths.RECO_INPUTS)
     ap.add_argument("--draws", type=float, nargs=4, default=[5e6, 5e6, 1e6, 1e6], help="helium pvc air planes (each)")
     ap.add_argument("--n-signal", type=int, default=100_000)
     ap.add_argument("--workers", type=int, default=40)
@@ -134,8 +135,8 @@ def main():
     for r in rows:
         g = lambda kind, t: r[kind].get(t, {}).get("after", 0.0)
         print(f"{r['design']:<12}{r['cone_mrad']:>5g}{100 * r['signal_lost']:>11.2f} %{r['combinatorial']['after']:>10.2g}"
-              + "".join(f"{g('muon', t):>9.3g}" for t in ("helium", "air", "pvc", "planes"))
-              + "".join(f"{g('nu', t):>8.3g}" for t in ("helium", "air", "pvc")) + f"{g('nu', 'planes'):>9.3g}"
+              + "".join(f"{g('muon', t):>9.3g}" for t in ("helium", "air", "wall", "planes"))
+              + "".join(f"{g('nu', t):>8.3g}" for t in ("helium", "air", "wall")) + f"{g('nu', 'planes'):>9.3g}"
               + f"{f(r['total'], r['total_err']):>17}{r['sensitivity']:>7.3f}{r['reward']:>10.2f}")
     print(f"\nconfusion matrix per source, events per 15 years (TP vetoed, FN survive; signal: FP lost, TN kept)")
     for r in rows:

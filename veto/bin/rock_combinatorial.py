@@ -9,7 +9,7 @@ the rock tracks (one row per particle, weight per spill of 4e13 of its draw). Pa
 sources) and rock x rock from different draws; the pairs within one draw are the rock vertex term (bin/rock_select.py).
 The muon x muon term is recomputed from the reco inputs with the same code for the ratio.
 
-    bin/remote.sh run bin/rock_combinatorial.py --design designs/modules/D6_straw_mod.json \
+    bin/remote.sh run bin/rock_combinatorial.py --design designs/R2_sbt_ubt.json \
         --rock-mu /disk/lhcb_data/sqasim/rock_dis/apply_D6_straw_mod_draws.npz --rock-nu .../nu_rock_D6_straw_mod_draws.npz
 """
 import _bootstrap  # noqa: F401
@@ -20,6 +20,8 @@ import time
 from pathlib import Path
 
 import numpy as np
+
+from veto.interactions import ul90
 import torch
 
 from benchmark_designs import _pair_cut
@@ -71,17 +73,24 @@ def rock_tracks(path, kind, seeds, draw_offset):
                 draw=tr["inter"][g] + draw_offset)
 
 
-def cross_pairs(A, B, dev, block, same=False):
-    """Candidate pairs (i in A, j in B) passing the pair cuts; same=True: A is B, i < j, different draws."""
+def cross_pairs(A, B, dev, block, same=False, sel=None):
+    """Candidate pairs (i in A, j in B) passing the pair cuts; same=True: A is B, i < j, different draws.
+
+    sel = RecoConfig: streaming selection (memory, 16 Nov 2026: ~1e9 vessel-DIS x mu candidates do not fit in 128 GB):
+    the measured IP is computed block by block, only pairs with IP < sel.ip_max are kept, and the candidates are only
+    counted (number, sum of wA x wB). Returns then a fifth value dict(n, w, ip) for veto_term(pre=...)."""
     def tens(d):
         return (torch.as_tensor(np.stack([d["bx"], d["by"], d["bz"]], 1), device=dev),
                 torch.as_tensor(np.stack([d["bpx"], d["bpy"], d["bpz"]], 1), device=dev),
-                torch.as_tensor(d["pdg"], device=dev), torch.as_tensor(d["draw"], device=dev))
+                torch.as_tensor(mt.charge_from_pdg_column(d["pdg"]), device=dev),   # charges: muons +-1 (charge sign),
+                torch.as_tensor(d["draw"], device=dev))                            # rock tracks +-13 (PDG) -> ISSUES D17
     rA, pA, qA, dA = tens(A)
     rB, pB, qB, dB = tens(B)
     nA, nB = len(rA), len(rB)
     r, p = torch.cat([rA, rB]), torch.cat([pA, pB])
-    out_a, out_b, out_v, n_pairs = [], [], [], 0
+    out_a, out_b, out_v, out_ip, n_pairs, n_cand, w_cand = [], [], [], [], 0, 0, 0.0
+    wA, wB = np.asarray(A["weight"], float), np.asarray(B["weight"], float)
+    rng_ip = np.random.default_rng(777)
     for i0 in range(0, nA, block):
         for j0 in range(i0 if same else 0, nB, block):
             ni, nj = min(block, nA - i0), min(block, nB - j0)
@@ -93,33 +102,76 @@ def cross_pairs(A, B, dev, block, same=False):
             ia, jb = ia[m], jb[m]
             n_pairs += len(ia)
             a, bb, v = _pair_cut(ia, jb + nA, r, p)
-            out_a.append(a.cpu().numpy()); out_b.append((bb - nA).cpu().numpy()); out_v.append(v.cpu().numpy())
-    return np.concatenate(out_a), np.concatenate(out_b), np.concatenate(out_v), n_pairs
+            a, bb, v = a.cpu().numpy(), (bb - nA).cpu().numpy(), v.cpu().numpy()
+            if sel is not None and len(a):
+                n_cand += len(a); w_cand += float((wA[a] * wB[bb]).sum())
+                ip = vsel.measured_ip(np.stack([A["bx"][a], A["by"][a], A["bz"][a]], 1), np.stack([A["bpx"][a], A["bpy"][a], A["bpz"][a]], 1),
+                                      np.stack([B["bx"][bb], B["by"][bb], B["bz"][bb]], 1), np.stack([B["bpx"][bb], B["bpy"][bb], B["bpz"][bb]], 1),
+                                      sel, rng_ip)
+                k = ip < sel.ip_max
+                a, bb, v = a[k], bb[k], v[k]
+                out_ip.append(ip[k])
+            out_a.append(a); out_b.append(bb); out_v.append(v)
+    cat = lambda x, sh, dt: np.concatenate(x) if x else np.zeros(sh, dt)
+    res = (cat(out_a, 0, np.int64), cat(out_b, 0, np.int64), cat(out_v, (0, 3), np.float64), n_pairs)
+    if sel is None:
+        return res
+    return res + (dict(n=n_cand, w=w_cand, ip=cat(out_ip, 0, np.float64)),)
 
 
-def veto_term(tr, cand, cand_w, cand_v, design, inp, cfg, rng):
-    """Measured IP cut and veto for candidate pairs (rows of tr); returns per-15-year before / after IP / after veto."""
+def veto_term(tr, cand, cand_w, cand_v, design, inp, cfg, rng, chunk=200_000, pre=None, companions=None, with_v0=False):
+    """Measured IP cut and veto for candidate pairs (rows of tr); returns per-15-year before / after IP / after veto.
+    pre = dict(n, w, ip) from cross_pairs(sel=cfg): cand are already the IP-selected pairs (streaming).
+    companions (20 Nov 2026): dict(tr, draw) of the other particles of each interaction (tr["draw"] of a leg): their hits are
+    hits of the pair, in coincidence with it (reco.run_events companions). with_v0: the pair vertex and visible momentum go to
+    the design's V0 rule / SBT V0 line (as for the in-vessel candidates)."""
     dt = DEFAULT_CONFIG["time_window"]
-    w = cand_w * 2 * dt / cfg.spill_s * SPILLS_15Y
-    out = dict(n_candidates=int(len(cand)), candidates_15y=float(w.sum()))
-    if not len(cand):
-        return dict(out, selected_15y=0.0, n_selected=0, after_15y=0.0, n_after=0)
-    st = lambda i: (np.stack([tr["bx"][i], tr["by"][i], tr["bz"][i]], 1), np.stack([tr["bpx"][i], tr["bpy"][i], tr["bpz"][i]], 1))
-    ip = vsel.measured_ip(*st(cand[:, 0]), *st(cand[:, 1]), cfg, np.random.default_rng(777))
-    keep = np.nonzero(ip < cfg.ip_max)[0]
+    fac = 2 * dt / cfg.spill_s * SPILLS_15Y
+    w = cand_w * fac
+    if pre is not None:
+        out = dict(n_candidates=int(pre["n"]), candidates_15y=float(pre["w"] * fac))
+        ip = pre["ip"]
+        keep = np.arange(len(cand))
+    else:
+        out = dict(n_candidates=int(len(cand)), candidates_15y=float(w.sum()))
+        if not len(cand):
+            return dict(out, selected_15y=0.0, n_selected=0, after_15y=0.0, n_after=0)
+        st = lambda i: (np.stack([tr["bx"][i], tr["by"][i], tr["bz"][i]], 1), np.stack([tr["bpx"][i], tr["bpy"][i], tr["bpz"][i]], 1))
+        ip = vsel.measured_ip(*st(cand[:, 0]), *st(cand[:, 1]), cfg, np.random.default_rng(777))
+        keep = np.nonzero(ip < cfg.ip_max)[0]
     out.update(selected_15y=float(w[keep].sum()), n_selected=int(len(keep)))
     if not len(keep):
-        return dict(out, after_15y=0.0, n_after=0, after_upper_15y=float(2.3 * w.mean() * len(keep) / max(len(cand), 1)))
-    rows = cand[keep].ravel()
-    event = np.repeat(np.arange(len(keep)), 2)
-    z_lim = np.repeat(cand_v[keep, 2], 2)
-    b = reco.run_events(take(tr, rows), event, z_lim, design, inp, cfg, rng)
-    surv = ~b["vetoed"]
+        return dict(out, after_15y=0.0, n_after=0, after_upper_15y=None)
+    # veto in chunks of candidates (memory: the D6 muon x rock term needed > 128 GB in one go, 16 Nov 2026)
+    surv, expl = [], []
+    for c0 in range(0, len(keep), chunk):
+        kc = keep[c0:c0 + chunk]
+        rows = cand[kc].ravel()
+        event = np.repeat(np.arange(len(kc)), 2)
+        z_lim = np.repeat(cand_v[kc, 2], 2)
+        comp = None
+        if companions is not None and len(companions["draw"]):
+            dr = np.asarray(tr["draw"][rows], np.int64)
+            cd = companions["draw"]                                       # sorted
+            lo, hi = np.searchsorted(cd, dr, "left"), np.searchsorted(cd, dr, "right")
+            n_c = np.where(dr >= 0, hi - lo, 0)
+            if n_c.sum():
+                ci = np.repeat(lo - np.cumsum(n_c) + n_c, n_c) + np.arange(n_c.sum())
+                comp = dict(tr={k: v[ci] for k, v in companions["tr"].items()}, event=np.repeat(event, n_c))
+        v0 = None
+        if with_v0:
+            pv = np.stack([tr["bpx"][rows], tr["bpy"][rows], tr["bpz"][rows]], 1).reshape(-1, 2, 3).sum(1)
+            v0 = dict(vtx=np.asarray(cand_v[kc], float), pvis=pv)
+        b = reco.run_events(take(tr, rows), event, z_lim, design, inp, cfg, rng, v0=v0, companions=comp)
+        surv.append(~b["vetoed"]); expl.append(b["explained"].reshape(-1, 2))
+        del b
+    surv, expl = np.concatenate(surv), np.concatenate(expl)
     wk = w[keep]
-    expl = b["explained"].reshape(-1, 2)
+    sk = keep[surv]                                                    # survivors (for --survivors)
+    out["_surv"] = dict(rows=cand[sk], w15=w[sk], vtx=cand_v[sk], ip=ip[sk], explained=expl[surv])
     out.update(after_15y=float(wk[surv].sum()), n_after=int(surv.sum()),
                after_err_15y=float(np.sqrt((wk[surv] ** 2).sum())),
-               after_upper_15y=float(2.3 * wk.max()) if not surv.any() else None,
+               after_upper_15y=ul90(wk) if not surv.any() else None,   # 90 % CL (interactions.ul90; was 2.3 x max weight)
                leg_explained=[float((wk * expl[:, 0]).sum() / wk.sum()), float((wk * expl[:, 1]).sum() / wk.sum())])
     return out
 
@@ -127,20 +179,26 @@ def veto_term(tr, cand, cand_w, cand_v, design, inp, cfg, rng):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--design", required=True)
-    ap.add_argument("--dataset", default="design-optimization-dataset-c-pool-v3-6000seeds-2026-10-31")
-    ap.add_argument("--inputs", default="inputs_c_s.npz")
+    ap.add_argument("--dataset", default=paths.MUON_DATASET)
+    ap.add_argument("--inputs", default=paths.RECO_INPUTS)
     ap.add_argument("--rock-mu", required=True); ap.add_argument("--seeds", type=int, default=300)
     ap.add_argument("--rock-nu", default=None)
     ap.add_argument("--block", type=int, default=4096)
+    ap.add_argument("--veto-chunk", type=int, default=200_000, help="candidates per veto call (memory)")
     ap.add_argument("--mu-sample", type=int, default=2_000_000, help="random SST1 muon rows (weights scaled); 0 = all")
     ap.add_argument("--cone", type=float, default=0.0, help="mrad")
+    ap.add_argument("--ip-cut", choices=("full", "partial"), default="full",
+                    help="measured-IP selection: full (IP < 10 cm) | partial (IP < 2.5 m), as run_reco.py")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--rock-rock", action="store_true", help="also the rock x rock term (dropped 16 Nov 2026, Guglielmo: "
+                    "0 candidates, two rock tracks never point back to the target)")
+    ap.add_argument("--survivors", default=None, help="npz with the pairs surviving the veto (per term)")
     a = ap.parse_args()
     t0 = time.time()
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     p = Path(a.design)
     design = dsg.load(p if p.exists() else a.design)
-    cfg = reco.RecoConfig(seed=1, multiple_scattering=True, cone=a.cone * 1e-3)
+    cfg = reco.RecoConfig(seed=1, multiple_scattering=True, cone=a.cone * 1e-3, ip_max=vsel.IP_CUTS[a.ip_cut])
     tr_in, inp = load_inputs(a.inputs)
     mu = muon_tracks(a.dataset, a.mu_sample)
     rk = rock_tracks(a.rock_mu, "muon", a.seeds, 0)
@@ -150,28 +208,42 @@ def main():
     print(f"good tracks per spill: muons {mu['weight'].sum():.4g} ({len(mu['ax']):,} rows), rock {rk['weight'].sum():.4g} "
           f"({len(rk['ax']):,} rows); {time.time() - t0:.0f} s", flush=True)
 
-    res = {}
+    res, dump = {}, {}
     # muon x muon from the reco inputs (the existing combinatorial term), same code
     res["mu x mu"] = veto_term(tr_in, inp["cand"], inp["cand_w"].astype(float), inp["cand_vertex"], design, inp, cfg,
-                               np.random.default_rng(1))
+                               np.random.default_rng(1), a.veto_chunk)
+    sv = res["mu x mu"].pop("_surv", None)
+    if sv is not None:
+        sv.update({f"tr_{k}": v[sv["rows"]] for k, v in tr_in.items()})
+        dump["mu x mu"] = sv
     print(f"mu x mu done, {time.time() - t0:.0f} s", flush=True)
-    for name, A, B, same in (("mu x rock", mu, rk, False), ("rock x rock", rk, rk, True)):
-        ia, ib, v, n_pairs = cross_pairs(A, B, dev, a.block, same)
+    terms = [("mu x rock", mu, rk, False)] + ([("rock x rock", rk, rk, True)] if a.rock_rock else [])
+    for name, A, B, same in terms:
+        ia, ib, v, n_pairs, pre = cross_pairs(A, B, dev, a.block, same, sel=cfg)
         tr = {k: np.concatenate([np.asarray(A[k], float), np.asarray(B[k], float)]) for k in KEYS}
         cand = np.stack([ia, ib + len(A["ax"])], 1)
         w = A["weight"][ia] * B["weight"][ib]
-        res[name] = dict(veto_term(tr, cand, w, v, design, inp, cfg, np.random.default_rng(2)), opposite_pairs=n_pairs)
-        print(f"{name}: {n_pairs:.3g} opposite-charge pairs, {len(ia):,} candidates, {time.time() - t0:.0f} s", flush=True)
+        res[name] = dict(veto_term(tr, cand, w, v, design, inp, cfg, np.random.default_rng(2), a.veto_chunk, pre=pre), opposite_pairs=n_pairs)
+        if "_surv" in res[name]:
+            sv = res[name].pop("_surv")
+            for k in KEYS:
+                sv[k] = tr[k][sv["rows"]]                                  # (n, 2): leg 0 = A (muon), leg 1 = B
+            dump[name] = sv
+        del tr, cand, w, ia, ib, v
+        print(f"{name}: {n_pairs:.3g} opposite-charge pairs, {res[name]['n_candidates']:,} candidates, {time.time() - t0:.0f} s", flush=True)
     print(f"\ndesign {design.name}, cone {a.cone:g} mrad; per 15 years (time window +-{DEFAULT_CONFIG['time_window'] * 1e12:.0f} ps)")
     print(f"  {'term':14s}{'candidates':>14s}{'IP < cut':>12s}{'n':>7s}{'after veto':>13s}{'n':>6s}   legs explained")
     for k, r in res.items():
         aft = f"{r['after_15y']:.3g}" if r.get("n_after") else f"< {r.get('after_upper_15y') or 0:.2g}"
         le = " / ".join(f"{x:.4f}" for x in r.get("leg_explained", []))
         print(f"  {k:14s}{r['candidates_15y']:>14.4g}{r['selected_15y']:>12.4g}{r['n_selected']:>7d}{aft:>13s}{r.get('n_after', 0):>6d}   {le}")
-    json.dump(dict(design=design.name, dataset=a.dataset, inputs=a.inputs, rock_mu=a.rock_mu, rock_nu=a.rock_nu, cone_mrad=a.cone,
+    json.dump(dict(design=design.name, ip_cut=a.ip_cut, ip_max=cfg.ip_max, dataset=a.dataset, inputs=a.inputs, rock_mu=a.rock_mu, rock_nu=a.rock_nu, cone_mrad=a.cone,
                    rates_per_spill=dict(muons=float(mu["weight"].sum()), rock=float(rk["weight"].sum())), terms=res),
               open(a.out, "w"), indent=1, default=float)
     print(f"wrote {a.out} ({time.time() - t0:.0f} s)")
+    if a.survivors:
+        np.savez_compressed(a.survivors, **{f"{t.replace(' ', '')}__{k}": np.asarray(v) for t, d in dump.items() for k, v in d.items()})
+        print(f"wrote {a.survivors}: " + ", ".join(f"{t} {len(d['w15'])}" for t, d in dump.items()))
 
 
 if __name__ == "__main__":

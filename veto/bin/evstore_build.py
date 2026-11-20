@@ -63,6 +63,11 @@ def shield(files, out, seed):
         forced = dict(rows=n_pl + np.arange(len(cps)), dec=dec, prod_owner=own, prod_pdg=part["pdg"][di], prod_p=part["p"][di, :3])
         # code 3 events: their V0 do not decay here (the copies carry them): give them an infinite lifetime by marking
         stable = np.isin(gpdg, V0) & (code[gev - off] == 3)
+        if np.isin(np.abs(v0), [321]).any():          # files with forced K+- copies (bin/force_kaons.py, 16 Nov 2026): every
+            # forced species at the exit plane is stable in ALL events (originals and copies); only each copy's forced
+            # parent (rows >= n_pl) decays -> no K+- / V0 decay is counted twice
+            stable = np.zeros(len(gpdg), bool)
+            stable[:n_pl] = np.isin(gpdg[:n_pl], list(V0) + [321, -321])
         tr = propagate_with_stable(gev, gpdg, gx, gp, gt, rng, forced, gb, stable)
         for k in es.EVENT_COLS:
             EV[k].append(np.asarray(ev[k]))

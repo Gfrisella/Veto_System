@@ -142,8 +142,10 @@ def _at_z(p, q, z):
     return pt
 
 
-def scatterers(tr, design, media=None):
-    """All scatterers of every track: z (n, S), x/X0 (n, S), NaN / 0 where a scatterer is not crossed."""
+def scatterers(tr, design, media=None, query=False):
+    """All scatterers of every track: z (n, S), x/X0 (n, S), NaN / 0 where a scatterer is not crossed. query=True: also the
+    z (n, S) at which each scatterer's momentum is taken (its own z; the middle of an SBT shell piece, whose kick sits at its
+    end), for the D19 shell energy loss."""
     (segs, bounced) = _segments(tr)
     p, q, _ = segs[0]
     n = len(p)
@@ -157,11 +159,12 @@ def scatterers(tr, design, media=None):
     # UBT and the vessel entrance window at z = Z_UBT (31.13 m since the FairShip layout; muons start at the
     # stored state A, 30.6 m, upstream of it)
     ubt = design.planes[0]
+    pu = _at_z(p, q, np.full(n, ubt.z))                           # straw UBT at its own z (30.73 m in the default layout)
+    in_ubt = np.isfinite(pu[:, 2]) & (np.abs(pu[:, 0]) < geo.UBT_HALF_X) & (pu[:, 1] >= ubt.y_lo) & (pu[:, 1] <= ubt.y_hi)
+    x_ubt = tech.x0(tech.TECHNOLOGIES[ubt.technology]) if ubt.technology else 0.0
+    zs.append(np.where(in_ubt, ubt.z, np.nan)); xs.append(np.where(in_ubt, x_ubt / cos_z, 0.0))
     pa = _at_z(p, q, np.full(n, geo.Z_UBT))
     near_a = np.isfinite(pa[:, 2])
-    in_ubt = near_a & (np.abs(pa[:, 0]) < geo.UBT_HALF_X) & (pa[:, 1] >= ubt.y_lo) & (pa[:, 1] <= ubt.y_hi)
-    x_ubt = tech.x0(tech.TECHNOLOGIES[ubt.technology]) if ubt.technology else 0.0
-    zs.append(np.where(in_ubt, geo.Z_UBT, np.nan)); xs.append(np.where(in_ubt, x_ubt / cos_z, 0.0))
     if not EXACT_CHORDS:
         in_win = near_a & (np.abs(pa[:, 0]) < geo.VESSEL_X_IN) & (np.abs(pa[:, 1]) < geo.VESSEL_Y_IN)
         zs.append(np.where(in_win, geo.Z_UBT, np.nan)); xs.append(np.where(in_win, WALL_THICKNESS / X0_WALL / cos_z, 0.0))
@@ -199,6 +202,32 @@ def scatterers(tr, design, media=None):
         zs.append(np.where(in_exit, geo.Z_VESSEL_MAX, np.nan)); xs.append(np.where(in_exit, WALL_THICKNESS / X0_WALL / cos_z, 0.0))
 
 
+    # D19 (16 Nov 2026, default off): the SBT shell as a scatterer, sbt config "material_scattering": inner Al 0.8 cm, LS
+    # 20 cm (ribs smeared), outer Al 0.8 cm (0.57 X0 at normal incidence); one thin scatterer per layer piece, at the END of
+    # the piece along the motion (17 Nov 2026; was its middle): the SBT own hits stay on the unscattered path, so the measured
+    # line must meet that path where the muon leaves the shell (as a real track does, tangent at its exit point). With the
+    # kick at the middle of a grazing piece (median 8 m of LS) the measured line missed the exit by theta0 x 4 m (~9 cm at
+    # 3 GeV) and often met no side wall at all (bin/sbt_shell_ms_check.py). The deposits upstream of the exit are covered
+    # by the SBT window's shell term (sbt cfg shell_ms_k).
+    sbt_cfg = getattr(design, "sbt", None)
+    zq_shell = {}
+    if sbt_cfg and sbt_cfg.get("material_scattering"):
+        from . import sbt_material as sm
+        for g0, g1, x0_m in ((0.0, sm.G_LS0, sm.AL_X0 / 2.699 / 100), (sm.G_LS0, sm.G_LS1, sm.LS_X0 / sm.LS_DENSITY / 100),
+                             (sm.G_LS1, sm.G_OUT, sm.AL_X0 / 2.699 / 100)):
+            seg, ta, tb = sm.layer_pieces(p, q, g0, g1)
+            o = np.argsort(seg, kind="stable"); seg, ta, tb = seg[o], ta[o], tb[o]
+            L = np.linalg.norm(d, axis=1)
+            for piece in range(2):                      # at most two pieces per segment (way in, way out)
+                zc, xx = np.full(n, np.nan), np.zeros(n)
+                first = np.r_[True, seg[1:] != seg[:-1]] if len(seg) else np.zeros(0, bool)
+                pick = first if piece == 0 else ~first
+                sg = seg[pick]
+                zc[sg] = p[sg, 2] + tb[pick] * d[sg, 2]         # end of the piece (the segments run along the motion)
+                xx[sg] = (tb[pick] - ta[pick]) * L[sg] / x0_m
+                zm = np.full(n, np.nan); zm[sg] = p[sg, 2] + 0.5 * (ta[pick] + tb[pick]) * d[sg, 2]
+                zs.append(zc); xs.append(xx); zq_shell[len(zs) - 1] = zm
+
     # air / helium, sliced in z (MEDIA)
     slices = np.arange(geo.Z_STATE_A + DZ_SLICE / 2, geo.Z_SST1, DZ_SLICE) if (MEDIA if media is None else media) else []
     for zc in slices:
@@ -208,6 +237,9 @@ def scatterers(tr, design, media=None):
         inside = ok & (zc > geo.Z_VESSEL_MIN) & (zc < geo.Z_VESSEL_MAX) & (np.abs(pt[:, 0]) < hx) & (np.abs(pt[:, 1]) < hy)
         x0 = np.where(inside, X0_HELIUM, X0_AIR)
         zs.append(np.where(ok, zc, np.nan)); xs.append(np.where(ok, DZ_SLICE * path_per_dz / x0, 0.0))
+    if query:
+        zq = [zq_shell.get(i, z_) for i, z_ in enumerate(zs)]
+        return np.stack(zs, 1), np.stack(xs, 1), np.stack(zq, 1)
     return np.stack(zs, 1), np.stack(xs, 1)
 
 
@@ -228,12 +260,22 @@ def kicks(tr, design, rng, media=None, tails=None):
     """Scattering of every track: dict with z, theta_x, theta_y (n, S), the total x/X0 (n,) and the number of
     hard single scatters (n,). Gaussian core (Highland on the total x/X0, shared over the scatterers) plus,
     with tails (default TAILS), the single-scattering tails of fastveto.msc."""
-    z, x = scatterers(tr, design, media)
+    el = tr.get("_eloss")
+    if el is None:
+        z, x = scatterers(tr, design, media)
+    else:
+        z, x, zq = scatterers(tr, design, media, query=True)
     p = np.maximum(np.sqrt(tr["bpx"] ** 2 + tr["bpy"] ** 2 + tr["bpz"] ** 2), 0.05)   # at z = 82 m
     x_tot = x.sum(1)
     theta = highland(p, x_tot)
+    if el is not None:          # D19 shell_energy_loss: each scatterer with the momentum the muon has there (the stored
+        # p upstream of the SBT shell, reduced along and after it); Highland on the total x/X0 shared by x_i / x_tot as before
+        from . import sbt_material
+        p = np.maximum(sbt_material.p_at_z(el, zq, np.maximum(el["E_B_stored"] ** 2 - M_MU ** 2, 0) ** 0.5), 0.05)
+        theta = highland(p, x_tot[:, None])                    # (n, S)
+    th2 = theta if theta.ndim == 2 else theta[:, None]
     with np.errstate(invalid="ignore", divide="ignore"):
-        sigma = theta[:, None] * np.sqrt(np.where(x_tot[:, None] > 0, x / x_tot[:, None], 0))
+        sigma = th2 * np.sqrt(np.where(x_tot[:, None] > 0, x / x_tot[:, None], 0))
     tx = rng.normal(size=x.shape) * sigma
     ty = rng.normal(size=x.shape) * sigma
     n_hard = np.zeros(x.shape, np.int64)
@@ -241,11 +283,13 @@ def kicks(tr, design, rng, media=None, tails=None):
         theta_c = TAIL_F * theta
         theta_max = np.maximum(np.minimum(HBARC_FM / (p * R_NUC), 1.0), 2 * theta_c)
         with np.errstate(invalid="ignore", divide="ignore"):
-            lam = x * tail_rate_per_x0(p, theta_c)[:, None]
+            rate = tail_rate_per_x0(p, theta_c)
+            lam = x * (rate if rate.ndim == 2 else rate[:, None])
         n_hard = rng.poisson(np.where(np.isfinite(z) & (x > 0), np.nan_to_num(lam), 0.0))
         r, c = np.nonzero(n_hard)
         rr, cc = np.repeat(r, n_hard[r, c]), np.repeat(c, n_hard[r, c])
-        t = sample_tail_angle(theta_c[rr], theta_max[rr], rng)
+        t = sample_tail_angle(theta_c[rr], theta_max[rr], rng) if theta_c.ndim == 1 else \
+            sample_tail_angle(theta_c[rr, cc], theta_max[rr, cc], rng)
         phi = rng.uniform(0, 2 * np.pi, len(t))
         np.add.at(tx, (rr, cc), t * np.cos(phi))
         np.add.at(ty, (rr, cc), t * np.sin(phi))

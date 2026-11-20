@@ -4,6 +4,214 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-20 — single-track DIS x independent muon, four rows (branch `veto-nov4-source`)
+
+- `RecoConfig.random_hits` (Guglielmo 20 Nov 2026: "random hits only for the LLP signal rejection"): False = no accidental
+  hits on the UBT planes (reco.accidental_hits), SBT (sbt.random_hits) or MS7 strips (shield_strips.tag, cfg random) -> background
+  tagged by its own hits only. Default True (unchanged); background scripts to be switched with the dis_combinatorial fix.
+- Interaction product x mu check (20 Nov 2026, results_rerun/full_chain_extra/diag_mu_ineff, page
+  https://claude.ai/artifact/7mp1KojngTYPHmUwJTVn5U): dis_combinatorial keeps the partner muons that stop in the SBT shell
+  (D19 shell_energy_loss, 45 % of the single-SST1 weight, 1.3 % of rows) -> mu inefficiency 0.48-0.50 for R2/R3 noV0, Z2, Z3
+  (stopped removed: R2 0.050 / 0.059 own hits, Z2 0.101 / 0.103; R1 0.373 / 0.465 own hits). It also drops the other products
+  of the single-track interaction: 98 % (R2 tiles) / 91 % (Z2 tiles) of MS7 single-track events have another charged product
+  on the tile plane (straight lines). The 20 Nov dis_comb_* "after" numbers are not usable; fix proposed, not run.
+
+- `bin/combi_single.py` (new): single-good-track events of an event store (D9 recipe, dis_combinatorial.dis_tracks) x the
+  Nov-4 SST1 muons, all opposite-charge pairs, pair cuts (_pair_cut), measured IP < 2.5 m / 10 cm, x 2 dt / T x spills;
+  scattered-muon flag (beam flag; MS7: parent-charge mu at the exit plane), with / without; per-code split; clustered
+  errors; `--self` DIS x DIS; `--closure` mu x mu; `--veto-design` after tagging on a candidate subsample.
+- `bin/combi_cutflow.py` (new): per-step cut flow (all, opposite, DOCA, vertex with / without 5 cm margin, true IP,
+  IP < 2.5 m, IP < 10 cm), per spill and per 15 y, with track p / angle diagnostics.
+- `bin/combi_single_summary.py` (new): results_rerun/combi_single/numbers.json. Results in STATUS (20 Nov) and the README.
+
+## 2026-11-19 — GA rerun ga_20261119_115533 result (branch `veto-nov4-source`, results only)
+
+- p_max pinned on, bounced-SST1 weight 100: best ga7c3, 225.3 drachmas, score -71.1 (seed R2 x34 -94.3); signal lost
+  5.9 -> 2.7 %, bounced SST1 tagging kept (84 %). See STATUS for the one-event caveat on the SBT-material term.
+- First launch failed (no --inputs, default inputs_nov4_q.npz missing); the GA should take its default from
+  evaluate_designs.EVAL_DATA, not paths.RECO_INPUTS (to do).
+
+## 2026-11-19 — bounced-SST1 term in the objective; gene pinning in the GA (branch `veto-nov4-source`)
+
+- `lib/veto/objective.py`: ObjectiveConfig.w_single_bounced (default 0 = off, earlier scores unchanged); when set, the
+  split-sensitivity reward gets the term sst1_bounced_untagged = w x (1 - res["single"]["SST1 bounced"]), error
+  w x sqrt(eff (1 - eff) / n_eff_single).
+- `evolve/ga_designs.py`: `--pin GENE=VALUE` (held fixed in seeds and children; seeds that change are renamed *_pin),
+  `--w-single-bounced`. Rerun ga_20261119_112015 with v0_pmax_on=1 and weight 100 (Guglielmo).
+
+## 2026-11-19 — GA run ga_20261118_225224 result (branch `veto-nov4-source`, results only)
+
+- No code change. 8 x 12 run from R1 / R2 / R3 + 3.4 m tile-plane seeds; best ga8c4 (198.5 drachmas, score -37.3 vs
+  -77.4 for the R2 x34 seed). Gain is one vessel mu-DIS MC event removed by switching off the V0 p_max cut; see STATUS.
+
+## 2026-11-18 — token-free optimiser (genetic algorithm); R2 reference in the LLM prompt (branch `veto-nov4-source`)
+
+- `evolve/ga_designs.py` (new, Guglielmo: "optimise in a way in which I don't use tokens"): genetic algorithm over named
+  genes (SBT on/off + 10 ring bits + threshold; UBT straw y extent, straw t0, segment cut; V0 rule on/off + theta, r0,
+  early_ns, min_hits, p_max, theta_p, early_tof; strips on/off + 3 layer / 8 station bits of R3 + theta, rule, window;
+  bounce_r_slope). Tournament selection, uniform crossover, mutation, (mu + lambda) truncation; same evaluate_slurm,
+  objective, history / best / confirm files as evolve_designs.py (runs in results/evolve/ga_<date>). Children above the
+  budget (333.5 drachmas, `--max-cost`) or rejected by the loader are dropped before Slurm. Seeds R1 / R2 / R3. `--dry-run`
+  shows generation-1 children; `--resume` continues a run. SBT physics model fixed; no fins.
+- `ga_designs.py` UBT tile genes (Guglielmo: "it can change also the UBT tiles size"): plane half_x 1-3 m, y_lo / y_hi
+  1.35-3 m, flame block xin 0.5-1.5 m and half-height 0.2-1.2 m, tile2 / tile for the flames and for the rest
+  (design.default_tile_regions); R1 / R2 / R3 round-trip to the same cost.
+- `evolve/evolve_designs.py`: prompt's R2 reference now includes the V0 rule (04cd1d5, Slurm 2125101): MS7 V0 0.67,
+  SBT-material < 13, vessel mu 1.3, nu 1.09 / MS7 0.70, signal lost 6.7 / 9.7 % (9.3 / 14.1 % at 2x UBT rate).
+
+- Rate limits in the optimiser WITHOUT the shield-end EM debris (Guglielmo 18 Nov 2026, option B): `run_reco.evaluate(...,
+  rate_em=True)` (default unchanged for run_reco); `evaluate_designs.RATE_EM = False` -> plane rates / over-limit flags from the
+  maps without em_* keys, accidental hits (signal loss) still with them; the with-debris peaks kept per plane
+  (`peak_*_with_em`). Reason: with the debris R1 / R2 / R3's cavern-side 2 x 2 cm flame block is at 2.76 MHz per channel
+  (limit 2.5) -> rate penalty 2054 on every reference design, and the first GA run (ga_20261118_221746, stopped after
+  generation 1) just cut the plane to |x| < 1.62 m to avoid it.
+
+- REVERTED (Guglielmo 18 Nov 2026, "revert B decision (place back the em debris)"): rate limits again WITH the EM
+  debris; `rate_em` / `RATE_EM` removed (the debris adds only 0.01 MHz to the 2.75 MHz flame-block peak anyway).
+
+- `ga_designs.py`: gene `tiles_fine_side` (fine tiles in both / right = -x cavern side / left flame block) and `--seeds` taking
+  .json files of study designs. Seeds of the run of 18 Nov night: R1 / R2 / R3 + `results_rerun/evolve/seeds_tiles_x34_2x2right.json`
+  (R1 / R2 with the tile plane |x| < 1.7 m, 4 x 4 cm, 2 x 2 cm only in the cavern-side flame block; 70.0 / 303.8 drachmas;
+  Guglielmo: "place the 2x2 where is needed and then go for optimization"; 4 x 4 limit stays 1 MHz per channel).
+
+## 2026-11-16 (night) — rock pairs, SBT shell window, tile 3-sigma window, MS7 statistics, forced K+- (branch `veto-nov4-source`)
+
+- `bin/rock_combinatorial.py`: veto in chunks (`--veto-chunk`), streaming IP cut in `cross_pairs(sel=cfg)` (also used by
+  `bin/dis_combinatorial.py`; OOM at 128 GB before), `--survivors` dump, `--ip-cut full|partial`, rock x rock opt-in
+  (`--rock-rock`, dropped). `bin/rock_survivors_page.py` + `docs/pages/rock_survivors.*` (pair explorer, rock species by
+  exact join on the draws).
+- `lib/veto/sbt.py` (b87da94): `shell_window` (default on): the pointing window spans the whole shell crossing (outer to
+  inner surface, +- r / sin a); `crossings(p, q, grow)`.
+- `lib/veto/technology.py` (5f7a770): tiles / tile2 `veto_window=None` -> +- 3 sigma (0.469 / 0.404 ns) instead of +-200 ps.
+- MS7 statistics: complementary importance-sampled samples fsv0 / fsnov0 (closure within 1.6 sigma); `bin/force_kaons.py` +
+  `force_v0(species, only_codes)` + store builder (e825a26): forced K+- decay copies, every forced species stable except
+  in its own copy.
+
+## 2026-11-16 (evening) — pair estimate = direct count; Section 6 cut flow; issues closed (branch `veto-nov4-source`)
+
+- ISSUES A1 decided (Guglielmo, "I prefer direct"): `objective.ObjectiveConfig.bkg_estimate` default `direct` (was
+  `factorised`; the optimiser used `max`): `evolve/objective.py`, `evolve_designs --bkg-estimate`, `end_to_end`, `scan_cone`.
+  Reason: the full-sample closure fails for R2 (7 surviving pairs vs 1.3 from eps x eps; cross-run 37 vs 5.2).
+- `run_reco` background block: `FN_frac_err` = sqrt(sum w_surv^2) / sum w (weighted error of the direct count),
+  `n_eff_survive`, `survivors` (20 heaviest surviving pairs: pair, muons, w_15y, share). `objective` uses the weighted error.
+- `bin/cutflow_notag.py` (new): cut flow without tagging per target / nu flavour / V0 species (interactions, >= 2 tracks,
+  pair cuts no IP, IP < 10 cm, IP < 2.5 m) on event stores; job 2089733 -> `results_rerun/reco/cutflow_notag_*.json`.
+  The nu store's meta declares `flavour` but `events.npz` lacks it: taken from `apply2026_R2_sbt_ubt.npz` (rows aligned).
+- S7 task 11 (rock x mu) is NOT rerun (correction to the entry below): D7 closed, mu x rock already shown negligible;
+  its line in `S7_eval.cmd` is an echo.
+- ISSUES closed: A1, A5, C1 (R1 / R2 / R3 straws have one view: no ghosts), C5, D7, D20.
+
+## 2026-11-16 (evening) — old designs removed (branch `veto-nov4-source`)
+
+- Guglielmo: "remove these old designs from everywhere, only R1, R2, R3". Deleted `designs/D0-D6*`, `designs/E1-E5*`,
+  `designs/modules/` (all `*_mod` variants) and `designs/R2_sbt_ubt_any.json`; they stay in git history.
+- Script defaults and usage examples now use R1 / R2 / R3 (scan_bounce, scan_cone, visualize_reco, benchmark_reco,
+  muon/nu_dis_apply, rock_apply, reco_event_display, dis_combinatorial stores, prepare_interactions `--nu` =
+  `results_rerun/interactions/apply2026_R2_sbt_ubt.npz`, docstrings). `rock_apply` / `reco_event_display` load
+  `designs/<name>.json`.
+- S7 rock x mu (D7) is now queued for R1 and R2 (was D6_straw_mod, OOM at 128 GB). `ROCK_MU` (Shah Rukh's rock draws,
+  file named after the D6 geometry it was drawn with) stays as input data.
+- Deleted (Guglielmo's OK) the old-design outputs in `veto/results`: 91 files (~119 GB: D6_straw muon interactions,
+  per-track DIS, D0-D6 visualisations, report_2026-10-23 design copies) and the store `evstore/vessel_mu_nov4q_D6_straw_mod_kl10`.
+  Shah Rukh's D6 stores in /disk/lhcb_data/sqasim/evstore (~35 GB) were not touched.
+
+## 2026-11-16 (afternoon) — silicon strip stations at the MS7 exit (branch `veto-nov4-source`)
+
+- `lib/veto/shield_strips.py` (new): stations, rate map, own / random hits, back-trace tagging (rules point / vertex);
+  `design.shield_strips`, channels and cost; `interactions.evaluate` and `run_reco` apply it.
+- `bin/strip_study.py` (new): theta calibration, layouts, tagged background vs signal loss.
+
+## 2026-11-16 — SBT pointing window along the wall (branch `veto-nov4-source`)
+
+- `lib/veto/sbt.py`: pointing window z +- r / sin(alpha) along the wall, per-ring hit timing (`window_z`, `sin_min`;
+  `"r"` = old). R2 single SST1 muons tagged 70.5 -> 90.2 %, signal loss 0.51 -> 0.54 %.
+- `bin/diag_untagged.py`: per-muon breakdown of untagged single muons (page: claude.ai/artifact/FnWCuP3xHpYcQewWnZ17U8).
+- `bin/nu_dis_apply.py` default GENIE v2 library; `bin/make_crossrun_pairs.py --pair-block`; batch S5 240G.
+
+## 2026-11-14 — tile2 limits from SR-389, A2 scan memory fix (branch `veto-nov4-source`)
+
+- `lib/veto/technology.py`: tile2 (2 x 2 cm flame tiles) max 2.5 MHz per channel and 90 ps, as SPSC-SR-389 (was 1 MHz, 80 ps).
+- `bin/scan_bounce.py`: first point per design run serially before the worker pool (cache build; 256 GB OOM on 12 Nov).
+- `data/interactions/genie/nu_library_v2.npz` linked to Shah Rukh's GENIE v2 library (MS7 neutrino chain, S3).
+
+## 2026-11-12 — default UBT, batch code, re-run batch scripts (branch `veto-nov4-source`)
+- Default UBT layout 2026-11-11 (design.apply_ubt_layout, plane kind `tiles`, ubt_tiles.regions with 2x2 cm flame blocks),
+  tile rate map from the store (reco.tile_rate_map), tile EM maps (em_debris), straw-UBT material at its own z.
+- make_peak_maps from a store; build_dis_parent_store from one store; air_upstream target group (code 8); paths env overrides.
+- B4: bin/eventcalc_b4.sh fixed (LCG setup, checks) and run; signal_eventcalc default store eventcalc_dcdcfc1.
+- bin/batch/{env.sh, task.sbatch, submit_rerun.sh}: the re-run batch; scan_bounce fixes.
+
+## 2026-11-11 (afternoon) — issue-review code (branch `veto-nov4-source`; D6 on `veto-d6-energy-rescale`)
+- C5: `bin/shell_to_store.py --stream` (column by column, memory-mapped; identical to the in-memory path on 20 seeds);
+  store `design-optimization-dataset-nov4-shell-3220seeds-2026-11-11` built (7.70e8 rows, 84 GB, per-type rates = summary.txt),
+  `paths.MUON_DATASET_FULL` (default switch in the re-run batch, with new pair inputs).
+- D15: Geant4 modules imported in the parent, workers forked, import retry, completeness checks (shield_dis, em_debris,
+  g4_vessel_transport); `VETO_G4_SPAWN=1` = old behaviour.
+- D8: target group `wall` (old key `pvc` accepted); CLI `--wall` (alias `--pvc`).
+- D4: range cut in `shield_dis.draw` (`E_MIN_INT`); rate change 0.04 %.
+- C1: analytic ghost hits of strip planes (`reco.ghost_tiles / ghost_mean / ghost_tile_means`, `RecoConfig.ghost_hits`,
+  `run_reco --no-ghosts`).
+- C9: `docs/patches/C9_categorize_muons.patch` for MuonsAndMatter (to apply by Guglielmo) + README.
+- C7: `bin/evstore_redecay.py --natural` (forced K_L decays for ordinary stores).
+- B4: `evolve/evaluate_designs.py --signal eventcalc` (default), evolve on `paths.RECO_INPUTS`, `VETO_SIGNAL_STORE`,
+  `bin/eventcalc_b4.sh` (regeneration with dcdcfc1 + import; not run).
+- A2: `RecoConfig.bounce_r0`, design knobs `detector.bounce_r_slope / bounce_r0` (clamped), `bin/scan_bounce.py`.
+- D9: `bin/dis_combinatorial.py` (DIS track x muon from event stores, single-track events, V0 products of MS7 originals
+  dropped, veto; bound printed).
+- D2: `bin/d2_selfveto.py` (self-veto of nu-He events by their own products on the planes, and its signal cost).
+- D6 (branch `veto-d6-energy-rescale`): libraries 0.5/1 - 400 GeV in 5 % steps, `VETO_LIB_RESCALE`, `bin/d6_compare_libraries.py`.
+
+## 2026-11-11 — merge of main (PR #16) into `veto-nov4-source`; charge fix completed
+- Merged origin/main 34cb244 (PR #16: charge-sign fix, rare corners, neutral hadrons in the helium, evolution / SBT plan).
+  Only conflict: docs/STATUS.md (both appended): both kept, Shah Rukh's rare-corner bullets back under 2026-11-10 (day).
+- `bin/rock_combinatorial.py` cross_pairs: opposite-charge test on charges (muon_types.charge_from_pdg_column on both sides);
+  before, store muons (+-1) vs rock tracks (-13 q) kept the same-sign pairs (ISSUES D17 b).
+- `paths.RECO_INPUTS` = inputs_nov4_q.npz (charge-fixed pair inputs from PR #16); results/reco copy replaced (data, not in git).
+- ISSUES D17 -> DONE with the PR #16 numbers.
+
+## 2026-11-11 — Nov-4 production as the muon source for everything (branch `veto-nov4-source`, base 4904c4f + V0 commit 48a0f36)
+- Guglielmo's decision (ISSUES D5, 11 Nov): every study uses the Nov-4 complete target production; older sources on request only.
+- `lib/veto/paths.py`: `MUON_DATASET` (design-optimization-dataset-nov4-shell-300seeds-2026-11-10), `RECO_INPUTS` (inputs_nov4.npz),
+  `RATE_MAPS` (sample_nov4.npz), `ms7_parents()` (/disk/lhcb_data/sqasim/ms7_parents/muons_iron_nov4.npz, env VETO_MS7_PARENTS),
+  `nov4_pool_pattern()` + `NOV4_POOL_TRAIN_CHUNKS` = 23 (env VETO_NOV4_POOL).
+- Defaults switched to them: make_reco_inputs, make_design_explorer (also `--html` reads `--out`), end_to_end, run_interactions,
+  muon_dis_apply, rock_combinatorial, run_reco, check_peak_rates, closure_check, make_crossrun_pairs (n_runs from meta "seeds",
+  writes inputs_nov4_xrun.npz), em_debris, shield_dis (generate reads the Nov-4 parents; legacy prepare writes
+  data/shield_dis/muons_iron.npz as LEGACY_PREPARED), generate_muon_study (`--input` Nov-4 pool chunks, `--n-chunks` 23), objective.
+- Data (not in git): symlink data/store/<Nov-4 store> -> Shah Rukh's store; copy of results/reco/inputs_nov4.npz (md5 4437741b...).
+- Every location of Guglielmo's 11 Nov list in paths.py: SQ / SQ_VETO, MUON_DATASET_DIR (store_dir reads the Nov-4 store on
+  /disk/lhcb_data), nov4_pool_pattern(part) + NOV4_POOL_HIDDEN_CHUNKS, NOV4_SHELL_DIR, NU_FLUX_PREFIX (store2026, 6 flavours,
+  NU_FLAVOURS), NU_PROD_RAW, GENIE_APPLY_DIR + nu_apply_2026(design, pdg), EVSTORE_DIR + evstore(name). shield_dis NU_STORE_PREFIX
+  and nu_dis_apply --store / --flavours (all 6) follow; run_interactions --nu-pdg; evstore_eval --store takes bare process names.
+- Not switched yet: make_peak_maps.py (one-run Full_dataset pickle), build_dis_parent_store.py (gamma + zeta).
+- The V0-production work staged on `veto-v0-production` is commit 48a0f36 on this branch.
+
+## 2026-11-10 — V0 tally in g4shield, V0-stable MS7 chain, low-W data, K_L -> pi+ pi- (branch `veto-v0-production`)
+
+- `cpp/g4shield.cc`: `v0_tally()` (every K_L / K_S / Lambda / Xi0 created: creator process, vertex, p, fate below cut /
+  decayed / absorbed / exit); additive, the transport output is unchanged. `bin/shield_dis.py generate --v0-tally`
+  (-> shield_<kind><tag>_v0tally.npz). `lib/veto/shield_iron.py`: `G4SHIELD_BUILD` overrides the module path.
+- `bin/g4pixi.sh`: Geant4 11.4.2 from the FairShip pixi env 26.10 (CVMFS), build + run without the container.
+- `bin/v0_fate.py` (tally analysis), `bin/v0_lowW.py` + `data/reference/lowW_strangeness_photoproduction.json`
+  (SAPHIR / CLAS / ABBHHM / SLAC, sigma_tot), `bin/shield_ip_tail.py` split by V0 species.
+- `lib/fastveto/decay.py`: K_L -> pi+ pi- (1.967e-3) in KL_CHANNELS.
+- Runs: results/shield_dis/shield_muon_g4v114_{default_s401,v0stable_s402}(.npz, _v0tally.npz). Results:
+  docs/v0_production.md slides 4-6, ISSUES D16.
+
+## 2026-11-10 — status-quo report (branch `veto-v0-production`)
+
+- New `docs/status_report_2026-11-10/`: Overleaf-ready LaTeX article (main.tex, sections/, refs.bib, figures/, logos/,
+  README.md), 9 pages: background budget for D6_straw_mod per source, setup, combinatorial, muon DIS, MS7 K_L incl. the
+  V0-vs-data check, neutrinos, rock / EM debris, statistics, open issues. Numbers from docs only, nothing re-run.
+
+## 2026-11-10 — V0 production in the MS7 muon DIS chain vs data (branch `veto-v0-production`, base 4904c4f)
+
+- New `bin/v0_production.py` (host python, existing files only): every V0 made at the MS7 vertex (V0-stable library
+  folded with the PR #15 vertex-energy spectrum), V0 vs W against gamma p 20 GeV (SLAC SHF) and NOMAD yields, V0 at the
+  exit plane vs vertex depth. Results in `results/v0_production/README.md`: Geant4 K0_S / Lambda at W ~ 6 GeV within
+  ~6 % of the gamma p data, Pythia 6 ~x1.9 high; per spill 7.9e3 K_L, 7.8e3 K_S, 5.4e3 Lambda made, 2.9e3 K_L at the
+  exit (21-37 % of them made by the shower in the iron); write-up docs/v0_production.md.
+
 ## 2026-11-10 — event store, MS7 on the Nov-4 muons with Geant4, debris and event viewers (branch `veto-neutrino-2026`)
 
 - `lib/veto/evstore.py`: design-independent event stores, events + track trees (parent links, end reasons, times) from each

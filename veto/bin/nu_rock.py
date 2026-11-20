@@ -20,7 +20,7 @@ each with weight S_f / M_f per spill.
 
     python3 bin/nu_rock.py prepare --prod /disk/lhcb_data/sqasim/nu_prod/tail --draws 200000 --out DIR
     python3 bin/nu_rock.py task --index K --ntasks N --lib nu_library_v2.npz --out DIR       (cudabear container: g4rock)
-    python3 bin/nu_rock.py combine --design designs/modules/D6_straw_mod.json --out DIR
+    python3 bin/nu_rock.py combine --design designs/R2_sbt_ubt.json --out DIR
 """
 import _bootstrap  # noqa: F401
 import argparse

@@ -5,8 +5,8 @@ Geant4 out of the shield, as interactions for the selection and veto (bin/run_in
     python3 bin/shield_dis.py prepare                                   # muons crossing the iron (host python)
     bin/g4.sh python3 bin/shield_dis.py generate --kind muon --n 2000000 --workers 90
     bin/g4.sh python3 bin/shield_dis.py generate --kind nu   --n 500000  --workers 90
-    python3 bin/run_interactions.py --design D6_straw --kind nu --interactions results/shield_dis/shield_muon.npz \\
-        --out results/shield_dis/D6_straw_shield_muon.json
+    python3 bin/run_interactions.py --design R2_sbt_ubt --kind nu --interactions results/shield_dis/shield_muon.npz \\
+        --out results/shield_dis/R2_sbt_ubt_shield_muon.json
 
 1. Parents (veto.shield_iron). Muons: Muons_2950_50cm_before_end_MS.pkl, one full run of the old 506 M input, true
    plane z = 29.20 m; bent by the MS7 field to the vertex (shield_iron.curved_points, since 2026-11-05, D4; mean
@@ -53,16 +53,18 @@ from veto.config import POT_PER_SPILL, SPILLS_15Y  # noqa: E402  (6e20 / 4e13 p.
 from veto import weights  # noqa: E402
 UB = 1e-34                                    # microbarn -> m^2
 V0 = {130: 15.34, 310: 0.026844, 3122: 0.0789, -3122: 0.0789, 3322: 0.0871, -3322: 0.0871}   # c tau [m]
-MASS = {130: 0.497611, 310: 0.497611, 3122: 1.115683, 3322: 1.31486}
+MASS = {130: 0.497611, 310: 0.497611, 3122: 1.115683, 3322: 1.31486, 321: 0.493677}
+KPM = {321: 3.712, -321: 3.712}   # c tau [m]: forced K+- decay copies (bin/force_kaons.py, 16 Nov 2026)
 OUT = paths.results_dir() / "shield_dis"
-PREPARED = paths.PROJECT_DIR / "data" / "shield_dis" / "muons_iron.npz"
+PREPARED = paths.ms7_parents()                   # Nov-4 parents (2026-11-11); prepare --from-transport writes it
+LEGACY_PREPARED = paths.PROJECT_DIR / "data" / "shield_dis" / "muons_iron.npz"   # 2018 one-run pickle (prepare without --from-transport)
 NU_STORES = paths.interactions_data() / "neutrinos2026"      # Shah Rukh 2026-11-09 flux (bin/nu_prepare.py); 2018 flux discarded
 MU_SPLIT = "geant4"                           # D3 (decided 2026-11-09): Geant4 muonNuclear (natural-validated); pythia = systematic
 BEND_PARENT = True                            # D4: parent muon bent by the MS7 field (si.curved_points)
 NU_FLAVOURS = (14, -14, 12, -12, 16, -16)     # D4: every flavour that has a store and an iron library entry
 MU_LIB = paths.PROJECT_DIR / "data/interactions/dis/mu_library_iron.npz"
 NU_LIB = paths.interactions_data() / "genie/nu_library_v2.npz"   # GENIE v2 (Shah Rukh 2026-11-09): Fe56, all 6 flavours
-NU_STORE_PREFIX = NU_STORES / "store"         # stores <prefix>_nu<pdg> (bin/nu_prepare.py)
+NU_STORE_PREFIX = paths.NU_FLUX_PREFIX          # stores <prefix>_nu<pdg>: Shah Rukh's 2026 flux (2026-11-11)
 
 
 # ------------------------------------------------------------------ 1. parents
@@ -115,14 +117,14 @@ def prepare(a):
     keep = (L > 0) & (pz > 0) & (w > 0)
     print(f"{len(x):,} muons ({w.sum():.4g} per spill), {keep.sum():,} cross the iron ({w[keep].sum():.4g} per spill), "
           f"z plane {np.median(z):.3f} m, {time.time() - t0:.0f} s")
-    PREPARED.parent.mkdir(parents=True, exist_ok=True)
-    np.savez(PREPARED, x=x[keep], y=y[keep], z=z[keep], px=px[keep], py=py[keep], pz=pz[keep],
+    LEGACY_PREPARED.parent.mkdir(parents=True, exist_ok=True)
+    np.savez(LEGACY_PREPARED, x=x[keep], y=y[keep], z=z[keep], px=px[keep], py=py[keep], pz=pz[keep],
              q=np.asarray(d["pdg"])[keep].astype(np.int8), weight=w[keep], evt_n=np.asarray(d["evt_n"])[keep],
              L=L[keep], s_in=s_in[keep], s_out=s_out[keep],
              meta=np.array(json.dumps(dict(source=str(si.MUON_FILE), z_shift=si.MUON_Z_SHIFT, n_all=len(x),
                                            w_all=float(w.sum()), iron=[si.Z_IRON0, si.Z_SHIELD_END, si.HALF_X, si.HALF_Y],
                                            pot_per_spill=POT_PER_SPILL))))
-    print(f"wrote {PREPARED}")
+    print(f"wrote {LEGACY_PREPARED} (legacy source; use with generate --prepared)")
 
 
 def parents(kind):
@@ -156,15 +158,23 @@ def parents(kind):
 
 
 # ------------------------------------------------------------------ 2. forced interactions
-def draw(kind, par, n, rng, per_track=False, mu_lib=None, mu_split=None):
+E_MIN_INT = 0.5                  # GeV, lowest muon energy of the interaction library (and of the range cut, D4)
+
+
+def draw(kind, par, n, rng, per_track=False, mu_lib=None, mu_split=None, v0_only=False):
     """N interactions among the parents, probability proportional to w P (each S / N); per_track: one interaction on
     every parent instead, weight w_i P_i (every track contributes once). Returns (inter, part, summary)."""
     from fastveto import dis, nudis
+    s_end = par["s_out"]
     if kind == "muon":
         lib = dis.MuonLibrary(str(mu_lib or MU_LIB), split=mu_split or MU_SPLIT)
-        E_mid = par["p"] - si.DEDX_MU * 0.5 * (par["s_in"] + par["s_out"])
-        sig = np.where(E_mid > 0.5, lib.sigma("iron", np.maximum(E_mid, 0.5)), 0.0)        # microbarn per nucleon
-        P = si.nucleons_per_m3() * sig * UB * par["L"]
+        # ISSUES D4 (11 Nov 2026): range cut. The chord ends where the muon has E_MIN_INT left (mean dE/dx from the
+        # iron start): stoppers no longer get the path they do not travel, and their sigma is taken on the real piece.
+        s_end = np.minimum(par["s_out"], np.maximum(par["s_in"], (par["p"] - E_MIN_INT) / si.DEDX_MU))
+        L_eff = s_end - par["s_in"]
+        E_mid = par["p"] - si.DEDX_MU * 0.5 * (par["s_in"] + s_end)
+        sig = np.where((L_eff > 0) & (E_mid > E_MIN_INT), lib.sigma("iron", np.maximum(E_mid, E_MIN_INT)), 0.0)  # ub / nucleon
+        P = si.nucleons_per_m3() * sig * UB * L_eff
         libs = {None: lib}                     # one library for mu+ and mu- (sign from the parent)
     else:
         libs = {fl: nudis.NuLibrary(str(NU_LIB), flavour=fl) for fl in np.unique(par["pdg"]).tolist()}
@@ -182,7 +192,7 @@ def draw(kind, par, n, rng, per_track=False, mu_lib=None, mu_split=None):
         cdf = np.cumsum(wP)
         idx = np.minimum(np.searchsorted(cdf, rng.random(n) * cdf[-1], side="right"), len(cdf) - 1)
         w_int = np.full(n, S / n)
-    s = rng.uniform(par["s_in"][idx], par["s_out"][idx])
+    s = rng.uniform(par["s_in"][idx], s_end[idx])                  # D4: muons only up to their range
     u = par["u"][idx]
     start = np.stack([par["x"][idx], par["y"][idx], par["z"][idx]], 1)
     if kind == "muon" and BEND_PARENT:
@@ -192,39 +202,47 @@ def draw(kind, par, n, rng, per_track=False, mu_lib=None, mu_split=None):
     else:
         vtx = start + u * s[:, None]
     E = par["p"][idx] - (si.DEDX_MU * s if kind == "muon" else 0.0)
-    ok = E > 0.5
+    ok = E > E_MIN_INT
     inter = dict(parent_row=idx, evt_n=par["evt_n"][idx], pdg_parent=par["pdg"][idx], code=np.full(n, CODE_SHIELD, np.int8),
                  x=vtx[:, 0], y=vtx[:, 1], z=vtx[:, 2], E=E, ux=u[:, 0], uy=u[:, 1], uz=u[:, 2],
                  weight=np.where(ok, w_int, 0.0), p_int=P[idx], w_parent=par["weight"][idx], muon=np.full(n, -1, np.int64), type=np.zeros(n, np.int8))
     parts = []
     inter["component"] = np.zeros(n, np.int8)
     inter["E_lib"] = np.zeros(n)
+    inter["lib_v0"] = np.zeros(n, bool)               # the library final state contains a K_L / K_S / Lambda
     for code, lb in libs.items():
         m = np.nonzero(ok & ((inter["pdg_parent"] == code) if code is not None else True))[0]
         if not len(m):
             continue
-        o = lb.sample("iron", E[m], u[m], vtx[m], inter["pdg_parent"][m], rng)
+        o = lb.sample("iron", E[m], u[m], vtx[m], inter["pdg_parent"][m], rng, **({"v0_only": v0_only} if v0_only else {}))
         o["int"] = m[o["int"]]
         inter["component"][m] = o["component"]
         inter["E_lib"][m] = o["E_lib"]
+        if "lib_v0" in o:
+            inter["lib_v0"][m] = o["lib_v0"]
+            inter["weight"][m] = inter["weight"][m] * o["w_factor"]     # v0_only: x P(V0 final state | E)
         parts.append({k: o[k] for k in ("int", "pdg", "p", "v", "beam")})
     part = {k: np.concatenate([q[k] for q in parts]) for k in parts[0]}
     order = np.argsort(part["int"], kind="stable")
     part = {k: v[order] for k, v in part.items()}
     summ = dict(parents=len(P), parents_per_spill=float(par["weight"].sum()),
                 interactions_per_spill=S, pot_per_spill=POT_PER_SPILL, interactions_15y=S * SPILLS_15Y, draws=n, dropped_low_E=int((~ok).sum()),
-                sampling="one per track, weight w P" if per_track else "proportional to w P, weight S / N")
+                sampling=("one per track, weight w P" if per_track else "proportional to w P, weight S / N")
+                + ({True: "; V0 final states only, weight x P(V0 | E)", "nov0": "; V0-free final states only, weight x P(no V0 | E)"}
+                   .get(v0_only, "")))
     return inter, part, summ
 
 
 # ------------------------------------------------------------------ 3. Geant4 transport
 _G4 = None
+_TALLY = False
 
 
-def _worker_init(seed, natural=None):
+def _worker_init(seed, natural=None, tally=False):
     import os
-    global _G4
+    global _G4, _TALLY
     _G4 = si.init_g4shield(seed=seed * 1000003 + os.getpid(), natural=natural)   # a different stream in every worker
+    _TALLY = tally
 
 
 def _transport_chunk(args):
@@ -232,10 +250,19 @@ def _transport_chunk(args):
     r = _G4.transport(off, pdg, p[:, 0], p[:, 1], p[:, 2], v[:, 0], v[:, 1], v[:, 2])
     r = {k: np.asarray(x) for k, x in r.items()}
     r["ev"] = r["ev"] + ev0
+    r["_e0"] = np.int64(ev0)                     # ISSUES D15: which chunk this is (completeness check in transport)
+    if _TALLY:                                   # D16: every V0 made in the iron (cpp/g4shield v0_tally)
+        t = _G4.v0_tally()
+        names = list(t.pop("processes"))
+        t = {k: np.asarray(x) for k, x in t.items()}
+        t["ev"] = t["ev"] + ev0
+        for k, none in (("creator", "primary"), ("end_process", "below_cut")):   # indices -> names (per worker)
+            t[k] = np.array([names[i] if i >= 0 else none for i in t[k]], dtype=object)
+        r["_v0"] = t
     return r
 
 
-def transport(part, n_inter, workers, chunk=2000, seed=1, natural=None):
+def transport(part, n_inter, workers, chunk=2000, seed=1, natural=None, tally=False):
     """Every final state through the iron with Geant4, in chunks of interactions over forked workers."""
     starts = np.searchsorted(part["int"], np.arange(n_inter + 1))
     jobs = []
@@ -244,16 +271,36 @@ def transport(part, n_inter, workers, chunk=2000, seed=1, natural=None):
         a, b = starts[e0], starts[e1]
         jobs.append((e0, (starts[e0:e1 + 1] - a).astype(np.int64), part["pdg"][a:b].astype(np.int32),
                      part["p"][a:b, :3].astype(np.float64), part["v"][a:b].astype(np.float64)))
-    ctx = mp.get_context("spawn")
+    # ISSUES D15: load the Geant4 libraries once here and FORK the workers (they inherit them; each still initialises its
+    # own run manager with its own seed in _worker_init). VETO_G4_SPAWN=1: the old spawn pool (every worker imports).
+    import os
+    spawn = os.environ.get("VETO_G4_SPAWN") == "1"
+    if not spawn:
+        si.g4shield_module(natural)
+    ctx = mp.get_context("spawn" if spawn else "fork")
     res = []
-    with ctx.Pool(workers, initializer=_worker_init, initargs=(seed, natural)) as pool:
+    with ctx.Pool(workers, initializer=_worker_init, initargs=(seed, natural, tally)) as pool:
         for i, r in enumerate(pool.imap_unordered(_transport_chunk, jobs)):
             res.append(r)
             if (i + 1) % max(1, len(jobs) // 20) == 0:
                 print(f"  transport {i + 1}/{len(jobs)} chunks", flush=True)
+    # ISSUES D15: every chunk must come back, and every interaction of it (fail loudly, never a silent loss)
+    got = sorted(int(r["_e0"]) for r in res)
+    want = [j[0] for j in jobs]
+    if got != sorted(want):
+        missing = sorted(set(want) - set(got))
+        raise RuntimeError(f"Geant4 transport: {len(res)} of {len(jobs)} chunks came back; missing chunk starts {missing[:10]}")
+    for r in res:
+        r.pop("_e0")
+    v0 = [r.pop("_v0") for r in res] if tally else None
     out = {k: np.concatenate([r[k] for r in res]) for k in res[0]}
     order = np.argsort(out["ev"], kind="stable")
-    return {k: v[order] for k, v in out.items()}
+    out = {k: v[order] for k, v in out.items()}
+    if tally:
+        t = {k: np.concatenate([x[k] for x in v0]) for k in v0[0]}
+        o = np.argsort(t["ev"], kind="stable")
+        out["_v0"] = {k: v[o] for k, v in t.items()}
+    return out
 
 
 # ------------------------------------------------------------------ 4. forced decays in the vessel
@@ -270,12 +317,22 @@ def plane_particles(g):
                 beam=np.zeros(len(v), bool))
 
 
-def force_v0(inter, part, rng, copies=1):
-    """`copies` extra interactions per neutral long-lived particle at the plane (weight / copies each): it decays in
-    the vessel, at an independent point and in an independent channel in every copy."""
+def force_v0(inter, part, rng, copies=1, acc_cut=False, species=None, only_codes=None):
+    """species: {pdg: c tau [m]} of the forced particles (default V0; KPM = charged kaons, 16 Nov 2026); only_codes: force
+    only particles of events with these codes (e.g. (3,): the originals, not the existing copies).
+    `copies` extra interactions per neutral long-lived particle at the plane (weight / copies each): it decays in
+    the vessel, at an independent point and in an independent channel in every copy. acc_cut (16 Nov 2026): keep only the
+    copies whose decay has >= 2 charged products with p > 1 GeV heading into the SST1 aperture (+10 % margin) - the
+    others can never pass the selection; their weight is simply not stored (no reweighting needed)."""
     from fastveto import decay
     n_inter = len(inter["weight"])
-    rows = np.nonzero(np.isin(part["pdg"], list(V0)))[0]
+    species = V0 if species is None else species
+    if any(abs(int(c)) == 321 for c in species):                    # K+- channels: the evstore decay table
+        from veto import evstore as _es
+        decay.CHANNELS.setdefault(321, _es.CHANNELS[321])
+    rows = np.nonzero(np.isin(part["pdg"], list(species)))[0]
+    if only_codes is not None:
+        rows = rows[np.isin(inter["code"][part["int"][rows]], list(only_codes))]
     rows = np.repeat(rows[part["p"][rows, 2] > 0], copies)
     if not len(rows):
         return inter, part
@@ -283,7 +340,7 @@ def force_v0(inter, part, rng, copies=1):
     p3 = part["p"][rows, :3]
     pm = np.linalg.norm(p3, axis=1)
     u = p3 / pm[:, None]
-    lam = pm / np.array([MASS[abs(int(c))] for c in pdg]) * np.array([V0[int(c)] for c in pdg])
+    lam = pm / np.array([MASS[abs(int(c))] for c in pdg]) * np.array([species[int(c)] for c in pdg])
     d1 = (geo.Z_VESSEL_MIN - si.Z_PLANE) / u[:, 2]
     d2 = (geo.Z_VESSEL_MAX - si.Z_PLANE) / u[:, 2]
     e1, e2 = np.exp(-d1 / lam), np.exp(-d2 / lam)
@@ -295,6 +352,24 @@ def force_v0(inter, part, rng, copies=1):
     k = len(rows)
     new_id = n_inter + np.arange(k)
     ev_d, pdg_d, p_d, v_d = decay.force_decay(new_id, pdg, part["p"][rows], vdec, rng)
+    if acc_cut:
+        from veto.interactions import charge
+        q = charge(pdg_d)
+        pz = p_d[:, 2]
+        with np.errstate(divide="ignore", invalid="ignore"):
+            xs = v_d[:, 0] + p_d[:, 0] / pz * (geo.Z_SST1 - v_d[:, 2]); ys = v_d[:, 1] + p_d[:, 1] / pz * (geo.Z_SST1 - v_d[:, 2])
+        good_d = (q != 0) & (pz > 0) & (np.linalg.norm(p_d[:, :3], axis=1) > 1.0) & (np.abs(xs) < 1.1 * geo.SST1_HALF_X) \
+            & (np.abs(ys) < 1.1 * geo.SST1_HALF_Y)
+        n_good = np.bincount(ev_d - n_inter, weights=good_d, minlength=len(rows))
+        keepk = np.nonzero(n_good >= 2)[0]
+        remap = np.full(len(rows), -1); remap[keepk] = np.arange(len(keepk))
+        md = remap[ev_d - n_inter] >= 0
+        ev_d, pdg_d, p_d, v_d = n_inter + remap[ev_d[md] - n_inter], pdg_d[md], p_d[md], v_d[md]
+        rows, pdg, Pdec, vdec = rows[keepk], pdg[keepk], Pdec[keepk], vdec[keepk]
+        k = len(rows)
+        new_id = n_inter + np.arange(k)
+        if not k:
+            return inter, part
     # the rest of each copied event: every other particle of the interaction
     src = part["int"][rows]
     starts = np.searchsorted(part["int"], np.arange(n_inter + 1))
@@ -309,9 +384,10 @@ def force_v0(inter, part, rng, copies=1):
     new_inter = {kk: np.concatenate([vv, vv[src]]) for kk, vv in inter.items()}
     new_inter["weight"][n_inter:] = inter["weight"][src] * Pdec / copies
     new_inter["code"][n_inter:] = CODE_SHIELD_V0
-    new_inter["v0"] = np.concatenate([np.zeros(n_inter, np.int64), pdg])
-    new_inter["parent"] = np.concatenate([np.arange(n_inter), src])
-    new_inter["z_decay"] = np.concatenate([np.full(n_inter, np.nan), vdec[:, 2]])
+    old = lambda k, fill: np.asarray(inter[k]) if k in inter else fill           # keep earlier copies' columns
+    new_inter["v0"] = np.concatenate([old("v0", np.zeros(n_inter, np.int64)), pdg])
+    new_inter["parent"] = np.concatenate([old("parent", np.arange(n_inter)), src])
+    new_inter["z_decay"] = np.concatenate([old("z_decay", np.full(n_inter, np.nan)), vdec[:, 2]])
     new_part = {kk: np.concatenate([part[kk], add[kk]]) for kk in part}
     order = np.argsort(new_part["int"], kind="stable")
     return new_inter, {kk: vv[order] for kk, vv in new_part.items()}
@@ -339,18 +415,31 @@ def generate(a):
     par = parents(a.kind)
     print(f"{a.kind}: {len(par['p']):,} parents cross the iron ({par['weight'].sum():.4g} per spill), {time.time() - t0:.0f} s",
           flush=True)
-    inter, part, summ = draw(a.kind, par, a.n, rng, a.per_track, a.mu_lib, a.mu_split)
+    fs = {"all": False, "v0": True, "nov0": "nov0"}[a.final_state if not a.v0_only else "v0"]
+    inter, part, summ = draw(a.kind, par, a.n, rng, a.per_track, a.mu_lib, a.mu_split, v0_only=fs)
+    summ["final_state"] = {False: "all", True: "v0", "nov0": "nov0"}[fs]
+    summ["lib_v0_fraction"] = float(inter["lib_v0"].mean())
     summ["mu_library"] = str(a.mu_lib or MU_LIB)
     summ["mu_split"] = a.mu_split or MU_SPLIT
     print(f"  {summ['interactions_per_spill']:.4g} interactions per spill ({summ['interactions_15y']:.4g} in 15 years); "
           f"{len(part['pdg']):,} final-state particles, {time.time() - t0:.0f} s", flush=True)
-    g = transport(part, len(inter["weight"]), a.workers, a.chunk, a.seed)
+    g = transport(part, len(inter["weight"]), a.workers, a.chunk, a.seed, tally=a.v0_tally)
+    if a.v0_tally:
+        OUT.mkdir(parents=True, exist_ok=True)
+        t = g.pop("_v0")
+        tout = OUT / f"shield_{a.kind}{a.tag}_v0tally.npz"
+        np.savez(tout, **{k: (v.astype(str) if v.dtype == object else v) for k, v in t.items()},
+                 int_weight=inter["weight"], int_z=inter["z"], int_E=inter["E"])
+        print(f"  V0 tally: {len(t['pdg']):,} V0 created -> {tout}", flush=True)
     plane = plane_particles(g)
     plane["primary"] = g["primary"].astype(bool)
     print(f"  Geant4: {len(plane['pdg']):,} particles at z = {si.Z_PLANE:.2f} m, {time.time() - t0:.0f} s", flush=True)
     summ["exit"] = exit_summary(inter, plane)
     plane.pop("primary")
-    inter2, part2 = force_v0(inter, plane, rng, a.v0_copies)
+    n_v0_plane = int(np.isin(plane["pdg"], list(V0)).sum())
+    inter2, part2 = force_v0(inter, plane, rng, a.v0_copies, acc_cut=a.v0_acc_cut)
+    summ["v0_at_plane"] = n_v0_plane
+    summ["v0_acc_cut"] = bool(a.v0_acc_cut)
     v0 = inter2["v0"] != 0
     summ["v0_copies"] = int(v0.sum())
     summ["copies_per_v0"] = a.v0_copies
@@ -385,7 +474,18 @@ def main():
     g.add_argument("--prepared", default=None, help=f"muons through the iron from prepare (default {PREPARED})")
     g.add_argument("--nu-lib", default=None, help=f"neutrino library (default {NU_LIB})")
     g.add_argument("--nu-stores", default=None, help=f"neutrino flux store prefix, <prefix>_nu<pdg> (default {NU_STORE_PREFIX})")
+    g.add_argument("--v0-tally", action="store_true", help="record every V0 created in the iron (cpp/g4shield v0_tally, "
+                   "D16) -> shield_<kind><tag>_v0tally.npz")
     g.add_argument("--v0-copies", type=int, default=1, help="forced vessel decays per V0 at the plane (weight / copies)")
+    g.add_argument("--v0-acc-cut", action="store_true", help="keep only V0 copies with >= 2 charged products > 1 GeV into the "
+                                                             "SST1 aperture (+10 %%): the others never pass the selection")
+    g.add_argument("--final-state", choices=["all", "v0", "nov0"], default="all",
+                   help="muons, importance sampling (16 Nov 2026): 'v0' only library final states with a V0 (weight x P(V0|E)), "
+                        "'nov0' only those without (weight x P(no V0|E); their V0 come from the Geant4 transport); "
+                        "'v0' + 'nov0' = the unbiased chain")
+    g.add_argument("--v0-only", action="store_true", help="muons: draw only library final states with a V0, weight x P(V0 | E) "
+                                                          "(importance sampling of the MS7 V0 chain; secondary V0 made in the "
+                                                          "Geant4 transport of V0-free final states are not in it)")
     g.add_argument("--mu-lib", help="muon DIS library (default data/interactions/dis/mu_library_iron.npz; "
                    "mu_library_iron_v0stable.npz keeps K_S, Lambda for Geant4 to transport and decay)")
     a = ap.parse_args()

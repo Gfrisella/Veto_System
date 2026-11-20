@@ -28,6 +28,10 @@ from . import materials as mat
 from . import vessel as V
 
 TARGET_HELIUM, TARGET_AIR, TARGET_PVC, TARGET_PLANE0 = 0, 1, 2, 10
+TARGET_WALL = TARGET_PVC     # ISSUES D8 (11 Nov 2026): the vessel-wall target group is "wall" (Mylar); "pvc" accepted as an alias
+WALL_ALIASES = ("wall", "pvc")
+TARGET_AIR_UP = 8            # C7 / D7 (12 Nov 2026): the air between the shield end and the vessel entrance, its own group
+                             # (own number of draws: it is statistically empty as part of "air"); 8: free in CODE_NAMES
 AIR_MARGIN = 0.4                   # m, air kept around the vessel and the fins (None = all the air)
 Z_SHIELD_END = geo.Z_SHIELD_END   # m, TRY6 shield end
 UPSTREAM_AIR = True                # D7 (2026-11-05): paths start at the shield end (straight back from A, no field there),
@@ -41,8 +45,10 @@ def target_name(code, design=None):
         return "helium"
     if code == TARGET_AIR:
         return "air"
+    if code == TARGET_AIR_UP:
+        return "air_upstream"
     if code == TARGET_PVC:
-        return "pvc"
+        return "wall"
     i = code - TARGET_PLANE0
     return design.planes[i].name if design is not None else f"plane {i}"
 
@@ -51,6 +57,8 @@ def target_material(code):
     """fastveto.materials name of a design-free target (helium, air, vessel wall)."""
     if code == TARGET_PVC:
         return V.WALL_MATERIAL
+    if code == TARGET_AIR_UP:
+        return "air"
     return target_name(code)
 
 
@@ -178,7 +186,7 @@ def _in_outer(pt):
     return (z >= z0) & (z <= z1) & (np.abs(x) <= hx) & (np.abs(y) <= hy)
 
 
-def crossings(d, design, include=("helium", "air", "pvc", "planes")):
+def crossings(d, design, include=("helium", "air", "wall", "planes")):
     """All target crossings of the muons in d (dict of columns). Returns dict of flat arrays (one row per crossing):
     muon, code, material (index into MATERIAL_NAMES), p0 (k,3), p1 (k,3), u (k,3) muon direction, n_area [nucleons / m^2],
     E [GeV]."""
@@ -228,12 +236,16 @@ def crossings(d, design, include=("helium", "air", "pvc", "planes")):
         elif "air" in include:
             # only the air near the vessel and the fins (C7); one row per piece
             seg, t0, t1 = _near_air_pieces(p, q, design, AIR_MARGIN)
+            zmid = p[seg, 2] + 0.5 * (t0 + t1) * dvec[seg, 2]
+            up = zmid < V.OUTER_BOX[0]                     # upstream of the vessel entrance: its own group (C7 / D7)
             cur_dn = cur["dn"]
-            cur["dn"] = cur_dn[seg]
-            add(idx[seg], TARGET_AIR, "air", p[seg] + t0[:, None] * dvec[seg], p[seg] + t1[:, None] * dvec[seg],
-                n_air * (t1 - t0) * length[seg], slice(None))
+            for code, m in ((TARGET_AIR, ~up), (TARGET_AIR_UP, up)):
+                s_ = seg[m]
+                cur["dn"] = cur_dn[s_]
+                add(idx[s_], code, "air", p[s_] + t0[m][:, None] * dvec[s_], p[s_] + t1[m][:, None] * dvec[s_],
+                    n_air * (t1[m] - t0[m]) * length[s_], slice(None))
             cur["dn"] = cur_dn
-        if "pvc" in include:
+        if any(k in include for k in WALL_ALIASES):
             # exact chords through the wall shell (outer chord minus helium chord, fastveto.vessel): entrance window,
             # lateral walls (also grazing: a line nearly parallel to an inclined wall can stay in it for metres) and exit
             iv = V.piece_intervals(p, q)

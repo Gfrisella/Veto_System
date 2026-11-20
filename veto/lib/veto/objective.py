@@ -4,7 +4,8 @@ Input: the result dict of one design as produced by bin/run_reco.py `evaluate()`
 (the entries of results/reco/results.json). Nothing is re-simulated here.
 
 Priorities, in order (lexicographic, implemented as tiers with weights 1000 / 100 / 10 / 1):
-  0. constraints      rate limits of every plane and the 8 MCHF budget: each violation costs
+  0. constraints      rate limits of every plane and the budget (veto.budget: the cost of the full SBT + UBT
+                      configuration R2; 8 MCHF until 16 Nov 2026): each violation costs
                       at least 1000, more than all the tiers below together (max 111); a rate limit
                       exceeded by a fraction f costs w_rate (1 + rate_slope f), i.e. steeply more
                       (rate_slope = 10: 2 x the limit = 11 000 points, ISSUES A3)
@@ -20,8 +21,9 @@ Background term (default bkg_form = "exp"):  T_bkg = 1 - exp(-N / bkg_scale).
 With bkg_scale = 1 event it is the Poisson probability of at least one false vertex in 15 years.
 It saturates for N >> bkg_scale (no gradient there); bkg_form = "log" keeps one.
 
-Background estimate (ISSUES A1): the direct count of surviving pairs is 0-3 out of 196 736, i.e.
-Poisson noise. The default estimate factorises the single-muon inefficiencies per muon type,
+Background estimate (ISSUES A1): DEFAULT = DIRECT count of surviving pairs (Guglielmo, 16 Nov 2026: the factorised
+estimate failed the full-sample closure for R2, 7 observed vs 1.3); weighted error sqrt(sum w^2) of the survivors,
+90 % CL limit 2.3 / n when none survives. The alternative (bkg_estimate = "factorised") factorises the single-muon inefficiencies per muon type,
     N = N_before * sum_kl f_kl eps_k eps_l ,
 with f_kl the weighted pair composition of the candidates and eps_k = 1 - veto efficiency of the
 muons of type k. By default (eps_source = "pairs") eps_k is measured on the muons of the pairs
@@ -76,12 +78,13 @@ class ObjectiveConfig:
     bkg_form: str = "exp"             # "exp": 1 - exp(-N / bkg_scale) | "log": log10(1 + N / bkg_target) / ...
     bkg_scale: float = 1.0            # exp: false vertices in 15 years at which the term reaches 1 - 1/e
     bkg_target: float = 0.01          # log: events in 15 years regarded as background free
-    bkg_estimate: str = "factorised"  # "factorised" | "direct" | "max" (conservative)
+    bkg_estimate: str = "direct"      # "direct" (default since 16 Nov 2026, Guglielmo, A1) | "factorised" | "max"
     eps_source: str = "pairs"         # eps_k from the muons of the pairs ("pairs") or the single-muon sample ("single")
     sig_loss_max: float = 0.10        # signal loss mapped to the top of the signal tier
     cost_min_kchf: float = 97.2       # straw UBT alone (D0)
-    cost_max_kchf: float = 8000.0     # top of the cost tier = the budget
-    cost_budget_kchf: float = 8000.0  # above it: penalty w_budget * (1 + (cost - budget) / budget)
+    cost_max_kchf: float = None       # top of the cost tier = the budget (None: veto.budget.kchf())
+    cost_budget_kchf: float = None    # above it: penalty w_budget * (1 + (cost - budget) / budget). None: the cost of the full
+                                      # SBT + UBT configuration (R2, veto.budget; Guglielmo 16 Nov 2026, was 8 / 10 MCHF)
     straw_channel_kchf: float = 97.2 / 3600   # converts rel_cost when the area cost is nan (pixels)
     rate_margin: float = 1.0          # penalise above rate_margin * limit (e.g. 0.5 for a factor 2 safety margin)
     w_rate: float = 1000.0            # per limit exceeded: w_rate * (1 + rate_slope * (peak / (margin * limit) - 1))
@@ -107,6 +110,16 @@ class ObjectiveConfig:
     split_sensitivity: bool = True
     w_bkg_tag: float = 100.0
     w_sig_veto: float = 100.0
+    # 19 Nov 2026 (Guglielmo: "count bounced SST1"): untagged fraction of the single-muon "SST1 bounced" sample
+    # (res["single"]), a term of its own: w_single_bounced * (1 - tagged). 0 = off (the default; earlier runs unchanged).
+    w_single_bounced: float = 0.0
+
+    def __post_init__(self):
+        if self.cost_budget_kchf is None or self.cost_max_kchf is None:
+            from veto import budget
+            b = budget.kchf()
+            self.cost_budget_kchf = b if self.cost_budget_kchf is None else self.cost_budget_kchf
+            self.cost_max_kchf = self.cost_budget_kchf if self.cost_max_kchf is None else self.cost_max_kchf
 
 
 def wilson_sigma(p, n):
@@ -117,7 +130,7 @@ def wilson_sigma(p, n):
 def sample_stats(inp=None):
     """Design-independent statistics of the reco inputs: pair composition f_kl, effective sample sizes."""
     if inp is None:
-        inp = np.load(paths.results_dir() / "reco" / "inputs.npz")
+        inp = np.load(paths.results_dir() / "reco" / paths.RECO_INPUTS)
     t = inp["tr_type"][inp["cand"]].astype(int)
     w = inp["cand_w"]
     f = np.zeros((3, 3))
@@ -150,7 +163,10 @@ def confusion_matrix(res, stats, cfg=ObjectiveConfig()):
     fn_fact_err = float(np.sqrt(((2 * f @ eps) * eps_err) @ ((2 * f @ eps) * eps_err)))
     n_surv = b["n_survive"]
     fn_dir = b["FN_frac"]
-    fn_dir_err = fn_dir / math.sqrt(n_surv) if n_surv else 2.3 / b["n"]     # 0 survivors: 90 % CL limit
+    if n_surv:   # weighted error when run_reco gives it (A1, 16 Nov 2026: a few heavy pairs dominate), else Poisson
+        fn_dir_err = b.get("FN_frac_err", fn_dir / math.sqrt(n_surv))
+    else:
+        fn_dir_err = 2.3 / b["n"]                                            # 0 survivors: 90 % CL limit
     fn, fn_err = {"factorised": (fn_fact, fn_fact_err), "direct": (fn_dir, fn_dir_err),
                   "max": max((fn_fact, fn_fact_err), (fn_dir, fn_dir_err))}[cfg.bkg_estimate]
 
@@ -188,6 +204,11 @@ def rate_penalty(res, cfg=ObjectiveConfig()):
                 p += 1 + cfg.rate_slope * (peak / (cfg.rate_margin * limit) - 1)
                 over.append(f"{pl['plane']}: {peak:.3g} > {cfg.rate_margin:g} x {limit:.3g} {unit}")
     return p, over
+
+
+def _drachma_kchf():
+    from veto import budget
+    return budget.drachma_kchf()
 
 
 def budget_penalty(cost, cfg=ObjectiveConfig()):
@@ -303,6 +324,11 @@ def score(res, stats, cfg=ObjectiveConfig()):
                      "background_untagged": (cfg.w_bkg_tag * (1 - r_bkg), cfg.w_bkg_tag * abs(dr_dn) * n_bkg_err),
                      "signal_vetoed": (cfg.w_sig_veto * sg["FP"], cfg.w_sig_veto * sg["FP_err"]),
                      "cost": (cost_points(cost, cfg), 0.0)}
+            if cfg.w_single_bounced:
+                eff = float((res.get("single") or {}).get(TYPES[0], 0.0))
+                n_eff = max(float(stats["n_eff_single"][0]), 1.0)
+                terms["sst1_bounced_untagged"] = (cfg.w_single_bounced * (1 - eff),
+                                                  cfg.w_single_bounced * math.sqrt(max(eff * (1 - eff), 0.0) / n_eff))
         else:
             terms = {"rate": (cfg.w_rate * p_rate, 0.0), "budget": (cfg.w_budget * p_budget, 0.0),
                      "sensitivity": (cfg.w_sens * (1 - sens), cfg.w_sens * sens_err), "cost": (cost_points(cost, cfg), 0.0)}
@@ -314,6 +340,7 @@ def score(res, stats, cfg=ObjectiveConfig()):
             "reward_err": math.sqrt(sum(e * e for _, e in terms.values())),
             "terms": terms, "feasible": not over and not p_budget, "over_rate_limit": over,
             "over_budget": bool(p_budget), "cost_kchf": cost, "cost_pct_budget": 100 * cost / cfg.cost_budget_kchf,
+            "cost_drachma": cost / _drachma_kchf(), "budget_drachma": cfg.cost_budget_kchf / _drachma_kchf(),
             "sensitivity": sens,
             "bkg_events_15y": n_bkg_raw, "bkg_events_15y_weighted": n_bkg, "bkg_events_15y_err": n_bkg_err,
             "bkg_by_source": sources, "bkg_source_weight": src_w,
@@ -336,11 +363,11 @@ def main():
               f"direct {bg['n_survive_direct']} pairs, FN {bg['FN_direct']:.3g} +- {bg['FN_direct_err']:.2g})")
         print("  single inefficiency: " + ", ".join(f"{k} {e:.3g} +- {de:.2g}" for k, (e, de) in cm["single_inefficiency"].items()))
         print(f"  signal efficiency {100 * sg['efficiency']:.2f} +- {100 * sg['efficiency_err']:.2f} %   "
-              f"cost {r['cost_kchf']:.0f} kCHF")
+              f"cost {r['cost_drachma']:.1f} drachmas")
         for o in r["over_rate_limit"]:
             print(f"  OVER RATE LIMIT  {o}")
         if r["over_budget"]:
-            print(f"  OVER BUDGET  {r['cost_kchf']:.0f} > {r['config']['cost_budget_kchf']:.0f} kCHF")
+            print(f"  OVER BUDGET  {r['cost_drachma']:.1f} > {r['budget_drachma']:.1f} drachmas")
 
 
 if __name__ == "__main__":

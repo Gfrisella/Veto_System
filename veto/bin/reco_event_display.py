@@ -3,7 +3,7 @@
 muons: each sampled SST1 muon is one event; what it leaves in the veto planes, what the backward search sees, and why it is
 vetoed or missed. Accidental hits are OFF (own hits only), so the display shows the algorithm's logic on the muon itself.
 
-    python3 bin/reco_event_display.py <seed dir> --design D6_straw_mod --out reco_display [--per-type 3000 --seeds 200]
+    python3 bin/reco_event_display.py <seed dir> --design R2_sbt_ubt --out reco_display [--per-type 3000 --seeds 200]
 
 Outcome per muon (single-track events, search on every plane upstream of SST1):
   vetoed (straight)   a hit matches the straight backward extrapolation of the measured SST1 track
@@ -37,12 +37,12 @@ def no_accidentals(design, maps, n_events, window_ns, cfg, rng):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("dir"); ap.add_argument("--design", default="D6_straw_mod"); ap.add_argument("--out", required=True)
+    ap.add_argument("dir"); ap.add_argument("--design", default="R2_sbt_ubt"); ap.add_argument("--out", required=True)
     ap.add_argument("--per-type", type=int, default=3000); ap.add_argument("--seeds", type=int, default=200)
     a = ap.parse_args()
     reco.accidental_hits = no_accidentals
     rng = np.random.default_rng(4)
-    design = dmod.load(f"designs/modules/{a.design}.json" if not a.design.endswith(".json") else a.design)
+    design = dmod.load(f"designs/{a.design}.json" if not a.design.endswith(".json") else a.design)
     cols = {}
     for f in sorted(glob.glob(f"{a.dir}/seed_*.npz"))[:a.seeds]:
         d = np.load(f)

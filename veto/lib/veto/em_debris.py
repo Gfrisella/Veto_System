@@ -1,7 +1,7 @@
 """EM debris from the end of the muon shield (ISSUES B2, decided 2026-11-05: our own Geant4, host build).
 
 Two Geant4 stages (separate processes: one G4RunManager per process), driven by bin/em_debris.py:
-  1. shield   the muons crossing the last 50 cm of MS7 iron (data/shield_dis/muons_iron.npz, state at z = 29.20 m),
+  1. shield   the muons crossing the last 50 cm of MS7 iron (paths.ms7_parents(): Nov-4 transport, state at z = 29.20 m),
               carried to the last DEPTH_X0 radiation lengths (shield_iron.curved_points: field, mean dE/dx) and through
               that slab with Geant4 (cpp/g4shield, FTFP_BERT incl. EM, field); every e+-, gamma above E_CUT at the plane
               z = 29.90 m is kept.
@@ -27,6 +27,7 @@ DEPTH_X0 = 0.5 / X0_FE           # the whole last 50 cm of MS7 (28.5 X0, 29.39 -
                                  # showers, MeV photons ~3.4 X0), same run time -> Guglielmo: full 50 cm. --depth to vary.
 Z_PLANES = tuple(geo.Z_UBT + np.arange(0, 10.001, 1.0))
 EM_FILE = "em_maps.npz"          # results/em_debris/
+SEG_DTX = 0.2                    # straw segment direction cut |tx_segment - tx_track| (option "segment_cut", 17 Nov 2026)
 
 
 def detection_probability(plane):
@@ -45,9 +46,26 @@ def make_maps(rec, w_per_spill, maps):
     w = w_per_spill[rec["ev"]]
     kinds = {"e": np.abs(rec["pdg"]) == 11, "g": rec["pdg"] == 22}
     ub, yb, zs, uyb = maps["u_bins"], maps["y_bins"], maps["z_slices"], maps["ubt_y_bins"]
+    # UBT straw plane (17 Nov 2026, fix): the crossings are recorded at the first EM plane z = Z_UBT (the tile plane), the
+    # straws sit at Z_UBT_STRAW, 40 cm upstream; the debris comes in steeply from the flames, so project each crossing back
+    # along its direction (air, no field) before the window cut (was: the tile-plane crossings, ~1.6x too many electrons).
+    dz_straw = geo.Z_UBT - getattr(geo, "Z_UBT_STRAW", geo.Z_UBT)
+    if dz_straw > 0 and "px" in rec:
+        with np.errstate(divide="ignore", invalid="ignore"):
+            x_straw = rec["x"] - rec["px"] / rec["pz"] * dz_straw
+            y_straw = rec["y"] - rec["py"] / rec["pz"] * dz_straw
+        fwd = rec["pz"] > 0
+    else:
+        x_straw, y_straw, fwd = rec["x"], rec["y"], np.ones(len(rec["x"]), bool)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        tx_straw = np.where(fwd, rec["px"] / rec["pz"], np.inf) if "px" in rec else np.zeros(len(rec["x"]))
     for k, m in kinds.items():
-        at_ubt = m & (rec["plane"] == 0) & (np.abs(rec["x"]) < geo.UBT_HALF_X)
-        out[f"em_ubt_{k}"] = np.histogram(rec["y"][at_ubt], uyb, weights=w[at_ubt])[0]
+        at_ubt = m & (rec["plane"] == 0) & fwd & (np.abs(x_straw) < geo.UBT_HALF_X)
+        out[f"em_ubt_{k}"] = np.histogram(y_straw[at_ubt], uyb, weights=w[at_ubt])[0]
+        # optimiser option "segment_cut" of the straw UBT (17 Nov 2026): only debris whose x-slope is within SEG_DTX of a
+        # near-axis track (signal back-traces and SST1 muons have |tx| < ~0.05) forms a matching 6-layer segment
+        seg = at_ubt & (np.abs(tx_straw) < SEG_DTX)
+        out[f"em_ubt_{k}_seg"] = np.histogram(y_straw[seg], uyb, weights=w[seg])[0]
         fin = np.zeros((2, len(zs), len(ub) - 1, len(yb) - 1))
         for iz, z in enumerate(zs):
             ip = np.nonzero(np.abs(z_planes - z) <= 0.51)[0]   # nearest EM plane (old inputs: slices from 30.6 m)
@@ -61,4 +79,12 @@ def make_maps(rec, w_per_spill, maps):
                 s = side == sd
                 fin[sd, iz] = np.histogram2d(u[s], rec["y"][sel][s], [ub, yb], weights=w[sel][s])[0]
         out[f"em_fin_{k}"] = fin
+        # UBT tile plane (default layout 11 Nov 2026, at the first EM plane z = Z_UBT): 2D map over the whole plane, the
+        # binning of reco.tile_rate_map (TILE_BIN, half sizes UBT_TILES_HALF_X / _Y)
+        from .reco import TILE_BIN
+        xe = np.arange(-geo.UBT_TILES_HALF_X, geo.UBT_TILES_HALF_X + 1e-9, TILE_BIN)
+        ye = np.arange(-geo.UBT_TILES_HALF_Y, geo.UBT_TILES_HALF_Y + 1e-9, TILE_BIN)
+        at_t = m & (rec["plane"] == 0)
+        out[f"em_tile_{k}"] = np.histogram2d(rec["x"][at_t], rec["y"][at_t], [xe, ye], weights=w[at_t])[0]
+    out["em_tile_x_edges"], out["em_tile_y_edges"] = xe, ye
     return out

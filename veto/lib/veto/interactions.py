@@ -1,7 +1,7 @@
 """Backgrounds from particle interactions after the muon shield (lib/fastveto) through our selection and veto.
 
 fastveto (fastveto.dis for muons, fastveto.nudis for neutrinos) forces interactions in the vessel helium, the
-air (z = 30.6 - 82 m), the vessel walls (350 um Mylar; target key 'pvc' kept) and every plane of a design, with a weight (interactions per spill) and the
+air (z = 30.6 - 82 m), the vessel walls (350 um Mylar; target key 'wall', was 'pvc' until ISSUES D8) and every plane of a design, with a weight (interactions per spill) and the
 final-state particles (pdg, momentum, production point, beam = the scattered muon / outgoing lepton). Here:
 
   tracks     charged particles are straight lines from their production point (no field before the
@@ -19,7 +19,7 @@ final-state particles (pdg, momentum, production point, beam = the scattered muo
                   muon, if it is not a vertex track, is followed back past the vertex to its parent's hits
                c  truth bound: the parent muon crossed a plane upstream of the interaction (no efficiency,
                   no reconstruction): the best any algorithm can do. Neutrinos have no parent.
-Results per target (helium, air, wall ('pvc'), each plane): interactions, selected, surviving a / b / c, per 15 years,
+Results per target (helium, air, wall (was 'pvc'), each plane): interactions, selected, surviving a / b / c, per 15 years,
 with errors from a bootstrap over input muons (evt_n: rows of one input muon are not independent).
 """
 
@@ -32,7 +32,7 @@ from . import reco
 from .config import SPILLS_15Y  # noqa: E402  (4e13 p.o.t. per spill)
 CHARGE = {11: -1, 13: -1, 15: -1, 211: 1, 321: 1, 2212: 1, 3222: 1, 3112: -1, 3312: -1, 3334: -1, 411: 1, 431: 1,
           4122: 1, 521: 1}
-CODE_NAMES = {0: "helium", 1: "air", 2: "pvc", 3: "shield_iron", 4: "shield_iron_v0", 5: "rock_wall", 6: "rock_floor", 7: "neutral_he"}   # bin/shield_dis.py: last 50 cm of
+CODE_NAMES = {0: "helium", 1: "air", 2: "wall", 3: "shield_iron", 4: "shield_iron_v0", 5: "rock_wall", 6: "rock_floor", 7: "neutral_he", 8: "air_upstream"}   # bin/shield_dis.py: last 50 cm of
 # MS7; 4 = copies of those interactions with a K_L / K_S / Lambda forced to decay in the vessel (weight x P(decay))
 
 
@@ -163,6 +163,16 @@ def parent_crossed(inter, sel, muons, design):
     return hit
 
 
+CL90 = 2.30   # Poisson 90 % CL upper limit for 0 observed events
+
+
+def ul90(w):
+    """90 % CL upper limit [same units as w] when none of the weighted events w survives (Guglielmo 18 Nov 2026):
+    2.30 x the effective weight of one event, sum(w^2) / sum(w), of the sample before tagging."""
+    w = np.asarray(w, float)
+    return float(CL90 * (w ** 2).sum() / w.sum()) if len(w) and w.sum() > 0 else 0.0
+
+
 def bootstrap(w, groups, n_boot=200, rng=None):
     """1-sigma error of sum(w), resampling the groups (input muons) with replacement; at least sum / sqrt(number of
     groups), so that a sum resting on one input muon gets 100 % (the bootstrap cannot vary a single group)."""
@@ -190,13 +200,27 @@ def evaluate(inter, part, design, maps, cfg, rng, muons=None, levels=("a", "b"),
         sel, pair, vertex = sel[keep], pair[keep], vertex[keep]
     w15 = inter["weight"] * SPILLS_15Y
     survive = {}
+    strip_tagged = None
     if len(sel):
         trk, ev, z_a, z_b, _ = event_tracks(inter, tr, sel, pair, vertex, muons)
+        v0 = dict(vtx=vertex, pvis=tr["p"][pair[:, 0]] + tr["p"][pair[:, 1]])
+        scfg = getattr(design, "sbt", None)
+        if scfg and (scfg.get("selftag_hits") or scfg.get("zone_rule")):   # D19: the interaction's own LS deposits
+            from . import sbt_material
+            v0["sbt_hits"] = sbt_material.own_hits_from_part(sel, inter, part, tr, pair, scfg,
+                                                             np.random.default_rng(int(rng.integers(2 ** 31))), muons)
         for lev, z in (("a", z_a), ("b", z_b)):
             if lev in levels:
-                r = reco.run_events(trk, ev, z, design, maps, cfg, rng)
+                r = reco.run_events(trk, ev, z, design, maps, cfg, rng, v0=v0)
                 survive[lev] = ~r["vetoed"][:len(sel)]
         survive["c"] = ~parent_crossed(inter, sel, muons, design) if muons is not None else np.ones(len(sel), bool)
+        strips = getattr(design, "shield_strips", None)
+        if strips is not None and len(strips["stations"]):   # silicon strip stations at the MS7 exit (16 Nov 2026)
+            from . import shield_strips
+            st = shield_strips.tag_events(strips, part, inter["z"], None, sel, vertex, tr["p"][pair[:, 0]] + tr["p"][pair[:, 1]], rng)
+            strip_tagged = st["tagged"]
+            for lev in list(survive):
+                survive[lev] = survive[lev] & ~strip_tagged
     groups = inter["evt_n"] if "evt_n" in inter else np.arange(n_inter)
     diag = {}
     if len(sel) and muons is not None:           # why level b misses: per selected event
@@ -219,6 +243,10 @@ def evaluate(inter, part, design, maps, cfg, rng, muons=None, levels=("a", "b"),
         row = dict(interactions=float(w15[m_all].sum()), n_interactions=int(m_all.sum()),
                    selected=float(w15[sel][m_sel].sum()), n_selected=int(m_sel.sum()),
                    selected_err=bootstrap(w15[sel][m_sel], groups[sel][m_sel], rng=rng))
+        if strip_tagged is not None:
+            ws_ = w15[sel][m_sel]
+            row["strip_tagged_frac"] = float((ws_ * strip_tagged[m_sel]).sum() / max(ws_.sum(), 1e-300))
+            row["strip_tagged_15y"] = float((ws_ * strip_tagged[m_sel]).sum())
         for lev, s in survive.items():
             mm = m_sel & s
             row[f"survive_{lev}"] = float(w15[sel][mm].sum())
@@ -242,7 +270,7 @@ def evaluate(inter, part, design, maps, cfg, rng, muons=None, levels=("a", "b"),
 
 
 # ---------------------------------------------------------------- cached, for the objective
-DESIGN_FREE_CODES = (0, 1, 2)   # helium, air, wall (Mylar): drawn from the muon dataset alone, the same for every design
+DESIGN_FREE_CODES = (0, 1, 2, 8)   # helium, air, wall (Mylar): drawn from the muon dataset alone, the same for every design
 
 
 def prepare(inter, part, cfg, muons=None, codes=DESIGN_FREE_CODES, g4=None):
@@ -275,10 +303,19 @@ def prepare(inter, part, cfg, muons=None, codes=DESIGN_FREE_CODES, g4=None):
                event_zint=inter["z"][sel], event_muon=(inter["muon"][sel] if "muon" in inter else np.full(len(sel), -1)),
                interactions15={int(c): float(inter["weight"][inter["code"] == c].sum() * SPILLS_15Y) for c in codes})
     out["interactions15"] = np.array([out["interactions15"].get(c, 0.0) for c in codes])
+    out["event_inter"] = idx[sel]                         # row of each selected event in the input inter (D19: own deposits)
     out["codes"] = np.array(codes)
     if len(sel):
         trk, ev, z_a, z_b, _ = event_tracks(inter, tr, sel, pair, vertex, muons)
         out.update({f"trk_{k}": v for k, v in trk.items()}, track_event=ev, track_z_a=z_a, track_z_b=z_b)
+        # for the shield-end strip stations (16 Nov 2026): vertex, visible momentum and the exit-plane hits of the products
+        from . import shield_strips
+        pos = np.full(n_inter, -1); pos[sel] = np.arange(len(sel))
+        he, hx, hy, htx, hty = shield_strips.exit_hits(part["int"], part["pdg"], part["p"], part["v"], slopes=True)
+        k = pos[he] >= 0
+        out.update(event_vtx=vertex, event_pvis=tr["p"][pair[:, 0]] + tr["p"][pair[:, 1]],
+                   strip_hit_event=pos[he[k]], strip_hit_x=hx[k], strip_hit_y=hy[k], strip_hit_tx=htx[k], strip_hit_ty=hty[k],
+                   strip_parent_row=np.full(len(sel), -1))      # set by the caller when the parents are MS7 muons
     return out
 
 
@@ -288,17 +325,51 @@ def veto(prep, design, maps, cfg, rng, level="b", muons=None):
     w, code, grp = prep["event_weight15"], prep["event_code"], prep["event_group"]
     n = len(w)
     surv = np.zeros(0, bool)
+    scfg = getattr(design, "sbt", None)
+    exists = np.ones(n, bool)
+    if "sbt_material" in prep:          # D19 (bin/sbt_prepare.py): the SBT material exists only where the design has SBT cells
+        from . import sbt as _sbt, sbt_material as _sm
+        _sm.register()                               # target names 9101-9104
+        if not scfg:
+            exists[:] = False
+        else:
+            ring = np.clip(np.searchsorted(_sbt.RING_EDGES, prep["event_zint"], side="right") - 1, 0, _sbt.N_RING - 1)
+            exists = np.isin(ring, scfg["cell_rings"])
+    exists_ring = exists.copy()
+    if "event_beyond_stop" in prep and scfg and scfg.get("shell_energy_loss"):   # D19: beyond the parent's stopping point
+        exists &= ~np.asarray(prep["event_beyond_stop"], bool)
     if n:
         trk = {k[4:]: prep[k] for k in prep if k.startswith("trk_")}
         z = prep["track_z_b" if level == "b" else "track_z_a"]
-        surv = ~reco.run_events(trk, prep["track_event"], z, design, maps, cfg, rng)["vetoed"][:n]
+        v0 = dict(vtx=prep["event_vtx"], pvis=prep["event_pvis"]) if "event_vtx" in prep else None
+        if v0 is not None and "sbt_dep_event" in prep and scfg and (scfg.get("selftag_hits") or scfg.get("zone_rule")):
+            from . import sbt_material
+            d = sbt_material.fired(dict(pid=prep["sbt_dep_event"], cell=prep["sbt_dep_cell"], edep=prep["sbt_dep_edep"],
+                                        t=prep["sbt_dep_t"]), scfg, np.random.default_rng(int(rng.integers(2 ** 31))))
+            v0["sbt_hits"] = dict(event=d["pid"].astype(np.int64), cell=d["cell"].astype(np.int64), t=d["t"])
+        surv = ~reco.run_events(trk, prep["track_event"], z, design, maps, cfg, rng, v0=v0)["vetoed"][:n]
+        strips = getattr(design, "shield_strips", None)
+        if strips is not None and len(strips["stations"]) and "event_vtx" in prep:     # shield-end strip stations
+            from . import shield_strips
+            if "strip_hit_tx" in prep:                    # layers: products back to each layer, parent muon upstream
+                hits = shield_strips.layer_hits(strips, prep["strip_hit_event"], prep["strip_hit_x"], prep["strip_hit_y"],
+                                                prep["strip_hit_tx"], prep["strip_hit_ty"], prep["event_zint"],
+                                                prep.get("strip_parent_row", np.full(n, -1)), rng)
+            else:                                         # older caches: exit-face hits only
+                hits = shield_strips.on_stations(strips, prep["strip_hit_event"], prep["strip_hit_x"], prep["strip_hit_y"], rng)
+            strips = dict(strips, random=getattr(cfg, "random_hits", False))
+            surv &= ~shield_strips.tag(strips, prep["event_vtx"], prep["event_pvis"], rng, hits=hits)["tagged"]
+    if n and not exists.all():                       # no SBT material there: those events do not exist for this design
+        w = np.where(exists, w, 0.0)
     out = {}
     for i, c in enumerate(prep["codes"]):
         m = code == c
-        out[CODE_NAMES[int(c)]] = dict(interactions=float(prep["interactions15"][i]), selected=float(w[m].sum()),
+        out[CODE_NAMES.get(int(c), str(int(c)))] = dict(interactions=float(prep["interactions15"][i]) * float(exists_ring.mean() if n else 1.0),
+                                       selected=float(w[m].sum()),
                                        n_selected=int(m.sum()), survive=float(w[m & surv].sum()),
                                        survive_err=bootstrap(w[m & surv], grp[m & surv], rng=rng),
                                        n_survive=int((m & surv).sum()))
     total = sum(r["survive"] for r in out.values())
     err = bootstrap(w[surv], grp[surv], rng=rng) if n else 0.0
-    return dict(per_target=out, total=float(total), total_err=float(err), n_events=int(n), n_survive=int(surv.sum()))
+    return dict(per_target=out, total=float(total), total_err=float(err), n_events=int(n), n_survive=int(surv.sum()),
+                ul90=(ul90(w[exists]) if n else 0.0) if not (n and (surv & exists).any()) else None)   # 90 % CL if none left

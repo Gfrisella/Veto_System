@@ -723,6 +723,41 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
   Folded: 5.4e8 x <= 5e-7 x 1/100 (IP^2 to 0.1 m) x 0.02 (real spectrum: 99 % < 4.9 GeV; two tracks > 1 GeV need ~5 GeV+)
   -> rock neutrons ~0.05 per 15 y (0.01-0.5); 2.7 if the spectrum softness is ignored (upper end). No veto for these.
 
+## 2026-11-10 (Guglielmo) V0 production in the MS7 muon chain vs data (branch veto-v0-production)
+- bin/v0_production.py -> results/v0_production/README.md. Made at the vertex (Geant4 muonNuclear, V0-stable library, PR #15
+  vertex spectrum): per spill K_L 7.9e3, K_S 7.8e3, Lambda 5.4e3, anti-Lambda 260 (~1 % per interaction: median W 1.3 GeV).
+- Data check at W = 6.2 GeV (gamma p 20 GeV, SLAC SHF): K0_S 0.087 vs 0.082 +- 0.003, Lambda 0.051 vs 0.049 +- 0.002;
+  Pythia 6 x1.9 high -> supports Geant4 as default (D3); the Pythia "x2.7" spread looks one-sided.
+- Exit plane: K_L 2.9e3 / spill = 0.40 of made; primaries alone give 0.25-0.31 -> 25-35 % cascade secondaries. K_S / Lambda
+  at the plane all from the cascade (vertex ones decayed, D9). Not done: full V0 tally in the iron (needs g4shield change + run).
+- 10 Nov (later): V0 tally in g4shield + V0-stable chain (Geant4 11.4.2 pixi; 11.4 = 11.2 within 1-3 % for K_L): 1.5e4 K_L
+  made per spill (half in the shower), exit K_L 37 % shower; K_S / Lambda kept at the vertex: vessel decays x8-30 but none
+  passes the selection (< 1e5 / 15 y each before IP vs 1.7e7 K_L). Low W: Geant4 >= x2-3 low but only ~8 % of the relevant
+  K_L -> +8-15 %. K_L -> pi+ pi- added. docs/v0_production.md slides 4-6, ISSUES D16.
+
+## 2026-11-11 (Guglielmo) Nov-4 production for everything (branch veto-nov4-source)
+- Decision: the Nov-4 complete target production is the muon source for every study, D5 included (ISSUES D5 note 11 Nov).
+  No enriched tail -> D5's convention / angle mismatch gone; "which tail is right" (dataset c vs Nov-4) -> Nov-4.
+- Code defaults switched via lib/veto/paths.py (MUON_DATASET, RECO_INPUTS, RATE_MAPS, ms7_parents, nov4_pool_pattern), see
+  CHANGELOG 2026-11-11. Checked: store 4.72e10 mu / spill, 3.22e4 / spill reaching SST1 (types 0-2), MS7 parents 3.95e7 rows
+  4.62e8 / spill, both recorded at 4e13 (no rescale). Nothing run.
+- Branch veto-nov4-source (worktree .claude/worktrees/nov4-source): commit 48a0f36 = the V0 work staged on veto-v0-production,
+  then the switch. The main checkout is unchanged except the store symlink and the inputs_nov4.npz copy.
+- Data locations (Guglielmo's list, 11 Nov; all in lib/veto/paths.py, all checked to exist):
+  Muons: source (PDG +-13) /disk/lhcb_data/sqasim/nov4_pool/train_000-022.h5 + hidden_000-003.h5 (nov4_pool_pattern("train" |
+  "hidden")); after the shield transport, one file per spill: nov4_pool/shell/train/ (3221 files) + shell/hidden/ (561) +
+  shell/summary.txt (NOV4_SHELL_DIR); design-optimisation store /disk/lhcb_data/sqasim/workspace/uzh/Veto_System/veto/data/
+  store/design-optimization-dataset-nov4-shell-300seeds-2026-11-10 (MUON_DATASET_DIR, store_dir(MUON_DATASET) reads it there;
+  identical to the /disk/users/sqasim copy); through the shield end /disk/lhcb_data/sqasim/ms7_parents/muons_iron_nov4.npz.
+  Neutrinos: flux stores .../veto/data/interactions/neutrinos/store2026_nu{12,-12,14,-14,16,-16} (NU_FLUX_PREFIX; per spill at
+  4e13: nu_mu 1.33e11, anti-nu_mu 1.06e11, nu_e 1.52e10, anti-nu_e 1.51e10, nu_tau / anti 1.28e9; same production as our
+  data/interactions/neutrinos2026 copy, plus E / comp columns); raw /disk/lhcb_data/sqasim/nu_prod/tail/ (NU_PROD_RAW); GENIE in
+  the vessel .../veto/data/interactions/genie/apply2026_<design>_nu<pdg>.npz (nu_apply_2026; run_interactions --kind nu --nu-pdg).
+  Event stores: /disk/lhcb_data/sqasim/evstore/<process> (EVSTORE_DIR; evstore_eval --store accepts bare names).
+  Defaults now: shield_dis and nu_dis_apply read the store2026 flux, nu_dis_apply runs all 6 flavours.
+- Next (re-run batch, needs approval): rate maps sample_nov4 (make_design_explorer) and peak maps from the store (make_peak_maps
+  to adapt), then the step-3 code items (D15, D9, C1, C7, A2, D12, B4, D14) and the batch of action list step 5.
+
 ## 2026-11-11 Muon charge-sign fix
 - BUG: every stored muon dataset (alpha .. nov4, sst1/ubt_TRY6) has pdg = charge sign (+1 = mu+; generate_muon_study writes
   sign(charge); verified on Nov-4 seed_0 against the pool by pool_index: all +1 rows are -13, and in every store -1 sits at
@@ -738,3 +773,362 @@ backgrounds; Pythia version vs the muon-flux measurement; optional J/psi-enhance
 - Regression check bin/check_charge_convention.py (helper, seed rows vs the source pool by pool_index, stores by the side
   each charge leaves on): Nov-4 seed_0 239 470 rows 0 mismatches; Nov-4, c, gamma stores OK. Convention now also in the
   metadata of new seed files and stores (pdg_convention).
+
+## 2026-11-11 (Guglielmo) merge of PR #16 into veto-nov4-source
+- origin/main (PR #16) merged; overlap with our work = the charge fix (our ISSUES D17, found in parallel): theirs kept.
+  Completed on our side: rock_combinatorial "mu x rock" opposite-charge test (was same-sign), paths.RECO_INPUTS ->
+  inputs_nov4_q.npz. Old D9 (dis_comb_pairs*, out of repo) numbers void (same inversion).
+- Still to decide with Guglielmo: the 5 questions of docs/plan_evolution_sbt_shieldend.md; issue review continues
+  (D8, D15, D9, C1 pending; then C7, A2, D12, B4, D4, C9). C5 store rebuild from 3220 spills: coordinate the new store
+  name with Shah Rukh (his plan uses the 300-seed store).
+
+## 2026-11-11 (Guglielmo) issue review complete
+- Every item of ISSUES.txt now has a decision (dated 11 Nov notes): D8, D15, D9, C1, C7, A2, D12 (closed), B4, D4, C9,
+  D2, D6, D7, D14; earlier today C5, D3 (minor), D16.4, B2 (closed), D5 (closed), D17 (done).
+- Code to write (no runs): D15 parent-loaded Geant4 + count check; D8 pvc -> wall; C1 analytic ghosts; D9 DIS x mu class
+  in evstore_eval (bound first); C7 bound; A2 slope scan + bounded genome; B4 EventCalc dcdcfc1 re-import, equal-weight
+  set in the objective; D4 range cut; C9 MuonsAndMatter categorize_muons patch (Guglielmo reviews); D2 self-veto study;
+  D6 libraries 0.5/1 - 400 GeV in 5 % + rescaling (branch veto-d6-energy-rescale); D14 shield-end debris in time + ACTS
+  parametrisation (Slurm arrays, Guglielmo submits).
+- Pending: approval of the re-run batch (step 5 of the action list), the C5 store rebuild (3220 spills; name to agree with
+  Shah Rukh), the 5 questions of docs/plan_evolution_sbt_shieldend.md.
+
+## 2026-11-12 (Guglielmo) re-run batch prepared; B4 done; default UBT
+- B4 DONE: EventCalc benchmarks regenerated (dcdcfc1) and imported -> data/signal/eventcalc_dcdcfc1 (default signal store).
+- Default UBT (Guglielmo 11-12 Nov): straws (window size) at 30.73 m + tile plane 4 x 4 m at 31.13 m, 2 x 2 cm tiles in the
+  flames (1 <= |x| <= 2 m, |y| <= 0.6 m), 4 x 4 cm elsewhere, no fins at the entrance z ("ubt_layout": "legacy" = old).
+  Nov-4: 1.28e9 mu / spill on the tile plane (1e4 in the window), 4x4 regions <= 0.67 MHz / channel, flame edges up to
+  2.8 MHz per 2x2 tile (0.15 m^2 above 1 MHz). EM debris maps on the tile plane (+7 % hits).
+- Code for the batch: make_peak_maps from the store, build_dis_parent_store from one store, tile EM maps, air upstream of the
+  vessel as its own target group (code 8, run_interactions --air-upstream-draws), paths overrides VETO_MUON_DATASET /
+  VETO_RECO_INPUTS / VETO_RATE_MAPS.
+- RE-RUN BATCH (to submit by Guglielmo from farm-gpu3/4/5): `bash bin/batch/submit_rerun.sh` on branch veto-nov4-source
+  (DRY=1 to only write the command files). 7 stages as Slurm arrays with dependencies, outputs in veto/results_rerun/
+  (nothing old overwritten): S1 maps (3220-spill store), S3 MS7 V0-stable muon (10 x 2e6) + nu, S4 pair inputs (+ S4b
+  cross-run), S2 EM debris 2e6, S5 interactions per design, S6 event stores + forced K_L, S7 run_reco full / partial with
+  debris and the B4 signal, evstore_eval, DIS x mu, D2 self-veto, closure, rock x mu. Designs: D6_straw, D6_fiber, D6_tile2,
+  D6_straw_mod (env DESIGNS). Not tested on the farm yet: first jobs may need path / memory tuning.
+- D6 libraries: branch veto-d6-energy-rescale, `sbatch --output=<dir>/d6_%a.log bin/batch/d6_libraries.sbatch`.
+- Running locally: A2 bounce scan (bin/scan_bounce.py, 3 designs). D9 local test was killed (memory): it is in S7 with a
+  300k muon sample.
+
+## 2026-11-12 (later) Slurm / GPU access for Claude; jobs submitted
+- Access: Slurm commands and nvidia-smi run outside the sandbox (per-command approval); Slurm = CPU nodes only (no GRES):
+  partitions standard (128-core / 256 GB nodes, 1 day), long, verylong, express; hep has one usable node (30 cores). GPUs:
+  4 x L40S on farm-gpu3 only (shared) -> S4 / S4b (pairing) run there with bin/batch/run_local_gpu.sh.
+- Submitted: D6 libraries 2051954 (array 0-2, logs veto/logs/slurm/d6_*.log); A2 bounce scan 2051957 (current inputs
+  inputs_nov4_q, logs/slurm/a2_scan_0.log, -> results/reco/bounce_scan.json); re-run batch S1 maps 2051958, S3 MS7 chains
+  2051959 (logs results_rerun/batch/logs). Next: S4 / S4b on the GPU after S1, then
+  `STAGES="S2 S5 S6 S7" J_S3=2051959 bash bin/batch/submit_rerun.sh` (S2 / S5 wait for S4 done locally).
+
+
+## 2026-11-12 afternoon — node overload fixed, R1/R2 first numbers, D6 comparison
+
+- **Overload (mail from the farm admin):** farm-wn81 at load 1314 on 80 cores. Cause: no thread limit; each of the 32 Pool
+  workers of `scan_bounce.py` opened one OpenBLAS thread per node core. Fix `bin/batch/env.sh` (47516d4): reads the job's
+  CMDFILE line; `--workers`/`--jobs` commands get 1 BLAS/OpenMP thread per process, others `SLURM_CPUS_PER_TASK`.
+  Same in `d6_libraries.sbatch` (027096c). Jobs 2051957, 2052184_0, 2051959_0 requeued.
+- **Memory:** S3 (16 Geant4 workers) peaks at 103 GB -> S3 resubmitted with 128G (job 2052621), S2 now 160G.
+  A2 scan needed 257 GB with 32 workers -> resubmitted with 12 workers / 128G (job 2052643).
+- **run_reco bug:** EventCalc signal had no `hits_per_event` (KeyError after the evaluation) -> fixed (3a096ca).
+- **R1 vs R2** (300-seed store, `inputs_nov4_q`, EventCalc B4 signal, MS; `results_test/reco/reco_R*.json`, job 2052622):
+
+  | design | bkg pairs 15 y (2.65 before) | signal loss | SST1 muons tagged (bounced) | Punzi | channels | cost / budget |
+  |---|---|---|---|---|---|---|
+  | R1 UBT only | 1.8e-3 | 0.48 % | 48 % (14 %) | 0.645 | 18 100 | 25 % |
+  | R2 SBT+UBT pointing | 3e-6 | 0.51 % | 70 % (57 %) | 0.662 | 31 764 | 84 % |
+  | R2 SBT any-hit, SR-389 rate | 0 | 15.3 % | 99 % (97 %) | 0.565 | 31 764 | 84 % |
+
+  Flame tiles (2x2 cm) peak at 2.78 MHz / tile, above the 2.5 MHz SR-389 limit.
+- **D6 compare** (`results/d6_compare_{iron,helium}.json`): 5 % grid cuts the energy mismatch from 5.8 % to 2.0 % rms; V0 and
+  charged yields per interaction agree with the old library within ~1.5 sigma in every energy bin; rescaling has no visible
+  effect. Neutrino library (task 2) failed: one GENIE gevgen (nu_mu, Na-23, 1 GeV) hung past the 1 h timeout.
+
+## 2026-11-14 — re-run batch resumed (R1 + R2), A2 on the reference designs
+
+- **Batch state:** S1 done (sample_nov4full, peak maps, DIS parent store 3.19e7 rows, tile map). S3 muon chains done
+  (job 2052621, `results_rerun/shield_dis/shield_muon_v0s_s501..510`). S3 neutrino task failed: `genie/nu_library_v2.npz`
+  missing in our tree -> linked to Shah Rukh's GENIE v2 library (all 6 flavours) and resubmitted (job 2064489).
+- **Rest of the chain submitted** with `DESIGNS="designs/R1_ubt_only.json designs/R2_sbt_ubt.json"`, S4 on CPU in Slurm
+  (no GPU in this session's memory budget): S4 2064490 -> S4b 2064491, S2 2064492, S5 2064493 -> S6 2064494 (also after
+  2064489) -> S7 2064495 (12 tasks). Logs `results_rerun/batch/logs`.
+- **A2:** the scan on D6_straw/fiber/tile2 was killed twice at the 256 GB node limit (12 and 32 workers). A single
+  evaluation needs 0.37 GB, so `scan_bounce.py` now runs the first point of each design serially (builds missing caches once)
+  before forking. Resubmitted on the reference designs R1 / R2 with 8 workers, 64 G (job 2064527).
+- **Open:** D6 neutrino library (GENIE hang at 1 GeV on Na-23) — not needed for the re-run, which uses Shah Rukh's v2.
+- **A2 result (job 2064527, 6 min, 8.8 GB; `results/reco/bounce_scan.json`):** bounce search off is best for R1 and R2 by
+  reward. R1: slope 0 -> 0.45 raises the bounced SST1 muons vetoed 0 -> 16.8 % (all SST1 43.0 -> 49.5 %) but the signal
+  loss 0.03 -> 0.75 %; combinatorial unchanged (0.12 / 15 y). R2: bounced 48.5 -> 58.4 %, signal loss 0.07 -> 0.76 %.
+  The script falls back to start 0.21 / range 0.105-0.42 when no design prefers a slope > 0 -> decision needed (off, or keep it as a knob).
+- **Rate penalty dominates the reward (-31 760 for both):** `technology.py` caps tile and tile2 at 1 MHz / channel;
+  SR-389 allows 2.5 MHz per 20 mm tile. Flame blocks peak 2.78 / 2.20 MHz. Proposed: tile2 limit 2.5 MHz (decision pending).
+- **Decisions (Guglielmo, 14 Nov):** (1) bounce search: keep as is (start 0.21, optimiser knob), may switch off later.
+  (2) tile2 as SR-389: 2.5 MHz per channel, 90 ps (was 1 MHz, 80 ps). Rate penalty R1/R2 31 800 -> 2 120 points (only the
+  x < 0 flame block, 2.78 MHz, 11 % over). Applied before S7 (2064495) starts.
+- **R2 untagged single muons (`bin/diag_untagged.py`, page https://claude.ai/artifact/FnWCuP3xHpYcQewWnZ17U8,
+  data `results_test/reco/diag_untagged_R2.json`):** 26.8 % untagged by weight = 17.1 % SBT hit but pointing missed
+  + 9.4 % UBT hit but window missed + 0.3 % other. 98 % of the untagged weight passes through the SBT liquid. Missed ones
+  are soft (median p 0.3 GeV at SST1); their backward line meets the wall a median 3.7 m (z) from the hit cell vs 0.6 m for
+  matched ones; not grazing (79 vs 111 mrad). Likely cause: sbt.tag opens rings z +- r, but a lateral r moves the crossing
+  by r / sin(alpha) along z (~8 m at 80 mrad). Proposed fix (not applied): ring range +- r / sin(alpha). Statistics: the
+  200k singles have n_eff ~ 490 (1 000 heaviest carry 59 %), so shares are +- a few %.
+
+## 2026-11-16 — batch: two failures fixed, S4b/S5-nu/S6/S7 resubmitted
+
+- Done: S4 inputs (2064490, 43 min, 7 GB), S2 EM debris (2064492), S5 muon DIS for R1 and R2 (2064493_0/2).
+- S5 nu (R1, R2) failed on nu_tau: `nu_dis_apply.py` read the v1 GENIE library (nu_mu, nu_e only) -> default now
+  `nu_library_v2.npz` (Shah Rukh, all 6 flavours, also Fe and the concrete nuclei). Resubmitted tasks 1,3 (2085338).
+- S4b cross-run pairs OOM (216 GB): unblocked pair building on the 3220-seed store -> `make_crossrun_pairs.py --pair-block`
+  (same as S4), batch uses `--device cpu --pair-block 20000`. Resubmitted 2085339; S6 2085340, S7 2085341 behind them.
+- S5 nu R1 done (2085338_1, 127 GB); R2 OOM at 134 GB -> rerun with 240G (2085943); S5 default now 240G.
+  S6 2085944 / S7 2085945 resubmitted behind 2085943 and S4b 2085339 (running).
+
+## 2026-11-16 — SBT pointing window r / sin(alpha) (Guglielmo: "yes implement the r/sin α fix and test it")
+
+- `sbt.tag` (pointing mode): rings within r / sin(alpha) of the wall crossing (alpha = line vs face normal complement,
+  from `crossings()["cos"]`, floored at `sin_min` = 0.05), and each hit timed against the line's time inside its ring
+  (a cell 8 m away is 27 ns off the crossing time). `window_z: "r"` keeps the first version.
+- Test (300-seed store, inputs_nov4_q, EventCalc dcdcfc1, MS, seed 1; `results_test/reco/reco_R2_sbt_ubt*_win.json`):
+  old window reproduces 12 Nov exactly (70.49 %, 0.512 %). New: all SST1 tagged 70.49 -> 90.19 % (bounced 57.3 -> 86.5,
+  p>1 & timing 93.2 -> 99.6, other 67.2 -> 87.2); signal loss 0.512 -> 0.541 % (+0.03, ~1 sigma of 40k events);
+  background pairs left 3 -> 0.
+- Diagnostic (`diag_untagged_R2_win.json`): untagged 26.8 -> 11.2 %: SBT pointing missed 17.1 -> 7.6 %, UBT window
+  missed 9.4 -> 3.3 %. Remaining SBT misses: soft (median 0.27 GeV); 49 % of them the measured line meets no side wall,
+  20 % a different face, rest a median 7 m away.
+- The queued S7 (2085945) runs this code (default "projected"), so the batch R2 numbers include the fix.
+
+## 2026-11-16 (afternoon) — D19 rate study; silicon strip stations at the MS7 exit (Guglielmo: "go for 4", "implement silicon strips in the Muon Shield")
+
+- **D19 SBT random rate (R2, pointing r/sin alpha, 300-spill test):** x1 (2.1 MHz) signal loss 0.541 %, SST1 tagged 90.2 %;
+  x5 0.534 % / 89.6 %; x13 (SR-389 27 MHz) 0.781 % / 89.4 %. The pointing rule is robust to the unknown back-scatter rate
+  (+0.24 points of signal at 27 MHz); `results_test/reco/reco_R2_sbt_ubt_rate{5,13}.json`.
+- **Silicon strips (`lib/veto/shield_strips.py`):** stations (20 x 20 cm default) at the MS7 exit face z = 29.90 m,
+  superimposed (no field / material in the transport); UT-outer-like 187.5 um strips spanning the station, 2 views, 25 ns,
+  99 %, 1 MHz/strip limit; own hits = charged products of the iron interaction at the exit plane; random hits from a map
+  of the MS7 parents (straight from 29.20 m: 4.62e8 / spill) + EM debris (e+- 1.25e8, converting gamma 5.2e6); peak
+  0.23 MHz/cm^2 at x = -1.73 m; strips <= 85 kHz; up to 41-48 MHz per station (~1 random hit per 25 ns slot). Rule: V0
+  vertex traced back along the visible momentum to z = 29.90 m, hits within r0 + theta dz; "point" >= 1 hit, "vertex" >= 2.
+  Wired into design (channels, placeholder cost 0.4 straw-channel units / channel, C6), interactions.evaluate (background,
+  strip_tagged_frac per target) and run_reco (signal loss, random hits). Cavern-side yoke face (48 stations, 1.9 m^2):
+  102 k channels, ~15 % of the budget. Not yet: the kink (station upstream of the iron), the field in the stations.
+- **Study** `bin/strip_study.py` (job 2086899): back-trace error -> theta, layouts (cavern-side yoke, both yokes,
+  hottest 10 / 25 cells of the selected parents), rule x theta -> tagged MS7 V0 / MS7 nu background and signal loss.
+
+## 2026-11-16 (evening) — budget, SBT rings, optimiser for R1 / R2
+
+- **Budget** (Guglielmo: "reduce the maximum budget to the one foreseen for the full SBT and UBT ... then relative to this"):
+  `lib/veto/budget.py` = the cost of R2 in the same placeholder model (6 733 kCHF); R1 = 30 %, R2 = 100 %; 8 MCHF kept only as
+  REF_BUDGET_KCHF (base of the 2023 SBT fraction); 10 MCHF overrides removed. Report updated (1533162).
+- **SBT rings** ("SBT can be optimized in ring, one full ring over the decay vessel"): `"sbt": {"ring_set": [...]}` = SR-389's
+  ten rings (ring k = cell rings 1+6k .. 6+6k, ring 0 also the first 80 cm row), each all four faces; ring 0 ~4.8 %, ring 9
+  ~9.8 % of the budget; full = 854 cells, unchanged.
+- **Optimiser** (evolve/evolve_designs.py; "trash the old designs", "score on the 3220 seeds"): seeds R1 / R2 only; new prompt
+  (2026 UBT straws + tile regions, SBT rings, shield-end strips, budget); `--host slurm` (one sbatch --wait per generation);
+  continuous grid; de-duplication on the whole design. Objective sources: combinatorial + prepared muon / nu / **ms7**
+  caches (`bin/prepare_interactions.py --muon-npz <S5 R2> --nu <S5 apply2026 R2> --ms7 <stores> --tag _nov4full`, job
+  2087009); `ix.veto` applies the strips to the MS7 cache.
+- Next: trial run, 5 generations x 8 children, `--inputs inputs_nov4full.npz --prep-tag _nov4full`, after the caches and
+  the strip study (theta default).
+
+## 2026-11-16 (late) — drachmas, strip study, R2 misses on the full inputs, V0 event display
+
+- **Drachma** (Guglielmo): 1 drachma = one 0.5 x 0.5 m module of 4 x 4 cm tiles (cheapest station); budget = R2 = 333.5;
+  R1 99.7; strip station 1.26; SBT ring 15.9-32.5; full SBT 233.8. Report: definition (named in honour of Archimedes,
+  Syracusia), price table, all costs in drachmas (0428bcc). Code: budget.drachma(), outputs and optimiser prompt.
+- **Caches** `prepared_*_nov4full` (job 2087009): muon 1 452 events (2.0e3 / 15 y before veto), nu 402 (4.1), MS7 nu 121
+  (9.9), **MS7 muon V0: only 2 events at full selection carrying 6.1e4 / 15 y** -> would saturate the objective on 2 events;
+  the trial run waits until this source is handled (more statistics / partial selection / mass cut, Q3 pending).
+- **Strip study** (`results_rerun/reco/strip_study.json`, job 2086899): back-trace error theta (68 / 90 %): MS7 mu V0
+  25 / 37 mrad (missing neutrino), MS7 nu 14 / 21 (partial), 2 / 10 (full). Best trade: 10 stations on the hottest cells,
+  rule point, theta 10 mrad (12.6 drachmas): MS7 nu tagged 74 % (full) / 36 % (partial), MS7 mu V0 23 % (partial), signal
+  loss 0.2 % (full) / 0.9 % (partial); 25 stations: 84 / 57 / 41 %, 0.3 / 1.8 %. theta >= 20 mrad costs 2-40 % signal.
+- **R2 misses, full 3220-spill inputs** (`diag_untagged_R2_full.json`): pairs are 97 % selected x selected, 3 % bounced x
+  selected; the soft "other" muons never form pairs. Selected muons untagged 2.2 % (n_eff 3: a few heavy muons, p ~1.1
+  GeV, entering from below, y ~ -2.3 at 30.6 m; 65 % SBT pointing missed, 35 % UBT window). Bounced p > 1 GeV untagged
+  25 % (n_eff 8): 69 % cross NO detector: they bounce off the cavern wall late (k_z ~ 79 m, k_x ~ -6 m) and reach SST1
+  through the 0.95 m gap between the vessel end (81.13 m) and SST1 (82.08 m), where there is no SBT.
+- **V0 event display**: bin/v0_examples.py (job 2087343) -> page.
+- **D20 downgraded to C:** no candidate pair (inputs_nov4full, 215 500) contains a muon bouncing after z = 77 m; the gap
+  muons never form a background vertex. Untagged fractions that matter = those of the pair muons (S7, full sample).
+- **Guglielmo: report only full-sample (3220) statistics.** Report Table 30 / R1-R2 numbers to be replaced from S7.
+
+## 2026-11-16 (night) — V0 rule, reference designs R1 / R2 / R3 only
+
+- **Why the MS7 V0 products are not tagged** (Guglielmo's question): the products of the iron interaction cross the 4 x 4 m
+  tile plane in every selected event (~7 charged per event, nearest hit a median 0.14 m from the daughter lines), but the
+  veto searches along each daughter's own backward line; a V0's daughters point to the decay, not to the production point
+  (opening angle, missing neutrino): on the two heavy full events 0 searches / 0.33-0.61 m off vs a 0.155 m window. In reality
+  also the V0 time of flight (median 0.35 ns late vs light, > +-0.2 ns tiles; not in the simulation: per-track clocks).
+- **V0 rule** (reco.v0_tag, design "detector": {"v0_rule": ...}): candidate traced back as a neutral along the pair
+  momentum, any hit within 5 cm + 25 mrad x distance on the planes upstream, time window opened 3 ns early, random hits
+  drawn over it. On the cached MS7 sample (full sel.) with R2: 43 -> 15 surviving events (the 1.2e4 heavy event tagged; the
+  4.9e4 one escapes: back-trace 41 mrad off).
+- **Only R1, R2, R3** (Guglielmo; also in the report). R3 = R2 + V0 rule + silicon strips in the MS7 magnet: 5 layers
+  29.39 / 29.4775 / 29.565 / 29.6525 / 29.74 m (last one 15 cm before the end), 3 stations of 20 x 20 cm each on the hottest
+  V0-parent cells (-1.1, +-0.1), (1.3, -0.1); 15 stations, 18.8 drachmas; R3 = 352.3 drachmas (5.6 % over the R2 budget).
+  Strip layers: products back from the exit face to layers downstream of the interaction, the parent muon to layers upstream.
+- Test on the full sample: maps job 2087758, then 2087759 (r123_study + run_reco R1 / R2 / R3 x full / partial).
+
+## 2026-11-16 (end of session) — HANDOFF.md
+Session closed by Guglielmo (chat too long). Everything needed to continue is in `HANDOFF.md` (overview, conventions,
+full-sample R1 / R2 results, jobs, next steps, Shah Rukh's open requests) and `docs/r3_shield_strips_v0rule.md`.
+R3 final: 3 layers 29.39 / 29.59 / 29.79 m x 8 stations 30 x 30 cm (|x| 0.75-1.35, |y| < 0.3), 82 % of the V0 points,
+<= 34 MHz per station, 378.7 drachmas. Report pushed (Appendix G). MS7 V0 statistics plan proposed (x20 copies, V0-only
+draws x10-70, more seeds), waiting for the go.
+
+## 2026-11-16 (evening 2) — MS7 V0 statistics increase (Guglielmo: "go for the V0 statistics increase and document it")
+- Importance sampling of the MS7 chain (`--final-state v0|nov0`, `--v0-acc-cut`), docs/v0_statistics.md. Validation
+  (job 2088400): V0-only gives 1 524 vs 2 093 V0 decays / spill -> 27 % secondary V0 -> complementary samples.
+- Production 2089677 (160 small jobs, 64 GB, %24: the farm is memory-bound; the 40 x 200 GB version never started), stores
+  2089678 (ms7_muon_fsv0, ms7_muon_fsnov0: SUM), cache 2089679 (prepared_ms7_v0stat).
+- Then: R1 / R2 / R3 on the new MS7 sample, document in the report (Appendix G / B), update HANDOFF.
+
+### 16 Nov 2026 (afternoon) — Section 6 cut flow without tagging (job 2089733)
+- `bin/cutflow_notag.py`: same selection as `interactions.evaluate`, all levels kept (interactions, >= 2 good tracks,
+  pair cuts no IP, IP < 10 cm, IP < 2.5 m) per target, per nu flavour (from `apply2026_R2_sbt_ubt.npz`, rows aligned;
+  the store's meta declares `flavour` but `events.npz` lacks it) and per V0 species for MS7. No tagging -> R2 stores.
+- Closure on `ms7_nu2026`: IP < 10 cm 9.86 / 15 y = S7 eval; no-IP sum 1.42e3 = S7 ip_tail "all".
+- Array 2089733 (`batch/S6b_cutflow.cmd`, outputs `reco/cutflow_notag_*.json`) -> report Section 6 tables.
+  MS7 muon V0 row waits for the V0-statistics production (other session); mu x product / rock pairs wait for S7 3, 8, 11.
+- S7 task 11 (rock x mu on the old D6_straw_mod design + D6 rock draws of 8 Nov, 300 seeds) had already failed (OOM,
+  146 GB > 128 GB). Dropped: Guglielmo, 16 Nov: only R1 / R2 / R3 anywhere. Rock pairs to be redone on R2 with draws from
+  the Nov-4 full sample: NOT needed (Guglielmo, 16 Nov: mu x rock already shown negligible, ISSUES line ~752);
+  Section 6 drops the rock pair rows and says so in one sentence.
+- A1 explainer page (product rule vs direct count, weak-spot toy, closure numbers): https://claude.ai/artifact/RkWTjSXM8gHe4yWWg5Sg2P
+- A1 decided: direct count everywhere (objective / optimiser / helpers), weighted error + heaviest survivors in run_reco.
+  Closed A1, A5, C1, C5, D7, D20. HANDOFF, CHANGELOG updated. S6b cut flow (2089733) done.
+- B1 check (bin/b1_scatter_check.py, R2 full sample): window covers the scatter above 5 GeV (100 %); 1-2 GeV 98.6 %, < 1 GeV 94.6 %.
+  Proposal r_ms 6 -> 9 mrad GeV pending. Closed today: A2, C7, C8, D2, D3, D18; deferred D6, D14 (debris in time, ACTS).
+- B1 closed (r_ms = 6 kept): bin/entrance_misses.py -> no muon through the vessel entrance is lost by the window (R2);
+  window misses only outside the entrance, left to the optimiser (fins, redundancy).
+
+### 16 Nov 2026 (evening) — rock x mu for R1 / R2 (job 2090190; Guglielmo asked to run it)
+- `bin/rock_combinatorial.py` now vetoes in chunks (`--veto-chunk`, 2-2.5 GB instead of > 128 GB). Rock draws: Shah Rukh's
+  `apply_D6_straw_mod_draws.npz` (design-independent: every draw with a product into the vessel or SST1). Full selection.
+- Per 15 y (candidates / IP < 10 cm / after veto, legs explained mu / rock):
+  R1: mu x mu 35.8 / 2.36 / 0.0074 +- 0.0024; **mu x rock 634 / 211 / 35.0 +- 0.4 (446 101 MC; rock leg explained 0.16)**.
+  R2: mu x mu 35.8 / 2.36 / 0.00047 +- 0.00046; mu x rock 634 / 211 / 0.0042 +- 0.0022 (53 MC; rock leg 0.992).
+  rock x rock: 0 candidates (3e6 opposite pairs). Rock tracks: 1.84e4 good / spill vs 8.5e3 shield muons.
+- => The earlier "mu x rock negligible" (D6_straw_mod, 0.023: its side fins tagged 99.99 % of rock legs) does NOT hold for
+  R1 (no fins / SBT: rock tracks enter through the walls untagged) and rock > mu x mu also for R2. D7 should be reopened
+  and Section 6 should keep the rock rows (pending Guglielmo). Survivor dump + page in progress.
+- D6: nu_library fixed (hung gevgen = failed attempt; cache by energy), neutrino 5 % library job 2090354 (branch veto-d6-energy-rescale).
+- D14.1 debris in time implemented (866d086, ceb0e34), R1/R2 runs 2090726; D14.2 ACTS scan in a separate session.
+- Report Section 6 filled (bt-report f9fe9c9, not pushed): full-sample no-tagging yields; pending MS7 muon V0 and vessel-DIS x mu
+  (S7 3/8 OOM at 128 GB; MS7-V0 x mu from the logs: 62.7 selected, R1 1.62, R2 0.0081 / 15 y). D19 handed to a fresh agent.
+- Rock survivors page: https://claude.ai/artifact/CTdxuttxYrQAK6UfNbQmv1 (pair explorer; rock species by exact join on the
+  draws: all negative, R1 pi- 73 / K- 12 / pbar 7.5 (check) / e- 7 %, R2 pi- 49 / e- 48 %). Partner shield muons are hard
+  (~250 GeV, near axis): the hard leg sets the pair direction, so IP < 10 cm. No double counting with the Nov-4 production
+  (muon-only store; rock_apply excludes the parent muon).
+- Why the SBT misses the 53 R2 pairs: 20 re-rolls (bin: $TMPDIR script, seeds 100-119) veto all 53 in 20/20 -> 52 pairs
+  (76 % of the weight) are random coincidences of SBT 99.3 % and UBT inefficiency (expected 1.3e-5 of the pairs, seen 2.0e-5).
+  1 pair (24 %): rock leg tagged 0/20 = systematic: the pi- (2.2 GeV, 21 deg to the wall) deposits 55 MeV in ring 59 at
+  z 80.12, the pointing window is centred on the INNER-wall crossing (80.51, ring 60) +- r/sin a = 0.16 m -> ring 60 only.
+  The 21.6 cm shell spans 0.57 m in z at this angle. Proposed (pending Guglielmo): window from the outer-shell crossing - r_z
+  to the inner crossing + r_z (sbt.tag), then re-run R2.
+- D14.1 debris in time result (2090726): negligible (R2 pairs 9->8, B unchanged; R1 singles +0.16 pts); flag default off.
+- Other session committed b87da94 (SBT shell_window, default on): affects R2 runs started after 16:32.
+- shell_window (b87da94) on R2, full sample (job 2091195; old outputs *_prewin.*): single SST1 muons tagged 90.5 -> 93.3 %
+  (selected 99.37 -> 99.69 %, bounced 87.3 -> 90.5 %, other 87.5 -> 91.7 %); signal loss full 2.866 -> 2.882 %, partial
+  2.616 -> 2.634 % (+0.02 points); pairs: full 2.5e-6 (unchanged), partial 0.00106 (24 -> 23 MC). D2 self-veto unchanged
+  (helium nu DIS 3.6 -> 3.55, signal 0 %). Closure re-run done. Still running: evstore_eval R2, D9 R2, rock x mu R2.
+- Guglielmo: debris in time OFF (no effect), D14 = ACTS only. Rock x rock not evaluated anymore; mu x rock handled from the other session (SBT window).
+
+### 16 Nov 2026 (evening): D9 vessel-DIS x mu closed
+- Blocked rerun (--dis-block 100000, job 2091067_0, 64 GB, 4 h): selected 0.0037 / 15 y (IP < 10 cm, no tagging);
+  after veto R1 5.4e-4, R2 1.3e-6 (other session's 2091195_5). Negligible. Report Section 6 rows filled locally (bt-report,
+  not committed / pushed).
+- D6 nu library (2090354_2) still running after 6 h: 705 gevgen timeouts, 194 (E, target) points dropped so far (low E).
+- ACTS scan 2090827 failed on all tasks (FairRunSim::Init abort on the nodes); ACTS and D19 agents resumed.
+- D9 removed from the open lists (HANDOFF, ISSUES action list); report pushed 22f8bad.
+- D14.2 ACTS done (agent, 6bc4d73): resolutions finer than RecoConfig; not wired into reco.measure, decision pending.
+- D14.2 comparison: run_reco --acts-resolution (RecoConfig.acts_resolution, default off; smears x/y/tx/ty and p with acts_resolution.sigmas) on R1/R2 full/partial, job 2095718 (first 2095702 failed: VETO_CODE unset; batch/acts_cmp.cmd, outputs reco_*_acts.json) vs S7 / R2_shellwin outputs.
+
+### 16 Nov 2026 (night) — tile window, K+- copies, hand-over (this session; see HANDOFF.md)
+- Tiles +- 3 sigma (5f7a770): the fixed +-200 ps lost the straight muons on TIME (all misses |dt| 0.2-0.4 ns, positions
+  fine). Test (tilewin3s_*): R1 selected muons tagged 81.7 -> 97.7 %, R1 full pairs 0.012 -> 0, partial 0.79 -> 3e-8, R2
+  pairs -> 0, signal loss +0.3-0.5 points. Re-run of everything UBT-dependent: job 2095750 (old outputs *_w200.*).
+- MS7: new sample closes on the unbiased chain (docs/v0_statistics.md); the heavy code-3 event is a K- decay in flight ->
+  forced K+- copies (e825a26), jobs 2095744 (copies + stores *_k) / 2095745 (cache prepared_ms7_v0statk).
+- Report 285ed5d: Section 6 rock row (634 / 211 / pending), D7 text, tile and shell windows in Section 7, App. G enlarged sample.
+- D19 agent done (1b1eef5 pushed, 4ac6a71 not): SBT material term ~780 / 15 y at IP<10 cm after R2 (muon K_L), decisions a-d pending (ISSUES D19).
+- D19 agent done (1b1eef5 pushed, 4ac6a71 not): SBT material term ~780 / 15 y at IP<10 cm after R2 (muon K_L), decisions a-d pending (ISSUES D19).
+- ACTS vs baseline (same code, job 2095763 *_basenow): R1 signal loss 3.14 -> 2.82 %, single tagged 65.8 -> 65.0; R2 signal 3.24 both, single 92.1 -> 94.3; pairs ~0 in all. ISSUES D14.
+- 17 Nov, Guglielmo: ACTS stays an option (D14 closed). D19: (a) SBT-material term in the budget, (b) v0_line + selftag_hits on, (c) zone rule on; (d) open.
+- D19 (d), Guglielmo: material_scattering ON in R2/R3 + shell-scattering term in the SBT window (agent).
+- D19 (a)-(d) implemented (19b2a0b, flags on in R2 / R3, shell_ms_k = 1; docs/d19_sbt.md section 7): R2 SBT-material
+  background IP < 10 cm mu 783 -> 113, nu 0.37 -> 0.091, nu-He 3.55 -> 0.96; IP < 2.5 m mu 2.75e5 -> 3.9e4, nu 367 -> 47;
+  signal +0.5 points. Shell kick moved to the exit of each shell piece. R2 single muons 92.1 -> 85.1 %: 37 % of the weight
+  are muons that would range out in the shell they are stored with (physical ones 96.5 -> 93.3 %); decision pending.
+  R3: IP < 10 cm mu 47 -> 0, nu 0.30 -> 0.078; IP < 2.5 m mu 2.76e4 -> 4.3e3. Objective cache prepared_sbt_nov4full (R2 125 / 15 y).
+
+## 2026-11-18 (evening) — token-free optimiser (Guglielmo: "ok for R2 modification. Can we optimise with a way in which I don't use token?")
+- `evolve/ga_designs.py`: genetic algorithm in place of the LLM (no tokens), same scoring on Slurm; seeds R1 / R2 / R3,
+  budget 333.5 drachmas enforced before submission. Dry run OK (12 valid children per generation, 99.7-333.5 drachmas).
+  Not launched yet: `evolve/ga_designs.py --generations 8 --children 12` = 9 Slurm jobs + 2 confirm jobs (<= 4 h each).
+- LLM prompt: R2 reference numbers with the V0 rule (r2v0 results, Slurm 2125101).
+- 18 Nov (Guglielmo: "it can change also the UBT tiles size"): ga_designs.py also varies the UBT tile plane (size, flame
+  blocks, 2 x 2 / 4 x 4 cm per part); dry run OK (78.6-333.5 drachmas). Still not launched.
+- 18 Nov night: first GA run (ga_20261118_221746) stopped after generation 1: every reference design paid a rate penalty of
+  2054 (cavern-side tile2 flame block 2.76 MHz / channel with the EM debris, limit 2.5), and the GA cut the tile plane to
+  |x| < 1.62 m to avoid it. Guglielmo chose option B: rate limits WITHOUT the EM debris (signal loss keeps it); the
+  2.76 MHz is a warning to report. Restarted (8 x 12).
+- 18 Nov night, CORRECTION: option B changes nothing. Without the EM debris the cavern-side tile2 flame block
+  (x -2.0..-1.0, |y| < 0.6) is still at 2.75 MHz per channel (2.76 with it; SR-389 limit 2.5): the excess is from the
+  MUONS (Nov-4 flux), not from the debris. Rate penalty 2006 on R1 / R2 / R3; 4 x 4 cm tiles there: 11 MHz.
+  Second run (ga_20261118_223546) stopped after generation 1; decision on the rate rule pending (Guglielmo).
+- 18 Nov night, Guglielmo: "revert B decision (place back the em debris) then use tiles with aperture 3.4 m total in x and
+  evaluate if this are ok (4x4cm^2)". Option B reverted (rates with the debris again). Next: R1 / R2 with the tile plane
+  |x| < 1.7 m, all 4 x 4 cm tiles, evaluated (rates per region, tagging, signal loss).
+- 18 Nov night: tile plane |x| < 1.7 m all 4 x 4 cm (study variants only, results_rerun/reco/tiles_x34/README.md, Slurm
+  2126935): flame channels 1.18 MHz (cavern side) / 0.92 MHz vs the code's 4 x 4 limit 1.0 MHz (2 x 2: 2.5 MHz SR-389);
+  the 690 kHz/cm^2 hot spot is at |x| 1.7-2.0 m, outside. Signal lost R1 2.45 -> 1.68 %, R2 6.74 -> 5.66 %; single SST1
+  tagged R1 64 -> 57 % (bounced 34 -> 18 %), R2 unchanged; -40 drachmas. Reference designs unchanged.
+- 18 Nov night, Guglielmo: "place the 2x2 where is needed and then go for optimization": 4 x 4 limit stays 1 MHz; study
+  seeds R1 / R2 with the 3.4 m plane and 2 x 2 cm only in the cavern-side flame block (+x block 0.92 MHz stays 4 x 4);
+  GA restarted from R1 / R2 / R3 + these two (8 x 12, rates with the EM debris).
+- 19 Nov: GA run ga_20261118_225224 finished (8 x 12, 23:28). Best ga8c4 -37.3 (confirm mean -39.3 +- 1.6), 198.5
+  drachmas: R2 x34 2x2-right seed minus SBT rings 0, 4, 8, 9, UBT segment cut ON, V0 p_max cut OFF, tiles y -2.0..1.72.
+  Terms vs seed (-77.4, 303.8 dr): background_untagged 56.9 -> 23.6, signal_vetoed 5.94 -> 5.71, cost 14.5 -> 8.0.
+  CAVEAT: the background gain is ONE MC event (vessel helium mu DIS, weight 1.28 / 15 y) removed by dropping p_max;
+  0 survivors -> 90 % UL 8.6 / 15 y (wall weights), so it is not a measured improvement. Also single SST1 bounced
+  tagged 83 -> 21 % (rings 8-9 removed; the objective barely sees it). Runner-up ga8c8 (275 dr, rings 5 removed only)
+  keeps bounced 83 %. Not adopted; designs/ unchanged.
+- 19 Nov, Guglielmo: "rerun with p_max on and count bounced SST1". New objective term sst1_bounced_untagged =
+  w_single_bounced x (1 - tagged fraction of single bounced SST1), weight 100 (Guglielmo; same scale as background /
+  signal terms; MC error +-2.4 points, 287 effective events). ga_designs --pin v0_pmax_on=1 --w-single-bounced 100;
+  seeds R1 / R2 / R3, the two 3.4 m variants, last run's top 3 (results_rerun/evolve/seeds_ga1118_top3.json) rebuilt
+  with p_max on (*_pin). Offline rescore of the last run at weight 100: ga8c8 (275 dr, bounced 83 %) first, ga8c4 out
+  of the top 4. Run ga_20261119_112015 FAILED (launched without --inputs: default inputs_nov4_q.npz missing, workers
+  crash-looped 34 min, nothing scored; killed, removed). Relaunched with --inputs inputs_nov4full.npz as
+  ga_20261119_115533 (a duplicate launch ga_20261119_115821 was stopped and removed).
+- 19 Nov 13:00: ga_20261119_115533 finished (8 x 12). Best ga7c3 -71.1 (confirm -71.0 +- 0.5), 225.3 drachmas (68 % of
+  budget): SBT rings 2, 5-9 (no 0, 1, 3, 4) 30 MeV, UBT straws +-1.35 with t0 + segment cut, tiles |x| < 1.7 y -2.0..1.7,
+  2x2 only in the -x flame block, V0 rule theta 15.7 mrad, r0 5.3 cm, early 2.33 ns, p_max 20, theta_p 0.25, no early_tof.
+  vs R2 x34 seed (-94.3, 303.8 dr): signal lost 5.94 -> 2.71 %, bounced SST1 tagged 83 -> 84 %, all SST1 94 -> 91 %,
+  SBT-material 2.95 +- 2.99 -> 0.004 (ONE heavy SBT-LS MC event, not a measured gain), MS7 0.59 -> 0.80, vessel mu 1.28
+  (same one event), nu He 1.08 -> 1.13. Runner-ups ga8c8 (244.7 dr, sig 3.0 %), ga6c9 (245.3 dr, 3.7 %); top 3 share the
+  ring / straw / V0 changes. Solid: signal loss halved, -79 drachmas, no rate penalty. Not adopted; designs/ unchanged.
+
+## 2026-11-20 (night, Guglielmo) V0 rule on / off for R1-R3, full chain for Z2 / Z3
+- Optimiser chain (evaluate_designs.py, 1e5 signal, seed 1, Nov-4): R1 + V0 rule (results_rerun/reco/r1_v0rule, Slurm
+  2147456): MS7 mu 1.67e4 -> 189 +- 91, signal lost 2.45 -> 4.35 %. R2 / R3 WITHOUT V0 (r23_nov0rule, 2147472): MS7 mu
+  1.37e4 / 1.34e4, SBT material 122 / 121, signal lost 5.00 / 5.18 % (with V0: 0.48, 2.95, 6.74 / 6.83 %). Reference
+  designs unchanged (study copies *_v0, *_nov0).
+- Full chain for Z2, Z3, R1_v0, R2_nov0, R3_nov0 (results_rerun/full_chain_extra, Slurm array 2149071, 24 tasks %3):
+  run_reco full / partial, evstore_eval (R2 / R1 vessel stores reused), dis_combinatorial, sbt_eval nu. Rock x mu not run
+  (D7 closed 16 Nov; Guglielmo: rock model suspect).
+- Muon flux per region (slide 16): results_rerun/nov4_flow/flux_regions.{py,json}; search radii: results_rerun/aperture_radii;
+  seen-by UBT + SBT only: kl_distributions/seen_by/plot_seen_by_nomsms.py.
+
+## 2026-11-20 — single-track DIS x independent muon (combinatorial), four rows (results_rerun/combi_single)
+- bin/combi_single.py (D9 recipe of dis_combinatorial.py; only events with exactly ONE good track; same pair cuts and
+  +-200 ps window factor as mu x mu), bin/combi_cutflow.py (step-by-step cut flow), bin/combi_single_summary.py
+  (numbers.json). Local runs, 2 x 4 threads. Closure: mu x mu with the same code 32.3 / 31.6 / 1.49 (ref 35.8 / 34.4 / 2.36).
+- Per 15 y, before tagging, pair cuts / IP < 2.5 m / IP < 10 cm, WITHOUT events whose only good track is the scattered
+  muon (recommended): vessel mu DIS x mu 0.0335 / 0.0332 / 0.00363; MS7 mu DIS (all products) x mu 708 / 700 / 62.5 +- 2.9;
+  vessel nu x mu 2.7e-4 / 2.7e-4 / 2.2e-5; MS7 nu x mu 0.0115 / 0.0114 / 8.3e-4. With the scattered muon: +2-3 % at most.
+- DIS x DIS: MS7 mu x MS7 mu 81.7 / 73.6 / 0.241 per 15 y (computed): not negligible next to mu x mu before the IP cut,
+  ~10 % of it at IP < 10 cm. Other DIS x DIS terms < 2e-3.
+- Note: _pair_cut (mu x mu 35.8, D9) has no 5 cm vertex margin; with it MS7 x mu x0.73 (pair cuts) / x0.89 (IP < 10 cm).
+- R2 after tagging (100 k-candidate subsample): all rows <= 1e-4 (MS7 0 MC, UL 0.08 subsample-limited).

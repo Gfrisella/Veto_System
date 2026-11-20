@@ -15,6 +15,7 @@ CUTS = [0.1, 0.25, 0.5, 1.0, 2.0]
 files = sorted(glob.glob(sys.argv[1]))
 acc = {c: 0.0 for c in CUTS}; acc2 = {c: 0.0 for c in CUTS}; npass = {c: 0 for c in CUTS}; nparents = {c: set() for c in CUTS}
 tot_pair = 0.0; tot_v0 = 0.0
+by_v0 = {}                                    # D16: per decayed V0 species, all-but-IP and IP < 0.5 / 1 m
 for f in files:
     inter, part = load_npz(f)
     nf = len(files)
@@ -33,6 +34,10 @@ for f in files:
     g0, g1 = pair[:, 0], pair[:, 1]
     ip = vsel.measured_ip(tr["b"][g0], tr["p"][g0], tr["b"][g1], tr["p"][g1], cfg, np.random.default_rng(779))
     tot_pair += w15[sel].sum()
+    for code in np.unique(I["v0"][sel]):
+        mv = I["v0"][sel] == code
+        b = by_v0.setdefault(int(code), [0.0, 0.0, 0.0, 0])
+        b[0] += w15[sel][mv].sum(); b[1] += w15[sel][mv & (ip < 0.5)].sum(); b[2] += w15[sel][mv & (ip < 1.0)].sum(); b[3] += int(mv.sum())
     for c in CUTS:
         q = ip < c
         acc[c] += w15[sel][q].sum(); acc2[c] += (w15[sel][q] ** 2).sum(); npass[c] += int(q.sum())
@@ -41,3 +46,5 @@ for f in files:
 print(f"\nV0 decays in vessel {tot_v0:.3g} / 15 y; vertex pair + <= 2 tracks (no IP cut) {tot_pair:.3g} / 15 y")
 for c in CUTS:
     print(f"  measured IP < {c:4.2f} m: {acc[c]:10.3g} +- {np.sqrt(acc2[c]):8.2g} / 15 y  ({npass[c]} copies, {len(nparents[c])} parent interactions)")
+for code, (b0, b5, b10, n) in sorted(by_v0.items()):
+    print(f"  v0 {code:6d}: all-but-IP {b0:9.3g}, IP < 0.5 m {b5:9.3g}, IP < 1 m {b10:9.3g} / 15 y  ({n} copies)")

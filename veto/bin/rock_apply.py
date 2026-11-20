@@ -17,7 +17,7 @@ Counted per spill (each draw carries S / M, S = sum w lambda over the seed, M = 
   interactions with >= 2 charged at SST1 (p > 1 GeV); the same with opposite charges.
 Draws that send a charged particle into the vessel or to SST1 are written out (with all their exits) for the reconstruction.
 
-    python3 bin/rock_apply.py <seed dir> --library rock_library.npz --design D6_straw_mod [--seeds 300 --draws 20000] --out rock_apply
+    python3 bin/rock_apply.py <seed dir> --library rock_library.npz --design R2_sbt_ubt [--seeds 300 --draws 20000] --out rock_apply
 """
 import _bootstrap  # noqa: F401
 import argparse
@@ -131,7 +131,7 @@ def expected(P_e, u, alpha, E0, lib, dedx):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("dir"); ap.add_argument("--library", required=True); ap.add_argument("--design", default="D6_straw_mod")
+    ap.add_argument("dir"); ap.add_argument("--library", required=True); ap.add_argument("--design", default="R2_sbt_ubt")
     ap.add_argument("--seeds", type=int, default=300); ap.add_argument("--draws", type=int, default=20000)
     ap.add_argument("--dedx", type=float, default=DEDX); ap.add_argument("--seed", type=int, default=5)
     ap.add_argument("--out", required=True)
@@ -148,7 +148,7 @@ def main():
                                "px", "py", "pz", "t", "beam")}
     rng = np.random.default_rng(a.seed)
     lib = Library(a.library)
-    des = dmod.load(f"designs/modules/{a.design}.json")
+    des = dmod.load(a.design if a.design.endswith(".json") else f"designs/{a.design}.json")
     planes = [(pl.name, float(pl.z), min(float(pl.to_global(0.0)), float(pl.to_global(pl.u_max))),
                max(float(pl.to_global(0.0)), float(pl.to_global(pl.u_max))), float(pl.y_lo), float(pl.y_hi)) for pl in des.planes]
     files = sorted(glob.glob(f"{a.dir}/seed_*.npz"))[:a.seeds]

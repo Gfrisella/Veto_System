@@ -1,0 +1,3394 @@
+{
+ "description": "Low-W strangeness photoproduction reference data, compiled 2026-11-10. W = sqrt(mp^2+2 mp Eg). See kind/note per entry: table vs figure-read vs derived.",
+ "records": [
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 0.9125,
+   "W_GeV": 1.6102,
+   "sigma_ub": 0.289,
+   "err_ub": 0.1854,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    0.9,
+    0.925
+   ],
+   "stat_ub": 0.136,
+   "sys_ub": 0.126,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 0.9375,
+   "W_GeV": 1.6247,
+   "sigma_ub": 0.809,
+   "err_ub": 0.1034,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    0.925,
+    0.95
+   ],
+   "stat_ub": 0.082,
+   "sys_ub": 0.063,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 0.9625,
+   "W_GeV": 1.6391,
+   "sigma_ub": 1.105,
+   "err_ub": 0.0966,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    0.95,
+    0.975
+   ],
+   "stat_ub": 0.078,
+   "sys_ub": 0.057,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 0.9875,
+   "W_GeV": 1.6533,
+   "sigma_ub": 1.431,
+   "err_ub": 0.0988,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    0.975,
+    1.0
+   ],
+   "stat_ub": 0.08,
+   "sys_ub": 0.058,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.025,
+   "W_GeV": 1.6745,
+   "sigma_ub": 1.946,
+   "err_ub": 0.0918,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    1.0,
+    1.05
+   ],
+   "stat_ub": 0.08,
+   "sys_ub": 0.045,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.075,
+   "W_GeV": 1.7022,
+   "sigma_ub": 2.303,
+   "err_ub": 0.0827,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    1.05,
+    1.1
+   ],
+   "stat_ub": 0.068,
+   "sys_ub": 0.047,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.125,
+   "W_GeV": 1.7296,
+   "sigma_ub": 2.089,
+   "err_ub": 0.0722,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    1.1,
+    1.15
+   ],
+   "stat_ub": 0.058,
+   "sys_ub": 0.043,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.175,
+   "W_GeV": 1.7565,
+   "sigma_ub": 1.889,
+   "err_ub": 0.064,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    1.15,
+    1.2
+   ],
+   "stat_ub": 0.05,
+   "sys_ub": 0.04,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.225,
+   "W_GeV": 1.783,
+   "sigma_ub": 1.845,
+   "err_ub": 0.0693,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    1.2,
+    1.25
+   ],
+   "stat_ub": 0.058,
+   "sys_ub": 0.038,
+   "kind": "measured, angle-integrated (table)",
+   "note": "HEPData row has LOW=1.3,HIGH=1.25 (typo); assumed bin 1.20-1.25 GeV; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.275,
+   "W_GeV": 1.8091,
+   "sigma_ub": 1.83,
+   "err_ub": 0.0626,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    1.25,
+    1.3
+   ],
+   "stat_ub": 0.049,
+   "sys_ub": 0.039,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.325,
+   "W_GeV": 1.8349,
+   "sigma_ub": 1.8,
+   "err_ub": 0.0789,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    1.3,
+    1.35
+   ],
+   "stat_ub": 0.068,
+   "sys_ub": 0.04,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.375,
+   "W_GeV": 1.8603,
+   "sigma_ub": 1.862,
+   "err_ub": 0.0791,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    1.35,
+    1.4
+   ],
+   "stat_ub": 0.067,
+   "sys_ub": 0.042,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.425,
+   "W_GeV": 1.8853,
+   "sigma_ub": 1.827,
+   "err_ub": 0.0716,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    1.4,
+    1.45
+   ],
+   "stat_ub": 0.058,
+   "sys_ub": 0.042,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.475,
+   "W_GeV": 1.91,
+   "sigma_ub": 1.791,
+   "err_ub": 0.0722,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    1.45,
+    1.5
+   ],
+   "stat_ub": 0.058,
+   "sys_ub": 0.043,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.525,
+   "W_GeV": 1.9344,
+   "sigma_ub": 1.739,
+   "err_ub": 0.0793,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    1.5,
+    1.55
+   ],
+   "stat_ub": 0.066,
+   "sys_ub": 0.044,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.575,
+   "W_GeV": 1.9585,
+   "sigma_ub": 1.61,
+   "err_ub": 0.0771,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    1.55,
+    1.6
+   ],
+   "stat_ub": 0.064,
+   "sys_ub": 0.043,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.625,
+   "W_GeV": 1.9824,
+   "sigma_ub": 1.469,
+   "err_ub": 0.0763,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    1.6,
+    1.65
+   ],
+   "stat_ub": 0.063,
+   "sys_ub": 0.043,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.675,
+   "W_GeV": 2.0059,
+   "sigma_ub": 1.409,
+   "err_ub": 0.0738,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    1.65,
+    1.7
+   ],
+   "stat_ub": 0.06,
+   "sys_ub": 0.043,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.725,
+   "W_GeV": 2.0291,
+   "sigma_ub": 1.26,
+   "err_ub": 0.0718,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    1.7,
+    1.75
+   ],
+   "stat_ub": 0.059,
+   "sys_ub": 0.041,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.775,
+   "W_GeV": 2.0521,
+   "sigma_ub": 1.184,
+   "err_ub": 0.0722,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    1.75,
+    1.8
+   ],
+   "stat_ub": 0.058,
+   "sys_ub": 0.043,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.825,
+   "W_GeV": 2.0749,
+   "sigma_ub": 1.106,
+   "err_ub": 0.0769,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    1.8,
+    1.85
+   ],
+   "stat_ub": 0.065,
+   "sys_ub": 0.041,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.875,
+   "W_GeV": 2.0973,
+   "sigma_ub": 1.113,
+   "err_ub": 0.0644,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    1.85,
+    1.9
+   ],
+   "stat_ub": 0.048,
+   "sys_ub": 0.043,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.925,
+   "W_GeV": 2.1196,
+   "sigma_ub": 1.11,
+   "err_ub": 0.0709,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    1.9,
+    1.95
+   ],
+   "stat_ub": 0.054,
+   "sys_ub": 0.046,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.975,
+   "W_GeV": 2.1416,
+   "sigma_ub": 1.056,
+   "err_ub": 0.0754,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    1.95,
+    2.0
+   ],
+   "stat_ub": 0.059,
+   "sys_ub": 0.047,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 2.025,
+   "W_GeV": 2.1634,
+   "sigma_ub": 0.998,
+   "err_ub": 0.074,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    2.0,
+    2.05
+   ],
+   "stat_ub": 0.058,
+   "sys_ub": 0.046,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 2.075,
+   "W_GeV": 2.185,
+   "sigma_ub": 0.937,
+   "err_ub": 0.0687,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    2.05,
+    2.1
+   ],
+   "stat_ub": 0.051,
+   "sys_ub": 0.046,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 2.125,
+   "W_GeV": 2.2064,
+   "sigma_ub": 0.922,
+   "err_ub": 0.0933,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    2.1,
+    2.15
+   ],
+   "stat_ub": 0.08,
+   "sys_ub": 0.048,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 2.175,
+   "W_GeV": 2.2275,
+   "sigma_ub": 0.966,
+   "err_ub": 0.1087,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    2.15,
+    2.2
+   ],
+   "stat_ub": 0.096,
+   "sys_ub": 0.051,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 2.225,
+   "W_GeV": 2.2485,
+   "sigma_ub": 0.809,
+   "err_ub": 0.0772,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    2.2,
+    2.25
+   ],
+   "stat_ub": 0.057,
+   "sys_ub": 0.052,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 2.275,
+   "W_GeV": 2.2692,
+   "sigma_ub": 0.731,
+   "err_ub": 0.079,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    2.25,
+    2.3
+   ],
+   "stat_ub": 0.062,
+   "sys_ub": 0.049,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 2.325,
+   "W_GeV": 2.2898,
+   "sigma_ub": 0.787,
+   "err_ub": 0.0929,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    2.3,
+    2.35
+   ],
+   "stat_ub": 0.077,
+   "sys_ub": 0.052,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 2.375,
+   "W_GeV": 2.3102,
+   "sigma_ub": 0.765,
+   "err_ub": 0.0836,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    2.35,
+    2.4
+   ],
+   "stat_ub": 0.063,
+   "sys_ub": 0.055,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 2.425,
+   "W_GeV": 2.3304,
+   "sigma_ub": 0.607,
+   "err_ub": 0.1325,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    2.4,
+    2.45
+   ],
+   "stat_ub": 0.116,
+   "sys_ub": 0.064,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 2.475,
+   "W_GeV": 2.3505,
+   "sigma_ub": 0.696,
+   "err_ub": 0.1022,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    2.45,
+    2.5
+   ],
+   "stat_ub": 0.078,
+   "sys_ub": 0.066,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 2.525,
+   "W_GeV": 2.3704,
+   "sigma_ub": 0.66,
+   "err_ub": 0.137,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    2.5,
+    2.55
+   ],
+   "stat_ub": 0.114,
+   "sys_ub": 0.076,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 2.575,
+   "W_GeV": 2.3901,
+   "sigma_ub": 0.523,
+   "err_ub": 0.1259,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 19",
+   "E_bin": [
+    2.55,
+    2.6
+   ],
+   "stat_ub": 0.106,
+   "sys_ub": 0.068,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.0625,
+   "W_GeV": 1.6953,
+   "sigma_ub": 0.351,
+   "err_ub": 0.0604,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    1.05,
+    1.075
+   ],
+   "stat_ub": 0.047,
+   "sys_ub": 0.038,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.0875,
+   "W_GeV": 1.7091,
+   "sigma_ub": 0.52,
+   "err_ub": 0.0534,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    1.075,
+    1.1
+   ],
+   "stat_ub": 0.042,
+   "sys_ub": 0.033,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.1125,
+   "W_GeV": 1.7228,
+   "sigma_ub": 0.672,
+   "err_ub": 0.0511,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    1.1,
+    1.125
+   ],
+   "stat_ub": 0.039,
+   "sys_ub": 0.033,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.1375,
+   "W_GeV": 1.7364,
+   "sigma_ub": 0.794,
+   "err_ub": 0.0627,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    1.125,
+    1.15
+   ],
+   "stat_ub": 0.052,
+   "sys_ub": 0.035,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.175,
+   "W_GeV": 1.7565,
+   "sigma_ub": 1.013,
+   "err_ub": 0.046,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    1.15,
+    1.2
+   ],
+   "stat_ub": 0.038,
+   "sys_ub": 0.026,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.225,
+   "W_GeV": 1.783,
+   "sigma_ub": 1.309,
+   "err_ub": 0.0524,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    1.2,
+    1.25
+   ],
+   "stat_ub": 0.043,
+   "sys_ub": 0.03,
+   "kind": "measured, angle-integrated (table)",
+   "note": "HEPData row has LOW=1.3,HIGH=1.25 (typo); assumed bin 1.20-1.25 GeV; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.275,
+   "W_GeV": 1.8091,
+   "sigma_ub": 1.519,
+   "err_ub": 0.0667,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    1.25,
+    1.3
+   ],
+   "stat_ub": 0.058,
+   "sys_ub": 0.033,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.325,
+   "W_GeV": 1.8349,
+   "sigma_ub": 1.855,
+   "err_ub": 0.0638,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    1.3,
+    1.35
+   ],
+   "stat_ub": 0.052,
+   "sys_ub": 0.037,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.375,
+   "W_GeV": 1.8603,
+   "sigma_ub": 2.16,
+   "err_ub": 0.0777,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    1.35,
+    1.4
+   ],
+   "stat_ub": 0.066,
+   "sys_ub": 0.041,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.425,
+   "W_GeV": 1.8853,
+   "sigma_ub": 2.273,
+   "err_ub": 0.0878,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    1.4,
+    1.45
+   ],
+   "stat_ub": 0.076,
+   "sys_ub": 0.044,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.475,
+   "W_GeV": 1.91,
+   "sigma_ub": 2.158,
+   "err_ub": 0.0698,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    1.45,
+    1.5
+   ],
+   "stat_ub": 0.055,
+   "sys_ub": 0.043,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.525,
+   "W_GeV": 1.9344,
+   "sigma_ub": 1.886,
+   "err_ub": 0.0729,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    1.5,
+    1.55
+   ],
+   "stat_ub": 0.061,
+   "sys_ub": 0.04,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.575,
+   "W_GeV": 1.9585,
+   "sigma_ub": 1.811,
+   "err_ub": 0.0656,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    1.55,
+    1.6
+   ],
+   "stat_ub": 0.052,
+   "sys_ub": 0.04,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.625,
+   "W_GeV": 1.9824,
+   "sigma_ub": 1.613,
+   "err_ub": 0.064,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    1.6,
+    1.65
+   ],
+   "stat_ub": 0.05,
+   "sys_ub": 0.04,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.675,
+   "W_GeV": 2.0059,
+   "sigma_ub": 1.5,
+   "err_ub": 0.0611,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    1.65,
+    1.7
+   ],
+   "stat_ub": 0.047,
+   "sys_ub": 0.039,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.725,
+   "W_GeV": 2.0291,
+   "sigma_ub": 1.426,
+   "err_ub": 0.0658,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    1.7,
+    1.75
+   ],
+   "stat_ub": 0.053,
+   "sys_ub": 0.039,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.775,
+   "W_GeV": 2.0521,
+   "sigma_ub": 1.392,
+   "err_ub": 0.0639,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    1.75,
+    1.8
+   ],
+   "stat_ub": 0.049,
+   "sys_ub": 0.041,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.825,
+   "W_GeV": 2.0749,
+   "sigma_ub": 1.33,
+   "err_ub": 0.0664,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    1.8,
+    1.85
+   ],
+   "stat_ub": 0.053,
+   "sys_ub": 0.04,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.875,
+   "W_GeV": 2.0973,
+   "sigma_ub": 1.314,
+   "err_ub": 0.0631,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    1.85,
+    1.9
+   ],
+   "stat_ub": 0.048,
+   "sys_ub": 0.041,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.925,
+   "W_GeV": 2.1196,
+   "sigma_ub": 1.144,
+   "err_ub": 0.0654,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    1.9,
+    1.95
+   ],
+   "stat_ub": 0.051,
+   "sys_ub": 0.041,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.975,
+   "W_GeV": 2.1416,
+   "sigma_ub": 1.181,
+   "err_ub": 0.0638,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    1.95,
+    2.0
+   ],
+   "stat_ub": 0.048,
+   "sys_ub": 0.042,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 2.025,
+   "W_GeV": 2.1634,
+   "sigma_ub": 1.081,
+   "err_ub": 0.0716,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    2.0,
+    2.05
+   ],
+   "stat_ub": 0.058,
+   "sys_ub": 0.042,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 2.075,
+   "W_GeV": 2.185,
+   "sigma_ub": 1.079,
+   "err_ub": 0.0774,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    2.05,
+    2.1
+   ],
+   "stat_ub": 0.065,
+   "sys_ub": 0.042,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 2.125,
+   "W_GeV": 2.2064,
+   "sigma_ub": 0.979,
+   "err_ub": 0.07,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    2.1,
+    2.15
+   ],
+   "stat_ub": 0.056,
+   "sys_ub": 0.042,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 2.175,
+   "W_GeV": 2.2275,
+   "sigma_ub": 0.877,
+   "err_ub": 0.076,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    2.15,
+    2.2
+   ],
+   "stat_ub": 0.064,
+   "sys_ub": 0.041,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 2.225,
+   "W_GeV": 2.2485,
+   "sigma_ub": 0.837,
+   "err_ub": 0.0661,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    2.2,
+    2.25
+   ],
+   "stat_ub": 0.051,
+   "sys_ub": 0.042,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 2.275,
+   "W_GeV": 2.2692,
+   "sigma_ub": 0.908,
+   "err_ub": 0.0731,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    2.25,
+    2.3
+   ],
+   "stat_ub": 0.056,
+   "sys_ub": 0.047,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 2.325,
+   "W_GeV": 2.2898,
+   "sigma_ub": 0.79,
+   "err_ub": 0.0883,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    2.3,
+    2.35
+   ],
+   "stat_ub": 0.076,
+   "sys_ub": 0.045,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 2.375,
+   "W_GeV": 2.3102,
+   "sigma_ub": 0.653,
+   "err_ub": 0.064,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    2.35,
+    2.4
+   ],
+   "stat_ub": 0.05,
+   "sys_ub": 0.04,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 2.425,
+   "W_GeV": 2.3304,
+   "sigma_ub": 0.709,
+   "err_ub": 0.0808,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    2.4,
+    2.45
+   ],
+   "stat_ub": 0.061,
+   "sys_ub": 0.053,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 2.475,
+   "W_GeV": 2.3505,
+   "sigma_ub": 0.728,
+   "err_ub": 0.08,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    2.45,
+    2.5
+   ],
+   "stat_ub": 0.059,
+   "sys_ub": 0.054,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 2.525,
+   "W_GeV": 2.3704,
+   "sigma_ub": 0.652,
+   "err_ub": 0.087,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    2.5,
+    2.55
+   ],
+   "stat_ub": 0.063,
+   "sys_ub": 0.06,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 2.575,
+   "W_GeV": 2.3901,
+   "sigma_ub": 0.554,
+   "err_ub": 0.1094,
+   "source": "SAPHIR, Glander et al., EPJA 19 (2004) 251, arXiv:nucl-ex/0308025; HEPData ins626695 Table 20",
+   "E_bin": [
+    2.55,
+    2.6
+   ],
+   "stat_ub": 0.088,
+   "sys_ub": 0.065,
+   "kind": "measured, angle-integrated (table)",
+   "note": "table; excludes global norm. syst (paper Table 2)"
+  },
+  {
+   "channel": "gamma p -> K0 Sigma+",
+   "E_gamma_GeV": 1.1,
+   "W_GeV": 1.716,
+   "sigma_ub": 0.205,
+   "err_ub": 0.04,
+   "source": "SAPHIR, Lawall et al., EPJA 24 (2005) 275, arXiv:nucl-ex/0504014 Table 3; HEPData ins680746 Table 13",
+   "E_bin": [
+    1.05,
+    1.15
+   ],
+   "kind": "measured, angle-integrated (table)",
+   "note": "error incl. normalisation per HEPData"
+  },
+  {
+   "channel": "gamma p -> K0 Sigma+",
+   "E_gamma_GeV": 1.2,
+   "W_GeV": 1.7698,
+   "sigma_ub": 0.447,
+   "err_ub": 0.054,
+   "source": "SAPHIR, Lawall et al., EPJA 24 (2005) 275, arXiv:nucl-ex/0504014 Table 3; HEPData ins680746 Table 13",
+   "E_bin": [
+    1.15,
+    1.25
+   ],
+   "kind": "measured, angle-integrated (table)",
+   "note": "error incl. normalisation per HEPData"
+  },
+  {
+   "channel": "gamma p -> K0 Sigma+",
+   "E_gamma_GeV": 1.3,
+   "W_GeV": 1.822,
+   "sigma_ub": 0.579,
+   "err_ub": 0.057,
+   "source": "SAPHIR, Lawall et al., EPJA 24 (2005) 275, arXiv:nucl-ex/0504014 Table 3; HEPData ins680746 Table 13",
+   "E_bin": [
+    1.25,
+    1.35
+   ],
+   "kind": "measured, angle-integrated (table)",
+   "note": "error incl. normalisation per HEPData"
+  },
+  {
+   "channel": "gamma p -> K0 Sigma+",
+   "E_gamma_GeV": 1.4,
+   "W_GeV": 1.8728,
+   "sigma_ub": 0.612,
+   "err_ub": 0.059,
+   "source": "SAPHIR, Lawall et al., EPJA 24 (2005) 275, arXiv:nucl-ex/0504014 Table 3; HEPData ins680746 Table 13",
+   "E_bin": [
+    1.35,
+    1.45
+   ],
+   "kind": "measured, angle-integrated (table)",
+   "note": "error incl. normalisation per HEPData"
+  },
+  {
+   "channel": "gamma p -> K0 Sigma+",
+   "E_gamma_GeV": 1.5,
+   "W_GeV": 1.9223,
+   "sigma_ub": 0.588,
+   "err_ub": 0.058,
+   "source": "SAPHIR, Lawall et al., EPJA 24 (2005) 275, arXiv:nucl-ex/0504014 Table 3; HEPData ins680746 Table 13",
+   "E_bin": [
+    1.45,
+    1.55
+   ],
+   "kind": "measured, angle-integrated (table)",
+   "note": "error incl. normalisation per HEPData"
+  },
+  {
+   "channel": "gamma p -> K0 Sigma+",
+   "E_gamma_GeV": 1.6,
+   "W_GeV": 1.9705,
+   "sigma_ub": 0.575,
+   "err_ub": 0.037,
+   "source": "SAPHIR, Lawall et al., EPJA 24 (2005) 275, arXiv:nucl-ex/0504014 Table 3; HEPData ins680746 Table 13",
+   "E_bin": [
+    1.55,
+    1.65
+   ],
+   "kind": "measured, angle-integrated (table)",
+   "note": "error incl. normalisation per HEPData"
+  },
+  {
+   "channel": "gamma p -> K0 Sigma+",
+   "E_gamma_GeV": 1.7,
+   "W_GeV": 2.0175,
+   "sigma_ub": 0.466,
+   "err_ub": 0.045,
+   "source": "SAPHIR, Lawall et al., EPJA 24 (2005) 275, arXiv:nucl-ex/0504014 Table 3; HEPData ins680746 Table 13",
+   "E_bin": [
+    1.65,
+    1.75
+   ],
+   "kind": "measured, angle-integrated (table)",
+   "note": "error incl. normalisation per HEPData"
+  },
+  {
+   "channel": "gamma p -> K0 Sigma+",
+   "E_gamma_GeV": 1.8,
+   "W_GeV": 2.0635,
+   "sigma_ub": 0.391,
+   "err_ub": 0.051,
+   "source": "SAPHIR, Lawall et al., EPJA 24 (2005) 275, arXiv:nucl-ex/0504014 Table 3; HEPData ins680746 Table 13",
+   "E_bin": [
+    1.75,
+    1.85
+   ],
+   "kind": "measured, angle-integrated (table)",
+   "note": "error incl. normalisation per HEPData"
+  },
+  {
+   "channel": "gamma p -> K0 Sigma+",
+   "E_gamma_GeV": 1.95,
+   "W_GeV": 2.1306,
+   "sigma_ub": 0.238,
+   "err_ub": 0.029,
+   "source": "SAPHIR, Lawall et al., EPJA 24 (2005) 275, arXiv:nucl-ex/0504014 Table 3; HEPData ins680746 Table 13",
+   "E_bin": [
+    1.85,
+    2.05
+   ],
+   "kind": "measured, angle-integrated (table)",
+   "note": "error incl. normalisation per HEPData"
+  },
+  {
+   "channel": "gamma p -> K0 Sigma+",
+   "E_gamma_GeV": 2.15,
+   "W_GeV": 2.217,
+   "sigma_ub": 0.201,
+   "err_ub": 0.033,
+   "source": "SAPHIR, Lawall et al., EPJA 24 (2005) 275, arXiv:nucl-ex/0504014 Table 3; HEPData ins680746 Table 13",
+   "E_bin": [
+    2.05,
+    2.25
+   ],
+   "kind": "measured, angle-integrated (table)",
+   "note": "error incl. normalisation per HEPData"
+  },
+  {
+   "channel": "gamma p -> K0 Sigma+",
+   "E_gamma_GeV": 2.35,
+   "W_GeV": 2.3001,
+   "sigma_ub": 0.125,
+   "err_ub": 0.025,
+   "source": "SAPHIR, Lawall et al., EPJA 24 (2005) 275, arXiv:nucl-ex/0504014 Table 3; HEPData ins680746 Table 13",
+   "E_bin": [
+    2.25,
+    2.45
+   ],
+   "kind": "measured, angle-integrated (table)",
+   "note": "error incl. normalisation per HEPData"
+  },
+  {
+   "channel": "gamma p -> K0 Sigma+",
+   "E_gamma_GeV": 2.525,
+   "W_GeV": 2.3704,
+   "sigma_ub": 0.086,
+   "err_ub": 0.027,
+   "source": "SAPHIR, Lawall et al., EPJA 24 (2005) 275, arXiv:nucl-ex/0504014 Table 3; HEPData ins680746 Table 13",
+   "E_bin": [
+    2.45,
+    2.6
+   ],
+   "kind": "measured, angle-integrated (table)",
+   "note": "error incl. normalisation per HEPData"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.1535,
+   "W_GeV": 1.745,
+   "sigma_ub": 2.074,
+   "err_ub": 0.23,
+   "source": "CLAS, McCracken et al., PRC 81 (2010) 025201, arXiv:0912.4274; HEPData ins840934 dsigma/dcos tables",
+   "W_bin": [
+    1.74,
+    1.75
+   ],
+   "stat_ub": 0.032,
+   "sys_ub": 0.228,
+   "kind": "DERIVED by us: sum of dsigma/dcos x dcos over measured bins only",
+   "note": "covers cos(theta_K) -0.45..0.93 only -> lower bound, missing extreme-forward/backward (forward peak matters at high W); sys summed linearly"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.4445,
+   "W_GeV": 1.895,
+   "sigma_ub": 2.246,
+   "err_ub": 0.248,
+   "source": "CLAS, McCracken et al., PRC 81 (2010) 025201, arXiv:0912.4274; HEPData ins840934 dsigma/dcos tables",
+   "W_bin": [
+    1.89,
+    1.9
+   ],
+   "stat_ub": 0.026,
+   "sys_ub": 0.247,
+   "kind": "DERIVED by us: sum of dsigma/dcos x dcos over measured bins only",
+   "note": "covers cos(theta_K) -0.85..0.93 only -> lower bound, missing extreme-forward/backward (forward peak matters at high W); sys summed linearly"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 1.6518,
+   "W_GeV": 1.995,
+   "sigma_ub": 1.721,
+   "err_ub": 0.191,
+   "source": "CLAS, McCracken et al., PRC 81 (2010) 025201, arXiv:0912.4274; HEPData ins840934 dsigma/dcos tables",
+   "W_bin": [
+    1.99,
+    2.0
+   ],
+   "stat_ub": 0.027,
+   "sys_ub": 0.189,
+   "kind": "DERIVED by us: sum of dsigma/dcos x dcos over measured bins only",
+   "note": "covers cos(theta_K) -0.95..0.93 only -> lower bound, missing extreme-forward/backward (forward peak matters at high W); sys summed linearly"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 2.2167,
+   "W_GeV": 2.245,
+   "sigma_ub": 0.75,
+   "err_ub": 0.083,
+   "source": "CLAS, McCracken et al., PRC 81 (2010) 025201, arXiv:0912.4274; HEPData ins840934 dsigma/dcos tables",
+   "W_bin": [
+    2.24,
+    2.25
+   ],
+   "stat_ub": 0.009,
+   "sys_ub": 0.083,
+   "kind": "DERIVED by us: sum of dsigma/dcos x dcos over measured bins only",
+   "note": "covers cos(theta_K) -0.93..0.91 only -> lower bound, missing extreme-forward/backward (forward peak matters at high W); sys summed linearly"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 2.8481,
+   "W_GeV": 2.495,
+   "sigma_ub": 0.371,
+   "err_ub": 0.041,
+   "source": "CLAS, McCracken et al., PRC 81 (2010) 025201, arXiv:0912.4274; HEPData ins840934 dsigma/dcos tables",
+   "W_bin": [
+    2.49,
+    2.5
+   ],
+   "stat_ub": 0.006,
+   "sys_ub": 0.041,
+   "kind": "DERIVED by us: sum of dsigma/dcos x dcos over measured bins only",
+   "note": "covers cos(theta_K) -0.85..0.89 only -> lower bound, missing extreme-forward/backward (forward peak matters at high W); sys summed linearly"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 3.259,
+   "W_GeV": 2.645,
+   "sigma_ub": 0.247,
+   "err_ub": 0.027,
+   "source": "CLAS, McCracken et al., PRC 81 (2010) 025201, arXiv:0912.4274; HEPData ins840934 dsigma/dcos tables",
+   "W_bin": [
+    2.64,
+    2.65
+   ],
+   "stat_ub": 0.004,
+   "sys_ub": 0.027,
+   "kind": "DERIVED by us: sum of dsigma/dcos x dcos over measured bins only",
+   "note": "covers cos(theta_K) -0.85..0.89 only -> lower bound, missing extreme-forward/backward (forward peak matters at high W); sys summed linearly"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 3.5755,
+   "W_GeV": 2.755,
+   "sigma_ub": 0.172,
+   "err_ub": 0.019,
+   "source": "CLAS, McCracken et al., PRC 81 (2010) 025201, arXiv:0912.4274; HEPData ins840934 dsigma/dcos tables",
+   "W_bin": [
+    2.75,
+    2.76
+   ],
+   "stat_ub": 0.003,
+   "sys_ub": 0.019,
+   "kind": "DERIVED by us: sum of dsigma/dcos x dcos over measured bins only",
+   "note": "covers cos(theta_K) -0.85..0.87 only -> lower bound, missing extreme-forward/backward (forward peak matters at high W); sys summed linearly"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 3.8139,
+   "W_GeV": 2.835,
+   "sigma_ub": 0.136,
+   "err_ub": 0.015,
+   "source": "CLAS, McCracken et al., PRC 81 (2010) 025201, arXiv:0912.4274; HEPData ins840934 dsigma/dcos tables",
+   "W_bin": [
+    2.83,
+    2.84
+   ],
+   "stat_ub": 0.003,
+   "sys_ub": 0.015,
+   "kind": "DERIVED by us: sum of dsigma/dcos x dcos over measured bins only",
+   "note": "covers cos(theta_K) -0.85..0.87 only -> lower bound, missing extreme-forward/backward (forward peak matters at high W); sys summed linearly"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.4445,
+   "W_GeV": 1.895,
+   "sigma_ub": 2.529,
+   "err_ub": 0.248,
+   "source": "CLAS, Dey et al., PRC 82 (2010) 025202, HEPData ins857728 dsigma/dcos tables",
+   "W_bin": [
+    1.89,
+    1.9
+   ],
+   "stat_ub": 0.021,
+   "sys_ub": 0.247,
+   "kind": "DERIVED by us: sum of dsigma/dcos x dcos over measured bins only",
+   "note": "covers cos(theta_K) -0.85..0.95 only -> lower bound, missing extreme-forward/backward (forward peak matters at high W); sys summed linearly"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 1.6518,
+   "W_GeV": 1.995,
+   "sigma_ub": 1.577,
+   "err_ub": 0.158,
+   "source": "CLAS, Dey et al., PRC 82 (2010) 025202, HEPData ins857728 dsigma/dcos tables",
+   "W_bin": [
+    1.99,
+    2.0
+   ],
+   "stat_ub": 0.013,
+   "sys_ub": 0.157,
+   "kind": "DERIVED by us: sum of dsigma/dcos x dcos over measured bins only",
+   "note": "covers cos(theta_K) -0.95..0.95 only -> lower bound, missing extreme-forward/backward (forward peak matters at high W); sys summed linearly"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 2.2167,
+   "W_GeV": 2.245,
+   "sigma_ub": 0.744,
+   "err_ub": 0.077,
+   "source": "CLAS, Dey et al., PRC 82 (2010) 025202, HEPData ins857728 dsigma/dcos tables",
+   "W_bin": [
+    2.24,
+    2.25
+   ],
+   "stat_ub": 0.01,
+   "sys_ub": 0.076,
+   "kind": "DERIVED by us: sum of dsigma/dcos x dcos over measured bins only",
+   "note": "covers cos(theta_K) -0.95..0.95 only -> lower bound, missing extreme-forward/backward (forward peak matters at high W); sys summed linearly"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 2.8481,
+   "W_GeV": 2.495,
+   "sigma_ub": 0.386,
+   "err_ub": 0.042,
+   "source": "CLAS, Dey et al., PRC 82 (2010) 025202, HEPData ins857728 dsigma/dcos tables",
+   "W_bin": [
+    2.49,
+    2.5
+   ],
+   "stat_ub": 0.009,
+   "sys_ub": 0.041,
+   "kind": "DERIVED by us: sum of dsigma/dcos x dcos over measured bins only",
+   "note": "covers cos(theta_K) -0.95..0.95 only -> lower bound, missing extreme-forward/backward (forward peak matters at high W); sys summed linearly"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 3.259,
+   "W_GeV": 2.645,
+   "sigma_ub": 0.268,
+   "err_ub": 0.031,
+   "source": "CLAS, Dey et al., PRC 82 (2010) 025202, HEPData ins857728 dsigma/dcos tables",
+   "W_bin": [
+    2.64,
+    2.65
+   ],
+   "stat_ub": 0.011,
+   "sys_ub": 0.029,
+   "kind": "DERIVED by us: sum of dsigma/dcos x dcos over measured bins only",
+   "note": "covers cos(theta_K) -0.95..0.95 only -> lower bound, missing extreme-forward/backward (forward peak matters at high W); sys summed linearly"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 3.5755,
+   "W_GeV": 2.755,
+   "sigma_ub": 0.203,
+   "err_ub": 0.025,
+   "source": "CLAS, Dey et al., PRC 82 (2010) 025202, HEPData ins857728 dsigma/dcos tables",
+   "W_bin": [
+    2.75,
+    2.76
+   ],
+   "stat_ub": 0.011,
+   "sys_ub": 0.022,
+   "kind": "DERIVED by us: sum of dsigma/dcos x dcos over measured bins only",
+   "note": "covers cos(theta_K) -0.95..0.95 only -> lower bound, missing extreme-forward/backward (forward peak matters at high W); sys summed linearly"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 3.8139,
+   "W_GeV": 2.835,
+   "sigma_ub": 0.15,
+   "err_ub": 0.018,
+   "source": "CLAS, Dey et al., PRC 82 (2010) 025202, HEPData ins857728 dsigma/dcos tables",
+   "W_bin": [
+    2.83,
+    2.84
+   ],
+   "stat_ub": 0.009,
+   "sys_ub": 0.016,
+   "kind": "DERIVED by us: sum of dsigma/dcos x dcos over measured bins only",
+   "note": "covers cos(theta_K) -0.95..0.95 only -> lower bound, missing extreme-forward/backward (forward peak matters at high W); sys summed linearly"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 2.2,
+   "W_GeV": 2.238,
+   "sigma_ub": 0.51,
+   "err_ub": 0.18,
+   "source": "ABBHHM, Erbe et al., Phys. Rev. 188 (1969) 2060, doi:10.1103/PhysRev.188.2060, Fig. 25",
+   "E_bin": [
+    2.0,
+    2.4
+   ],
+   "kind": "READ FROM FIGURE (digitised from page image, +-0.03 ub reading error)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 2.6,
+   "W_GeV": 2.3999,
+   "sigma_ub": 0.47,
+   "err_ub": 0.19,
+   "source": "ABBHHM, Erbe et al., Phys. Rev. 188 (1969) 2060, doi:10.1103/PhysRev.188.2060, Fig. 25",
+   "E_bin": [
+    2.4,
+    2.8
+   ],
+   "kind": "READ FROM FIGURE (digitised from page image, +-0.03 ub reading error)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 3.0,
+   "W_GeV": 2.5515,
+   "sigma_ub": 0.6,
+   "err_ub": 0.25,
+   "source": "ABBHHM, Erbe et al., Phys. Rev. 188 (1969) 2060, doi:10.1103/PhysRev.188.2060, Fig. 25",
+   "E_bin": [
+    2.8,
+    3.2
+   ],
+   "kind": "READ FROM FIGURE (digitised from page image, +-0.03 ub reading error)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 3.4,
+   "W_GeV": 2.6946,
+   "sigma_ub": 0.78,
+   "err_ub": 0.29,
+   "source": "ABBHHM, Erbe et al., Phys. Rev. 188 (1969) 2060, doi:10.1103/PhysRev.188.2060, Fig. 25",
+   "E_bin": [
+    3.2,
+    3.6
+   ],
+   "kind": "READ FROM FIGURE (digitised from page image, +-0.03 ub reading error)"
+  },
+  {
+   "channel": "gamma p -> K+ Lambda",
+   "E_gamma_GeV": 4.7,
+   "W_GeV": 3.1145,
+   "sigma_ub": 0.12,
+   "err_ub": 0.05,
+   "source": "ABBHHM, Erbe et al., Phys. Rev. 188 (1969) 2060, doi:10.1103/PhysRev.188.2060, Fig. 25",
+   "E_bin": [
+    3.6,
+    5.8
+   ],
+   "kind": "READ FROM FIGURE (digitised from page image, +-0.03 ub reading error)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 2.5,
+   "W_GeV": 2.3604,
+   "sigma_ub": 0.29,
+   "err_ub": 0.09,
+   "source": "ABBHHM, Erbe et al., Phys. Rev. 188 (1969) 2060, doi:10.1103/PhysRev.188.2060, Fig. 25",
+   "E_bin": [
+    2.0,
+    3.0
+   ],
+   "kind": "READ FROM FIGURE (digitised from page image, +-0.03 ub reading error)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0",
+   "E_gamma_GeV": 4.4,
+   "W_GeV": 3.0228,
+   "sigma_ub": 0.09,
+   "err_ub": 0.04,
+   "source": "ABBHHM, Erbe et al., Phys. Rev. 188 (1969) 2060, doi:10.1103/PhysRev.188.2060, Fig. 25",
+   "E_bin": [
+    3.0,
+    5.8
+   ],
+   "kind": "READ FROM FIGURE (digitised from page image, +-0.03 ub reading error)"
+  },
+  {
+   "channel": "gamma p -> strange X (LOWER LIMIT)",
+   "E_gamma_GeV": 0.95,
+   "W_GeV": 1.6319,
+   "sigma_ub": 1.3,
+   "err_ub": 0.3,
+   "source": "ABBHHM, Erbe et al., Phys. Rev. 188 (1969) 2060, Fig. 30 (lower limit of sigma(gamma p -> strange particles))",
+   "E_bin": [
+    0.9,
+    1.0
+   ],
+   "kind": "READ FROM FIGURE; lower limit = sum of kinematically identified channels only"
+  },
+  {
+   "channel": "gamma p -> strange X (LOWER LIMIT)",
+   "E_gamma_GeV": 1.1,
+   "W_GeV": 1.716,
+   "sigma_ub": 2.3,
+   "err_ub": 0.4,
+   "source": "ABBHHM, Erbe et al., Phys. Rev. 188 (1969) 2060, Fig. 30 (lower limit of sigma(gamma p -> strange particles))",
+   "E_bin": [
+    1.0,
+    1.2
+   ],
+   "kind": "READ FROM FIGURE; lower limit = sum of kinematically identified channels only"
+  },
+  {
+   "channel": "gamma p -> strange X (LOWER LIMIT)",
+   "E_gamma_GeV": 1.25,
+   "W_GeV": 1.7961,
+   "sigma_ub": 4.4,
+   "err_ub": 0.8,
+   "source": "ABBHHM, Erbe et al., Phys. Rev. 188 (1969) 2060, Fig. 30 (lower limit of sigma(gamma p -> strange particles))",
+   "E_bin": [
+    1.2,
+    1.3
+   ],
+   "kind": "READ FROM FIGURE; lower limit = sum of kinematically identified channels only"
+  },
+  {
+   "channel": "gamma p -> strange X (LOWER LIMIT)",
+   "E_gamma_GeV": 1.35,
+   "W_GeV": 1.8476,
+   "sigma_ub": 4.2,
+   "err_ub": 0.75,
+   "source": "ABBHHM, Erbe et al., Phys. Rev. 188 (1969) 2060, Fig. 30 (lower limit of sigma(gamma p -> strange particles))",
+   "E_bin": [
+    1.3,
+    1.4
+   ],
+   "kind": "READ FROM FIGURE; lower limit = sum of kinematically identified channels only"
+  },
+  {
+   "channel": "gamma p -> strange X (LOWER LIMIT)",
+   "E_gamma_GeV": 1.45,
+   "W_GeV": 1.8977,
+   "sigma_ub": 4.25,
+   "err_ub": 0.8,
+   "source": "ABBHHM, Erbe et al., Phys. Rev. 188 (1969) 2060, Fig. 30 (lower limit of sigma(gamma p -> strange particles))",
+   "E_bin": [
+    1.4,
+    1.5
+   ],
+   "kind": "READ FROM FIGURE; lower limit = sum of kinematically identified channels only"
+  },
+  {
+   "channel": "gamma p -> strange X (LOWER LIMIT)",
+   "E_gamma_GeV": 1.6,
+   "W_GeV": 1.9705,
+   "sigma_ub": 4.1,
+   "err_ub": 0.6,
+   "source": "ABBHHM, Erbe et al., Phys. Rev. 188 (1969) 2060, Fig. 30 (lower limit of sigma(gamma p -> strange particles))",
+   "E_bin": [
+    1.5,
+    1.7
+   ],
+   "kind": "READ FROM FIGURE; lower limit = sum of kinematically identified channels only"
+  },
+  {
+   "channel": "gamma p -> strange X (LOWER LIMIT)",
+   "E_gamma_GeV": 1.85,
+   "W_GeV": 2.0861,
+   "sigma_ub": 4.4,
+   "err_ub": 0.6,
+   "source": "ABBHHM, Erbe et al., Phys. Rev. 188 (1969) 2060, Fig. 30 (lower limit of sigma(gamma p -> strange particles))",
+   "E_bin": [
+    1.7,
+    2.0
+   ],
+   "kind": "READ FROM FIGURE; lower limit = sum of kinematically identified channels only"
+  },
+  {
+   "channel": "gamma p -> strange X (LOWER LIMIT)",
+   "E_gamma_GeV": 2.25,
+   "W_GeV": 2.2589,
+   "sigma_ub": 2.85,
+   "err_ub": 0.4,
+   "source": "ABBHHM, Erbe et al., Phys. Rev. 188 (1969) 2060, Fig. 30 (lower limit of sigma(gamma p -> strange particles))",
+   "E_bin": [
+    2.0,
+    2.5
+   ],
+   "kind": "READ FROM FIGURE; lower limit = sum of kinematically identified channels only"
+  },
+  {
+   "channel": "gamma p -> strange X (LOWER LIMIT)",
+   "E_gamma_GeV": 3.0,
+   "W_GeV": 2.5515,
+   "sigma_ub": 2.7,
+   "err_ub": 0.35,
+   "source": "ABBHHM, Erbe et al., Phys. Rev. 188 (1969) 2060, Fig. 30 (lower limit of sigma(gamma p -> strange particles))",
+   "E_bin": [
+    2.5,
+    3.5
+   ],
+   "kind": "READ FROM FIGURE; lower limit = sum of kinematically identified channels only"
+  },
+  {
+   "channel": "gamma p -> strange X (LOWER LIMIT)",
+   "E_gamma_GeV": 4.2,
+   "W_GeV": 2.96,
+   "sigma_ub": 2.7,
+   "err_ub": 0.35,
+   "source": "ABBHHM, Erbe et al., Phys. Rev. 188 (1969) 2060, Fig. 30 (lower limit of sigma(gamma p -> strange particles))",
+   "E_bin": [
+    3.5,
+    5.8
+   ],
+   "kind": "READ FROM FIGURE; lower limit = sum of kinematically identified channels only"
+  },
+  {
+   "channel": "gamma p -> p K+ K-",
+   "E_gamma_GeV": 1.79,
+   "W_GeV": 2.059,
+   "sigma_ub": 0.21,
+   "err_ub": 0.07,
+   "source": "ABBHHM, Phys. Rev. 188 (1969) 2060, Table V",
+   "E_bin": [
+    1.58,
+    2.0
+   ],
+   "kind": "measured (table)"
+  },
+  {
+   "channel": "gamma p -> p K+ K-",
+   "E_gamma_GeV": 2.25,
+   "W_GeV": 2.2589,
+   "sigma_ub": 0.47,
+   "err_ub": 0.12,
+   "source": "ABBHHM, Phys. Rev. 188 (1969) 2060, Table V",
+   "E_bin": [
+    2.0,
+    2.5
+   ],
+   "kind": "measured (table)"
+  },
+  {
+   "channel": "gamma p -> p K+ K-",
+   "E_gamma_GeV": 2.75,
+   "W_GeV": 2.4578,
+   "sigma_ub": 0.54,
+   "err_ub": 0.14,
+   "source": "ABBHHM, Phys. Rev. 188 (1969) 2060, Table V",
+   "E_bin": [
+    2.5,
+    3.0
+   ],
+   "kind": "measured (table)"
+  },
+  {
+   "channel": "gamma p -> p K+ K-",
+   "E_gamma_GeV": 3.25,
+   "W_GeV": 2.6418,
+   "sigma_ub": 1.06,
+   "err_ub": 0.23,
+   "source": "ABBHHM, Phys. Rev. 188 (1969) 2060, Table V",
+   "E_bin": [
+    3.0,
+    3.5
+   ],
+   "kind": "measured (table)"
+  },
+  {
+   "channel": "gamma p -> p K+ K-",
+   "E_gamma_GeV": 3.75,
+   "W_GeV": 2.8138,
+   "sigma_ub": 0.64,
+   "err_ub": 0.19,
+   "source": "ABBHHM, Phys. Rev. 188 (1969) 2060, Table V",
+   "E_bin": [
+    3.5,
+    4.0
+   ],
+   "kind": "measured (table)"
+  },
+  {
+   "channel": "gamma p -> p K+ K-",
+   "E_gamma_GeV": 4.25,
+   "W_GeV": 2.9758,
+   "sigma_ub": 0.97,
+   "err_ub": 0.26,
+   "source": "ABBHHM, Phys. Rev. 188 (1969) 2060, Table V",
+   "E_bin": [
+    4.0,
+    4.5
+   ],
+   "kind": "measured (table)"
+  },
+  {
+   "channel": "gamma p -> p K+ K-",
+   "E_gamma_GeV": 4.75,
+   "W_GeV": 3.1295,
+   "sigma_ub": 1.11,
+   "err_ub": 0.3,
+   "source": "ABBHHM, Phys. Rev. 188 (1969) 2060, Table V",
+   "E_bin": [
+    4.5,
+    5.0
+   ],
+   "kind": "measured (table)"
+  },
+  {
+   "channel": "gamma p -> p K+ K-",
+   "E_gamma_GeV": 5.4,
+   "W_GeV": 3.3187,
+   "sigma_ub": 0.92,
+   "err_ub": 0.26,
+   "source": "ABBHHM, Phys. Rev. 188 (1969) 2060, Table V",
+   "E_bin": [
+    5.0,
+    5.8
+   ],
+   "kind": "measured (table)"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0(1385)",
+   "E_gamma_GeV": 1.71,
+   "W_GeV": 2.0222,
+   "sigma_ub": 0.67,
+   "err_ub": 0.27,
+   "source": "ABBHHM, Phys. Rev. 188 (1969) 2060, Table VII",
+   "E_bin": [
+    1.42,
+    2.0
+   ],
+   "kind": "measured (table), corrected for unobserved decay modes"
+  },
+  {
+   "channel": "gamma p -> K+ Sigma0(1385)",
+   "E_gamma_GeV": 3.9,
+   "W_GeV": 2.8634,
+   "sigma_ub": 0.15,
+   "err_ub": 0.09,
+   "source": "ABBHHM, Phys. Rev. 188 (1969) 2060, Table VII",
+   "E_bin": [
+    2.0,
+    5.8
+   ],
+   "kind": "measured (table), corrected for unobserved decay modes"
+  },
+  {
+   "channel": "gamma p -> K0 Sigma+(1385)",
+   "E_gamma_GeV": 1.71,
+   "W_GeV": 2.0222,
+   "sigma_ub": 0.68,
+   "err_ub": 0.48,
+   "source": "ABBHHM, Phys. Rev. 188 (1969) 2060, Table VII",
+   "E_bin": [
+    1.42,
+    2.0
+   ],
+   "kind": "measured (table), corrected for unobserved decay modes"
+  },
+  {
+   "channel": "gamma p -> K0 Sigma+(1385)",
+   "E_gamma_GeV": 3.9,
+   "W_GeV": 2.8634,
+   "sigma_ub": 0.13,
+   "err_ub": 0.09,
+   "source": "ABBHHM, Phys. Rev. 188 (1969) 2060, Table VII",
+   "E_bin": [
+    2.0,
+    5.8
+   ],
+   "kind": "measured (table), corrected for unobserved decay modes"
+  },
+  {
+   "channel": "gamma p -> events with VISIBLE strange-particle decay (topological)",
+   "E_gamma_GeV": 1.44,
+   "W_GeV": 1.8928,
+   "sigma_ub": 4.4,
+   "err_ub": 0.9,
+   "source": "SLAC-PUB-0618 Table Ib (Ballam et al., PRL 23 (1969) 498)",
+   "kind": "measured (table); NOT corrected for invisible decays (K0L, K+-, Lambda->n pi0, K0S->pi0pi0) -> lower limit on sigma(strange)",
+   "note": "preprint values; published PRL may differ slightly"
+  },
+  {
+   "channel": "gamma p -> events with VISIBLE strange-particle decay (topological)",
+   "E_gamma_GeV": 2.84,
+   "W_GeV": 2.4919,
+   "sigma_ub": 7.7,
+   "err_ub": 0.9,
+   "source": "SLAC-PUB-0618 Table Ib (Ballam et al., PRL 23 (1969) 498)",
+   "kind": "measured (table); NOT corrected for invisible decays (K0L, K+-, Lambda->n pi0, K0S->pi0pi0) -> lower limit on sigma(strange)",
+   "note": "preprint values; published PRL may differ slightly"
+  },
+  {
+   "channel": "gamma p -> events with VISIBLE strange-particle decay (topological)",
+   "E_gamma_GeV": 4.66,
+   "W_GeV": 3.1024,
+   "sigma_ub": 7.8,
+   "err_ub": 0.9,
+   "source": "SLAC-PUB-0618 Table Ib (Ballam et al., PRL 23 (1969) 498)",
+   "kind": "measured (table); NOT corrected for invisible decays (K0L, K+-, Lambda->n pi0, K0S->pi0pi0) -> lower limit on sigma(strange)",
+   "note": "preprint values; published PRL may differ slightly"
+  },
+  {
+   "channel": "gamma p -> events with VISIBLE strange-particle decay (topological)",
+   "E_gamma_GeV": 9.3,
+   "W_GeV": 4.2816,
+   "sigma_ub": 9.8,
+   "err_ub": 0.4,
+   "source": "SLAC-PUB-1196 Table IV (Bingham et al., PRD 8 (1973) 1277), 8<Eg<10.3",
+   "kind": "measured (table); NOT corrected for invisible decays (K0L, K+-, Lambda->n pi0, K0S->pi0pi0) -> lower limit on sigma(strange)",
+   "note": "preprint values; published PRL may differ slightly"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 0.915,
+   "W_GeV": 1.6116,
+   "sigma_ub": 201.7,
+   "err_ub": 4.7,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 0.94,
+   "W_GeV": 1.6261,
+   "sigma_ub": 205.0,
+   "err_ub": 4.6,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 0.965,
+   "W_GeV": 1.6405,
+   "sigma_ub": 201.5,
+   "err_ub": 4.8,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 0.99,
+   "W_GeV": 1.6547,
+   "sigma_ub": 212.1,
+   "err_ub": 4.9,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.015,
+   "W_GeV": 1.6688,
+   "sigma_ub": 217.5,
+   "err_ub": 5.0,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.04,
+   "W_GeV": 1.6828,
+   "sigma_ub": 215.2,
+   "err_ub": 4.9,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.065,
+   "W_GeV": 1.6967,
+   "sigma_ub": 191.7,
+   "err_ub": 5.0,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.09,
+   "W_GeV": 1.7105,
+   "sigma_ub": 191.1,
+   "err_ub": 5.0,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.115,
+   "W_GeV": 1.7242,
+   "sigma_ub": 174.7,
+   "err_ub": 5.0,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.14,
+   "W_GeV": 1.7377,
+   "sigma_ub": 165.0,
+   "err_ub": 4.8,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.165,
+   "W_GeV": 1.7512,
+   "sigma_ub": 158.7,
+   "err_ub": 4.9,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.19,
+   "W_GeV": 1.7645,
+   "sigma_ub": 162.2,
+   "err_ub": 5.0,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.215,
+   "W_GeV": 1.7777,
+   "sigma_ub": 149.6,
+   "err_ub": 4.8,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.24,
+   "W_GeV": 1.7909,
+   "sigma_ub": 148.6,
+   "err_ub": 5.0,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.265,
+   "W_GeV": 1.8039,
+   "sigma_ub": 143.8,
+   "err_ub": 4.9,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.29,
+   "W_GeV": 1.8169,
+   "sigma_ub": 155.6,
+   "err_ub": 4.7,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.315,
+   "W_GeV": 1.8298,
+   "sigma_ub": 146.8,
+   "err_ub": 4.9,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.34,
+   "W_GeV": 1.8425,
+   "sigma_ub": 153.6,
+   "err_ub": 4.8,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.365,
+   "W_GeV": 1.8552,
+   "sigma_ub": 154.4,
+   "err_ub": 5.0,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.39,
+   "W_GeV": 1.8678,
+   "sigma_ub": 153.6,
+   "err_ub": 5.4,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.415,
+   "W_GeV": 1.8803,
+   "sigma_ub": 146.8,
+   "err_ub": 5.2,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.44,
+   "W_GeV": 1.8928,
+   "sigma_ub": 153.5,
+   "err_ub": 5.3,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.465,
+   "W_GeV": 1.9051,
+   "sigma_ub": 144.2,
+   "err_ub": 5.4,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.49,
+   "W_GeV": 1.9174,
+   "sigma_ub": 151.5,
+   "err_ub": 5.2,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.515,
+   "W_GeV": 1.9296,
+   "sigma_ub": 155.9,
+   "err_ub": 5.3,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.54,
+   "W_GeV": 1.9417,
+   "sigma_ub": 154.1,
+   "err_ub": 5.1,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.565,
+   "W_GeV": 1.9538,
+   "sigma_ub": 146.1,
+   "err_ub": 5.1,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.59,
+   "W_GeV": 1.9657,
+   "sigma_ub": 138.8,
+   "err_ub": 5.1,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.615,
+   "W_GeV": 1.9776,
+   "sigma_ub": 156.5,
+   "err_ub": 5.1,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.64,
+   "W_GeV": 1.9894,
+   "sigma_ub": 150.2,
+   "err_ub": 5.0,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.665,
+   "W_GeV": 2.0012,
+   "sigma_ub": 150.3,
+   "err_ub": 4.0,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.69,
+   "W_GeV": 2.0129,
+   "sigma_ub": 145.4,
+   "err_ub": 3.9,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.715,
+   "W_GeV": 2.0245,
+   "sigma_ub": 138.9,
+   "err_ub": 3.7,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.74,
+   "W_GeV": 2.0361,
+   "sigma_ub": 144.5,
+   "err_ub": 3.9,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.765,
+   "W_GeV": 2.0475,
+   "sigma_ub": 142.5,
+   "err_ub": 4.4,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.79,
+   "W_GeV": 2.059,
+   "sigma_ub": 141.5,
+   "err_ub": 4.5,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.815,
+   "W_GeV": 2.0703,
+   "sigma_ub": 142.4,
+   "err_ub": 4.7,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.84,
+   "W_GeV": 2.0816,
+   "sigma_ub": 143.2,
+   "err_ub": 4.4,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.865,
+   "W_GeV": 2.0929,
+   "sigma_ub": 148.6,
+   "err_ub": 4.4,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.89,
+   "W_GeV": 2.104,
+   "sigma_ub": 153.9,
+   "err_ub": 4.7,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.915,
+   "W_GeV": 2.1152,
+   "sigma_ub": 135.4,
+   "err_ub": 4.6,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.94,
+   "W_GeV": 2.1262,
+   "sigma_ub": 148.0,
+   "err_ub": 4.9,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.965,
+   "W_GeV": 2.1372,
+   "sigma_ub": 144.3,
+   "err_ub": 4.7,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.99,
+   "W_GeV": 2.1482,
+   "sigma_ub": 143.5,
+   "err_ub": 4.7,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.015,
+   "W_GeV": 2.1591,
+   "sigma_ub": 149.1,
+   "err_ub": 4.8,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.04,
+   "W_GeV": 2.1699,
+   "sigma_ub": 143.5,
+   "err_ub": 5.2,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.065,
+   "W_GeV": 2.1807,
+   "sigma_ub": 138.0,
+   "err_ub": 5.3,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.09,
+   "W_GeV": 2.1914,
+   "sigma_ub": 131.7,
+   "err_ub": 5.3,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.115,
+   "W_GeV": 2.2021,
+   "sigma_ub": 144.5,
+   "err_ub": 5.2,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.14,
+   "W_GeV": 2.2127,
+   "sigma_ub": 137.5,
+   "err_ub": 5.3,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.165,
+   "W_GeV": 2.2233,
+   "sigma_ub": 144.9,
+   "err_ub": 5.3,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.19,
+   "W_GeV": 2.2338,
+   "sigma_ub": 135.9,
+   "err_ub": 5.3,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.215,
+   "W_GeV": 2.2443,
+   "sigma_ub": 138.3,
+   "err_ub": 5.4,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.24,
+   "W_GeV": 2.2547,
+   "sigma_ub": 139.0,
+   "err_ub": 5.5,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.265,
+   "W_GeV": 2.2651,
+   "sigma_ub": 136.1,
+   "err_ub": 5.5,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.29,
+   "W_GeV": 2.2754,
+   "sigma_ub": 128.6,
+   "err_ub": 5.5,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.315,
+   "W_GeV": 2.2857,
+   "sigma_ub": 135.9,
+   "err_ub": 5.6,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.34,
+   "W_GeV": 2.296,
+   "sigma_ub": 139.5,
+   "err_ub": 5.8,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.365,
+   "W_GeV": 2.3062,
+   "sigma_ub": 132.7,
+   "err_ub": 5.5,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.39,
+   "W_GeV": 2.3163,
+   "sigma_ub": 138.7,
+   "err_ub": 5.6,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.415,
+   "W_GeV": 2.3264,
+   "sigma_ub": 143.1,
+   "err_ub": 5.7,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.44,
+   "W_GeV": 2.3365,
+   "sigma_ub": 140.3,
+   "err_ub": 5.8,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.465,
+   "W_GeV": 2.3465,
+   "sigma_ub": 140.4,
+   "err_ub": 5.6,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.49,
+   "W_GeV": 2.3565,
+   "sigma_ub": 138.9,
+   "err_ub": 6.1,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.515,
+   "W_GeV": 2.3664,
+   "sigma_ub": 141.0,
+   "err_ub": 5.8,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.54,
+   "W_GeV": 2.3763,
+   "sigma_ub": 130.4,
+   "err_ub": 5.8,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.565,
+   "W_GeV": 2.3861,
+   "sigma_ub": 136.3,
+   "err_ub": 5.7,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.59,
+   "W_GeV": 2.396,
+   "sigma_ub": 124.1,
+   "err_ub": 7.7,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.615,
+   "W_GeV": 2.4057,
+   "sigma_ub": 128.4,
+   "err_ub": 7.0,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.64,
+   "W_GeV": 2.4155,
+   "sigma_ub": 129.9,
+   "err_ub": 7.7,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.665,
+   "W_GeV": 2.4251,
+   "sigma_ub": 132.5,
+   "err_ub": 7.3,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.69,
+   "W_GeV": 2.4348,
+   "sigma_ub": 134.3,
+   "err_ub": 5.9,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.715,
+   "W_GeV": 2.4444,
+   "sigma_ub": 138.7,
+   "err_ub": 6.0,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.74,
+   "W_GeV": 2.454,
+   "sigma_ub": 132.8,
+   "err_ub": 6.1,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.765,
+   "W_GeV": 2.4635,
+   "sigma_ub": 144.4,
+   "err_ub": 4.3,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.79,
+   "W_GeV": 2.473,
+   "sigma_ub": 133.4,
+   "err_ub": 4.1,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.815,
+   "W_GeV": 2.4825,
+   "sigma_ub": 136.2,
+   "err_ub": 3.8,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.84,
+   "W_GeV": 2.4919,
+   "sigma_ub": 130.2,
+   "err_ub": 4.0,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.865,
+   "W_GeV": 2.5013,
+   "sigma_ub": 133.8,
+   "err_ub": 3.7,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.89,
+   "W_GeV": 2.5107,
+   "sigma_ub": 133.9,
+   "err_ub": 3.8,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.915,
+   "W_GeV": 2.52,
+   "sigma_ub": 130.4,
+   "err_ub": 3.9,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.94,
+   "W_GeV": 2.5293,
+   "sigma_ub": 131.4,
+   "err_ub": 4.0,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.965,
+   "W_GeV": 2.5386,
+   "sigma_ub": 128.7,
+   "err_ub": 4.0,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.99,
+   "W_GeV": 2.5478,
+   "sigma_ub": 140.4,
+   "err_ub": 4.0,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.015,
+   "W_GeV": 2.557,
+   "sigma_ub": 138.3,
+   "err_ub": 4.1,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.04,
+   "W_GeV": 2.5661,
+   "sigma_ub": 129.2,
+   "err_ub": 4.3,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.065,
+   "W_GeV": 2.5753,
+   "sigma_ub": 143.6,
+   "err_ub": 4.0,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.09,
+   "W_GeV": 2.5844,
+   "sigma_ub": 128.0,
+   "err_ub": 4.2,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.115,
+   "W_GeV": 2.5934,
+   "sigma_ub": 132.6,
+   "err_ub": 4.0,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.14,
+   "W_GeV": 2.6024,
+   "sigma_ub": 132.1,
+   "err_ub": 4.4,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.165,
+   "W_GeV": 2.6114,
+   "sigma_ub": 126.8,
+   "err_ub": 5.0,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.19,
+   "W_GeV": 2.6204,
+   "sigma_ub": 127.8,
+   "err_ub": 5.1,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.215,
+   "W_GeV": 2.6293,
+   "sigma_ub": 124.3,
+   "err_ub": 4.9,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.24,
+   "W_GeV": 2.6382,
+   "sigma_ub": 123.9,
+   "err_ub": 4.9,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.265,
+   "W_GeV": 2.6471,
+   "sigma_ub": 127.1,
+   "err_ub": 5.2,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.29,
+   "W_GeV": 2.656,
+   "sigma_ub": 121.3,
+   "err_ub": 5.0,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.315,
+   "W_GeV": 2.6648,
+   "sigma_ub": 133.8,
+   "err_ub": 5.1,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.34,
+   "W_GeV": 2.6736,
+   "sigma_ub": 128.7,
+   "err_ub": 5.1,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.365,
+   "W_GeV": 2.6823,
+   "sigma_ub": 134.3,
+   "err_ub": 5.2,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.39,
+   "W_GeV": 2.6911,
+   "sigma_ub": 123.1,
+   "err_ub": 5.1,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.415,
+   "W_GeV": 2.6998,
+   "sigma_ub": 131.7,
+   "err_ub": 5.4,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.44,
+   "W_GeV": 2.7084,
+   "sigma_ub": 121.4,
+   "err_ub": 5.3,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.465,
+   "W_GeV": 2.7171,
+   "sigma_ub": 137.0,
+   "err_ub": 5.2,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.49,
+   "W_GeV": 2.7257,
+   "sigma_ub": 123.2,
+   "err_ub": 5.2,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.515,
+   "W_GeV": 2.7343,
+   "sigma_ub": 130.1,
+   "err_ub": 5.4,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.54,
+   "W_GeV": 2.7429,
+   "sigma_ub": 134.8,
+   "err_ub": 5.4,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.565,
+   "W_GeV": 2.7514,
+   "sigma_ub": 129.4,
+   "err_ub": 5.3,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.59,
+   "W_GeV": 2.7599,
+   "sigma_ub": 127.8,
+   "err_ub": 6.0,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.615,
+   "W_GeV": 2.7684,
+   "sigma_ub": 122.7,
+   "err_ub": 5.7,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.64,
+   "W_GeV": 2.7769,
+   "sigma_ub": 121.8,
+   "err_ub": 5.5,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.665,
+   "W_GeV": 2.7853,
+   "sigma_ub": 119.8,
+   "err_ub": 5.6,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.69,
+   "W_GeV": 2.7937,
+   "sigma_ub": 119.3,
+   "err_ub": 5.7,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.715,
+   "W_GeV": 2.8021,
+   "sigma_ub": 134.2,
+   "err_ub": 5.4,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.74,
+   "W_GeV": 2.8104,
+   "sigma_ub": 132.3,
+   "err_ub": 5.5,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.765,
+   "W_GeV": 2.8188,
+   "sigma_ub": 124.8,
+   "err_ub": 5.8,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.79,
+   "W_GeV": 2.8271,
+   "sigma_ub": 122.0,
+   "err_ub": 5.6,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.815,
+   "W_GeV": 2.8354,
+   "sigma_ub": 113.9,
+   "err_ub": 5.5,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.84,
+   "W_GeV": 2.8436,
+   "sigma_ub": 127.1,
+   "err_ub": 6.0,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.865,
+   "W_GeV": 2.8519,
+   "sigma_ub": 122.4,
+   "err_ub": 5.9,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.89,
+   "W_GeV": 2.8601,
+   "sigma_ub": 134.7,
+   "err_ub": 5.9,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.915,
+   "W_GeV": 2.8683,
+   "sigma_ub": 124.9,
+   "err_ub": 5.7,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.94,
+   "W_GeV": 2.8764,
+   "sigma_ub": 116.3,
+   "err_ub": 5.8,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.965,
+   "W_GeV": 2.8846,
+   "sigma_ub": 136.2,
+   "err_ub": 6.1,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.99,
+   "W_GeV": 2.8927,
+   "sigma_ub": 123.6,
+   "err_ub": 6.3,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 4.015,
+   "W_GeV": 2.9008,
+   "sigma_ub": 146.2,
+   "err_ub": 6.3,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 4.04,
+   "W_GeV": 2.9089,
+   "sigma_ub": 135.6,
+   "err_ub": 6.3,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 4.065,
+   "W_GeV": 2.9169,
+   "sigma_ub": 119.8,
+   "err_ub": 6.6,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 4.09,
+   "W_GeV": 2.925,
+   "sigma_ub": 141.9,
+   "err_ub": 6.8,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 4.115,
+   "W_GeV": 2.933,
+   "sigma_ub": 132.4,
+   "err_ub": 6.9,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 4.14,
+   "W_GeV": 2.941,
+   "sigma_ub": 128.8,
+   "err_ub": 6.5,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 4.165,
+   "W_GeV": 2.9489,
+   "sigma_ub": 133.6,
+   "err_ub": 6.8,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 4.19,
+   "W_GeV": 2.9569,
+   "sigma_ub": 133.5,
+   "err_ub": 7.2,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 4.215,
+   "W_GeV": 2.9648,
+   "sigma_ub": 126.6,
+   "err_ub": 6.9,
+   "source": "Armstrong et al., PRD 5 (1972) 1640; HEPData ins67298 Table 1",
+   "kind": "measured (table)",
+   "note": "stat error; +-3% syst"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.7,
+   "W_GeV": 2.7971,
+   "sigma_ub": 128.4,
+   "err_ub": 4.6,
+   "source": "Caldwell et al., PRD 7 (1973) 1362; HEPData ins83727 Table 1 (proton)",
+   "kind": "measured (table)"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 3.94,
+   "W_GeV": 2.8764,
+   "sigma_ub": 136.1,
+   "err_ub": 4.9,
+   "source": "Caldwell et al., PRD 7 (1973) 1362; HEPData ins83727 Table 1 (proton)",
+   "kind": "measured (table)"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 4.19,
+   "W_GeV": 2.9569,
+   "sigma_ub": 132.9,
+   "err_ub": 5.0,
+   "source": "Caldwell et al., PRD 7 (1973) 1362; HEPData ins83727 Table 1 (proton)",
+   "kind": "measured (table)"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 4.43,
+   "W_GeV": 3.0321,
+   "sigma_ub": 128.3,
+   "err_ub": 5.7,
+   "source": "Caldwell et al., PRD 7 (1973) 1362; HEPData ins83727 Table 1 (proton)",
+   "kind": "measured (table)"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 4.7,
+   "W_GeV": 3.1145,
+   "sigma_ub": 126.9,
+   "err_ub": 4.2,
+   "source": "Caldwell et al., PRD 7 (1973) 1362; HEPData ins83727 Table 1 (proton)",
+   "kind": "measured (table)"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 5.01,
+   "W_GeV": 3.2065,
+   "sigma_ub": 134.4,
+   "err_ub": 4.4,
+   "source": "Caldwell et al., PRD 7 (1973) 1362; HEPData ins83727 Table 1 (proton)",
+   "kind": "measured (table)"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 5.32,
+   "W_GeV": 3.296,
+   "sigma_ub": 121.7,
+   "err_ub": 4.4,
+   "source": "Caldwell et al., PRD 7 (1973) 1362; HEPData ins83727 Table 1 (proton)",
+   "kind": "measured (table)"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 5.63,
+   "W_GeV": 3.3831,
+   "sigma_ub": 130.1,
+   "err_ub": 5.2,
+   "source": "Caldwell et al., PRD 7 (1973) 1362; HEPData ins83727 Table 1 (proton)",
+   "kind": "measured (table)"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 5.98,
+   "W_GeV": 3.4788,
+   "sigma_ub": 120.7,
+   "err_ub": 4.0,
+   "source": "Caldwell et al., PRD 7 (1973) 1362; HEPData ins83727 Table 1 (proton)",
+   "kind": "measured (table)"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 6.37,
+   "W_GeV": 3.5824,
+   "sigma_ub": 128.6,
+   "err_ub": 4.2,
+   "source": "Caldwell et al., PRD 7 (1973) 1362; HEPData ins83727 Table 1 (proton)",
+   "kind": "measured (table)"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 1.44,
+   "W_GeV": 1.8928,
+   "sigma_ub": 145.1,
+   "err_ub": 5.7,
+   "source": "SLAC bubble chamber, Ballam et al., PRD 5 (1972) 545; HEPData ins67165 Table 1",
+   "kind": "measured (table)"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 2.8,
+   "W_GeV": 2.4768,
+   "sigma_ub": 132.0,
+   "err_ub": 3.0,
+   "source": "SLAC bubble chamber, Ballam et al., PRD 5 (1972) 545; HEPData ins67165 Table 1",
+   "kind": "measured (table)"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 4.7,
+   "W_GeV": 3.1145,
+   "sigma_ub": 127.0,
+   "err_ub": 3.0,
+   "source": "SLAC bubble chamber, Ballam et al., PRD 5 (1972) 545; HEPData ins67165 Table 1",
+   "kind": "measured (table)"
+  },
+  {
+   "channel": "gamma p -> X (total)",
+   "E_gamma_GeV": 9.3,
+   "W_GeV": 4.2816,
+   "sigma_ub": 124.0,
+   "err_ub": 2.5,
+   "source": "SLAC, Bingham et al., PRD 8 (1973) 1277; HEPData ins81022 Table 1",
+   "kind": "measured (table)",
+   "E_bin": [
+    8.0,
+    10.3
+   ]
+  }
+ ]
+}

@@ -856,7 +856,7 @@ OBJ_STATS = vobj.sample_stats()
 _inp = json.loads((EVO_DIR / EVO_RUN / "config.json").read_text()).get("inputs", "inputs.npz") if (EVO_DIR / EVO_RUN).exists() else None
 _inp = _inp if _inp and (paths.results_dir() / "reco" / _inp).exists() else "inputs_delta_s_amaps.npz"
 RUN_STATS = vobj.sample_stats(np.load(paths.results_dir() / "reco" / _inp)) if (paths.results_dir() / "reco" / _inp).exists() else OBJ_STATS
-OBJ_CFG = vobj.ObjectiveConfig(bkg_estimate="max", form="sensitivity", cost_budget_kchf=10000.0)
+OBJ_CFG = vobj.ObjectiveConfig(bkg_estimate="max", form="sensitivity")
 
 
 def evo_history(run):
