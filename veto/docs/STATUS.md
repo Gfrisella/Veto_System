@@ -1110,6 +1110,17 @@ draws x10-70, more seeds), waiting for the go.
   (same one event), nu He 1.08 -> 1.13. Runner-ups ga8c8 (244.7 dr, sig 3.0 %), ga6c9 (245.3 dr, 3.7 %); top 3 share the
   ring / straw / V0 changes. Solid: signal loss halved, -79 drachmas, no rate penalty. Not adopted; designs/ unchanged.
 
+## 2026-11-20 (night, Guglielmo) V0 rule on / off for R1-R3, full chain for Z2 / Z3
+- Optimiser chain (evaluate_designs.py, 1e5 signal, seed 1, Nov-4): R1 + V0 rule (results_rerun/reco/r1_v0rule, Slurm
+  2147456): MS7 mu 1.67e4 -> 189 +- 91, signal lost 2.45 -> 4.35 %. R2 / R3 WITHOUT V0 (r23_nov0rule, 2147472): MS7 mu
+  1.37e4 / 1.34e4, SBT material 122 / 121, signal lost 5.00 / 5.18 % (with V0: 0.48, 2.95, 6.74 / 6.83 %). Reference
+  designs unchanged (study copies *_v0, *_nov0).
+- Full chain for Z2, Z3, R1_v0, R2_nov0, R3_nov0 (results_rerun/full_chain_extra, Slurm array 2149071, 24 tasks %3):
+  run_reco full / partial, evstore_eval (R2 / R1 vessel stores reused), dis_combinatorial, sbt_eval nu. Rock x mu not run
+  (D7 closed 16 Nov; Guglielmo: rock model suspect).
+- Muon flux per region (slide 16): results_rerun/nov4_flow/flux_regions.{py,json}; search radii: results_rerun/aperture_radii;
+  seen-by UBT + SBT only: kl_distributions/seen_by/plot_seen_by_nomsms.py.
+
 ## 2026-11-20 — single-track DIS x independent muon (combinatorial), four rows (results_rerun/combi_single)
 - bin/combi_single.py (D9 recipe of dis_combinatorial.py; only events with exactly ONE good track; same pair cuts and
   +-200 ps window factor as mu x mu), bin/combi_cutflow.py (step-by-step cut flow), bin/combi_single_summary.py
