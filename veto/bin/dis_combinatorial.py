@@ -32,10 +32,12 @@ from veto import design as dsg
 from veto import evstore as es
 from veto import interactions as ix
 from veto import paths, reco
+from veto import geometry as geo
 from veto.config import DEFAULT_CONFIG
 
 V0 = (130, 310, 3122, 3322)
 DEFAULT_STORES = ("ms7_muon_v0s", "vessel_mu_R2_sbt_ubt")
+Z_PRETAG = geo.Z_VESSEL_MIN + 0.05   # m: vertex selection, at least 5 cm inside the vessel
 COMP_PMIN = 0.1   # GeV: other products of the interaction kept as companions (hits in coincidence)
 
 
@@ -94,6 +96,36 @@ def dis_tracks(store):
     return out, info, comp
 
 
+def companions_of(comp, draws, event):
+    """Companion tracks of the interactions `draws` (one per track row; -1 = none) as reco.run_events companions."""
+    if comp is None or not len(comp["draw"]):
+        return None
+    cd = comp["draw"]
+    dr = np.asarray(draws, np.int64)
+    lo, hi = np.searchsorted(cd, dr, "left"), np.searchsorted(cd, dr, "right")
+    n_c = np.where(dr >= 0, hi - lo, 0)
+    if not n_c.sum():
+        return None
+    ci = np.repeat(lo - np.cumsum(n_c) + n_c, n_c) + np.arange(n_c.sum())
+    return dict(tr={k: v[ci] for k, v in comp["tr"].items()}, event=np.repeat(np.asarray(event), n_c))
+
+
+def pretag(trk, design, inp, cfg, rng, comp=None, chunk=200_000):
+    """20 Nov 2026 (Guglielmo: tag each leg once, pair only the ones not tagged): every track traced back from SST1 alone,
+    searching the planes / SBT upstream of Z_PRETAG (every selected vertex is downstream of it): a leg tagged here is
+    tagged in every pair it could make. comp: the rest of its interaction (companions). Returns the tagged mask."""
+    n = len(trk["ax"])
+    tagged = np.zeros(n, bool)
+    for c0 in range(0, n, chunk):
+        rows = np.arange(c0, min(c0 + chunk, n))
+        ev = np.arange(len(rows))
+        sub_ = {k: np.asarray(v)[rows] for k, v in trk.items()}
+        cmp_ = companions_of(comp, sub_["draw"], ev) if comp is not None else None
+        m = reco.run_events(sub_, ev, np.full(len(rows), Z_PRETAG), design, inp, cfg, rng, companions=cmp_)
+        tagged[rows] = m["vetoed"]
+    return tagged
+
+
 def merge_terms(parts):
     """Sum the veto_term results of blocks of DIS tracks (pair weights w_mu x w_DIS: blocks add up)."""
     if len(parts) == 1:
@@ -124,6 +156,7 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--random-hits", action="store_true", help="also tag with random hits (default off: background tagged only by its own hits, Guglielmo 20 Nov 2026; random hits count only for the signal loss)")
     ap.add_argument("--no-companions", action="store_true", help="do not use the other products of the interaction (pre-20 Nov behaviour)")
+    ap.add_argument("--no-pretag", action="store_true", help="pair every muon and DIS track (pre-20 Nov; slow, same result)")
     ap.add_argument("--no-v0", action="store_true", help="do not pass the pair vertex to the V0 rule (pre-20 Nov behaviour)")
     a = ap.parse_args()
     t0 = time.time()
@@ -142,6 +175,14 @@ def main():
         mu = {k: v[~st] for k, v in mu.items()}
         tr_in, inp, _ = shell_loss_populations(tr_in, inp, scfg)
         print(f"SBT shell: {n_stopped:.4g} muons / spill stop in the shell, removed from the pairs and the inefficiency", flush=True)
+    pre_info = {}
+    if not a.no_pretag:                 # tag each muon once; only the untagged ones can make an untagged pair
+        tg = pretag({k: mu[k] for k in list(KEYS) + ["draw"]}, design, inp, cfg, np.random.default_rng(11))
+        pre_info["mu_tagged_w_frac"] = float(mu["weight"][tg].sum() / mu["weight"].sum())
+        pre_info["mu_rows"], pre_info["mu_rows_left"] = int(len(tg)), int((~tg).sum())
+        mu = {k: v[~tg] for k, v in mu.items()}
+        print(f"muons tagged alone (upstream of {Z_PRETAG:.2f} m): {pre_info['mu_tagged_w_frac']:.4f} of the weight; "
+              f"{pre_info['mu_rows_left']:,} of {pre_info['mu_rows']:,} rows left to pair", flush=True)
     print(f"good SST1 muons: {mu['weight'].sum():.4g} / spill ({len(mu['ax']):,} rows), {time.time() - t0:.0f} s", flush=True)
     # veto efficiency of an average SST1 muon (for the bound): the single-muon sample of the reco inputs
     single = inp["single"]; sw = inp["single_w"]
@@ -153,6 +194,13 @@ def main():
         B, info, comp = dis_tracks(st)
         if a.no_companions:
             comp = None
+        if not a.no_pretag:             # tag each single-track interaction once (its track + the rest of the interaction)
+            tg = pretag({k: B[k] for k in list(KEYS) + ["draw"]}, design, inp, cfg, np.random.default_rng(13), comp=comp)
+            info["pretag_tagged_w_frac"] = float(B["weight"][tg].sum() / max(B["weight"].sum(), 1e-300))
+            info["pretag_rows_left"] = int((~tg).sum())
+            B = {k: v[~tg] for k, v in B.items()}
+            print(f"  DIS tracks tagged alone: {info['pretag_tagged_w_frac']:.4f} of the weight; {info['pretag_rows_left']:,} left to pair",
+                  flush=True)
         infos[st] = info
         print(f"{st}: {info['single_track_events']:,} single-track events ({info['single_rate_per_spill']:.4g} tracks / spill), "
               f"{info['multi_track_events']:,} multi-track events rejected (D9), {time.time() - t0:.0f} s", flush=True)
@@ -190,7 +238,8 @@ def main():
               f"{aft:>12s}{r.get('n_after', 0):>6d}")
     json.dump(dict(design=design.name, dataset=a.dataset, inputs=a.inputs, mu_inefficiency=mu_ineff, stores=infos, terms=res,
                    options=dict(random_hits=a.random_hits, companions=not a.no_companions, v0=not a.no_v0,
-                                companion_pmin=COMP_PMIN, mu_stopped_per_spill=n_stopped)),
+                                companion_pmin=COMP_PMIN, mu_stopped_per_spill=n_stopped, pretag=not a.no_pretag,
+                                z_pretag=Z_PRETAG, **pre_info)),
               open(a.out, "w"), indent=1, default=float)
     print(f"wrote {a.out} ({time.time() - t0:.0f} s)")
 

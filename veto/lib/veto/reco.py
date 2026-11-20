@@ -58,8 +58,9 @@ class RecoConfig:
     cone: float = 0.0                  # vertex cone [rad]: tracks of a vertex also search r0 + cone * (distance from
                                        # the vertex to the plane), for parents bent at the vertex (0 = off)
     multiple_scattering: bool = False  # scatter the muons after z = 30.6 m (scattering.py)
-    random_hits: bool = True           # accidental hits of other muons (UBT planes, SBT, MS7 strips). False = background tagged only
-                                       # by its own hits (Guglielmo 20 Nov 2026: random hits only for the signal loss)
+    random_hits: bool = False          # accidental hits of other muons (UBT planes, SBT, MS7 strips) for BACKGROUND events. Default
+                                       # False since 20 Nov 2026 (Guglielmo: random hits only for the LLP signal loss): background is
+                                       # tagged by its own hits only. Signal (run_events with_own_hits=False) always gets random hits.
     debris_in_time: bool = False       # D14.1: each muon's own shield-end e / gamma on the UBT planes, in time (debris_in_time.py)
     acts_resolution: bool = False      # D14.2: measure() smears with the ACTS fit (acts_resolution.py) instead of sigma_pos / sigma_slope / ms_slope; also smears p
     msc_media: bool = True             # ... also in the helium and the air (1 m slices)
@@ -679,7 +680,7 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
     rule = v0_rule_config(design) if v0 is not None else None
     if rule:                                                 # the V0 rule looks earlier: draw random hits there too
         window = window + (max(rule["early_ns"], EARLY_TOF_MAX) if rule.get("early_tof") else rule["early_ns"])
-    acc = (accidental_hits(design, maps, n_events, window, cfg, rng) if getattr(cfg, "random_hits", True)
+    acc = (accidental_hits(design, maps, n_events, window, cfg, rng) if (getattr(cfg, "random_hits", False) or not with_own_hits)
            else {k: np.empty(0) for k in ("event", "plane", "u", "y", "t", "ghost")})
     acc["track"] = np.full(len(acc["event"]), -1)            # accidental: no track of this event
     hits = {k: np.concatenate([own[k], acc[k]]) for k in own}
