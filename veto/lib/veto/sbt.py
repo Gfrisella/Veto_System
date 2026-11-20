@@ -427,13 +427,16 @@ def zone_tag(h_ev, h_cell, h_t, v0, cfg, n_events, window):
     return out
 
 
-def tag(tr_true, meas, event, z_limit, cfg, reco_cfg, rng, n_events, with_own_hits=True, v0=None):
+def tag(tr_true, meas, event, z_limit, cfg, reco_cfg, rng, n_events, with_own_hits=True, v0=None, companions=None):
     """SBT decision per event (and per track for "pointing"). Returns dict vetoed (n_events), explained (n_tracks).
     v0 (optional, D19): dict vtx, pvis per event (the vertex candidate) and sbt_hits (event, cell, t: extra own hits of the
     event, e.g. the deposits of the interaction itself, sbt_material.deposits); used only with cfg v0_line / selftag_hits."""
     window = cfg["n_sigma"] * np.hypot(cfg["sigma_t"] * 1e9, reco_cfg.sigma_t_track)      # ns
     own = own_hits(tr_true, event, cfg, rng) if with_own_hits else dict(event=np.zeros(0, int), cell=np.zeros(0, int),
                                                                          t=np.zeros(0), track=np.zeros(0, int))
+    if with_own_hits and companions is not None and len(companions["event"]):   # reco.run_events: the rest of the event
+        co = own_hits(companions["tr"], np.asarray(companions["event"], np.int64), cfg, rng)
+        own = {k: np.concatenate([own[k], co[k] if k != "track" else np.full(len(co["event"]), -1)]) for k in own}
     use_line = bool(cfg.get("v0_line")) and v0 is not None and len(v0.get("vtx", [])) > 0
     early = cfg.get("v0_line_early_ns", 3.0) if use_line else 0.0
     acc = (random_hits(n_events, cfg, reco_cfg.spill_s, rng, window + 2.0 + early) if getattr(reco_cfg, "random_hits", True)

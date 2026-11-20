@@ -27,7 +27,7 @@ import numpy as np
 import torch
 
 from rock_combinatorial import KEYS, cross_pairs, muon_tracks, veto_term
-from run_reco import load_inputs
+from run_reco import load_inputs, shell_loss_populations
 from veto import design as dsg
 from veto import evstore as es
 from veto import interactions as ix
@@ -36,6 +36,7 @@ from veto.config import DEFAULT_CONFIG
 
 V0 = (130, 310, 3122, 3322)
 DEFAULT_STORES = ("ms7_muon_v0s", "vessel_mu_R2_sbt_ubt")
+COMP_PMIN = 0.1   # GeV: other products of the interaction kept as companions (hits in coincidence)
 
 
 def drop_v0_products_of_originals(ev, tr):
@@ -75,10 +76,22 @@ def dis_tracks(store):
                bx=b[:, 0], by=b[:, 1], bz=b[:, 2], bpx=p[:, 0], bpy=p[:, 1], bpz=p[:, 2],
                weight=inter["weight"][t["inter"][one]], type=np.full(len(one), 3.0),
                pdg=-13.0 * t["q"][one], draw=t["inter"][one].astype(np.int64))   # -13 q: a PDG-like id, read as charge
-    info = dict(store=str(paths.evstore(store)), tracks=n0, tracks_after_v0_drop=len(tr["event"]), good=len(g),
+    # 20 Nov 2026: the rest of each single-track interaction (charged, moving downstream, p > COMP_PMIN; straight lines like the
+    # track itself): its hits are in coincidence with the candidate (reco.run_events companions), sorted by interaction (draw)
+    single_int = np.zeros(len(inter["weight"]), bool); single_int[t["inter"][one]] = True
+    is_one = np.zeros(len(t["inter"]), bool); is_one[one] = True
+    c = np.nonzero(single_int[t["inter"]] & ~is_one & (np.linalg.norm(t["p"], axis=1) > COMP_PMIN))[0]
+    c = c[np.argsort(t["inter"][c], kind="stable")]
+    cn = np.full(len(c), np.nan)
+    cv, cb, cp = t["v"][c], t["b"][c], t["p"][c]
+    comp = dict(draw=t["inter"][c].astype(np.int64),
+                tr=dict(ax=cv[:, 0], ay=cv[:, 1], az=cv[:, 2], apz=cp[:, 2], kx=cn, ky=cn, kz=cn.copy(),
+                        bx=cb[:, 0], by=cb[:, 1], bz=cb[:, 2], bpx=cp[:, 0], bpy=cp[:, 1], bpz=cp[:, 2],
+                        weight=inter["weight"][t["inter"][c]], type=np.full(len(c), 3.0), pdg=-13.0 * t["q"][c]))
+    info = dict(store=str(paths.evstore(store)), tracks=n0, companions=int(len(c)), tracks_after_v0_drop=len(tr["event"]), good=len(g),
                 events_with_good=int((n_good > 0).sum()), single_track_events=int((n_good == 1).sum()),
                 multi_track_events=int((n_good >= 2).sum()), single_rate_per_spill=float(out["weight"].sum()))
-    return out, info
+    return out, info, comp
 
 
 def merge_terms(parts):
@@ -109,14 +122,26 @@ def main():
     ap.add_argument("--dis-block", type=int, default=0,
                     help="process the DIS tracks in blocks of this many rows (memory: the vessel store needed > 128 GB in one go, S7 16 Nov 2026); 0 = all at once")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--random-hits", action="store_true", help="also tag with random hits (default off: background tagged only by its own hits, Guglielmo 20 Nov 2026; random hits count only for the signal loss)")
+    ap.add_argument("--no-companions", action="store_true", help="do not use the other products of the interaction (pre-20 Nov behaviour)")
+    ap.add_argument("--no-v0", action="store_true", help="do not pass the pair vertex to the V0 rule (pre-20 Nov behaviour)")
     a = ap.parse_args()
     t0 = time.time()
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     p = Path(a.design)
     design = dsg.load(p if p.exists() else a.design)
-    cfg = reco.RecoConfig(seed=1, multiple_scattering=True)
+    cfg = reco.RecoConfig(seed=1, multiple_scattering=True, random_hits=a.random_hits)
     tr_in, inp = load_inputs(a.inputs)
     mu = muon_tracks(a.dataset, a.mu_sample)
+    scfg = getattr(design, "sbt", None) or {}
+    n_stopped = 0
+    if scfg.get("shell_energy_loss"):   # 20 Nov 2026: muons that stop in the SBT shell never reach SST1 (as run_reco)
+        from veto import sbt_material
+        st = sbt_material.shell_energy_loss(mu, scfg.get("shell_eloss_beta", True))["stopped"]
+        n_stopped = float(mu["weight"][st].sum())
+        mu = {k: v[~st] for k, v in mu.items()}
+        tr_in, inp, _ = shell_loss_populations(tr_in, inp, scfg)
+        print(f"SBT shell: {n_stopped:.4g} muons / spill stop in the shell, removed from the pairs and the inefficiency", flush=True)
     print(f"good SST1 muons: {mu['weight'].sum():.4g} / spill ({len(mu['ax']):,} rows), {time.time() - t0:.0f} s", flush=True)
     # veto efficiency of an average SST1 muon (for the bound): the single-muon sample of the reco inputs
     single = inp["single"]; sw = inp["single_w"]
@@ -125,7 +150,9 @@ def main():
     mu_ineff = float((sw * ~m["vetoed"]).sum() / sw.sum())
     res, infos = {}, {}
     for st in a.stores:
-        B, info = dis_tracks(st)
+        B, info, comp = dis_tracks(st)
+        if a.no_companions:
+            comp = None
         infos[st] = info
         print(f"{st}: {info['single_track_events']:,} single-track events ({info['single_rate_per_spill']:.4g} tracks / spill), "
               f"{info['multi_track_events']:,} multi-track events rejected (D9), {time.time() - t0:.0f} s", flush=True)
@@ -136,9 +163,11 @@ def main():
             Bk = {k: v_[k0:k0 + step] for k, v_ in B.items()}
             ia, ib, v, n_pairs, pre = cross_pairs(mu, Bk, dev, a.block, sel=cfg)      # streaming IP cut (memory)
             tr = {k: np.concatenate([np.asarray(mu[k], float), np.asarray(Bk[k], float)]) for k in KEYS}
+            tr["draw"] = np.concatenate([np.full(len(mu["ax"]), -1, np.int64), np.asarray(Bk["draw"], np.int64)])
             cand = np.stack([ia, ib + len(mu["ax"])], 1)
             w = mu["weight"][ia] * Bk["weight"][ib]
-            rk = veto_term(tr, cand, w, v, design, inp, cfg, np.random.default_rng(2 + k0 // step), pre=pre)
+            rk = veto_term(tr, cand, w, v, design, inp, cfg, np.random.default_rng(2 + k0 // step), pre=pre,
+                           companions=comp, with_v0=not a.no_v0)
             rk.pop("_surv", None)
             rk["opposite_pairs"] = n_pairs
             parts.append(rk)
@@ -159,7 +188,9 @@ def main():
         aft = f"{r['after_15y']:.3g}" if r.get("n_after") else f"< {r.get('after_upper_15y') or 0:.2g}"
         print(f"  {k:34s}{r['candidates_15y']:>13.4g}{r['selected_15y']:>11.4g}{r['n_selected']:>7d}{r['bound_15y']:>10.3g}"
               f"{aft:>12s}{r.get('n_after', 0):>6d}")
-    json.dump(dict(design=design.name, dataset=a.dataset, inputs=a.inputs, mu_inefficiency=mu_ineff, stores=infos, terms=res),
+    json.dump(dict(design=design.name, dataset=a.dataset, inputs=a.inputs, mu_inefficiency=mu_ineff, stores=infos, terms=res,
+                   options=dict(random_hits=a.random_hits, companions=not a.no_companions, v0=not a.no_v0,
+                                companion_pmin=COMP_PMIN, mu_stopped_per_spill=n_stopped)),
               open(a.out, "w"), indent=1, default=float)
     print(f"wrote {a.out} ({time.time() - t0:.0f} s)")
 

@@ -637,9 +637,12 @@ def v0_tag(hits, design, v0, rule, cfg, n_events):
     return n_hit >= rule["min_hits"], n_hit
 
 
-def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, details=False, v0=None):
+def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, details=False, v0=None, companions=None):
     """Full chain for a set of events. tr: true tracks (one row per track), event: event id per
     track, z_limit: search only planes upstream of this z (the vertex; 82 m for single tracks).
+    companions (20 Nov 2026): dict(tr=<tracks, same format>, event=<event id per row>): other particles of the same events
+    (e.g. the rest of an interaction whose one track reaches SST1). Their own hits on the planes / SBT are hits of the event
+    (in coincidence with it) but they are not traced back themselves (not measured): track = -1, as an accidental hit.
     Returns per-event veto flag, per-track explained flag, per-plane veto counts and timings."""
     timing = {}
     n_events = int(event.max()) + 1 if len(event) else 0
@@ -667,6 +670,11 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
                                   muon_time_at=lambda pl: -true_crossing(tr_true, pl)[2] / C)
         own = {k: np.concatenate([own[k], deb[k]]) for k in own}
         timing["debris_hits"] = len(deb["event"])
+    if with_own_hits and companions is not None and len(companions["event"]):
+        ch = own_hits(companions["tr"], np.asarray(companions["event"], np.int64), design, rng)
+        ch["track"] = np.full(len(ch["event"]), -1)
+        own = {k: np.concatenate([own[k], ch[k]]) for k in own}
+        timing["companion_hits"] = len(ch["event"])
     window = time_window(design, cfg) + ACC_MARGIN_NS        # each plane its own window
     rule = v0_rule_config(design) if v0 is not None else None
     if rule:                                                 # the V0 rule looks earlier: draw random hits there too
@@ -694,7 +702,7 @@ def run_events(tr, event, z_limit, design, maps, cfg, rng, with_own_hits=True, d
     if sbt_cfg:                                  # Surrounding Background Tagger (veto.sbt, 12 Nov 2026): OR with the planes
         from . import sbt
         sb = sbt.tag(tr_true, meas, event, z_limit, sbt_cfg, cfg, rng, n_events, with_own_hits=with_own_hits,
-                     v0=v0)               # D19: used only with the SBT flags v0_line / selftag_hits (default off)
+                     v0=v0, companions=companions)               # D19: used only with the SBT flags v0_line / selftag_hits (default off)
         n_sbt = int((sb["vetoed"] & ~vetoed).sum())
         explained |= sb["explained"]
         vetoed |= sb["vetoed"]

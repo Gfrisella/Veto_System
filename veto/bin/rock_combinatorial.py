@@ -119,9 +119,12 @@ def cross_pairs(A, B, dev, block, same=False, sel=None):
     return res + (dict(n=n_cand, w=w_cand, ip=cat(out_ip, 0, np.float64)),)
 
 
-def veto_term(tr, cand, cand_w, cand_v, design, inp, cfg, rng, chunk=200_000, pre=None):
+def veto_term(tr, cand, cand_w, cand_v, design, inp, cfg, rng, chunk=200_000, pre=None, companions=None, with_v0=False):
     """Measured IP cut and veto for candidate pairs (rows of tr); returns per-15-year before / after IP / after veto.
-    pre = dict(n, w, ip) from cross_pairs(sel=cfg): cand are already the IP-selected pairs (streaming)."""
+    pre = dict(n, w, ip) from cross_pairs(sel=cfg): cand are already the IP-selected pairs (streaming).
+    companions (20 Nov 2026): dict(tr, draw) of the other particles of each interaction (tr["draw"] of a leg): their hits are
+    hits of the pair, in coincidence with it (reco.run_events companions). with_v0: the pair vertex and visible momentum go to
+    the design's V0 rule / SBT V0 line (as for the in-vessel candidates)."""
     dt = DEFAULT_CONFIG["time_window"]
     fac = 2 * dt / cfg.spill_s * SPILLS_15Y
     w = cand_w * fac
@@ -146,7 +149,20 @@ def veto_term(tr, cand, cand_w, cand_v, design, inp, cfg, rng, chunk=200_000, pr
         rows = cand[kc].ravel()
         event = np.repeat(np.arange(len(kc)), 2)
         z_lim = np.repeat(cand_v[kc, 2], 2)
-        b = reco.run_events(take(tr, rows), event, z_lim, design, inp, cfg, rng)
+        comp = None
+        if companions is not None and len(companions["draw"]):
+            dr = np.asarray(tr["draw"][rows], np.int64)
+            cd = companions["draw"]                                       # sorted
+            lo, hi = np.searchsorted(cd, dr, "left"), np.searchsorted(cd, dr, "right")
+            n_c = np.where(dr >= 0, hi - lo, 0)
+            if n_c.sum():
+                ci = np.repeat(lo - np.cumsum(n_c) + n_c, n_c) + np.arange(n_c.sum())
+                comp = dict(tr={k: v[ci] for k, v in companions["tr"].items()}, event=np.repeat(event, n_c))
+        v0 = None
+        if with_v0:
+            pv = np.stack([tr["bpx"][rows], tr["bpy"][rows], tr["bpz"][rows]], 1).reshape(-1, 2, 3).sum(1)
+            v0 = dict(vtx=np.asarray(cand_v[kc], float), pvis=pv)
+        b = reco.run_events(take(tr, rows), event, z_lim, design, inp, cfg, rng, v0=v0, companions=comp)
         surv.append(~b["vetoed"]); expl.append(b["explained"].reshape(-1, 2))
         del b
     surv, expl = np.concatenate(surv), np.concatenate(expl)
