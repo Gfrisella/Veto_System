@@ -1109,3 +1109,15 @@ draws x10-70, more seeds), waiting for the go.
   SBT-material 2.95 +- 2.99 -> 0.004 (ONE heavy SBT-LS MC event, not a measured gain), MS7 0.59 -> 0.80, vessel mu 1.28
   (same one event), nu He 1.08 -> 1.13. Runner-ups ga8c8 (244.7 dr, sig 3.0 %), ga6c9 (245.3 dr, 3.7 %); top 3 share the
   ring / straw / V0 changes. Solid: signal loss halved, -79 drachmas, no rate penalty. Not adopted; designs/ unchanged.
+
+## 2026-11-20 — single-track DIS x independent muon (combinatorial), four rows (results_rerun/combi_single)
+- bin/combi_single.py (D9 recipe of dis_combinatorial.py; only events with exactly ONE good track; same pair cuts and
+  +-200 ps window factor as mu x mu), bin/combi_cutflow.py (step-by-step cut flow), bin/combi_single_summary.py
+  (numbers.json). Local runs, 2 x 4 threads. Closure: mu x mu with the same code 32.3 / 31.6 / 1.49 (ref 35.8 / 34.4 / 2.36).
+- Per 15 y, before tagging, pair cuts / IP < 2.5 m / IP < 10 cm, WITHOUT events whose only good track is the scattered
+  muon (recommended): vessel mu DIS x mu 0.0335 / 0.0332 / 0.00363; MS7 mu DIS (all products) x mu 708 / 700 / 62.5 +- 2.9;
+  vessel nu x mu 2.7e-4 / 2.7e-4 / 2.2e-5; MS7 nu x mu 0.0115 / 0.0114 / 8.3e-4. With the scattered muon: +2-3 % at most.
+- DIS x DIS: MS7 mu x MS7 mu 81.7 / 73.6 / 0.241 per 15 y (computed): not negligible next to mu x mu before the IP cut,
+  ~10 % of it at IP < 10 cm. Other DIS x DIS terms < 2e-3.
+- Note: _pair_cut (mu x mu 35.8, D9) has no 5 cm vertex margin; with it MS7 x mu x0.73 (pair cuts) / x0.89 (IP < 10 cm).
+- R2 after tagging (100 k-candidate subsample): all rows <= 1e-4 (MS7 0 MC, UL 0.08 subsample-limited).

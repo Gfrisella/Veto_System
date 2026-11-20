@@ -4,6 +4,16 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-20 — single-track DIS x independent muon, four rows (branch `veto-nov4-source`)
+
+- `bin/combi_single.py` (new): single-good-track events of an event store (D9 recipe, dis_combinatorial.dis_tracks) x the
+  Nov-4 SST1 muons, all opposite-charge pairs, pair cuts (_pair_cut), measured IP < 2.5 m / 10 cm, x 2 dt / T x spills;
+  scattered-muon flag (beam flag; MS7: parent-charge mu at the exit plane), with / without; per-code split; clustered
+  errors; `--self` DIS x DIS; `--closure` mu x mu; `--veto-design` after tagging on a candidate subsample.
+- `bin/combi_cutflow.py` (new): per-step cut flow (all, opposite, DOCA, vertex with / without 5 cm margin, true IP,
+  IP < 2.5 m, IP < 10 cm), per spill and per 15 y, with track p / angle diagnostics.
+- `bin/combi_single_summary.py` (new): results_rerun/combi_single/numbers.json. Results in STATUS (20 Nov) and the README.
+
 ## 2026-11-19 — GA rerun ga_20261119_115533 result (branch `veto-nov4-source`, results only)
 
 - p_max pinned on, bounced-SST1 weight 100: best ga7c3, 225.3 drachmas, score -71.1 (seed R2 x34 -94.3); signal lost
