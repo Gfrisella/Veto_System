@@ -292,3 +292,4 @@ Same good-track filter on both (p > 1, straw aperture at all 4 stations + TD, fi
   `fig:secondaries_DSST1` in Subsection `sub:secondaries`.
 - **2026-11-23, archived in git:** Veto_System repo, branch `veto-fairship-nosbt` (worktree `.claude/worktrees/fairship-nosbt`), `veto/docs/investigations_2026-11-23/fairship_noSBT/` (no `data/`, no `ubt_plane2_mu.npz`).
 - **2026-11-23:** origin figure split for the note: `secondaries_origin_map.png` (top/side views) + `secondaries_origin_z.png` (rate vs production z); bottom grey note removed.
+- **2026-11-23, good-track cut for the note:** `scripts/secondaries_good.py` → `results/secondaries_good.{npz,txt}`: secondaries p>1 + real TD hit + ≥3 of 4 straw stations (field map, n_min=3): 21.09 ± 2.95 kHz (MS7 8.87, walls 6.83, air 4.30, vessel 0.56, MS4–6 0.50); TD only 21.43; 4/4 st 21.05 (station cut irrelevant once TD hit). Note Table: column "+TD + 3/4 DSST", PDG codes; rate-vs-z plot = 2 colours (p>1, p>1+TD+3/4).

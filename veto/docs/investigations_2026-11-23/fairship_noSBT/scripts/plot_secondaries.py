@@ -85,18 +85,20 @@ fig.savefig(f'{OUT}/secondaries_origin_map.png', dpi=110, bbox_inches='tight'); 
 # rate vs production z: separate figure
 fig, axz = plt.subplots(figsize=(13, 5.5))
 bins = np.arange(0, 86, 1.0)
-for lab, m, col, mk in CAT:
-    i = sel & m
-    h, _ = np.histogram(z0[i], bins, weights=w[i] / 1e3)
-    axz.stairs(h, bins, color=col, lw=2, label=lab)
+G = np.load(f'{H}/results/secondaries_good.npz')   # from scripts/secondaries_good.py
+good = np.zeros(len(w), bool); good[G['idx']] = G['td'] & (G['nst'] >= 3)
+for lab, m, col in [('$p>1$ GeV/c', sel, '#3a7fd9'), ('$p>1$ GeV/c + TD + $\\geq$3 of 4 stations', sel & good, '#e8643a')]:
+    h, _ = np.histogram(z0[m], bins, weights=w[m] / 1e3)
+    axz.stairs(h, bins, color=col, lw=2,
+               label=f'{lab}: {w[m].sum() / 1e3:.1f} ± {np.sqrt((w[m] ** 2).sum()) / 1e3:.1f} kHz')
 axz.set_yscale('log'); axz.set_ylim(1e-3, 50); axz.set_xlim(0, 86)
 for n, za, zb in mags:
     axz.axvspan(za, zb, color='#e9e6df' if n != 'MS5' else '#f3f1ec', zorder=0)
     axz.text(0.5 * (za + zb), 20, n, rotation=90, fontsize=9, color='#666', ha='center', va='center')
-axz.axvspan(32.85, 82.85, color='#f4f4f4', zorder=0); axz.text(57.85, 25, 'decay vessel', ha='center', fontsize=10, color='#666')
+axz.axvspan(32.85, 82.85, color='#f4f4f4', zorder=0); axz.text(57.85, 2e-3, 'decay vessel', ha='center', fontsize=10, color='#666')
 axz.axvline(83.71, color='#333', lw=2)
 axz.set_xlabel('production z [m]'); axz.set_ylabel('rate at DSST1 [kHz / m]')
-axz.set_title('Rate of the secondaries at DSST1 ($p>1$ GeV/c) vs production z')
+axz.set_title('Rate of the secondaries at DSST1 vs production z')
 axz.grid(color='#e6e6e6', lw=0.8); axz.legend(frameon=True, framealpha=0.9, edgecolor='none', fontsize=11, loc='upper left', bbox_to_anchor=(0.43, 1.0))
 fig.savefig(f'{OUT}/secondaries_origin_z.png', dpi=110, bbox_inches='tight'); plt.close(fig)
 
