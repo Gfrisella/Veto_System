@@ -6,7 +6,7 @@ IP < 10 cm. Time coincidence: rate = sum over pairs of w_a w_b x 2 dt / T_spill 
 DEFAULT_CONFIG time_window), the factor of rock_combinatorial.veto_term (mu x mu 35.8 / 34.4 / 2.36).
 
 DIS side (dis_combinatorial.dis_tracks recipe, ISSUES D9): events of an event store with EXACTLY ONE good track
-(SST1 + timing acceptance, p > 1 GeV); events with >= 2 good tracks are their own vertex and are not used. MS7 stores:
+(p > 1 GeV, all 4 straw stations + timing detector); events with >= 2 good tracks are their own vertex and are not used. MS7 stores:
 V0 products of the code-3 originals dropped, the code-4 forced-decay copies carry them. Each track is flagged
 "scattered muon" when it is the interacting muon itself (vessel stores: the beam flag; MS7 stores, beam flag not
 stored: a mu+- leaving the MS7 exit plane (tree parent -1) with the charge of the parent muon), so that the numbers are
@@ -40,6 +40,38 @@ from veto.config import DEFAULT_CONFIG, SPILLS_15Y
 
 FAC = 2 * DEFAULT_CONFIG["time_window"] / 1.0 * SPILLS_15Y      # 2 dt / T_spill (1 s, RecoConfig.spill_s) x spills
 LEVELS = ("cand", "ip25", "ip01")
+
+
+def single_tracks_rock(path, kind, seeds, sst1_one=False):
+    """Cavern-rock draws (rock_select.build; products only, the incoming muon is not in the file): good tracks of the
+    single-good-track draws; sst1_one: and no other charged track crossing the SST1 aperture (straight lines)."""
+    from rock_select import build
+    inter, part = build(np.load(path), "muon" if kind == "rockmu" else "nu", seeds if kind == "rockmu" else 1)
+    t = ix.charged_tracks(part)
+    n_ev = len(inter["weight"])
+    g = np.nonzero(t["good"])[0]
+    n_good = np.bincount(t["inter"][g], minlength=n_ev)
+    one = g[n_good[t["inter"][g]] == 1]
+    if sst1_one:
+        n_at = np.bincount(t["inter"][t["acc"]], minlength=n_ev)
+        one = one[n_at[t["inter"][one]] == 1]
+    e = t["inter"][one]
+    v, b, p = t["v"][one], t["b"][one], t["p"][one]
+    nan = np.full(len(one), np.nan)
+    code = np.asarray(inter["code"]).astype(int)[e]
+    out = dict(ax=v[:, 0], ay=v[:, 1], az=v[:, 2], apz=p[:, 2], kx=nan, ky=nan, kz=nan.copy(),
+               bx=b[:, 0], by=b[:, 1], bz=b[:, 2], bpx=p[:, 0], bpy=p[:, 1], bpz=p[:, 2],
+               weight=np.asarray(inter["weight"], float)[e], type=np.full(len(one), 3.0), pdg=-13.0 * t["q"][one],
+               draw=e.astype(np.int64) + 5 * 10**12, scat=np.zeros(len(one), bool), code=code, ev=e.astype(np.int64),
+               q=t["q"][one].astype(float), true_pdg=np.asarray(part["pdg"])[t["row"][one]])
+    info = dict(store=str(path), events=n_ev, events_with_good=int((n_good > 0).sum()),
+                single_track_events=int(len(np.unique(e))), multi_track_events=int((n_good >= 2).sum()),
+                single_good_events_any_sst1=int((n_good == 1).sum()), sst1_one=bool(sst1_one),
+                single_rate_per_spill=float(out["weight"].sum()), single_rate_per_spill_noscat=float(out["weight"].sum()),
+                single_events_noscat=len(one), scattered_muon_rule="none (rock draws hold the products only)",
+                single_rate_by_code={str(int(c)): float(out["weight"][code == c].sum()) for c in np.unique(code)},
+                single_rate_by_code_noscat={str(int(c)): float(out["weight"][code == c].sum()) for c in np.unique(code)})
+    return out, info
 
 
 def single_tracks(store, kind, sst1_one=False):
@@ -205,11 +237,12 @@ def summarise(acc, maskB, maskA=None, same=False):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--stores", nargs="*", default=[], help="label=store:kind (kind mu | nu)")
+    ap.add_argument("--stores", nargs="*", default=[], help="label=store:kind (kind mu | nu | rockmu | rocknu: cavern-rock draws npz)")
     ap.add_argument("--dataset", default=paths.MUON_DATASET)
     ap.add_argument("--mu-sample", type=int, default=300_000, help="random SST1 muon rows (weights scaled), as D9")
     ap.add_argument("--dis-sample", type=int, default=0, help="random single-track rows per store (weights scaled); 0 = all")
     ap.add_argument("--block", type=int, default=4096)
+    ap.add_argument("--rock-seeds", type=int, default=300, help="seeds of the rock muon draws (weight / seeds, as rock_combinatorial)")
     ap.add_argument("--sst1-one", action="store_true", help="the good track must be the only charged track at SST1 (23 Nov)")
     ap.add_argument("--threads", type=int, default=8)
     ap.add_argument("--self", nargs="*", default=[], help="labels of stores for which DIS x DIS (different events) is also computed")
@@ -242,7 +275,10 @@ def main():
     for spec in a.stores:
         label, rest = spec.split("=", 1)
         store, kind = rest.rsplit(":", 1)
-        B, info = single_tracks(store, kind, sst1_one=a.sst1_one)
+        if kind in ("rockmu", "rocknu"):
+            B, info = single_tracks_rock(store, kind, a.rock_seeds, sst1_one=a.sst1_one)
+        else:
+            B, info = single_tracks(store, kind, sst1_one=a.sst1_one)
         if a.dis_sample and a.dis_sample < len(B["bx"]):
             sel = np.sort(np.random.default_rng(11).choice(len(B["bx"]), a.dis_sample, replace=False))
             sc = len(B["bx"]) / a.dis_sample
