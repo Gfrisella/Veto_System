@@ -108,7 +108,12 @@ def ms7_parents() -> Path:
 
 
 def field_map_h5() -> Path:
-    for candidate in (data_root() / "MainSpectrometerField.h5",
+    """Spectrometer field map (.h5: points [m], B [T]). VETO_FIELD_MAP overrides; FairShip's
+    2026_07_02_MainSpectrometerField_V21_2455 converted by bin/convert_fairship_field.py is MainSpectrometerField_V21_2455.h5."""
+    if os.environ.get("VETO_FIELD_MAP"):
+        return Path(os.environ["VETO_FIELD_MAP"])
+    for candidate in (data_root() / "MainSpectrometerField_V21_2455.h5",   # default since 23 Nov 2026 (FairShip map + polarity)
+                      data_root() / "MainSpectrometerField.h5",
                       PROJECT_DIR.parent / "MainSpectrometerField.h5"):
         if candidate.exists():
             return candidate

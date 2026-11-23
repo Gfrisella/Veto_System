@@ -6,6 +6,13 @@ what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20)
 
 ## 2026-11-20 — SBT walls fired by nu DIS, mu DIS and mu x mu (branch `veto-nov4-source`)
 
+- Spectrometer field map = FairShip 2026_07_02_MainSpectrometerField_V21_2455 with its polarity (Guglielmo 23 Nov 2026), as in the
+  TRY_2026_EM_noSBT_full production: bin/convert_fairship_field.py (CVMFS 26.10 files/ -> data/MainSpectrometerField_V21_2455.h5),
+  paths.field_map_h5() default (VETO_FIELD_MAP overrides). Checked against the ROOT map: 1 540 351 points, +-5 / +-5 / +-7.5 m, 10 cm;
+  int B dz on 4 lines identical to 4 digits (axis 0.8389 T m). Old map (MainSpectrometerField.h5): 19.8 m long, int Bx = -1.073 T m
+  (opposite polarity, ~5 m more fringe field), same peak 0.151 T. Precomputed products built with the old map (muon types in the
+  Nov-4 store, reco inputs, evstore preps) are NOT redone by this change.
+
 - `bin/sbt_firing.py` (new): R2, own deposits only. Per event store (vessel / MS7 / SBT-material nu and mu) the SBT cells
   fired by the event's own particles (sbt_material.deposits summed per event and cell, threshold + efficiency), attributed
   to products / scattered muon / parent muon; all events (subsample, per spill = rate per cell) and selected events (IP < 2.5 m
