@@ -4,6 +4,13 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-23 — FairShip TRY_2026_EM_noSBT_full comparison archived — branch `veto-fairship-nosbt`, base d71cb70
+- New `docs/investigations_2026-11-23/fairship_noSBT/` (copy of the working folder
+  `FairShip_TRY2026_EM_SST1/comparison_noSBT`, without the 8 GB `data/`): MS7 production and cavern good tracks vs our
+  chain (README), TD / straw-aperture tests, 4-station cut flow, and the numbers and plots of the secondaries at DSST1
+  for the MS note (`scripts/note_numbers.py`, `scripts/plot_secondaries.py`, `plots/note/`). No library code changed.
+  The scripts use the good-track definition of the `veto-nov4-source` worktree (4 stations + TD).
+
 ## 2026-11-23 — single-track interactions: one charged track at SST1; SST1 multiplicity
 - `bin/dis_combinatorial.py`, `bin/combi_single.py`: `--sst1-one` (helper `n_charged_sst1`): an interaction enters the
   interaction × μ combinatorial only if its good track is the ONLY charged track reaching SST1 (any p / acceptance, scattered
