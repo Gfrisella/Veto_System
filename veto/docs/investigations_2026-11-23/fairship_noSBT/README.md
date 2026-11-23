@@ -290,3 +290,5 @@ Same good-track filter on both (p > 1, straw aperture at all 4 stations + TD, fi
   style), `secondaries_xy_DSST1.png` (non-μ, p>1, colour = p; Scatter_Momentum_Map style, 2904 tracks 74.8 kHz),
   `secondaries_p_pt_DSST1.png` (non-μ, all p, 60 log bins/axis; P_vs_Pt style). Figures `fig:secondaries_origin`,
   `fig:secondaries_DSST1` in Subsection `sub:secondaries`.
+- **2026-11-23, archived in git:** Veto_System repo, branch `veto-fairship-nosbt` (worktree `.claude/worktrees/fairship-nosbt`), `veto/docs/investigations_2026-11-23/fairship_noSBT/` (no `data/`, no `ubt_plane2_mu.npz`).
+- **2026-11-23:** origin figure split for the note: `secondaries_origin_map.png` (top/side views) + `secondaries_origin_z.png` (rate vs production z); bottom grey note removed.

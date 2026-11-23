@@ -2,7 +2,8 @@
 """Plots of the secondaries at DSST1 for the MS note (Subsection sub:secondaries), FairShip TRY_2026_EM_noSBT_full.
 Secondary = charged track (e, mu, pi, p, K) crossing the DSST1 scoring plane (|x|<2, |y|<3, z_FS 83.71), pz > 0, not
 the muon of the input sample. Rates per spill (x 411947589 / (3086e5)). z in the FairShip frame.
- 1. secondaries_origin_map.png : production point, top (x-z) and side (y-z) view, by origin (as hit_categories), p>1.
+ 1. secondaries_origin_map.png : production point, top (x-z) and side (y-z) view, by origin (as hit_categories), p>1;
+    secondaries_origin_z.png   : rate at DSST1 vs production z, by origin, p>1.
  2. secondaries_xy_DSST1.png    : non-muon secondaries at DSST1, p>1, colour = momentum (as Scatter_Momentum_Map_T1).
  3. secondaries_p_pt_DSST1.png  : non-muon secondaries at DSST1, p-pT rate (as P_vs_Pt), all momenta."""
 import os, pickle
@@ -41,9 +42,9 @@ names = ['MHS', 'MS1', 'MS2', 'MS3', 'MS4', 'MS5', 'MS6', 'MS7']
 zs = 32.18 - sum(g + 2 * d for g, d in rows) / 100; mags = []
 for (g, d), n in zip(rows, names):
     zs += g / 100; mags.append((n, zs, zs + 2 * d / 100)); zs += 2 * d / 100
-fig = plt.figure(figsize=(16, 11.5))
-gs = fig.add_gridspec(2, 2, width_ratios=[2.3, 1], hspace=0.28, wspace=0.18)
-axt, axs, axz = fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[1, 0]), fig.add_subplot(gs[:, 1])
+fig = plt.figure(figsize=(13, 11.5))
+gs = fig.add_gridspec(2, 1, hspace=0.28)
+axt, axs = fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[1, 0])
 def geometry(ax, view):
     for n, za, zb in mags:
         ax.axvspan(za, zb, color='#e9e6df' if n != 'MS5' else '#f3f1ec', zorder=0)
@@ -80,7 +81,9 @@ for lab, m, col, mk in CAT:
 axt.legend(handles=handles, loc='upper right', frameon=True, framealpha=0.9, edgecolor='none', fontsize=11.5)
 szh = [Line2D([], [], ls='', marker='o', color='#b0ada5', ms=np.sqrt(6 + 18 * np.log10(v)), label=f'{v:g} GeV/c') for v in (1.5, 10, 100)]
 axs.legend(handles=szh, title='P at DSST1', loc='upper left', frameon=False, fontsize=10.5, title_fontsize=10.5)
-# (c) rate vs production z
+fig.savefig(f'{OUT}/secondaries_origin_map.png', dpi=110, bbox_inches='tight'); plt.close(fig)
+# rate vs production z: separate figure
+fig, axz = plt.subplots(figsize=(13, 5.5))
 bins = np.arange(0, 86, 1.0)
 for lab, m, col, mk in CAT:
     i = sel & m
@@ -89,12 +92,13 @@ for lab, m, col, mk in CAT:
 axz.set_yscale('log'); axz.set_ylim(1e-3, 50); axz.set_xlim(0, 86)
 for n, za, zb in mags:
     axz.axvspan(za, zb, color='#e9e6df' if n != 'MS5' else '#f3f1ec', zorder=0)
+    axz.text(0.5 * (za + zb), 20, n, rotation=90, fontsize=9, color='#666', ha='center', va='center')
+axz.axvspan(32.85, 82.85, color='#f4f4f4', zorder=0); axz.text(57.85, 25, 'decay vessel', ha='center', fontsize=10, color='#666')
+axz.axvline(83.71, color='#333', lw=2)
 axz.set_xlabel('production z [m]'); axz.set_ylabel('rate at DSST1 [kHz / m]')
-axz.set_title('(c) Rate vs production z'); axz.grid(color='#e6e6e6', lw=0.8); axz.legend(frameon=False, fontsize=11, loc='upper left')
-fig.text(0.985, 0.02, 'Charged, not muons of the initial sample; |x|<2 m, |y|<3 m at DSST1. Marker area ∝ log(P at DSST1). '
-         'Shaded: magnets (MS5 lighter, passive), cavern concrete. FairShip TRY_2026, full physics, balloon only.',
-         ha='right', fontsize=10, color='#666')
-fig.savefig(f'{OUT}/secondaries_origin_map.png', dpi=110, bbox_inches='tight'); plt.close(fig)
+axz.set_title('Rate of the secondaries at DSST1 ($p>1$ GeV/c) vs production z')
+axz.grid(color='#e6e6e6', lw=0.8); axz.legend(frameon=True, framealpha=0.9, edgecolor='none', fontsize=11, loc='upper left', bbox_to_anchor=(0.43, 1.0))
+fig.savefig(f'{OUT}/secondaries_origin_z.png', dpi=110, bbox_inches='tight'); plt.close(fig)
 
 # ------------------------------------------------------------------ 2. x-y at DSST1 (Scatter_Momentum_Map style)
 plt.rcdefaults(); plt.rcParams.update({'font.size': 20})
