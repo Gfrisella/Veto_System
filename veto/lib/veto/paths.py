@@ -113,6 +113,7 @@ def field_map_h5() -> Path:
     if os.environ.get("VETO_FIELD_MAP"):
         return Path(os.environ["VETO_FIELD_MAP"])
     for candidate in (data_root() / "MainSpectrometerField_V21_2455.h5",   # default since 23 Nov 2026 (FairShip map + polarity)
+                      PROJECT_DIR.parent / "MainSpectrometerField_V21_2455.h5",
                       data_root() / "MainSpectrometerField.h5",
                       PROJECT_DIR.parent / "MainSpectrometerField.h5"):
         if candidate.exists():
