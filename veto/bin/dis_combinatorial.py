@@ -63,7 +63,18 @@ def drop_v0_products_of_originals(ev, tr):
     return {k: v[~bad] for k, v in tr.items()}
 
 
-def dis_tracks(store):
+CHARGED = (11, 13, 211, 321, 2212, 3112, 3222, 3312, 3334)
+
+
+def n_charged_sst1(ev, tr):
+    """Charged tracks reaching SST1 per event (any momentum, any acceptance; the scattered muon included)."""
+    eo = np.argsort(ev["event"], kind="stable")
+    evi = eo[np.searchsorted(np.asarray(ev["event"])[eo], tr["event"])]
+    at = np.isin(np.abs(np.asarray(tr["pdg"])), CHARGED) & (np.asarray(tr["end"]) == es.END_SST1)
+    return np.bincount(evi[at], minlength=len(ev["event"]))
+
+
+def dis_tracks(store, sst1_one=False):
     meta, ev, tr = es.read(paths.evstore(store))
     n0 = len(tr["event"])
     tr = drop_v0_products_of_originals(ev, tr)
@@ -72,6 +83,8 @@ def dis_tracks(store):
     g = np.nonzero(t["good"])[0]
     n_good = np.bincount(t["inter"][g], minlength=len(inter["weight"]))
     one = g[n_good[t["inter"][g]] == 1]                 # D9: events with exactly one good track
+    if sst1_one:                                        # 23 Nov: and no other charged track at SST1 (any p / acceptance)
+        one = one[n_charged_sst1(ev, tr)[t["inter"][one]] == 1]
     nan = np.full(len(one), np.nan)
     v, b, p = t["v"][one], t["b"][one], t["p"][one]
     out = dict(ax=v[:, 0], ay=v[:, 1], az=v[:, 2], apz=p[:, 2], kx=nan, ky=nan, kz=nan.copy(),
@@ -91,7 +104,8 @@ def dis_tracks(store):
                         bx=cb[:, 0], by=cb[:, 1], bz=cb[:, 2], bpx=cp[:, 0], bpy=cp[:, 1], bpz=cp[:, 2],
                         weight=inter["weight"][t["inter"][c]], type=np.full(len(c), 3.0), pdg=-13.0 * t["q"][c]))
     info = dict(store=str(paths.evstore(store)), tracks=n0, companions=int(len(c)), tracks_after_v0_drop=len(tr["event"]), good=len(g),
-                events_with_good=int((n_good > 0).sum()), single_track_events=int((n_good == 1).sum()),
+                events_with_good=int((n_good > 0).sum()), single_track_events=int(len(np.unique(t["inter"][one]))),
+                single_good_events_any_sst1=int((n_good == 1).sum()), sst1_one=bool(sst1_one),
                 multi_track_events=int((n_good >= 2).sum()), single_rate_per_spill=float(out["weight"].sum()))
     return out, info, comp
 
@@ -157,6 +171,7 @@ def main():
     ap.add_argument("--random-hits", action="store_true", help="also tag with random hits (default off: background tagged only by its own hits, Guglielmo 20 Nov 2026; random hits count only for the signal loss)")
     ap.add_argument("--no-companions", action="store_true", help="do not use the other products of the interaction (pre-20 Nov behaviour)")
     ap.add_argument("--pretag", action="store_true", help="tag each leg alone first and pair only the untagged ones (fast, same expectation, but the detector inefficiency is drawn once per simulated leg: large variance, 20 Nov 2026 test 6 vs 154 MC pairs)")
+    ap.add_argument("--sst1-one", action="store_true", help="single-track events: the good track must be the only charged track at SST1 (23 Nov 2026)")
     ap.add_argument("--no-v0", action="store_true", help="do not pass the pair vertex to the V0 rule (pre-20 Nov behaviour)")
     a = ap.parse_args()
     t0 = time.time()
@@ -191,7 +206,7 @@ def main():
     mu_ineff = float((sw * ~m["vetoed"]).sum() / sw.sum())
     res, infos = {}, {}
     for st in a.stores:
-        B, info, comp = dis_tracks(st)
+        B, info, comp = dis_tracks(st, sst1_one=a.sst1_one)
         if a.no_companions:
             comp = None
         if a.pretag:             # tag each single-track interaction once (its track + the rest of the interaction)

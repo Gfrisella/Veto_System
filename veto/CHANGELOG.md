@@ -4,6 +4,15 @@ Changes to the veto optimisation code, newest first. Each entry gives the branch
 what changed. Open problems are in `ISSUES.txt`. Earlier entries (2026-10-19/20) are in this file on branch
 `veto-all-sst1`.
 
+## 2026-11-23 — single-track interactions: one charged track at SST1; SST1 multiplicity
+- `bin/dis_combinatorial.py`, `bin/combi_single.py`: `--sst1-one` (helper `n_charged_sst1`): an interaction enters the
+  interaction × μ combinatorial only if its good track is the ONLY charged track reaching SST1 (any p / acceptance, scattered
+  muon included). MS7 μ single-track source 4 944 -> 1 088 / spill. Reruns: Slurm 2203236, results_rerun/sst1one_23nov.
+- `bin/sst1_multiplicity.py` (new): charged-track multiplicity at SST1 per interaction (incoming muon excluded), per source
+  and location (MS7, cavern rock, vessel codes, UBT planes, SBT Al / LS / ribs); results_rerun/sst1one_23nov/multiplicity.json.
+- Good track = p > 1 GeV + SST1 + timing acceptance (ix.charged_tracks). Another agent is redefining it (23 Nov): redo these
+  numbers if the definition changes.
+
 ## 2026-11-20 — SBT walls fired by nu DIS, mu DIS and mu x mu (branch `veto-nov4-source`)
 
 - Spectrometer field map = FairShip 2026_07_02_MainSpectrometerField_V21_2455 with its polarity (Guglielmo 23 Nov 2026), as in the

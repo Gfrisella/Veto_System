@@ -30,7 +30,7 @@ import numpy as np
 import torch
 
 from benchmark_designs import _pair_cut
-from dis_combinatorial import drop_v0_products_of_originals
+from dis_combinatorial import drop_v0_products_of_originals, n_charged_sst1
 from rock_combinatorial import KEYS, muon_tracks, veto_term
 from veto import evstore as es
 from veto import interactions as ix
@@ -42,8 +42,10 @@ FAC = 2 * DEFAULT_CONFIG["time_window"] / 1.0 * SPILLS_15Y      # 2 dt / T_spill
 LEVELS = ("cand", "ip25", "ip01")
 
 
-def single_tracks(store, kind):
-    """Good tracks of the single-good-track events of a store, with flags (scattered muon, code, draw id)."""
+def single_tracks(store, kind, sst1_one=False):
+    """Good tracks of the single-good-track events of a store, with flags (scattered muon, code, draw id).
+    sst1_one: also require that the good track is the ONLY charged track reaching SST1 in the event (23 Nov definition:
+    events with >= 2 tracks at the SSTs belong to the vertex category, whatever their momentum / acceptance)."""
     meta, ev, tr = es.read(paths.evstore(store))
     tr = drop_v0_products_of_originals(ev, tr)
     keep = (tr["end"] == es.END_SST1) | ((tr["end"] != es.END_DECAY) & (tr["end"] != es.END_FORCED))
@@ -53,6 +55,10 @@ def single_tracks(store, kind):
     g = np.nonzero(t["good"])[0]
     n_good = np.bincount(t["inter"][g], minlength=len(inter["weight"]))
     one = g[n_good[t["inter"][g]] == 1]
+    n_sst1 = None
+    if sst1_one:
+        n_sst1 = n_charged_sst1(ev, tr)
+        one = one[n_sst1[t["inter"][one]] == 1]
     trow = tr_rows[t["row"][one]]
     e = t["inter"][one]
     pdg = np.asarray(tr["pdg"])[trow]
@@ -84,7 +90,8 @@ def single_tracks(store, kind):
                weight=inter["weight"][e], type=np.full(len(one), 3.0), pdg=-13.0 * t["q"][one],
                draw=draw, scat=scat, code=code, ev=e.astype(np.int64), q=t["q"][one].astype(float), true_pdg=pdg)
     info = dict(store=str(paths.evstore(store)), events=len(ev["event"]), events_with_good=int((n_good > 0).sum()),
-                single_track_events=int((n_good == 1).sum()), multi_track_events=int((n_good >= 2).sum()),
+                single_track_events=int(len(np.unique(e))), multi_track_events=int((n_good >= 2).sum()),
+                single_good_events_any_sst1=int((n_good == 1).sum()), sst1_one=bool(sst1_one),
                 single_rate_per_spill=float(out["weight"].sum()),
                 single_rate_per_spill_noscat=float(out["weight"][~scat].sum()),
                 single_events_noscat=int((~scat).sum()), scattered_muon_rule=rule,
@@ -203,6 +210,7 @@ def main():
     ap.add_argument("--mu-sample", type=int, default=300_000, help="random SST1 muon rows (weights scaled), as D9")
     ap.add_argument("--dis-sample", type=int, default=0, help="random single-track rows per store (weights scaled); 0 = all")
     ap.add_argument("--block", type=int, default=4096)
+    ap.add_argument("--sst1-one", action="store_true", help="the good track must be the only charged track at SST1 (23 Nov)")
     ap.add_argument("--threads", type=int, default=8)
     ap.add_argument("--self", nargs="*", default=[], help="labels of stores for which DIS x DIS (different events) is also computed")
     ap.add_argument("--closure", action="store_true", help="mu x mu of the muon sample with the same code")
@@ -213,7 +221,7 @@ def main():
     torch.set_num_threads(a.threads)
     t0 = time.time()
     cfg = reco.RecoConfig(seed=1, multiple_scattering=True)
-    res = dict(method=__doc__.split("\n\n")[0], factor_15y_per_pair_weight=FAC, dataset=a.dataset, mu_sample=a.mu_sample,
+    res = dict(method=__doc__.split("\n\n")[0], sst1_one=a.sst1_one, factor_15y_per_pair_weight=FAC, dataset=a.dataset, mu_sample=a.mu_sample,
                dis_sample=a.dis_sample, time_window_s=DEFAULT_CONFIG["time_window"], spills_15y=SPILLS_15Y, terms={}, stores={})
     mu = muon_tracks(a.dataset, a.mu_sample)
     from veto import muon_types as mt
@@ -234,7 +242,7 @@ def main():
     for spec in a.stores:
         label, rest = spec.split("=", 1)
         store, kind = rest.rsplit(":", 1)
-        B, info = single_tracks(store, kind)
+        B, info = single_tracks(store, kind, sst1_one=a.sst1_one)
         if a.dis_sample and a.dis_sample < len(B["bx"]):
             sel = np.sort(np.random.default_rng(11).choice(len(B["bx"]), a.dis_sample, replace=False))
             sc = len(B["bx"]) / a.dis_sample
